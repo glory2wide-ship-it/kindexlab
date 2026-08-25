@@ -11,7 +11,8 @@ async function handle(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const persist = new URL(request.url).searchParams.get("persist") !== "0";
+  const persist =
+    process.env.VERCEL !== "1" && new URL(request.url).searchParams.get("persist") !== "0";
   const result = await runIngestJob({ persist });
 
   return NextResponse.json({

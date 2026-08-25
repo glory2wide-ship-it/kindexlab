@@ -9,7 +9,7 @@ import { SITE } from "@/lib/site";
 export const metadata: Metadata = {
   title: "데일리 트렌드 브리핑",
   description:
-    "매일 1~3편의 1,000단어 이상 화제 시세 브리핑. 종합 해설과 카테고리 심층을 자동 발행하고, 어제 글은 매거진 아카이브로 쌓입니다.",
+    "매일 종합 1편과 히트맵 전 카테고리 심층(1,000단어 이상)을 자동 발행합니다. 어제 글은 매거진 아카이브로 쌓입니다.",
   alternates: { canonical: "/briefing" },
 };
 
@@ -30,6 +30,7 @@ export default async function BriefingHubPage() {
       url: `${SITE.url}/briefing/${item.slug}`,
       datePublished: item.publishedAt,
       wordCount: item.wordCount,
+      image: item.coverImage?.src,
     })),
   };
 
@@ -43,7 +44,7 @@ export default async function BriefingHubPage() {
         <p className="font-mono text-xs text-accent">BRIEFING DESK</p>
         <h1 className="text-3xl font-semibold tracking-tight">데일리 트렌드 브리핑</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          최신 순위·등락 데이터를 바탕으로 매일 종합 브리핑 1편과 카테고리 심층 1~2편을
+          최신 순위·등락 데이터를 바탕으로 매일 종합 브리핑 1편과 히트맵 전 카테고리 심층을
           발행합니다. 날짜가 바뀌면 전날 기사는 검색 가능한 아카이브로 넘어가 장기 SEO
           유입을 만듭니다.
         </p>
@@ -51,7 +52,7 @@ export default async function BriefingHubPage() {
       </header>
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">오늘의 에디션</h2>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {today.map((article) => (
             <BriefingCard key={article.slug} article={article} />
           ))}

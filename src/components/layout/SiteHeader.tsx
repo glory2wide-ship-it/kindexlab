@@ -15,8 +15,8 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-line bg-board/90 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4">
         <Link href="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-accent font-mono text-xs font-bold text-black">
-            EB
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-accent font-sans text-[11px] font-bold tracking-tight text-black">
+            KL
           </span>
           <span className="leading-tight">
             <span className="block font-semibold tracking-tight">{SITE.name}</span>
@@ -36,7 +36,7 @@ export function SiteHeader() {
         </nav>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <KstClock />
-          <span className="hidden items-center gap-1.5 rounded-full border border-up/30 bg-up/10 px-2.5 py-1 font-mono text-[11px] text-up sm:inline-flex">
+          <span className="hidden items-center gap-1.5 rounded-full border border-up/30 bg-up/10 px-2.5 py-1 font-sans text-[11px] font-semibold tracking-tight text-up sm:inline-flex">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-up" />
             LIVE
           </span>

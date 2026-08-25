@@ -4,18 +4,22 @@ import { hierarchy, treemap, treemapSquarify } from "d3-hierarchy";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { HoverCard } from "@/components/dashboard/HoverCard";
 import { TYPE_ORDER } from "@/lib/categories";
-import { TYPE_LABEL, formatRate } from "@/lib/format";
+import { TYPE_LABEL, formatCompact, formatRate } from "@/lib/format";
 import { heatFill, heatText } from "@/lib/heatmap";
-import { buildTimeframeMetrics, getTimeframeSeries } from "@/lib/timeframes";
+import {
+  changeForEntity,
+  getTimeframeSeries,
+  heatForTimeframe,
+  volumeForTimeframe,
+} from "@/lib/timeframes";
 import { rankingPath } from "@/lib/slugs";
 import { layoutTreemapLabel } from "@/lib/treemapLabel";
 import type { CategoryId, EntityType, RankingEntity, SeriesPoint, Timeframe } from "@/lib/types";
 
-export const TREEMAP_MAX_ITEMS = 28;
-const PER_SECTOR = 5;
+export const TREEMAP_MAX_ITEMS = 44;
 
-export function heatmapVisibleCount(items: RankingEntity[]): number {
-  return pickHeatmapItems(items).length;
+export function heatmapVisibleCount(items: RankingEntity[], timeframe: Timeframe = "1m"): number {
+  return pickHeatmapItems(items, timeframe).length;
 }
 
 interface TreeNode {
@@ -32,23 +36,30 @@ interface HoverState {
   y: number;
 }
 
-function pickHeatmapItems(items: RankingEntity[]): RankingEntity[] {
+function heatSort(a: RankingEntity, b: RankingEntity, timeframe: Timeframe): number {
+  const heat = heatForTimeframe(b, timeframe) - heatForTimeframe(a, timeframe);
+  if (heat !== 0) return heat;
+  const volume = volumeForTimeframe(b, timeframe) - volumeForTimeframe(a, timeframe);
+  if (volume !== 0) return volume;
+  return a.rank - b.rank;
+}
+
+function pickHeatmapItems(items: RankingEntity[], timeframe: Timeframe): RankingEntity[] {
   const types = TYPE_ORDER.filter((type) => items.some((item) => item.type === type));
   if (types.length <= 1) {
-    return [...items]
-      .sort((a, b) => b.buzzScore - a.buzzScore || b.volume - a.volume || a.rank - b.rank)
-      .slice(0, TREEMAP_MAX_ITEMS);
+    return [...items].sort((a, b) => heatSort(a, b, timeframe)).slice(0, TREEMAP_MAX_ITEMS);
   }
+  const perSector = Math.max(3, Math.floor(TREEMAP_MAX_ITEMS / types.length));
   return types.flatMap((type) =>
     items
       .filter((item) => item.type === type)
-      .sort((a, b) => b.buzzScore - a.buzzScore || b.volume - a.volume || a.rank - b.rank)
-      .slice(0, PER_SECTOR),
+      .sort((a, b) => heatSort(a, b, timeframe))
+      .slice(0, perSector),
   );
 }
 
-function cellWeight(entity: RankingEntity, maxVolume: number): number {
-  const scaled = Math.pow(Math.max(entity.volume, 1), 0.58);
+function cellWeight(entity: RankingEntity, timeframe: Timeframe, maxVolume: number): number {
+  const scaled = Math.pow(Math.max(volumeForTimeframe(entity, timeframe), 1), 0.58);
   const floor = Math.pow(Math.max(maxVolume, 1), 0.58) * 0.5;
   return Math.max(scaled, floor);
 }
@@ -78,10 +89,10 @@ export function TreemapView({
   const [hover, setHover] = useState<HoverState | null>(null);
   const { width, height } = bounds;
 
-  const visible = useMemo(() => pickHeatmapItems(items), [items]);
+  const visible = useMemo(() => pickHeatmapItems(items, timeframe), [items, timeframe]);
   const maxVolume = useMemo(
-    () => visible.reduce((max, item) => Math.max(max, item.volume), 1),
-    [visible],
+    () => visible.reduce((max, item) => Math.max(max, volumeForTimeframe(item, timeframe)), 1),
+    [timeframe, visible],
   );
 
   useEffect(() => {
@@ -104,7 +115,7 @@ export function TreemapView({
 
   const { leaves, groups } = useMemo(() => {
     const root = hierarchy(tree)
-      .sum((node) => (node.entity ? cellWeight(node.entity, maxVolume) : 0))
+      .sum((node) => (node.entity ? cellWeight(node.entity, timeframe, maxVolume) : 0))
       .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
     const laidOut = treemap<TreeNode>()
       .size([width, height])
@@ -117,7 +128,7 @@ export function TreemapView({
       leaves: laidOut.leaves(),
       groups: laidOut.children ?? [],
     };
-  }, [height, maxVolume, tree, width]);
+  }, [height, maxVolume, timeframe, tree, width]);
 
   function moveHover(
     event: MouseEvent,
@@ -203,27 +214,28 @@ export function TreemapView({
           const entity = leaf.data.entity;
           if (!entity) return null;
           const series = getTimeframeSeries(entity, timeframe);
-          const change = buildTimeframeMetrics(entity)[timeframe].changeRate;
+          const change = changeForEntity(entity, timeframe);
           const w = leaf.x1 - leaf.x0;
           const h = leaf.y1 - leaf.y0;
           const rate = formatRate(change);
+          const metric = `${formatCompact(volumeForTimeframe(entity, timeframe))}`;
           const label = layoutTreemapLabel({
             width: w,
             height: h,
             y: leaf.y0,
             name: entity.name,
             rate,
-            typeLabel: TYPE_LABEL[entity.type] ?? entity.type,
+            typeLabel: metric,
           });
           const fill = heatText(change);
           const padX = label?.padX ?? 8;
-          const nameY = label?.nameY ?? leaf.y0 + Math.min(22, h * 0.38);
-          const rateY = label?.rateY ?? Math.min(leaf.y1 - 8, nameY + 18);
+          const nameY = label?.nameY ?? leaf.y0 + Math.min(26, h * 0.4);
+          const rateY = label?.rateY ?? Math.min(leaf.y1 - 8, nameY + 20);
           return (
             <a
               key={entity.id}
               href={rankingPath(entity.slug)}
-              aria-label={`${TYPE_LABEL[entity.type]} ${entity.name} ${rate}`}
+              aria-label={`${TYPE_LABEL[entity.type]} ${entity.rank}위 ${entity.name} ${rate} ${metric}`}
               onMouseEnter={(event) => moveHover(event, entity, series, change)}
               onMouseMove={(event) => moveHover(event, entity, series, change)}
             >
@@ -239,9 +251,9 @@ export function TreemapView({
                   x={leaf.x0 + padX}
                   y={nameY}
                   fill={fill}
-                  fontSize={label?.nameSize ?? 13}
-                  fontWeight={700}
-                  letterSpacing="-0.02em"
+                  fontSize={label?.nameSize ?? 19.2}
+                  fontWeight={800}
+                  letterSpacing="-0.03em"
                   fontFamily="var(--font-sans)"
                 >
                   {label?.name ?? entity.name}
@@ -252,10 +264,25 @@ export function TreemapView({
                   fill={fill}
                   fontSize={label?.rateSize ?? 12}
                   fontWeight={700}
-                  fontFamily="var(--font-jetbrains-mono), ui-monospace, monospace"
+                  letterSpacing="-0.02em"
+                  fontFamily="var(--font-sans)"
                 >
                   {rate}
                 </text>
+                {label?.showType ? (
+                  <text
+                    x={leaf.x0 + padX}
+                    y={label.typeY}
+                    fill={fill}
+                    fontSize={label.typeSize}
+                    fontWeight={600}
+                    letterSpacing="-0.02em"
+                    fontFamily="var(--font-sans)"
+                    opacity={0.9}
+                  >
+                    {metric}
+                  </text>
+                ) : null}
               </g>
             </a>
           );

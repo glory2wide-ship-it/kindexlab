@@ -151,6 +151,11 @@ export function classifyBuzzType(name: string, tags: string[]): EntityType {
   const known = matchCatalog(name);
   if (known) return known.type;
   const blob = `${name} ${tags.join(" ")}`;
+  if (/웹툰|만화|카카오페이지/.test(blob)) return "webtoon";
+  if (/틱톡|릴스|쇼츠|유튜브 조회|인기 영상/.test(blob)) return "shorts";
+  if (/모바일 게임|앱스토어 게임|구글플레이/.test(blob)) return "mobile_game";
+  if (/스팀|PC 게임|동접/.test(blob)) return "pc_game";
+  if (/PS5|플레이스테이션|닌텐도|Xbox|콘솔 게임/.test(blob)) return "console_game";
   if (/유튜버|인플루언서|스트리머|BJ|크리에이터/.test(blob)) return "influencer";
   if (/예능|드라마|방송|뉴스/.test(blob)) return "tv_show";
   if (/아이돌|K-?POP|걸그룹|보이그룹/.test(blob)) return "kpop";

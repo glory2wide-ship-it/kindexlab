@@ -1,4 +1,4 @@
-import { CATEGORIES } from "@/lib/categories";
+import { CATEGORIES, TYPE_ORDER } from "@/lib/categories";
 import { formatCompact, formatRate, formatScore, TYPE_LABEL } from "@/lib/format";
 import type { CategoryId, EntityType, MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
 
@@ -10,6 +10,11 @@ const INDEX_TO_CATEGORY: Record<string, CategoryId> = {
   influencer: "influencer",
   music: "music_chart",
   ratings: "tv_rating",
+  webtoon: "webtoon",
+  shorts: "shorts",
+  mobile: "mobile_game",
+  pcgame: "pc_game",
+  console: "console_game",
 };
 
 export interface MarketSnapshot {
@@ -28,6 +33,9 @@ export function categoryLabel(id: CategoryId): string {
 export function heatmapHref(category: CategoryId = "all"): string {
   return category === "all" ? "/#heatmap" : `/?category=${category}#heatmap`;
 }
+
+/** One SEO deep-dive per heatmap sector tab, excluding 종합. */
+export const HEATMAP_DEEP_DIVE_CATEGORIES: CategoryId[] = [...TYPE_ORDER];
 
 export function describeEntity(entity: RankingEntity): string {
   return `${entity.name}(${formatRate(entity.fluctuationRate)}, 버즈 ${formatScore(entity.buzzScore)}, 거래량 ${formatCompact(entity.volume)})`;
@@ -55,17 +63,13 @@ export function snapshotFromPayload(payload: RankingsPayload): MarketSnapshot {
   return { payload, gainers, losers, volumeLeaders, byType, leadingSectors };
 }
 
-export function pickDeepDiveCategories(snapshot: MarketSnapshot, editionDate: string, count = 2): CategoryId[] {
-  const salt = Number(editionDate.replaceAll("-", "")) % 7;
-  const scored = snapshot.leadingSectors.map((sector, order) => ({
-    category: sector.category,
-    score: Math.abs(sector.index?.changeRate ?? 0) * 10 + (salt + order) * 0.3,
-  }));
-  scored.sort((a, b) => b.score - a.score);
-  const unique: CategoryId[] = [];
-  for (const row of scored) {
-    if (!unique.includes(row.category)) unique.push(row.category);
-    if (unique.length >= count) break;
-  }
-  return unique.slice(0, count);
+export function pickDeepDiveCategories(
+  snapshot: MarketSnapshot,
+  _editionDate: string,
+  count = TYPE_ORDER.length,
+): CategoryId[] {
+  const withData = TYPE_ORDER.filter((type) => (snapshot.byType[type] ?? []).length > 0);
+  if (withData.length >= count) return withData.slice(0, count);
+  const missing = TYPE_ORDER.filter((type) => !withData.includes(type));
+  return [...withData, ...missing].slice(0, count);
 }

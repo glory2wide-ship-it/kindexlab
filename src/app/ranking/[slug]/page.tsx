@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdUnit, MonetizationSlot } from "@/components/ads/AdUnit";
 import { ProductShelf } from "@/components/affiliate/ProductShelf";
 import { BuzzChart } from "@/components/entity/BuzzChart";
 import { EntityHero } from "@/components/entity/EntityHero";
@@ -9,6 +8,7 @@ import { getAllSlugs, getEntityBySlug, getRelatedEntities } from "@/lib/api";
 import { TYPE_LABEL, formatRate } from "@/lib/format";
 import { SITE } from "@/lib/site";
 import { rankingPath, rankingUrl } from "@/lib/slugs";
+import type { EntityType } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const dynamicParams = true;
@@ -55,12 +55,7 @@ export default async function RankingDetailPage({
     url: rankingUrl(SITE.url, entity.slug),
     description: entity.summary,
     mainEntity: {
-      "@type":
-        entity.type === "tv_show" || entity.type === "tv_rating"
-          ? "TVSeries"
-          : entity.type === "music_chart"
-            ? "MusicRecording"
-            : "Person",
+      "@type": schemaType(entity.type),
       name: entity.name,
       alternateName: entity.nameEn,
     },
@@ -85,9 +80,6 @@ export default async function RankingDetailPage({
         <h2 className="text-xl font-semibold">오늘의 분석</h2>
         <p className="mt-4 text-[15px] leading-8">{entity.analysis}</p>
       </article>
-      <MonetizationSlot region="in-article">
-        <AdUnit format="horizontal" />
-      </MonetizationSlot>
       <ProductShelf products={entity.products} entityName={entity.name} />
       <section>
         <h2 className="mb-3 text-lg font-semibold">같은 섹터 종목</h2>
@@ -122,4 +114,13 @@ export default async function RankingDetailPage({
       </section>
     </div>
   );
+}
+
+function schemaType(type: EntityType): string {
+  if (type === "tv_show" || type === "tv_rating") return "TVSeries";
+  if (type === "music_chart") return "MusicRecording";
+  if (type === "webtoon") return "ComicSeries";
+  if (type === "shorts") return "VideoObject";
+  if (type === "mobile_game" || type === "pc_game" || type === "console_game") return "VideoGame";
+  return "Person";
 }

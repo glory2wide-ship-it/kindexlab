@@ -1,7 +1,8 @@
 import { marketIndices, rankings, rankingsUpdatedAt } from "@/data/rankings";
-import { snapshotToPayload } from "@/lib/ingestion/compose";
-import { ingestLivePayload, readPersistedSnapshot } from "@/lib/ingestion/job";
-import { buildTimeframeMetrics } from "@/lib/timeframes";
+import { snapshotToPayload, buildIndices } from "@/lib/ingestion/compose";
+import { readPersistedSnapshot, runIngestJob } from "@/lib/ingestion/job";
+import { trendsRevalidateSec } from "@/lib/refresh";
+import { attachTimeframeMetrics, buildTimeframeMetrics, rankItemsForTimeframe } from "@/lib/timeframes";
 import type {
   CategoryId,
   RankingEntity,
@@ -11,20 +12,24 @@ import type {
   TrendsPayload,
 } from "@/lib/types";
 import { decodeRouteSlug, slugsMatch } from "@/lib/slugs";
-import { unstable_cache } from "next/cache";
 
 /**
  * Data-source switch:
  *   TRENDS_DATA_SOURCE=live  → crawler snapshot + on-demand refresh
- *   unset / mock             → local rankings fixture
+ *   TRENDS_DATA_SOURCE=mock  → local rankings fixture
+ *   unset on Vercel          → live (production default)
+ *   unset locally            → mock
  */
 export type TrendsSource = TrendsPayload["source"];
 
 export function getTrendsSource(): TrendsSource {
-  return process.env.TRENDS_DATA_SOURCE === "live" ? "live" : "mock";
+  if (process.env.TRENDS_DATA_SOURCE === "mock") return "mock";
+  if (process.env.TRENDS_DATA_SOURCE === "live") return "live";
+  return process.env.VERCEL ? "live" : "mock";
 }
 
 function loadMockRankings(): RankingsPayload {
+  console.warn("[kindexlab:trends] using mock fixture");
   return {
     updatedAt: rankingsUpdatedAt,
     status: "open",
@@ -33,37 +38,90 @@ function loadMockRankings(): RankingsPayload {
   };
 }
 
-const liveRevalidate = Number(process.env.TRENDS_LIVE_REVALIDATE ?? 300);
-const liveRevalidateSec = Number.isFinite(liveRevalidate) ? liveRevalidate : 300;
+let ingestGate: Promise<RankingsPayload> | null = null;
 
-const ingestWhenEmpty = unstable_cache(
-  async () => {
-    const snapshot = readPersistedSnapshot();
-    const report = await ingestLivePayload({ previous: snapshot });
-    if (report.payload.items.length > 0) return report.payload;
-    return loadMockRankings();
-  },
-  ["enterbuzz-live-ingest"],
-  { revalidate: liveRevalidateSec },
-);
-
-async function loadLiveRankings(): Promise<RankingsPayload> {
-  const snapshot = readPersistedSnapshot();
-  if (snapshot?.items.length) return snapshotToPayload(snapshot);
-  try {
-    return await ingestWhenEmpty();
-  } catch {
-    return loadMockRankings();
-  }
+function snapshotAgeMs(updatedAt?: string): number {
+  if (!updatedAt) return Number.POSITIVE_INFINITY;
+  const parsed = Date.parse(updatedAt);
+  return Number.isFinite(parsed) ? Date.now() - parsed : Number.POSITIVE_INFINITY;
 }
 
-export async function getRankings(): Promise<RankingsPayload> {
-  return getTrendsSource() === "live" ? loadLiveRankings() : loadMockRankings();
+function isNextProductionBuild() {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
+async function ingestFreshRankings(): Promise<RankingsPayload> {
+  if (ingestGate) return ingestGate;
+  ingestGate = (async () => {
+    const previous = readPersistedSnapshot();
+    const started = Date.now();
+    try {
+      const persist =
+        !isNextProductionBuild() &&
+        process.env.VERCEL !== "1" &&
+        (process.env.TRENDS_PERSIST_LIVE === "1" ||
+          (process.env.NODE_ENV === "production" && process.env.TRENDS_PERSIST_LIVE !== "0"));
+      const report = await runIngestJob({ persist });
+      const emptySources = report.sourceResults
+        .filter((source) => !source.ok)
+        .map((source) => ({ id: source.id, count: source.count, reason: source.error }));
+      console.info("[kindexlab:ingest]", {
+        ms: Date.now() - started,
+        persisted: report.persisted,
+        usedPreviousSnapshot: report.usedPreviousSnapshot,
+        itemCount: report.itemCount,
+        updatedAt: report.updatedAt,
+        sources: report.sourceResults.map((source) => ({
+          id: source.id,
+          ok: source.ok,
+          count: source.count,
+        })),
+        empty: emptySources,
+      });
+      if (report.usedPreviousSnapshot) {
+        console.warn("[kindexlab:ingest] scrape returned no rows; serving previous snapshot");
+      }
+      if (report.payload.items.length > 0) return report.payload;
+      console.warn("[kindexlab:ingest] empty payload, falling back");
+      if (previous?.items.length) return snapshotToPayload(previous);
+      return loadMockRankings();
+    } catch (error) {
+      console.error("[kindexlab:ingest] scrape failed", error);
+      if (previous?.items.length) return snapshotToPayload(previous);
+      return loadMockRankings();
+    } finally {
+      ingestGate = null;
+    }
+  })();
+  return ingestGate;
+}
+
+async function loadLiveRankings(options?: { refresh?: boolean }): Promise<RankingsPayload> {
+  const snapshot = readPersistedSnapshot();
+  if (isNextProductionBuild() && snapshot?.items.length) {
+    return snapshotToPayload(snapshot);
+  }
+  const maxAgeMs = trendsRevalidateSec() * 1000;
+  const stale = !snapshot?.items.length || snapshotAgeMs(snapshot.updatedAt) >= maxAgeMs;
+  if (!options?.refresh && snapshot?.items.length && !stale) {
+    return snapshotToPayload(snapshot);
+  }
+  return ingestFreshRankings();
+}
+
+export async function getRankings(options?: { refresh?: boolean }): Promise<RankingsPayload> {
+  const payload = getTrendsSource() === "live" ? await loadLiveRankings(options) : loadMockRankings();
+  const items = payload.items.map(attachTimeframeMetrics);
+  return {
+    ...payload,
+    items,
+    indices: buildIndices(items, payload.indices),
+  };
 }
 
 export function toTrendEntity(entity: RankingEntity, timeframe: Timeframe = "1d"): TrendEntity {
-  const metrics = buildTimeframeMetrics(entity);
-  const snapshot = metrics[timeframe];
+  const metrics = entity.metrics ?? buildTimeframeMetrics(entity);
+  const snapshot = metrics[timeframe] ?? metrics["1m"];
   return {
     id: entity.id,
     slug: entity.slug,
@@ -72,9 +130,9 @@ export function toTrendEntity(entity: RankingEntity, timeframe: Timeframe = "1d"
     category: entity.type,
     rank: entity.rank,
     previousRank: entity.previousRank,
-    buzzScore: snapshot.buzzScore,
-    fluctuationPct: snapshot.changeRate,
-    volume: snapshot.volume,
+    buzzScore: entity.buzzScore,
+    fluctuationPct: snapshot?.changeRate ?? entity.fluctuationRate,
+    volume: entity.volume,
     metrics,
     sparkline: entity.sparkline,
     tags: entity.tags,
@@ -87,13 +145,15 @@ export function toTrendEntity(entity: RankingEntity, timeframe: Timeframe = "1d"
 export async function getTrends(options?: {
   category?: CategoryId;
   timeframe?: Timeframe;
+  refresh?: boolean;
 }): Promise<TrendsPayload> {
-  const payload = await getRankings();
+  const payload = await getRankings({ refresh: options?.refresh });
   const timeframe = options?.timeframe ?? "1d";
   const category = options?.category ?? "all";
-  const items = payload.items
-    .filter((item) => category === "all" || item.type === category)
-    .map((item) => toTrendEntity(item, timeframe));
+  const filtered = payload.items.filter((item) => category === "all" || item.type === category);
+  const items = rankItemsForTimeframe(filtered, timeframe).map((item) =>
+    toTrendEntity(item, timeframe),
+  );
 
   return {
     source: getTrendsSource(),

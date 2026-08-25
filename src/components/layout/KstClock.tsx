@@ -21,13 +21,15 @@ export function KstClock() {
     <time
       suppressHydrationWarning
       dateTime={now?.toISOString()}
-      className="flex min-w-[7.25rem] flex-col items-end leading-tight"
+      className="flex min-w-[10.4rem] flex-col items-end font-sans leading-tight"
       aria-label="한국 표준시"
     >
-      <span className="hidden font-mono text-[10px] text-muted sm:inline">{dateLine}</span>
-      <span className="font-mono text-xs font-semibold tabular-nums tracking-tight">
+      <span className="hidden text-[14.4px] font-medium tracking-tight text-muted sm:inline">
+        {dateLine}
+      </span>
+      <span className="text-[17.3px] font-semibold tabular-nums tracking-tight">
         {timeLine}
-        <span className="ml-1 text-[10px] font-medium text-muted">KST</span>
+        <span className="ml-1 text-[14.4px] font-medium text-muted">KST</span>
       </span>
     </time>
   );

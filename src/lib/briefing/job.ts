@@ -1,7 +1,8 @@
-import { composeArticle, composeEdition } from "@/lib/briefing/compose";
+import { composeArticle, composeEdition, ensureBriefingLength } from "@/lib/briefing/compose";
 import { hasEdition, listSeeded } from "@/lib/briefing/catalog";
 import { editionDateTime, kstDateString } from "@/lib/briefing/dates";
 import { applyAiDraft, generateWithAi } from "@/lib/briefing/ai";
+import { TYPE_ORDER } from "@/lib/categories";
 import { describeEntity, snapshotFromPayload } from "@/lib/briefing/metrics";
 import { persistEdition } from "@/lib/briefing/persist";
 import { getRankings } from "@/lib/providers/trends";
@@ -19,7 +20,17 @@ function factsBlock(payload: RankingsPayload): string {
   const movers = [...snap.gainers.slice(0, 8), ...snap.losers.slice(0, 4)]
     .map(describeEntity)
     .join("\n");
-  return `지수\n${indices}\n\n종목\n${movers}`;
+  const sectors = TYPE_ORDER.map((type) => {
+    const items = snap.byType[type] ?? [];
+    const top = items.slice(0, 3).map(describeEntity).join(", ");
+    const bottom = [...items]
+      .sort((a, b) => a.fluctuationRate - b.fluctuationRate)
+      .slice(0, 2)
+      .map(describeEntity)
+      .join(", ");
+    return `${type}: 상승 ${top || "-"} / 하락 ${bottom || "-"}`;
+  }).join("\n");
+  return `지수\n${indices}\n\n종목\n${movers}\n\n카테고리\n${sectors}`;
 }
 
 async function maybeAi(article: BriefingArticle, payload: RankingsPayload): Promise<BriefingArticle> {
@@ -29,7 +40,8 @@ async function maybeAi(article: BriefingArticle, payload: RankingsPayload): Prom
     category: article.category,
     facts: factsBlock(payload),
   });
-  return draft ? applyAiDraft(article, draft) : article;
+  const next = draft ? applyAiDraft(article, draft) : article;
+  return ensureBriefingLength(next, snapshotFromPayload(payload));
 }
 
 export async function generateEdition(

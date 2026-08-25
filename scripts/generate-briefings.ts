@@ -1,7 +1,7 @@
 /**
  * Backend template for the daily briefing job.
  *
- * Generates 1–3 analytical articles (1000+ words) from top-ranking entities.
+ * Generates 1 main briefing plus one 1000+ word deep-dive per heatmap category.
  * Optional OpenAI drafting runs when OPENAI_API_KEY is set; otherwise the
  * deterministic composer is used.
  *

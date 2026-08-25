@@ -1,7 +1,7 @@
 import { AffiliateTeaser } from "@/components/affiliate/AffiliateTeaser";
 import { TimeframeChart } from "@/components/charts/TimeframeChart";
-import { TYPE_LABEL, formatCompact, formatRate, formatScore } from "@/lib/format";
-import { buildTimeframeMetrics, timeframeLabel } from "@/lib/timeframes";
+import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel } from "@/lib/format";
+import { buildTimeframeMetrics, scoreForTimeframe, timeframeLabel, volumeForTimeframe } from "@/lib/timeframes";
 import type { RankingEntity, SeriesPoint, Timeframe } from "@/lib/types";
 
 const PREVIEW_FRAMES: Timeframe[] = ["5m", "1d", "1w"];
@@ -22,7 +22,7 @@ export function HoverCard({
   y: number;
 }) {
   const up = change > 0;
-  const metrics = buildTimeframeMetrics(entity);
+  const metrics = entity.metrics ?? buildTimeframeMetrics(entity);
 
   return (
     <div
@@ -39,7 +39,7 @@ export function HoverCard({
         </p>
       </div>
       <p className="font-mono text-xs text-muted">
-        {formatScore(entity.buzzScore)} · 거래량 {formatCompact(entity.volume)}
+        {formatScore(scoreForTimeframe(entity, timeframe))} · {metricLabel(entity.type)} {formatCompact(volumeForTimeframe(entity, timeframe))}
       </p>
       <div className="mt-2 grid grid-cols-3 gap-1 font-mono text-[10px]">
         {PREVIEW_FRAMES.map((frame) => {

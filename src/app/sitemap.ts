@@ -3,6 +3,8 @@ import { SITE } from "@/lib/site";
 import { rankingUrl } from "@/lib/slugs";
 import type { MetadataRoute } from "next";
 
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [slugs, briefingSlugs, editionDates] = await Promise.all([
     getAllSlugs(),
@@ -20,6 +22,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     { url: `${SITE.url}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${SITE.url}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE.url}/terms`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE.url}/disclaimer`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE.url}/contact`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
     ...editionDates.map((date) => ({
       url: `${SITE.url}/briefing/archive/${date}`,
       lastModified: now,

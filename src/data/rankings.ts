@@ -19,7 +19,7 @@ function product(
 export const marketIndices: MarketIndex[] = [
   {
     id: "k-buzz",
-    label: "엔터버즈 종합",
+    label: "KindexLab 종합",
     value: 1284.62,
     changeRate: 2.41,
     note: "예능·아이돌 동반 강세",
@@ -65,6 +65,41 @@ export const marketIndices: MarketIndex[] = [
     value: 1270.85,
     changeRate: 3.11,
     note: "토일 드라마 견인",
+  },
+  {
+    id: "webtoon",
+    label: "웹툰지수",
+    value: 1320.4,
+    changeRate: 4.22,
+    note: "연재일 조회 강세",
+  },
+  {
+    id: "shorts",
+    label: "숏폼지수",
+    value: 1298.6,
+    changeRate: 6.14,
+    note: "유튜브 조회 강세",
+  },
+  {
+    id: "mobile",
+    label: "모바일지수",
+    value: 1188.2,
+    changeRate: 3.42,
+    note: "앱스토어 시즌 이벤트",
+  },
+  {
+    id: "pcgame",
+    label: "PC게임지수",
+    value: 1344.9,
+    changeRate: 2.18,
+    note: "스팀 동접 상승",
+  },
+  {
+    id: "console",
+    label: "콘솔지수",
+    value: 1112.4,
+    changeRate: 1.66,
+    note: "신작·스토어 노출",
   },
 ];
 

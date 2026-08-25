@@ -4,13 +4,18 @@ export type EntityType =
   | "tv_show"
   | "influencer"
   | "music_chart"
-  | "tv_rating";
+  | "tv_rating"
+  | "webtoon"
+  | "shorts"
+  | "mobile_game"
+  | "pc_game"
+  | "console_game";
 
 export type CategoryId = "all" | EntityType;
 
 export type ViewMode = "treemap" | "list";
 
-export type Timeframe = "5m" | "10m" | "30m" | "60m" | "1d" | "1w" | "1m";
+export type Timeframe = "1m" | "5m" | "10m" | "30m" | "60m" | "120m" | "1d" | "1w" | "1mo";
 
 export type MarketStatus = "open" | "closed";
 
@@ -58,6 +63,8 @@ export interface RankingEntity {
   summary: string;
   analysis: string;
   products: AffiliateProduct[];
+  metrics?: TimeframeMetrics;
+  imageUrl?: string;
 }
 
 /** Public API DTO. Mock today; swap the provider to a scraper later. */
@@ -97,6 +104,13 @@ export interface MarketIndex {
   note: string;
 }
 
+export interface BriefingCoverImage {
+  src: string;
+  alt: string;
+  photographer?: string;
+  source?: "live" | "unsplash" | "fallback";
+}
+
 export interface DailyBriefing {
   id: string;
   slug: string;
@@ -106,6 +120,7 @@ export interface DailyBriefing {
   updatedAt: string;
   readingMinutes: number;
   wordCount: number;
+  coverImage?: BriefingCoverImage;
   sections: BriefingSection[];
 }
 
@@ -120,6 +135,7 @@ export interface BriefingArticle extends DailyBriefing {
 
 export interface BriefingSection {
   heading?: string;
+  headingLevel?: 2 | 3;
   paragraphs: string[];
 }
 

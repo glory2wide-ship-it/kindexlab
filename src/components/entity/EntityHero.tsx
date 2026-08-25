@@ -1,4 +1,4 @@
-import { TYPE_LABEL, formatCompact, formatRate, formatScore, scoreLabel } from "@/lib/format";
+import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel, scoreLabel } from "@/lib/format";
 import { buildTimeframeMetrics } from "@/lib/timeframes";
 import type { RankingEntity, Timeframe } from "@/lib/types";
 
@@ -38,7 +38,7 @@ export function EntityHero({ entity }: { entity: RankingEntity }) {
           <dd className="mt-1 font-mono text-lg">{formatScore(entity.openScore)}</dd>
         </div>
         <div>
-          <dt className="text-muted">거래량</dt>
+          <dt className="text-muted">{metricLabel(entity.type)}</dt>
           <dd className="mt-1 font-mono text-lg">{formatCompact(entity.volume)}</dd>
         </div>
         <div>

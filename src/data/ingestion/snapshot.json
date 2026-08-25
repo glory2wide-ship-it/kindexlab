@@ -73,7 +73,7 @@
   "indices": [
     {
       "id": "k-buzz",
-      "label": "엔터버즈 종합",
+      "label": "KindexLab 종합",
       "value": 911.73,
       "changeRate": -0.05,
       "note": "실시간 수집 합산"

@@ -17,10 +17,6 @@ export function BriefingRail({
             Today&apos;s Desk
           </p>
           <h2 className="mt-1 text-xl font-semibold tracking-tight">오늘의 트렌드 브리핑</h2>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
-            매일 종합 1편과 카테고리 심층 1~2편을 자동 발행합니다. 전문은 개별 페이지에 1,000단어
-            이상으로 남기고, 어제 글은 아카이브 검색으로 쌓입니다.
-          </p>
         </div>
         <div className="flex gap-3 text-sm">
           <Link href="/briefing" className="font-medium text-accent hover:underline">
@@ -31,9 +27,9 @@ export function BriefingRail({
           </Link>
         </div>
       </div>
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+      <div className="space-y-4">
         <BriefingCard article={main} />
-        <div className="grid gap-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {dives.map((article) => (
             <BriefingCard key={article.slug} article={article} />
           ))}

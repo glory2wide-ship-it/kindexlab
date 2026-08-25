@@ -8,18 +8,27 @@ import {
   volumeFromRank,
 } from "@/lib/ingestion/score";
 import { classifyBuzzType, fetchNaverNewsBoost } from "@/lib/ingestion/sources/buzz";
+import { pickConsoleGames, pickMobileGames, pickPcGames } from "@/lib/ingestion/sources/games";
 import { pickPrimaryMusic } from "@/lib/ingestion/sources/music";
+import { pickPrimaryShorts } from "@/lib/ingestion/sources/shorts";
+import { pickPrimaryWebtoon } from "@/lib/ingestion/sources/webtoon";
+import { attachTimeframeMetrics, changeForEntity, volumeForTimeframe } from "@/lib/timeframes";
 import type { CatalogMatch, ChartRow, IngestSnapshot, SourceResult } from "@/lib/ingestion/types";
 import type { AffiliateProduct, EntityType, MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
 
 const INDEX_META: { id: string; label: string; type?: EntityType; note: string }[] = [
-  { id: "k-buzz", label: "엔터버즈 종합", note: "실시간 수집 합산" },
+  { id: "k-buzz", label: "KindexLab 종합", note: "실시간 수집 합산" },
   { id: "kpop", label: "K-POP지수", type: "kpop", note: "차트 아티스트 수급" },
   { id: "broadcast", label: "방송지수", type: "tv_show", note: "편성·화제 합산" },
   { id: "celebrity", label: "셀럽지수", type: "celebrity", note: "검색·뉴스 버즈" },
   { id: "influencer", label: "인플지수", type: "influencer", note: "크리에이터 언급" },
   { id: "music", label: "음원지수", type: "music_chart", note: "국내 음원 차트" },
   { id: "ratings", label: "시청률지수", type: "tv_rating", note: "닐슨 가구 시청률" },
+  { id: "webtoon", label: "웹툰지수", type: "webtoon", note: "네이버·카카오 인기" },
+  { id: "shorts", label: "숏폼지수", type: "shorts", note: "유튜브·숏폼 조회" },
+  { id: "mobile", label: "모바일지수", type: "mobile_game", note: "앱스토어 게임 인기" },
+  { id: "pcgame", label: "PC게임지수", type: "pc_game", note: "스팀 동접·플레이타임" },
+  { id: "console", label: "콘솔지수", type: "console_game", note: "콘솔 트렌드 순위" },
 ];
 
 function cleanTitle(value: string): string {
@@ -47,7 +56,13 @@ function defaultProducts(name: string, type: EntityType): AffiliateProduct[] {
       ? [`${name} 앨범`, "무선 이어폰", "응원봉"]
       : type === "tv_show" || type === "tv_rating"
         ? [`${name} 굿즈`, "홈시네마 프로젝터", "팝콘"]
-        : [`${name} 굿즈`, `${name} 모자`, "포토카드 바인더"];
+        : type === "webtoon"
+          ? [`${name} 단행본`, `${name} 굿즈`, "태블릿"]
+          : type === "shorts"
+            ? [`${name} 관련 굿즈`, "스마트폰 거치대", "무선 이어폰"]
+            : type === "mobile_game" || type === "pc_game" || type === "console_game"
+              ? [`${name} 가이드북`, "게이밍 헤드셋", "컨트롤러"]
+          : [`${name} 굿즈`, `${name} 모자`, "포토카드 바인더"];
   return queries.map((searchQuery, index) => ({
     id: `live-${slugify(name)}-${index + 1}`,
     name: searchQuery,
@@ -69,6 +84,17 @@ function takeTop(rows: ChartRow[], limit: number): ChartRow[] {
     .filter((row) => cleanTitle(row.title).length >= 1)
     .sort((a, b) => a.rank - b.rank)
     .slice(0, limit);
+}
+
+function scaledVolume(views: number | undefined, rank: number, divisor: number, fallback = 90_000): number {
+  if (!views || views <= 0) return volumeFromRank(rank, fallback);
+  return Math.max(70_000, Math.min(Math.round(views / divisor), 4_800_000));
+}
+
+function shortsVolume(views: number | undefined, rank: number): number {
+  const ranked = volumeFromRank(rank, 110_000);
+  if (!views || views <= 0) return ranked;
+  return Math.max(ranked, Math.min(Math.round(views / 4), 4_800_000));
 }
 
 function mergeRows(groups: ChartRow[][]): ChartRow[] {
@@ -118,21 +144,37 @@ function toEntity(
 ): RankingEntity {
   const title = cleanTitle(row.title);
   const catalog: CatalogMatch | undefined = matchCatalog(title, row.subtitle);
-  const slug = catalog?.slug ?? slugify(title);
-  const knownType = catalog?.type ?? type;
+  const chartLocked = type === "shorts" || type === "webtoon" || type === "mobile_game" || type === "pc_game" || type === "console_game";
+  const knownType = chartLocked ? type : (catalog?.type ?? type);
+  const slug =
+    type === "shorts"
+      ? `shorts-${slugify(title) || catalog?.slug || `item-${row.rank}`}`
+      : (catalog?.slug ?? slugify(title));
   const score =
     row.metric && type === "tv_rating"
       ? scoreFromMetric(row.metric)
-      : row.metric && (type === "celebrity" || type === "influencer")
-        ? scoreFromRank(row.rank, 20, 900, 1700) + Math.min(row.metric, 30) * 6
-        : scoreFromRank(row.rank, 20);
+      : row.metric && (type === "webtoon" || type === "shorts" || type === "mobile_game" || type === "pc_game" || type === "console_game")
+        ? scoreFromRank(row.rank, 40, 900, 1860) + Math.min(Math.max(row.metric, 0), 12) * 8
+        : row.metric && (type === "celebrity" || type === "influencer")
+          ? scoreFromRank(row.rank, 20, 900, 1700) + Math.min(row.metric, 30) * 6
+          : scoreFromRank(row.rank, 20);
   const history = previous?.scoreHistory?.[slug] ?? [];
   const previousScore = history.at(-1);
   const fluctuationRate = row.previousRank
     ? Number((((row.previousRank - row.rank) / Math.max(row.previousRank, 1)) * 12).toFixed(2))
     : changeFromScores(score, previousScore);
   const sparkline = sparklineFromHistory(history, score);
-  const volume = row.volume ?? volumeFromRank(row.rank, knownType === "music_chart" ? 120_000 : 70_000);
+  const volume =
+    knownType === "webtoon"
+      ? scaledVolume(row.volume, row.rank, 35, 95_000)
+      : knownType === "shorts"
+        ? shortsVolume(row.volume, row.rank)
+        : knownType === "pc_game"
+          ? scaledVolume(row.volume, row.rank, 4, 100_000)
+          : knownType === "mobile_game" || knownType === "console_game"
+            ? (row.volume ?? volumeFromRank(row.rank, 88_000))
+            : (row.volume ??
+              volumeFromRank(row.rank, knownType === "music_chart" ? 120_000 : 70_000));
   const tags = [...new Set([...(catalog?.tags ?? []), ...(row.tags ?? []), ...extraTags])].slice(0, 5);
   const sourceLabel = tags[0] ?? "실시간";
   const nameEn =
@@ -154,8 +196,9 @@ function toEntity(
     history: historyPoints(sparkline),
     tags: tags.length ? tags : [sourceLabel],
     summary: `${title}은(는) ${sourceLabel} 기준으로 ${row.rank}위입니다. 등락 ${fluctuationRate.toFixed(2)}%, 거래량 대용치는 ${volume.toLocaleString("ko-KR")}입니다.`,
-    analysis: `${title} 수급은 공개 차트·시청률·뉴스 피드를 합산한 실시간 스냅샷입니다. 순위 변동은 직전 수집 대비 버즈 점수 변화이며, 상세 분석은 일일 브리핑에서 이어집니다.`,
+    analysis: `${title} 수급은 공개 차트·시청률·웹툰 인기·숏폼 조회·게임 순위·뉴스 피드를 합산한 실시간 스냅샷입니다. 순위 변동은 직전 수집 대비 버즈 점수 변화이며, 상세 분석은 일일 브리핑에서 이어집니다.`,
     products: catalog?.products?.length ? catalog.products : defaultProducts(title, knownType),
+    imageUrl: row.imageUrl,
   };
 }
 
@@ -168,20 +211,85 @@ function uniqueBySlug(items: RankingEntity[]): RankingEntity[] {
   return [...map.values()];
 }
 
-function buildIndices(items: RankingEntity[]): MarketIndex[] {
+function mean(values: number[]): number {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function sparklineChange(item: RankingEntity): number {
+  const series = item.sparkline.filter((value) => Number.isFinite(value));
+  if (series.length < 2) return 0;
+  return changeFromScores(series[series.length - 1] ?? 0, series[0]);
+}
+
+function weightedWindowChange(items: RankingEntity[]): number {
+  const leaders = [...items]
+    .sort((a, b) => volumeForTimeframe(b, "1d") - volumeForTimeframe(a, "1d") || a.rank - b.rank)
+    .slice(0, 12);
+  let weighted = 0;
+  let mass = 0;
+  for (const item of leaders) {
+    const weight = Math.sqrt(Math.max(volumeForTimeframe(item, "1d"), 1));
+    weighted += changeForEntity(item, "1d") * weight;
+    mass += weight;
+  }
+  return mass > 0 ? Number((weighted / mass).toFixed(2)) : 0;
+}
+
+function pickIndexChange(candidates: number[]): number {
+  const finite = candidates.filter((value) => Number.isFinite(value));
+  const strong = finite.find((value) => Math.abs(value) >= 0.5 && Math.abs(value) <= 18);
+  if (strong != null) return Number(strong.toFixed(2));
+  const modest = [...finite]
+    .filter((value) => Math.abs(value) >= 0.05 && Math.abs(value) <= 18)
+    .sort((a, b) => Math.abs(b) - Math.abs(a));
+  if (modest[0] != null) return Number(modest[0].toFixed(2));
+  const fallback = finite.find((value) => Math.abs(value) >= 0.05) ?? 0;
+  return Number(Math.max(-18, Math.min(18, fallback)).toFixed(2));
+}
+
+function entityIndexChange(item: RankingEntity): number {
+  const live = changeForEntity(item, "1d");
+  if (Number.isFinite(live) && live !== 0) return live;
+  if (Number.isFinite(item.fluctuationRate) && item.fluctuationRate !== 0) return item.fluctuationRate;
+  return changeFromScores(item.buzzScore, item.openScore);
+}
+
+function directedSectorChange(items: RankingEntity[]): number {
+  if (!items.length) return 0;
+  const ranked = [...items].sort(
+    (a, b) =>
+      volumeForTimeframe(b, "1d") - volumeForTimeframe(a, "1d") ||
+      a.rank - b.rank,
+  );
+  const leaders = ranked.slice(0, Math.max(3, Math.ceil(ranked.length * 0.4)));
+  return mean(leaders.map(entityIndexChange));
+}
+
+export function buildIndices(items: RankingEntity[], previous?: MarketIndex[]): MarketIndex[] {
   return INDEX_META.map((meta) => {
-    const subset = meta.type ? items.filter((item) => item.type === meta.type) : items;
+    const subset = (meta.type ? items.filter((item) => item.type === meta.type) : items).map(
+      attachTimeframeMetrics,
+    );
     const value = subset.length
       ? Number((subset.reduce((sum, item) => sum + item.buzzScore, 0) / subset.length).toFixed(2))
       : 1000;
-    const changeRate = subset.length
-      ? Number((subset.reduce((sum, item) => sum + item.fluctuationRate, 0) / subset.length).toFixed(2))
+    const vsPrevious = changeFromScores(
+      value,
+      previous?.find((index) => index.id === meta.id)?.value,
+    );
+    const stored = subset.length ? mean(subset.map(entityIndexChange)) : 0;
+    const vsOpen = subset.length
+      ? mean(subset.map((item) => changeFromScores(item.buzzScore, item.openScore)))
       : 0;
+    const spark = subset.length ? mean(subset.map(sparklineChange)) : 0;
+    const windowed = subset.length ? weightedWindowChange(subset) : 0;
+    const directed = subset.length ? directedSectorChange(subset) : 0;
     return {
       id: meta.id,
       label: meta.label,
       value,
-      changeRate,
+      changeRate: pickIndexChange([vsPrevious, stored, directed, windowed, vsOpen, spark]),
       note: meta.note,
     };
   });
@@ -195,6 +303,18 @@ export async function composeLiveSnapshot(
   const musicPrimary = pickPrimaryMusic(sources);
   const musicRows = takeTop(musicPrimary?.items ?? [], 50);
   const artists = artistRows(musicRows);
+  const webtoonPrimary = pickPrimaryWebtoon(sources);
+  const webtoonDaily = takeTop(byId("naver-webtoon-daily")?.items ?? webtoonPrimary?.items ?? [], 40);
+  const webtoonWeekly = takeTop(byId("naver-webtoon-weekly")?.items ?? [], 50);
+  const kakaoWebtoon = takeTop(byId("kakao-webtoon")?.items ?? [], 30);
+  const webtoonRows = takeTop(mergeRows([webtoonDaily, webtoonWeekly, kakaoWebtoon]), 40);
+  const shortsRows = takeTop(pickPrimaryShorts(sources)?.items ?? [], 30);
+  const mobileRows = takeTop(mergeRows([pickMobileGames(sources)]), 30);
+  const pcRows = takeTop(
+    pickPcGames(sources).filter((row) => !/^Steam \d+$/i.test(row.title)),
+    30,
+  );
+  const consoleRows = takeTop(pickConsoleGames(sources), 24);
 
   const terrestrial = byId("nielsen-terrestrial")?.items ?? [];
   const cable = byId("nielsen-cable")?.items ?? [];
@@ -222,12 +342,23 @@ export async function composeLiveSnapshot(
     metric: (row.metric ?? 0) + Math.min((boosts.get(row.title) ?? 0) / 500, 40),
   }));
 
-  const usedNames = [...musicRows, ...artists, ...ratings, ...shows].map((row) => row.title);
+  const usedNames = [
+    ...musicRows,
+    ...artists,
+    ...ratings,
+    ...shows,
+    ...webtoonRows,
+    ...shortsRows,
+    ...mobileRows,
+    ...pcRows,
+    ...consoleRows,
+  ].map((row) => row.title);
+  const chartTypes = new Set(["music_chart", "webtoon", "shorts", "mobile_game", "pc_game", "console_game"]);
   const buzzEntities = boostedNews
     .filter((row) => !usedNames.some((name) => namesOverlap(name, row.title)))
     .map((row) => {
       const type = classifyBuzzType(row.title, row.tags ?? []);
-      if (type === "music_chart") return toEntity(row, "celebrity", previous, row.tags ?? []);
+      if (chartTypes.has(type)) return toEntity(row, "celebrity", previous, row.tags ?? []);
       return toEntity(row, type, previous, row.tags ?? []);
     });
 
@@ -236,16 +367,25 @@ export async function composeLiveSnapshot(
     ...artists.map((row) => toEntity(row, "kpop", previous, ["차트 아티스트"])),
     ...ratings.map((row) => toEntity(row, "tv_rating", previous, row.tags ?? [])),
     ...shows.map((row) => toEntity(row, "tv_show", previous, row.tags ?? [])),
+    ...webtoonRows.map((row) => toEntity(row, "webtoon", previous, row.tags ?? [])),
+    ...shortsRows.map((row) => toEntity(row, "shorts", previous, row.tags ?? [])),
+    ...mobileRows.map((row) => toEntity(row, "mobile_game", previous, row.tags ?? [])),
+    ...pcRows.map((row) => toEntity(row, "pc_game", previous, row.tags ?? [])),
+    ...consoleRows.map((row) => toEntity(row, "console_game", previous, row.tags ?? [])),
     ...buzzEntities,
   ]);
 
   const items = built
     .sort((a, b) => b.buzzScore - a.buzzScore)
-    .map((item, index) => ({
-      ...item,
-      rank: index + 1,
-      previousRank: previous?.items.find((row) => row.slug === item.slug)?.rank ?? index + 1,
-    }));
+    .map((item, index) => {
+      const rank = index + 1;
+      const prev = previous?.items.find((row) => row.slug === item.slug);
+      const previousRank = prev?.rank ?? rank;
+      const scoreDelta =
+        prev && prev.buzzScore > 0 ? changeFromScores(item.buzzScore, prev.buzzScore) : 0;
+      const fluctuationRate = scoreDelta !== 0 ? scoreDelta : item.fluctuationRate;
+      return { ...item, rank, previousRank, fluctuationRate };
+    });
 
   const scoreHistory = { ...(previous?.scoreHistory ?? {}) };
   for (const item of items) {
@@ -255,7 +395,7 @@ export async function composeLiveSnapshot(
   return {
     status: items.length ? "open" : "closed",
     sources: sources.map((item) => ({ id: item.id, ok: item.ok, count: item.count, error: item.error })),
-    indices: buildIndices(items),
+    indices: buildIndices(items, previous?.indices),
     items,
     scoreHistory,
   };

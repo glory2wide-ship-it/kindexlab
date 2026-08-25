@@ -78,3 +78,173 @@ body {
 .ticker-track:hover {
   animation-play-state: paused;
 }
+
+@keyframes market-pulse {
+  0% {
+    opacity: 0.45;
+    transform: scale(0.992);
+    filter: brightness(1.18);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.006);
+    filter: brightness(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.market-live-flash {
+  animation: market-pulse 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .market-live-flash,
+  .flip-leaf-top,
+  .flip-leaf-bottom {
+    animation: none;
+  }
+}
+
+.flip-board {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12em;
+  color: inherit;
+  font: inherit;
+  letter-spacing: -0.04em;
+}
+
+.kpi-score {
+  max-width: 100%;
+  font-size: clamp(0.94rem, calc(100cqi / 7.17), 1.62rem);
+  line-height: 1.15;
+}
+
+.kpi-score .flip-board {
+  max-width: 100%;
+  gap: 0.05em;
+}
+
+.kpi-score .flip-glyph {
+  width: 0.62em;
+  height: 1.15em;
+}
+
+.kpi-score .flip-punct {
+  width: 0.26em;
+}
+
+.kpi-score .flip-glyph-face,
+.kpi-score .flip-half-bottom .flip-glyph-face,
+.kpi-score .flip-leaf-bottom .flip-glyph-face {
+  height: 1.15em;
+}
+
+.flip-punct {
+  display: inline-block;
+  width: 0.32em;
+  text-align: center;
+}
+
+.flip-glyph {
+  position: relative;
+  display: inline-block;
+  width: 0.7em;
+  height: 1.22em;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-line) 85%, transparent);
+  border-radius: 0.14em;
+  background: color-mix(in srgb, var(--color-line) 28%, var(--color-panel));
+  perspective: 14em;
+  transform-style: preserve-3d;
+}
+
+.flip-glyph::after {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  z-index: 3;
+  height: 1px;
+  background: color-mix(in srgb, var(--color-ink) 22%, transparent);
+  content: "";
+}
+
+.flip-half,
+.flip-leaf {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 50%;
+  overflow: hidden;
+}
+
+.flip-half-top,
+.flip-leaf-top {
+  top: 0;
+}
+
+.flip-half-bottom,
+.flip-leaf-bottom {
+  top: 50%;
+}
+
+.flip-glyph-face {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: flex;
+  height: 1.22em;
+  align-items: center;
+  justify-content: center;
+}
+
+.flip-half-top .flip-glyph-face,
+.flip-leaf-top .flip-glyph-face {
+  top: 0;
+}
+
+.flip-half-bottom .flip-glyph-face,
+.flip-leaf-bottom .flip-glyph-face {
+  bottom: 0;
+}
+
+.flip-leaf {
+  z-index: 2;
+  background: color-mix(in srgb, var(--color-line) 28%, var(--color-panel));
+  backface-visibility: hidden;
+}
+
+.flip-leaf-top {
+  transform-origin: bottom center;
+  animation: flip-fold-top 0.32s ease-in var(--flip-delay, 0ms) forwards;
+}
+
+.flip-leaf-bottom {
+  transform-origin: top center;
+  transform: rotateX(90deg);
+  animation: flip-fold-bottom 0.28s ease-out calc(var(--flip-delay, 0ms) + 0.32s)
+    forwards;
+}
+
+@keyframes flip-fold-top {
+  from {
+    transform: rotateX(0deg);
+  }
+  to {
+    transform: rotateX(-90deg);
+  }
+}
+
+@keyframes flip-fold-bottom {
+  from {
+    transform: rotateX(90deg);
+  }
+  to {
+    transform: rotateX(0deg);
+  }
+}

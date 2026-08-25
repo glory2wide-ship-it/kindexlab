@@ -36,7 +36,7 @@ export async function generateWithAi(input: {
           {
             role: "system",
             content:
-              "You are EnterBuzz, a Korean K-culture market desk. Write analytical Korean journalism, not hype. Return JSON {title, excerpt, sections:[{heading, paragraphs: string[]}]} with at least 7 sections and 1000+ Korean space-separated words. Do not mention advertising revenue models.",
+              "You are KindexLab (킨덱스랩), a Korean K-culture market desk at kindexlab.com. Write analytical Korean journalism, not hype. Return JSON {title, excerpt, sections:[{heading, headingLevel: 2|3, paragraphs: string[]}]}. Mix H2 market-overview headings with H3 sub-analysis. At least 9 sections and 1200+ Korean space-separated words of rich context, not short summaries. Do not mention advertising revenue models.",
           },
           {
             role: "user",
@@ -61,6 +61,15 @@ export async function generateWithAi(input: {
       sections: draft.sections,
     });
     if (words < 1000) return null;
+    draft.sections = draft.sections.map((section, index) => ({
+      ...section,
+    headingLevel:
+      section.headingLevel === 3 || section.headingLevel === 2
+        ? section.headingLevel
+        : index === 0 || index % 3 === 0
+          ? 2
+          : 3,
+    }));
     return draft;
   } catch {
     return null;

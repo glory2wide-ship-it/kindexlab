@@ -1,6 +1,7 @@
 import extraFile from "@/data/briefings/extra.json";
 import { publishedBriefings } from "@/data/briefings/published";
 import { compareDatesDesc } from "@/lib/briefing/dates";
+import { withBriefingCover } from "@/lib/briefing/cover";
 import type { BriefingArticle } from "@/lib/types";
 
 function extras(): BriefingArticle[] {
@@ -10,7 +11,7 @@ function extras(): BriefingArticle[] {
 export function listSeeded(): BriefingArticle[] {
   const map = new Map<string, BriefingArticle>();
   for (const item of [...publishedBriefings, ...extras()]) {
-    map.set(item.slug, item);
+    map.set(item.slug, withBriefingCover(item));
   }
   return [...map.values()].sort(compareArticles);
 }

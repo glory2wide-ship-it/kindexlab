@@ -12,7 +12,8 @@ export async function persistSnapshot(
     await mkdir(path.dirname(file), { recursive: true });
     await writeFile(file, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
     return { wrote: true, path: snapshotRel };
-  } catch {
+  } catch (error) {
+    console.error("[kindexlab:ingest] persist failed", error);
     return { wrote: false, path: snapshotRel };
   }
 }

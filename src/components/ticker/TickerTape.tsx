@@ -21,7 +21,7 @@ export function TickerTape({ items }: { items: RankingEntity[] }) {
               key={`${item.id}-${index}`}
               href={rankingPath(item.slug)}
               suppressHydrationWarning
-              className="flex shrink-0 items-center gap-2 font-mono text-xs tracking-wide"
+              className="flex shrink-0 items-center gap-2 font-sans text-[13.8px] font-medium tracking-tight"
             >
               <span className="text-muted">{String(item.rank).padStart(2, "0")}</span>
               <span className="text-ink">{item.name}</span>

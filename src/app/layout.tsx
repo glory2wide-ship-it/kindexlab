@@ -27,18 +27,30 @@ export const metadata: Metadata = {
   },
   description: SITE.description,
   keywords: [
+    "KindexLab",
+    "킨덱스랩",
+    "kindexlab.com",
     "화제성 순위",
     "셀럽 랭킹",
     "예능 순위",
     "K-POP",
     "음원 차트",
     "시청률",
+    "웹툰",
+    "네이버웹툰",
+    "숏폼",
+    "틱톡",
+    "유튜브 인기",
+    "모바일 게임",
+    "스팀",
+    "콘솔 게임",
     "트리맵",
     "버즈 지수",
   ],
   openGraph: {
     type: "website",
     locale: SITE.locale,
+    url: SITE.url,
     siteName: SITE.name,
     title: `${SITE.name} · ${SITE.tagline}`,
     description: SITE.description,
@@ -50,6 +62,9 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   alternates: { canonical: "/" },
+  other: {
+    "application-name": SITE.name,
+  },
 };
 
 const adsenseClient = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
@@ -77,6 +92,24 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             strategy="afterInteractive"
           />
         ) : null}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: SITE.name,
+              alternateName: SITE.nameKo,
+              url: SITE.url,
+              email: SITE.contactEmail,
+              publisher: {
+                "@type": "Organization",
+                name: SITE.company,
+                email: SITE.contactEmail,
+              },
+            }),
+          }}
+        />
         <ThemeProvider>
           <SiteHeader />
           <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:py-8">{children}</main>

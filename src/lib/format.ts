@@ -56,12 +56,32 @@ export const TYPE_LABEL: Record<string, string> = {
   influencer: "인플루언서",
   music_chart: "음원",
   tv_rating: "시청률",
+  webtoon: "웹툰",
+  shorts: "숏폼",
+  mobile_game: "모바일",
+  pc_game: "PC게임",
+  console_game: "콘솔",
 };
 
 export function scoreLabel(type: string): string {
   if (type === "music_chart") return "차트 지수";
   if (type === "tv_rating") return "시청률 지수";
+  if (type === "webtoon") return "인기 지수";
+  if (type === "shorts") return "조회 지수";
+  if (type === "mobile_game") return "인기 지수";
+  if (type === "pc_game") return "플레이 지수";
+  if (type === "console_game") return "트렌드 지수";
   return "버즈 점수";
+}
+
+export function metricLabel(type: string): string {
+  if (type === "shorts" || type === "webtoon") return "조회";
+  if (type === "mobile_game") return "인기";
+  if (type === "pc_game") return "동접";
+  if (type === "console_game") return "트렌드";
+  if (type === "tv_rating") return "시청";
+  if (type === "music_chart") return "스트리밍";
+  return "거래량";
 }
 
 export function formatLiveKst(date: Date): { dateLine: string; timeLine: string } {

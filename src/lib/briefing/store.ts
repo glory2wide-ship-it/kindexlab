@@ -1,20 +1,18 @@
 import { unstable_cache } from "next/cache";
-import { marketIndices, rankings, rankingsUpdatedAt } from "@/data/rankings";
 import { compareArticles, listSeeded } from "@/lib/briefing/catalog";
 import { composeEdition } from "@/lib/briefing/compose";
+import { withBriefingCover } from "@/lib/briefing/cover";
 import { compareDatesDesc, editionDateTime, isLiveEdition, kstDateString } from "@/lib/briefing/dates";
-import type { BriefingArticle, CategoryId, RankingsPayload } from "@/lib/types";
-
-const payload: RankingsPayload = {
-  updatedAt: rankingsUpdatedAt,
-  status: "open",
-  indices: marketIndices,
-  items: rankings,
-};
+import { CATEGORIES } from "@/lib/categories";
+import { getRankings } from "@/lib/providers/trends";
+import type { BriefingArticle, CategoryId } from "@/lib/types";
 
 const composeLiveEdition = unstable_cache(
-  async (editionDate: string) => composeEdition(payload, editionDate, editionDateTime(editionDate)),
-  ["briefing-live-edition"],
+  async (editionDate: string) => {
+    const payload = await getRankings();
+    return composeEdition(payload, editionDate, editionDateTime(editionDate));
+  },
+  ["briefing-live-edition-v12"],
   { revalidate: 3600 },
 );
 
@@ -30,7 +28,8 @@ export async function listAllBriefings(): Promise<BriefingArticle[]> {
 
 export async function getBriefingBySlug(slug: string): Promise<BriefingArticle | undefined> {
   const articles = await listAllBriefings();
-  return articles.find((item) => item.slug === slug);
+  const article = articles.find((item) => item.slug === slug);
+  return article ? withBriefingCover(article) : undefined;
 }
 
 export async function getTodaysBriefings(): Promise<BriefingArticle[]> {
@@ -109,14 +108,6 @@ export function parseScopeParam(raw?: string | string[]): "today" | "archive" | 
 export function parseCategoryParam(raw?: string | string[]): CategoryId | undefined {
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (!value || value === "all") return value === "all" ? "all" : undefined;
-  const allowed: CategoryId[] = [
-    "all",
-    "kpop",
-    "celebrity",
-    "tv_show",
-    "influencer",
-    "music_chart",
-    "tv_rating",
-  ];
+  const allowed = CATEGORIES.map((item) => item.id);
   return allowed.includes(value as CategoryId) ? (value as CategoryId) : undefined;
 }

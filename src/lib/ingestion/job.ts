@@ -4,11 +4,16 @@ import path from "node:path";
 import { composeLiveSnapshot, snapshotToPayload } from "@/lib/ingestion/compose";
 import { fetchBroadcastSources } from "@/lib/ingestion/sources/broadcast";
 import { fetchBuzzSources } from "@/lib/ingestion/sources/buzz";
+import { fetchGameSources } from "@/lib/ingestion/sources/games";
 import { fetchMusicSources } from "@/lib/ingestion/sources/music";
+import { fetchShortsSources } from "@/lib/ingestion/sources/shorts";
+import { fetchWebtoonSources } from "@/lib/ingestion/sources/webtoon";
 import type { IngestReport, IngestSnapshot } from "@/lib/ingestion/types";
 import type { RankingsPayload } from "@/lib/types";
 
-export function readPersistedSnapshot(): IngestSnapshot | undefined {
+let memorySnapshot: IngestSnapshot | undefined;
+
+function readDiskSnapshot(): IngestSnapshot | undefined {
   try {
     const file = path.join(process.cwd(), "src", "data", "ingestion", "snapshot.json");
     const snapshot = JSON.parse(readFileSync(file, "utf8")) as IngestSnapshot;
@@ -21,34 +26,69 @@ export function readPersistedSnapshot(): IngestSnapshot | undefined {
   return undefined;
 }
 
+export function readPersistedSnapshot(): IngestSnapshot | undefined {
+  const disk = readDiskSnapshot();
+  if (memorySnapshot?.items.length) {
+    if (!disk) return memorySnapshot;
+    const memAt = Date.parse(memorySnapshot.updatedAt);
+    const diskAt = Date.parse(disk.updatedAt);
+    if (Number.isFinite(memAt) && (!Number.isFinite(diskAt) || memAt >= diskAt)) {
+      return memorySnapshot;
+    }
+  }
+  return disk;
+}
+
+function rememberSnapshot(snapshot: IngestSnapshot) {
+  memorySnapshot = snapshot;
+}
+
 export async function ingestLivePayload(options?: {
   previous?: IngestSnapshot;
 }): Promise<IngestReport> {
   const previous = options?.previous ?? readPersistedSnapshot();
-  const [music, broadcast, buzz] = await Promise.all([
+  const [music, broadcast, buzz, webtoon, shorts, games] = await Promise.all([
     fetchMusicSources(),
     fetchBroadcastSources(),
     fetchBuzzSources(),
+    fetchWebtoonSources(),
+    fetchShortsSources(),
+    fetchGameSources(),
   ]);
-  const sources = [...music, ...broadcast, ...buzz];
+  const sources = [...music, ...broadcast, ...buzz, ...webtoon, ...shorts, ...games];
   const composed = await composeLiveSnapshot(sources, previous);
   const updatedAt = new Date().toISOString();
   let items = composed.items;
   let indices = composed.indices;
+  let scoreHistory = composed.scoreHistory ?? previous?.scoreHistory ?? {};
   let usedPreviousSnapshot = false;
 
-  if (!items.length && previous?.items.length) {
+  const previousCount = previous?.items.length ?? 0;
+  const collapsed =
+    previousCount > 0 && items.length < Math.max(40, Math.floor(previousCount * 0.5));
+  if ((!items.length || collapsed) && previous?.items.length) {
     items = previous.items;
     indices = previous.indices;
+    scoreHistory = previous.scoreHistory ?? scoreHistory;
     usedPreviousSnapshot = true;
   }
 
-  const payload: RankingsPayload = snapshotToPayload({
+  const snapshot: IngestSnapshot = {
     updatedAt,
     status: items.length ? "open" : "closed",
+    sources: sources.map((item) => ({
+      id: item.id,
+      ok: item.ok,
+      count: item.count,
+      error: item.error,
+    })),
     indices,
     items,
-  });
+    scoreHistory,
+  };
+  rememberSnapshot(snapshot);
+
+  const payload: RankingsPayload = snapshotToPayload(snapshot);
 
   return {
     updatedAt,
@@ -68,20 +108,9 @@ export async function ingestLivePayload(options?: {
 
 export async function runIngestJob(options?: { persist?: boolean }): Promise<IngestReport> {
   const report = await ingestLivePayload();
-  if (!options?.persist) return report;
+  if (!options?.persist || !memorySnapshot) return report;
 
   const { persistSnapshot } = await import("@/lib/ingestion/persist");
-  const snapshot: IngestSnapshot = {
-    updatedAt: report.updatedAt,
-    status: report.payload.status,
-    sources: report.sourceResults,
-    indices: report.payload.indices,
-    items: report.payload.items,
-    scoreHistory: readPersistedSnapshot()?.scoreHistory ?? {},
-  };
-  for (const item of report.payload.items) {
-    snapshot.scoreHistory[item.slug] = [...(snapshot.scoreHistory[item.slug] ?? []).slice(-6), item.buzzScore];
-  }
-  const persisted = await persistSnapshot(snapshot);
+  const persisted = await persistSnapshot(memorySnapshot);
   return { ...report, persisted: persisted.wrote };
 }

@@ -1,8 +1,23 @@
 import Link from "next/link";
+import { BriefingCover } from "@/components/briefing/BriefingCover";
+import { withBriefingCover } from "@/lib/briefing/cover";
 import { isLiveEdition } from "@/lib/briefing/dates";
 import { categoryLabel, heatmapHref } from "@/lib/briefing/metrics";
 import { rankingPath } from "@/lib/slugs";
 import type { BriefingArticle, RankingEntity } from "@/lib/types";
+
+function SectionHeading({
+  heading,
+  level,
+}: {
+  heading: string;
+  level: 2 | 3;
+}) {
+  if (level === 3) {
+    return <h3 className="mb-3 text-base font-semibold tracking-tight">{heading}</h3>;
+  }
+  return <h2 className="mb-3 text-lg font-semibold">{heading}</h2>;
+}
 
 export function DailyBriefing({
   briefing,
@@ -13,6 +28,10 @@ export function DailyBriefing({
 }) {
   const live = isLiveEdition(briefing.editionDate);
   const categoryHref = heatmapHref(briefing.category);
+  const cover = withBriefingCover(briefing, {
+    keyword: related[0]?.name,
+    imageUrl: related[0]?.imageUrl,
+  }).coverImage;
 
   return (
     <article className="rounded-2xl border border-line bg-panel px-5 py-8 md:px-10">
@@ -28,6 +47,12 @@ export function DailyBriefing({
         {briefing.editionDate} · {categoryLabel(briefing.category)} · {briefing.readingMinutes}분
         읽기 · 약 {briefing.wordCount.toLocaleString("ko-KR")}단어 · 애드센스 고품질 본문 기준 충족
       </p>
+
+      {cover ? (
+        <div className="mt-6 max-w-3xl">
+          <BriefingCover image={cover} />
+        </div>
+      ) : null}
 
       <nav className="mt-6 flex flex-wrap gap-2 text-sm" aria-label="관련 시세판">
         <Link
@@ -51,18 +76,19 @@ export function DailyBriefing({
       </nav>
 
       <div className="prose-board mt-8 max-w-3xl space-y-8">
-        {briefing.sections.map((section) => (
-          <section key={section.heading ?? section.paragraphs[0]?.slice(0, 12)}>
-            {section.heading ? (
-              <h2 className="mb-3 text-lg font-semibold">{section.heading}</h2>
-            ) : null}
-            {section.paragraphs.map((paragraph) => (
-              <p key={paragraph.slice(0, 24)} className="mb-4 text-[15px] leading-8 text-ink/90">
-                {paragraph}
-              </p>
-            ))}
-          </section>
-        ))}
+        {briefing.sections.map((section, index) => {
+          const level = section.headingLevel === 3 ? 3 : 2;
+          return (
+            <section key={`${section.heading ?? "p"}-${index}`}>
+              {section.heading ? <SectionHeading heading={section.heading} level={level} /> : null}
+              {section.paragraphs.map((paragraph) => (
+                <p key={paragraph.slice(0, 24)} className="mb-4 text-[15px] leading-8 text-ink/90">
+                  {paragraph}
+                </p>
+              ))}
+            </section>
+          );
+        })}
       </div>
 
       {related.length > 0 ? (

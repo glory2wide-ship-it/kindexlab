@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdUnit, MonetizationSlot } from "@/components/ads/AdUnit";
 import { DailyBriefing } from "@/components/briefing/DailyBriefing";
 import { listSeeded } from "@/lib/briefing/catalog";
 import { getBriefingBySlug, getEntitiesBySlugs } from "@/lib/api";
@@ -31,6 +30,7 @@ export async function generateMetadata({
       type: "article",
       publishedTime: briefing.publishedAt,
       modifiedTime: briefing.updatedAt,
+      images: briefing.coverImage?.src ? [{ url: briefing.coverImage.src, alt: briefing.coverImage.alt }] : undefined,
     },
   };
 }
@@ -56,6 +56,7 @@ export default async function BriefingArticlePage({
     author: { "@type": "Organization", name: SITE.name },
     publisher: { "@type": "Organization", name: SITE.name },
     wordCount: briefing.wordCount,
+    image: briefing.coverImage?.src,
     mainEntityOfPage: `${SITE.url}/briefing/${briefing.slug}`,
   };
 
@@ -79,9 +80,6 @@ export default async function BriefingArticlePage({
         </Link>
       </p>
       <DailyBriefing briefing={briefing} related={related} />
-      <MonetizationSlot region="after-content">
-        <AdUnit format="horizontal" />
-      </MonetizationSlot>
     </div>
   );
 }

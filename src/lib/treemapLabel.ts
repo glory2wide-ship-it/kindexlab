@@ -1,5 +1,5 @@
-const MIN_NAME = 13;
-const MAX_NAME = 44;
+const MIN_NAME = 19.2;
+const MAX_NAME = 62;
 const MIN_RATE = 12;
 const MAX_RATE = 28;
 
@@ -81,27 +81,27 @@ export function layoutTreemapLabel(input: {
   if (innerW < 28 || innerH < 24) return null;
 
   const areaScale = Math.sqrt(Math.max(1, w * h));
-  let nameSize = clamp(areaScale * 0.132, MIN_NAME, MAX_NAME);
-  nameSize = Math.min(nameSize, innerH * 0.42, innerW * 0.42);
+  let nameSize = clamp(areaScale * 0.17, MIN_NAME, MAX_NAME);
+  nameSize = Math.min(nameSize, innerH * 0.5, innerW * 0.5);
   nameSize = fitSizeToWidth(name, nameSize, innerW, MIN_NAME);
 
-  let rateSize = clamp(nameSize * 0.78, MIN_RATE, MAX_RATE);
+  let rateSize = clamp(nameSize * 0.72, MIN_RATE, MAX_RATE);
   rateSize = fitSizeToWidth(rate, rateSize, innerW, Math.min(MIN_RATE, innerW * 0.22));
 
-  const lineGap = Math.max(2, nameSize * 0.16);
+  const lineGap = Math.max(2, nameSize * 0.14);
   const stacked = () => nameSize + lineGap + rateSize * 0.92;
 
   if (stacked() > innerH) {
     const scale = innerH / stacked();
-    nameSize = Math.max(11, nameSize * scale);
+    nameSize = Math.max(16.8, nameSize * scale);
     rateSize = Math.max(11, rateSize * scale);
   }
   if (stacked() > innerH) {
-    rateSize = Math.min(rateSize, Math.max(11, innerH * 0.32));
-    nameSize = Math.max(11, innerH - lineGap - rateSize * 0.92);
+    rateSize = Math.min(rateSize, Math.max(11, innerH * 0.28));
+    nameSize = Math.max(16.8, innerH - lineGap - rateSize * 0.92);
   }
 
-  nameSize = fitSizeToWidth(name, nameSize, innerW, 11);
+  nameSize = fitSizeToWidth(name, nameSize, innerW, 16.8);
   rateSize = fitSizeToWidth(rate, rateSize, innerW, 11);
   const displayName = ellipsize(name, nameSize, innerW);
 

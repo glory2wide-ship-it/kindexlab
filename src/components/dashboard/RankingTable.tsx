@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Sparkline } from "@/components/dashboard/Sparkline";
-import { TYPE_LABEL, formatCompact, formatRate, formatScore, rankDelta } from "@/lib/format";
+import { TYPE_LABEL, formatCompact, formatRate, formatScore, rankDelta, metricLabel } from "@/lib/format";
 import { rankingPath } from "@/lib/slugs";
-import { changeForEntity, getTimeframeSeries } from "@/lib/timeframes";
+import { changeForEntity, getTimeframeSeries, scoreForTimeframe, volumeForTimeframe } from "@/lib/timeframes";
 import type { RankingEntity, Timeframe } from "@/lib/types";
 
 type SortKey = "rank" | "name" | "type" | "buzzScore" | "change" | "volume";
@@ -32,7 +32,13 @@ export function RankingTable({
   const rows = useMemo(() => {
     const mapped = items.map((item) => {
       const series = getTimeframeSeries(item, timeframe);
-      return { item, series, change: changeForEntity(item, timeframe) };
+      return {
+        item,
+        series,
+        change: changeForEntity(item, timeframe),
+        buzzScore: scoreForTimeframe(item, timeframe),
+        volume: volumeForTimeframe(item, timeframe),
+      };
     });
     const sign = dir === "asc" ? 1 : -1;
     return mapped.sort((a, b) => {
@@ -40,17 +46,17 @@ export function RankingTable({
         rank: a.item.rank,
         name: a.item.name,
         type: a.item.type,
-        buzzScore: a.item.buzzScore,
+        buzzScore: a.buzzScore,
         change: a.change,
-        volume: a.item.volume,
+        volume: a.volume,
       };
       const other: Record<SortKey, number | string> = {
         rank: b.item.rank,
         name: b.item.name,
         type: b.item.type,
-        buzzScore: b.item.buzzScore,
+        buzzScore: b.buzzScore,
         change: b.change,
-        volume: b.item.volume,
+        volume: b.volume,
       };
       if (typeof table[sortKey] === "string") {
         return String(table[sortKey]).localeCompare(String(other[sortKey]), "ko") * sign;
@@ -89,7 +95,7 @@ export function RankingTable({
                 right
               />
               <SortTh
-                label="거래량"
+                label="지표"
                 active={sortKey === "volume"}
                 onClick={() => toggle("volume")}
                 right
@@ -98,7 +104,7 @@ export function RankingTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ item, series, change }) => (
+            {rows.map(({ item, series, change, buzzScore, volume }) => (
               <tr
                 key={item.id}
                 className="border-b border-line/80 transition-colors hover:bg-board/80"
@@ -114,12 +120,12 @@ export function RankingTable({
                   </Link>
                 </td>
                 <td className="px-2 py-3 text-xs text-muted">{TYPE_LABEL[item.type]}</td>
-                <td className="px-2 py-3 text-right font-mono">{formatScore(item.buzzScore)}</td>
+                <td className="px-2 py-3 text-right font-mono">{formatScore(buzzScore)}</td>
                 <td className="px-2 py-3 text-right">
                   <ChangeCell rate={change} />
                 </td>
                 <td className="px-2 py-3 text-right font-mono text-muted">
-                  {formatCompact(item.volume)}
+                  {metricLabel(item.type)} {formatCompact(volume)}
                 </td>
                 <td className="px-4 py-3">
                   <Sparkline data={series.map((point) => point.v)} positive={change >= 0} />
@@ -130,7 +136,7 @@ export function RankingTable({
         </table>
       </div>
       <ul className="divide-y divide-line md:hidden">
-        {rows.map(({ item, series, change }) => (
+        {rows.map(({ item, series, change, volume }) => (
           <li key={item.id}>
             <Link href={rankingPath(item.slug)} className="flex items-center gap-3 px-4 py-3">
               <div className="w-8 text-center font-mono">
@@ -140,7 +146,7 @@ export function RankingTable({
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{item.name}</p>
                 <p className="font-mono text-xs text-muted">
-                  {TYPE_LABEL[item.type]} · {formatCompact(item.volume)}
+                  {TYPE_LABEL[item.type]} · {metricLabel(item.type)} {formatCompact(volume)}
                 </p>
               </div>
               <div className="text-right">

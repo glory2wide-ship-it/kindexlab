@@ -7,6 +7,7 @@ export interface ChartRow {
   subtitle?: string;
   metric?: number;
   volume?: number;
+  imageUrl?: string;
   tags?: string[];
 }
 

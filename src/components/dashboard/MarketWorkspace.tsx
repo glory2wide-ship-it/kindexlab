@@ -5,23 +5,30 @@ import { RankingTable } from "@/components/dashboard/RankingTable";
 import { heatmapVisibleCount, TreemapView } from "@/components/dashboard/TreemapView";
 import { MethodologyModal } from "@/components/methodology/MethodologyModal";
 import { CATEGORIES, TIMEFRAMES } from "@/lib/categories";
+import { rankItemsForTimeframe } from "@/lib/timeframes";
 import type { CategoryId, RankingEntity, Timeframe, ViewMode } from "@/lib/types";
 
 export function MarketWorkspace({
   items,
   initialCategory = "all",
+  flashNonce = 0,
 }: {
   items: RankingEntity[];
   initialCategory?: CategoryId;
+  flashNonce?: number;
 }) {
   const [view, setView] = useState<ViewMode>("treemap");
   const [category, setCategory] = useState<CategoryId>(initialCategory);
-  const [timeframe, setTimeframe] = useState<Timeframe>("1d");
+  const [timeframe, setTimeframe] = useState<Timeframe>("1m");
   const [methodOpen, setMethodOpen] = useState(false);
 
   const filtered = useMemo(
     () => (category === "all" ? items : items.filter((item) => item.type === category)),
     [category, items],
+  );
+  const ranked = useMemo(
+    () => rankItemsForTimeframe(filtered, timeframe),
+    [filtered, timeframe],
   );
 
   return (
@@ -32,9 +39,9 @@ export function MarketWorkspace({
       <div className="flex flex-col gap-3 border-b border-line px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold">EnterBuzz Heatmap</h2>
+            <h2 className="text-base font-semibold">KindexLab Heatmap</h2>
             <p className="text-xs text-muted">
-              박스 크기 = 거래량 · 색상 = 등락률 · 섹터별 상위 종목
+              박스 크기 = 거래량 · 색상 = 등락률 · 숏폼·게임 포함 섹터별 상위 종목
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -101,15 +108,19 @@ export function MarketWorkspace({
       </div>
 
       {view === "treemap" ? (
-        <TreemapView items={filtered} category={category} timeframe={timeframe} />
+        <div className={flashNonce > 0 ? "market-live-flash" : undefined}>
+          <TreemapView items={ranked} category={category} timeframe={timeframe} />
+        </div>
       ) : (
-        <RankingTable items={filtered} timeframe={timeframe} />
+        <div className={flashNonce > 0 ? "market-live-flash" : undefined}>
+          <RankingTable items={ranked} timeframe={timeframe} />
+        </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-2 font-mono text-[10px] text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-2 font-sans text-[10px] text-muted">
         <span>
-          범례: 상승 빨강 · 하락 파랑 · 보합 회색 · 히트맵 {heatmapVisibleCount(filtered)} ·
-          리스트 {filtered.length}종목
+          범례: 상승 빨강 · 하락 파랑 · 보합 회색 · 히트맵 {heatmapVisibleCount(ranked, timeframe)} ·
+          리스트 {ranked.length}종목
         </span>
         <span>Finviz-style hierarchical heatmap</span>
       </div>
