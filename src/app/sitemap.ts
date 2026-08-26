@@ -1,4 +1,5 @@
 import { getAllBriefingSlugs, getAllSlugs, listEditionDates } from "@/lib/api";
+import { listPosts } from "@/lib/posts/store";
 import { SITE } from "@/lib/site";
 import { rankingUrl } from "@/lib/slugs";
 import type { MetadataRoute } from "next";
@@ -6,15 +7,17 @@ import type { MetadataRoute } from "next";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [slugs, briefingSlugs, editionDates] = await Promise.all([
+  const [slugs, briefingSlugs, editionDates, posts] = await Promise.all([
     getAllSlugs(),
     getAllBriefingSlugs(),
     listEditionDates(),
+    listPosts(),
   ]);
   const now = new Date();
   return [
     { url: SITE.url, lastModified: now, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE.url}/briefing`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    { url: `${SITE.url}/posts`, lastModified: now, changeFrequency: "hourly", priority: 0.85 },
     {
       url: `${SITE.url}/briefing/archive`,
       lastModified: now,
@@ -37,6 +40,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "weekly" as const,
       priority: 0.7,
+    })),
+    ...posts.map((post) => ({
+      url: `${SITE.url}/posts/${post.slug}`,
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: 0.72,
     })),
     ...slugs.map((slug) => ({
       url: rankingUrl(SITE.url, slug),

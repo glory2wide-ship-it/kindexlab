@@ -28,6 +28,11 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/posts" className="hover:text-ink">
+                금융·생활 시세 칼럼
+              </Link>
+            </li>
+            <li>
               <Link href="/briefing/archive" className="hover:text-ink">
                 브리핑 아카이브
               </Link>

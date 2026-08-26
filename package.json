@@ -11,7 +11,8 @@
         "start": "next start",
         "lint": "eslint",
         "briefing:generate": "tsx scripts/generate-briefings.ts",
-        "ingest:trends": "tsx scripts/ingest-trends.ts"
+        "ingest:trends": "tsx scripts/ingest-trends.ts",
+        "posts:generate": "tsx scripts/generate-posts.ts"
     },
     "dependencies": {
         "d3-hierarchy": "^3.1.2",

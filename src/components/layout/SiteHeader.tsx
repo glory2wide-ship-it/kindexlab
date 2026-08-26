@@ -6,6 +6,7 @@ import { SITE } from "@/lib/site";
 const nav = [
   { href: "/", label: "시세판" },
   { href: "/briefing", label: "일일 브리핑" },
+  { href: "/posts", label: "시세 칼럼" },
   { href: "/briefing/archive", label: "아카이브" },
   { href: "/about", label: "소개" },
 ];
