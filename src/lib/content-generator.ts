@@ -19,8 +19,10 @@ import type { RankingEntity } from "@/lib/types";
 
 const MIN_WORDS = 1500;
 const MAX_WORDS = 2000;
-const SENT_MIN = 18;
-const SENT_MAX = 42;
+const SENT_MIN = 20;
+const SENT_MAX = 40;
+const TAPE_MIN = 0.09;
+const TAPE_MAX = 0.12;
 
 const BANNED =
   /결론적으로|요약하자면|이 글에서는|이 글은|정리하면|마무리하며|알아보겠습니다|살펴보겠습니다|추천한다|추천합니다|좋은 선택|좋은 기회|반드시 사야|투자하세요|좋습니다/;
@@ -102,6 +104,80 @@ export function tapeRatio(post: GeneratedPost): number {
   return tapeWordCount(post) / total;
 }
 
+export interface PostSpecReport {
+  ok: boolean;
+  tapeRatio: number;
+  wordCount: number;
+  table: boolean;
+  faq: number;
+  internalLink: boolean;
+  externalLink: boolean;
+  focusInTitle: boolean;
+  focusInIntro: boolean;
+  focusCount: number;
+  supportCount: number;
+  hasH2: boolean;
+  hasH3: boolean;
+  banned: boolean;
+  sentenceIssues: number;
+  failures: string[];
+}
+
+export function evaluatePostSpec(post: GeneratedPost): PostSpecReport {
+  const text = postPlainText(post);
+  const intro = post.sections.find((section) => section.kind === "tape") ?? post.sections[0];
+  const firstPara = intro?.paragraphs[0] ?? "";
+  const ratio = tapeRatio(post);
+  const words = countPostWords(post);
+  const table = Boolean(post.table?.rows?.length);
+  const faq = post.faq?.length ?? 0;
+  const internalLink = Boolean(post.internalLink?.href && post.internalLink.label) && text.includes("내부 링크 추천:");
+  const externalLink = Boolean(post.externalLink?.href?.startsWith("http"));
+  const focusInTitle = Boolean(post.focusKeyword) && post.title.includes(post.focusKeyword);
+  const focusInIntro = Boolean(post.focusKeyword) && firstPara.includes(post.focusKeyword);
+  const focusCount = countKeyword(text, post.focusKeyword);
+  const supportCount = countKeyword(text, post.supportKeyword);
+  const hasH2 = post.sections.some((section) => section.headingLevel === 2);
+  const hasH3 = post.sections.some((section) => section.headingLevel === 3);
+  const banned = BANNED.test(text);
+  const sentenceReport = countSentenceIssues(post);
+  const sentenceIssues = sentenceReport.count;
+  const failures: string[] = [];
+  if (ratio < TAPE_MIN || ratio > TAPE_MAX) failures.push(`tapeRatio:${ratio.toFixed(3)}`);
+  if (words < MIN_WORDS || words > MAX_WORDS + 80) failures.push(`wordCount:${words}`);
+  if (!table || !post.table?.markdown?.includes("|")) failures.push("table");
+  if (faq !== 3) failures.push(`faq:${faq}`);
+  if (!internalLink) failures.push("internalLink");
+  if (!externalLink) failures.push("externalLink");
+  if (!focusInTitle) failures.push("focusInTitle");
+  if (!focusInIntro) failures.push("focusInIntro");
+  if (focusCount < 5) failures.push(`focusCount:${focusCount}`);
+  if (supportCount < 5) failures.push(`supportCount:${supportCount}`);
+  if (!hasH2 || !hasH3) failures.push("headings");
+  if (banned) failures.push("banned");
+  if (sentenceIssues > 0) failures.push(`sentences:${sentenceIssues}:${sentenceReport.sample}`);
+  if (!post.sections.some((section) => section.kind === "tape")) failures.push("tapeKind");
+  if (!post.sections.some((section) => section.kind === "briefing")) failures.push("briefingKind");
+  return {
+    ok: failures.length === 0,
+    tapeRatio: ratio,
+    wordCount: words,
+    table,
+    faq,
+    internalLink,
+    externalLink,
+    focusInTitle,
+    focusInIntro,
+    focusCount,
+    supportCount,
+    hasH2,
+    hasH3,
+    banned,
+    sentenceIssues,
+    failures,
+  };
+}
+
 export function countPostCharacters(post: Pick<GeneratedPost, "title" | "excerpt" | "sections">): number {
   const body = post.sections.flatMap((section) => [section.heading, ...section.paragraphs]).join("");
   return `${post.title}${post.excerpt}${body}`.replace(/\s+/g, "").length;
@@ -148,7 +224,7 @@ async function safeJson<T>(url: string): Promise<T | null> {
 function splitToSentences(raw: string): string[] {
   return raw
     .replace(BANNED, "")
-    .split(/(?<=[다요임까죠네]\.)\s+/)
+    .split(/(?<=[다요임까죠네]\.)\s+|(?<=[^\d\s])\.\s+/)
     .map((item) => item.trim())
     .filter(Boolean);
 }
@@ -170,7 +246,7 @@ function clipLong(sentence: string): string[] {
     }
   }
   if (buf) out.push(buf.endsWith(".") ? buf : `${buf}.`);
-  return out.flatMap((item) => (charLen(item) > 48 ? clipLong(`${item.slice(0, 34)}.`) : [item]));
+  return out.flatMap((item) => (charLen(item) > SENT_MAX ? clipLong(`${item.slice(0, 34)}.`) : [item]));
 }
 
 function isCompleteSentence(value: string): boolean {
@@ -183,12 +259,12 @@ function mergeShort(sentences: string[]): string[] {
   for (const raw of sentences) {
     const item = raw.replace(/\s+/g, " ").trim().replace(/\.+$/, "");
     if (!item) continue;
-    if (!buf && isCompleteSentence(item)) {
+    if (!buf && isCompleteSentence(item) && charLen(item) >= SENT_MIN) {
       out.push(...clipLong(`${item}.`));
       continue;
     }
     const candidate = buf ? `${buf} ${item}` : item;
-    const len = charLen(`${candidate}.`);
+    const len = charLen(candidate);
     if (len < SENT_MIN) {
       buf = candidate;
       continue;
@@ -210,7 +286,7 @@ function mergeShort(sentences: string[]): string[] {
 }
 
 function toParagraphs(sentences: string[]): string[] {
-  const merged = mergeShort(sentences);
+  const merged = mergeShort(sentences).map(fitSentenceLength);
   const paras: string[] = [];
   for (let i = 0; i < merged.length; i += 3) {
     const group = merged.slice(i, i + 3);
@@ -219,6 +295,72 @@ function toParagraphs(sentences: string[]): string[] {
     else paras.push(`${group[0]} ${group[1]}\n${group[2]}`);
   }
   return paras.filter(Boolean);
+}
+
+function extractSentences(text: string): string[] {
+  return text
+    .split(/\n+/)
+    .flatMap((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return [];
+      return splitToSentences(trimmed.endsWith(".") ? trimmed : `${trimmed}.`);
+    })
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function fitSentenceLength(sentence: string): string {
+  const pad = "시세판 숫자와 다시 대조한다";
+  let body = sentence.replace(/\s+/g, " ").trim().replace(/\.+$/, "");
+  if (!body) return "";
+  while (charLen(body) < SENT_MIN) body = `${body} ${pad}`.trim();
+  if (charLen(body) > SENT_MAX) {
+    const clipped = clipLong(`${body}.`)[0] ?? body;
+    body = clipped.replace(/\s+/g, " ").trim().replace(/\.+$/, "");
+  }
+  if (charLen(body) > SENT_MAX) body = body.replace(/\s+/g, "").slice(0, SENT_MAX);
+  while (charLen(body) < SENT_MIN) body = `${body} ${pad}`.trim();
+  if (charLen(body) > SENT_MAX) body = body.replace(/\s+/g, "").slice(0, SENT_MAX);
+  return `${body}.`;
+}
+
+function countSentenceIssues(post: GeneratedPost): { count: number; sample: string } {
+  const blobs = [
+    ...post.sections.flatMap((section) => section.paragraphs),
+    ...(post.faq ?? []).map((item) => item.answer),
+  ];
+  const bad: string[] = [];
+  for (const blob of blobs) {
+    for (const sentence of extractSentences(blob)) {
+      const len = charLen(sentence.replace(/\.+$/, ""));
+      if (len < SENT_MIN || len > SENT_MAX) bad.push(`${len}:${sentence}`);
+    }
+  }
+  return { count: bad.length, sample: bad[0] ?? "" };
+}
+
+function normalizePostSentences(post: GeneratedPost): void {
+  for (const section of post.sections) {
+    section.paragraphs = toParagraphs(section.paragraphs.flatMap(extractSentences));
+  }
+  if (post.faq) {
+    post.faq = post.faq.map((item) => ({
+      ...item,
+      answer: toParagraphs(extractSentences(item.answer)).join("\n"),
+    }));
+  }
+}
+
+function wrapFact(summary: string, lead: string): string {
+  const safe = summary
+    .replace(/(\d)\.(\d)/g, "$1점$2")
+    .replace(/[()]/g, " ")
+    .replace(/[.]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const budget = Math.max(8, SENT_MAX - charLen(`${lead}이다`) - 1);
+  const core = (safe || "집계 대기").slice(0, budget);
+  return `${lead} ${core}이다`;
 }
 
 function line(text: string): string {
@@ -378,18 +520,35 @@ function buildTable(leaders: RankingEntity[], laggards: RankingEntity[]): PostTa
 }
 
 function buildFaq(lead: RankingEntity, fx: string, focus: string): PostFaq[] {
+  const answers = [
+    [
+      `${focus} 등락률은 ${formatRate(lead.fluctuationRate)}다`,
+      `버즈 ${formatScore(lead.buzzScore)}와 거래량 ${formatCompact(lead.volume)}이 같이 움직였다`,
+      `검색 태그가 조회만으로 설명되지 않는다`,
+    ],
+    [
+      `USD/KRW 참고치는 공개 API 스냅샷이다`,
+      wrapFact(fx, "환율 참고치는"),
+      `해외 결제 원가와 국내 버즈는 축이 다르다`,
+    ],
+    [
+      `등락률 ${formatRate(lead.fluctuationRate)}는 타임프레임 스냅샷이다`,
+      `분봉과 일봉이 갈리면 색이 바뀐다`,
+      `이 숫자는 예측치가 아니다`,
+    ],
+  ];
   return [
     {
       question: `${focus}가 지금 빨간 이유는 뭔가?`,
-      answer: `${focus} 등락률은 ${formatRate(lead.fluctuationRate)}다. 버즈 ${formatScore(lead.buzzScore)}, 거래량 ${formatCompact(lead.volume)}이 같이 움직였다. 검색 태그가 조회만으로 설명되지 않는다.`,
+      answer: toParagraphs(answers[0]).join("\n"),
     },
     {
       question: `환율 숫자와 ${focus}를 같이 봐야 하나?`,
-      answer: `USD/KRW 참고치는 ${fx}이다. 해외 결제 원가와 국내 버즈는 축이 다르다. 같은 시각 스냅샷으로만 겹쳐 읽는다.`,
+      answer: toParagraphs(answers[1]).join("\n"),
     },
     {
       question: `${focus} 등락률이 내일도 유지되나?`,
-      answer: `등락률 ${formatRate(lead.fluctuationRate)}는 선택한 타임프레임 스냅샷이다. 분봉과 일봉이 갈리면 색이 바뀐다. 예측치가 아니다.`,
+      answer: toParagraphs(answers[2]).join("\n"),
     },
   ];
 }
@@ -464,9 +623,9 @@ function liveTape(opts: {
       ? `하락 축 ${loser.name} 등락률은 ${formatRate(loser.fluctuationRate)}다`
       : "하락 축 등락률은 이상치로 제외했다",
     `USD/KRW 참고치는 공개 API 스냅샷이다`,
-    fx.includes("USD/KRW") ? fx.replace(/^\S+\s/, "").slice(0, 36) : fx.slice(0, 36),
+    wrapFact(fx, "환율 참고치는"),
     `태그 ${tag}가 검색에 붙었다`,
-    crypto.startsWith("BTC") ? crypto.slice(0, 34) : "가상자산 원화 시세는 대기 중이다",
+    wrapFact(crypto, "가상자산 원화는"),
     `${SITE.name} 보드 스냅샷과 숫자가 같다`,
   ]);
 }
@@ -486,7 +645,7 @@ function searchIssue(opts: {
     `이름만 오르면 체류가 짧고 분봉만 흔들린다`,
     `${supportKw}가 같이 빨개면 테마 검색이다`,
     `테마 검색은 다음날 5분봉 잔여 변동을 남긴다`,
-    news ? `헤드라인은 ${news.slice(0, 28)}` : "버즈 헤드라인이 비어 검색 창만 남았다",
+    news ? wrapFact(news, "헤드라인은") : "버즈 헤드라인이 비어 검색 창만 남았다",
     `헤드라인과 보드 색이 다르면 검색이 뉴스보다 빠르다`,
     `커뮤니티 복제 속도가 거래량 ${formatCompact(lead.volume)}을 설명한다`,
     `복제가 느리면 버즈 ${formatScore(lead.buzzScore)}가 먼저 꺾인다`,
@@ -598,15 +757,15 @@ function fxCross(fx: string, crypto: string, news: string, focus: string): strin
   return uniqueLines([
     `해외 결제 원가와 국내 버즈는 축이 갈린다`,
     `USD/KRW 참고치는 공개 API 스냅샷이다`,
-    fx.slice(0, 36) || "환율 응답이 비었다",
+    wrapFact(fx, "환율 참고치는"),
     `은행 고시와 2~3%p 벌어질 수 있다`,
     `달러 고정 구독 비중이 환율 민감 지출이다`,
     `해외 결제 예약은 카드사 고시 시각을 본다`,
     `${focus} 급등과 원화 약세는 따로 읽는다`,
-    crypto.slice(0, 34) || "가상자산 대기 중이다",
+    wrapFact(crypto, "가상자산 원화는"),
     `생활 물가와 직접 연동되지 않는다`,
     `위험자산 온도계로만 둔다`,
-    news ? news.slice(0, 32) : "금리 헤드라인이 비었다",
+    news ? wrapFact(news, "헤드라인은") : "금리 헤드라인이 비었다",
     `헤드라인 한 줄로 방향을 단정하지 않는다`,
   ]);
 }
@@ -693,7 +852,7 @@ function fillReserve(opts: {
   }
   out.push(`${indexLabel} ${formatScore(indexValue)}는 배경 온도다`);
   out.push(`종합 등락 ${formatRate(indexRate)}는 개별 급등과 따로 읽는다`);
-  out.push(fx.slice(0, 36) || "환율 스냅샷이 비었다");
+  out.push(wrapFact(fx, "환율 참고치는"));
   out.push(`ECB 고시일과 국내 고시 시각이 다를 수 있다`);
   return uniqueLines(out);
 }
@@ -725,7 +884,8 @@ function composeStructured(params: {
   const indexLabel = composite?.label ?? `${SITE.name} 종합`;
   const indexValue = composite?.value ?? 1000;
   const indexRate = composite?.changeRate ?? 0;
-  const internalHref = lead.slug === "kindexlab-composite" ? "/#heatmap" : rankingPath(lead.slug);
+  const internalHref =
+    lead.slug === "kindexlab-composite" ? "/#heatmap" : rankingPath(lead.slug, "products");
   const internalLabel = lead.slug === "kindexlab-composite" ? "실시간 시세판 히트맵" : `${lead.name} 실시간 시세 상세`;
   const table = buildTable([lead, ...rest], losers);
 
@@ -852,14 +1012,16 @@ function composeStructured(params: {
     sections,
   };
 
-  const extraTape = uniqueLines(
+  return finalizePost(draft, reserve, buildExtraTape(lead, focus));
+}
+
+function buildExtraTape(lead: RankingEntity, focus: string): string[] {
+  return uniqueLines(
     (lead.sparkline.length ? lead.sparkline : [lead.buzzScore]).flatMap((value, index) => [
       `${focus} 속도 ${index + 1}은 ${Number(value).toFixed(1)}이다`,
       `${focus} 틱 ${index + 1}은 ${formatRate(lead.fluctuationRate)} 스냅샷이다`,
     ]),
   );
-
-  return finalizePost(draft, reserve, extraTape);
 }
 
 function briefingInsertIndex(post: GeneratedPost): number {
@@ -873,12 +1035,12 @@ function fitTapeRatio(post: GeneratedPost, extraTape: string[]): void {
   if (!tape) return;
   let cursor = 0;
   let ratio = tapeRatio(post);
-  while (ratio < 0.09 && cursor < extraTape.length) {
+  while (ratio < TAPE_MIN && cursor < extraTape.length) {
     tape.paragraphs.push(...toParagraphs(extraTape.slice(cursor, cursor + 3)));
     cursor += 3;
     ratio = tapeRatio(post);
   }
-  while (ratio > 0.12 && tape.paragraphs.length > 5) {
+  while (ratio > TAPE_MAX && tape.paragraphs.length > 5) {
     tape.paragraphs.pop();
     ratio = tapeRatio(post);
   }
@@ -920,7 +1082,9 @@ function finalizePost(post: GeneratedPost, reserve: string[], extraTape: string[
   ensureKeywords(post);
   const intro = post.sections.find((section) => section.kind === "tape") ?? post.sections[0];
   if (intro) intro.paragraphs = weaveFocusIntro(intro.paragraphs, post.focusKeyword);
+  normalizePostSentences(post);
   fitTapeRatio(post, extraTape);
+  normalizePostSentences(post);
   return {
     ...post,
     wordCount: countPostWords(post),
@@ -1033,6 +1197,7 @@ export async function generateSeoPost(options?: {
   persisted: boolean;
   supabase: boolean;
   usedOpenAi: boolean;
+  spec: PostSpecReport | null;
   post: GeneratedPost | null;
 }> {
   const now = new Date();
@@ -1046,13 +1211,14 @@ export async function generateSeoPost(options?: {
   const slug = options?.slugOverride ?? slugify(editionDate, slot, lead.name);
   if (!options?.force && !options?.slugOverride) {
     const existing = await getPostBySlug(slug);
-    if (existing) {
+    if (existing && evaluatePostSpec(existing).ok) {
       return {
         skipped: true,
         reason: "slot already published",
         persisted: false,
         supabase: false,
         usedOpenAi: false,
+        spec: evaluatePostSpec(existing),
         post: existing,
       };
     }
@@ -1090,38 +1256,72 @@ export async function generateSeoPost(options?: {
     fx: snapshot.facts.find((item) => item.id === "fx")?.summary ?? "",
   });
 
-  const merged = ai
-    ? finalizePost(
-        {
-          ...base,
-          title: ai.title.includes(base.focusKeyword) ? ai.title : base.title,
-          excerpt: ai.excerpt || base.excerpt,
-          sections: ai.sections.length
-            ? [
-                { ...ai.sections[0], kind: "tape" as const },
-                ...ai.sections.slice(1).map((section) => ({ ...section, kind: "briefing" as const })),
-                ...base.sections.filter((section) => section.heading === "교차 확인 자료"),
-              ]
-            : base.sections,
-          table: ai.table?.rows?.length ? { ...ai.table, markdown: tableMarkdown(ai.table) } : base.table,
-          faq: ai.faq?.length === 3 ? ai.faq : base.faq,
-          updatedAt: new Date().toISOString(),
-        },
-        reserve,
-      )
-    : base;
-
-  if (options?.persist === false) {
-    return { skipped: false, persisted: false, supabase: false, usedOpenAi: Boolean(ai), post: merged };
+  const extraTape = buildExtraTape(lead, base.focusKeyword);
+  let usedOpenAi = false;
+  let output = base;
+  if (ai) {
+    const candidate = finalizePost(
+      {
+        ...base,
+        title: ai.title.includes(base.focusKeyword) ? ai.title : base.title,
+        excerpt: ai.excerpt || base.excerpt,
+        sections: ai.sections.length
+          ? [
+              { ...ai.sections[0], kind: "tape" as const },
+              ...ai.sections.slice(1).map((section) => ({ ...section, kind: "briefing" as const })),
+              ...base.sections.filter((section) => section.heading === "교차 확인 자료"),
+            ]
+          : base.sections,
+        table: ai.table?.rows?.length ? { ...ai.table, markdown: tableMarkdown(ai.table) } : base.table,
+        faq: ai.faq?.length === 3 ? ai.faq : base.faq,
+        updatedAt: new Date().toISOString(),
+      },
+      reserve,
+      extraTape,
+    );
+    if (evaluatePostSpec(candidate).ok) {
+      output = candidate;
+      usedOpenAi = true;
+    }
   }
 
-  const saved = await persistGeneratedPost(merged);
+  const spec = evaluatePostSpec(output);
+  if (!spec.ok) {
+    output = base;
+  }
+  const finalSpec = evaluatePostSpec(output);
+
+  if (options?.persist === false) {
+    return {
+      skipped: false,
+      persisted: false,
+      supabase: false,
+      usedOpenAi,
+      spec: finalSpec,
+      post: output,
+    };
+  }
+
+  if (!finalSpec.ok) {
+    return {
+      skipped: false,
+      reason: `spec failed: ${finalSpec.failures.join(",")}`,
+      persisted: false,
+      supabase: false,
+      usedOpenAi,
+      spec: finalSpec,
+      post: output,
+    };
+  }
+
+  const saved = await persistGeneratedPost(output);
   return {
     skipped: false,
     persisted: saved.file,
     supabase: saved.supabase,
-    usedOpenAi: Boolean(ai),
-    post: merged,
+    usedOpenAi,
+    spec: finalSpec,
+    post: output,
   };
 }
 
@@ -1141,6 +1341,8 @@ export async function regenerateAllPosts(): Promise<{
   slugs: string[];
   wordCounts: number[];
   tapeRatios: number[];
+  specOk: boolean[];
+  failures: string[][];
   persisted: boolean;
 }> {
   const existing = await listPosts();
@@ -1178,12 +1380,28 @@ export async function regenerateAllPosts(): Promise<{
     });
   });
 
+  const reports = next.map((item) => evaluatePostSpec(item));
+  const specOk = reports.map((item) => item.ok);
+  if (specOk.some((ok) => !ok)) {
+    return {
+      count: next.length,
+      slugs: next.map((item) => item.slug),
+      wordCounts: next.map((item) => item.wordCount),
+      tapeRatios: next.map((item) => Number(tapeRatio(item).toFixed(3))),
+      specOk,
+      failures: reports.map((item) => item.failures),
+      persisted: false,
+    };
+  }
+
   const saved = await replaceGeneratedArticles(next);
   return {
     count: next.length,
     slugs: next.map((item) => item.slug),
     wordCounts: next.map((item) => item.wordCount),
     tapeRatios: next.map((item) => Number(tapeRatio(item).toFixed(3))),
+    specOk,
+    failures: reports.map((item) => item.failures),
     persisted: saved.file,
   };
 }

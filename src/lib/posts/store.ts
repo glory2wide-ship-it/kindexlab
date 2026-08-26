@@ -155,8 +155,11 @@ export async function persistGeneratedPost(post: GeneratedPost): Promise<{ file:
 export async function listPosts(): Promise<GeneratedPost[]> {
   const [disk, remote] = await Promise.all([readDisk(), supabaseList()]);
   const bySlug = new Map<string, GeneratedPost>();
-  for (const item of [...disk, ...remote, ...memory.values()]) {
-    bySlug.set(item.slug, item);
+  for (const item of [...remote, ...disk, ...memory.values()]) {
+    const prev = bySlug.get(item.slug);
+    const nextStamp = item.updatedAt || item.publishedAt || "";
+    const prevStamp = prev?.updatedAt || prev?.publishedAt || "";
+    if (!prev || nextStamp >= prevStamp) bySlug.set(item.slug, item);
   }
   return [...bySlug.values()].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 }

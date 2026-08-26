@@ -4,6 +4,7 @@ async function main() {
   if (process.argv.includes("--all")) {
     const result = await regenerateAllPosts();
     console.log(JSON.stringify(result, null, 2));
+    if (result.specOk.some((ok) => !ok)) process.exitCode = 1;
     return;
   }
   const force = process.argv.includes("--force");
@@ -17,6 +18,9 @@ async function main() {
         wordCount: result.post?.wordCount ?? 0,
         characterCount: result.post?.characterCount ?? 0,
         usedOpenAi: result.usedOpenAi,
+        compliant: result.spec?.ok ?? false,
+        tapeRatio: result.spec?.tapeRatio ?? 0,
+        failures: result.spec?.failures ?? [],
         persisted: result.persisted,
         supabase: result.supabase,
       },
