@@ -200,6 +200,27 @@ export function changeForSeries(points: SeriesPoint[]): number {
   return Number((((last - first) / first) * 100).toFixed(2));
 }
 
+export function seriesOhlc(points: SeriesPoint[]): {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  change: number;
+} {
+  const values = points.map((point) => point.v).filter((value) => Number.isFinite(value));
+  const open = values[0] ?? 0;
+  const close = values[values.length - 1] ?? open;
+  const high = values.length ? Math.max(...values) : open;
+  const low = values.length ? Math.min(...values) : open;
+  return {
+    open: Number(open.toFixed(2)),
+    high: Number(high.toFixed(2)),
+    low: Number(low.toFixed(2)),
+    close: Number(close.toFixed(2)),
+    change: changeForSeries(points),
+  };
+}
+
 export function changeForEntity(entity: RankingEntity, timeframe: Timeframe): number {
   const live = entity.metrics?.[timeframe]?.changeRate;
   if (metricsAreDistinct(entity.metrics) && Number.isFinite(live)) return live as number;

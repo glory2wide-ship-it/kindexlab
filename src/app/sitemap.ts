@@ -1,4 +1,5 @@
 import { getAllBriefingSlugs, getAllSlugs, listEditionDates } from "@/lib/api";
+import { CHANNEL_SECTIONS, channelHref, channelSectionHref, inferPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import { listPosts } from "@/lib/posts/store";
 import { SITE } from "@/lib/site";
 import { rankingUrl } from "@/lib/slugs";
@@ -18,6 +19,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: SITE.url, lastModified: now, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE.url}/briefing`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
     { url: `${SITE.url}/posts`, lastModified: now, changeFrequency: "hourly", priority: 0.85 },
+    ...POST_CHANNELS.flatMap((channel) =>
+      CHANNEL_SECTIONS.map((section) => ({
+        url: `${SITE.url}${channelSectionHref(channel.id, section.id)}`,
+        lastModified: now,
+        changeFrequency: "hourly" as const,
+        priority: section.id === "board" ? 0.9 : 0.8,
+      })),
+    ),
     {
       url: `${SITE.url}/briefing/archive`,
       lastModified: now,
@@ -42,7 +51,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     })),
     ...posts.map((post) => ({
-      url: `${SITE.url}/posts/${post.slug}`,
+      url: `${SITE.url}${channelHref(inferPostChannel(post), post.slug)}`,
       lastModified: now,
       changeFrequency: "daily" as const,
       priority: 0.72,

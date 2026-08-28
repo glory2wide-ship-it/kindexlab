@@ -1,12 +1,13 @@
 import Link from "next/link";
+import { POST_CHANNELS } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 
 export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-16 border-t border-line bg-panel">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 md:grid-cols-4">
+    <footer className="mt-8 border-t border-line bg-panel">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:grid-cols-2 md:grid-cols-5">
         <div>
           <p className="font-semibold">{SITE.name}</p>
           <p className="mt-2 text-sm leading-6 text-muted">
@@ -29,7 +30,7 @@ export function SiteFooter() {
             </li>
             <li>
               <Link href="/posts" className="hover:text-ink">
-                금융·생활 시세 칼럼
+                전체 이슈 칼럼
               </Link>
             </li>
             <li>
@@ -42,6 +43,18 @@ export function SiteFooter() {
                 소개
               </Link>
             </li>
+          </ul>
+        </div>
+        <div className="text-sm">
+          <p className="font-medium">카테고리</p>
+          <ul className="mt-2 space-y-1.5 text-muted">
+            {POST_CHANNELS.map((item) => (
+              <li key={item.id}>
+                <Link href={item.href} className="hover:text-ink">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
         <div className="text-sm">

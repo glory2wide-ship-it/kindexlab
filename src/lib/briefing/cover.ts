@@ -7,7 +7,7 @@ interface CoverAsset {
   queries: string[];
 }
 
-const COVERS: Record<CategoryId, CoverAsset[]> = {
+const COVERS: Partial<Record<CategoryId, CoverAsset[]>> = {
   all: [
     { id: "photo-1493225457124-a3eb161ffa5f", photographer: "Austin Neill", queries: ["k-pop", "concert", "stage"] },
     { id: "photo-1514525253161-7a46d19cd819", photographer: "Anthony Delanoix", queries: ["crowd", "festival", "korea"] },
@@ -68,6 +68,34 @@ const COVERS: Record<CategoryId, CoverAsset[]> = {
     { id: "photo-1612287230202-1ff1d85d1cba", photographer: "Nikita Kachanovsky", queries: ["xbox", "controller", "console"] },
     { id: "photo-1605901309584-818e25960a8f", photographer: "Sean Do", queries: ["nintendo", "switch", "gamepad"] },
   ],
+  headline_news: [
+    { id: "photo-1504711434969-e33886168f5c", photographer: "Roman Kraft", queries: ["newsroom", "headline", "press"] },
+    { id: "photo-1495020689067-958852a7765e", photographer: "Roman Kraft", queries: ["newspaper", "politics", "desk"] },
+  ],
+  party_support: [
+    { id: "photo-1529107386315-ffe250a2c20f", photographer: "Sasha Freemind", queries: ["assembly", "politics", "flag"] },
+  ],
+  politician_support: [
+    { id: "photo-1541872703-74c5e44368f9", photographer: "Sasha Freemind", queries: ["politician", "speech", "podium"] },
+  ],
+  political_pundit: [
+    { id: "photo-1557597774-9d273605dfa9", photographer: "Ben White", queries: ["debate", "studio", "commentary"] },
+  ],
+  political_influencer: [
+    { id: "photo-1611162616475-46b635cb6868", photographer: "Alexander Shatov", queries: ["youtube", "politics", "creator"] },
+  ],
+  political_ratings: [
+    { id: "photo-1593784991095-a205069470c9", photographer: "Onur Binay", queries: ["news", "television", "broadcast"] },
+  ],
+  political_search: [
+    { id: "photo-1486312338219-ce68d2c6f44d", photographer: "Glenn Carstens-Peters", queries: ["search", "laptop", "trends"] },
+  ],
+  local_policy: [
+    { id: "photo-1477959858617-67f85cf4f1df", photographer: "Pedro Lastra", queries: ["city", "skyline", "policy"] },
+  ],
+  subsidy: [
+    { id: "photo-1554224155-6726b3ff858f", photographer: "Kelly Sikkema", queries: ["finance", "documents", "support"] },
+  ],
 };
 
 function hash(input: string): number {
@@ -83,6 +111,15 @@ function unsplashSrc(id: string): string {
   return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1600&h=900&q=80`;
 }
 
+function coverCategory(
+  article: Pick<BriefingArticle, "category" | "channel" | "kind">,
+): CategoryId {
+  if (article.channel === "politics" && (article.kind === "main" || article.category === "all")) {
+    return "headline_news";
+  }
+  return article.category;
+}
+
 function keywordFromArticle(
   article: Pick<BriefingArticle, "title" | "relatedEntitySlugs" | "category">,
   keyword?: string,
@@ -93,27 +130,39 @@ function keywordFromArticle(
 }
 
 export function briefingCoverFor(
-  article: Pick<BriefingArticle, "slug" | "title" | "category" | "kind" | "relatedEntitySlugs" | "coverImage">,
+  article: Pick<
+    BriefingArticle,
+    "slug" | "title" | "category" | "kind" | "channel" | "relatedEntitySlugs" | "coverImage"
+  >,
   options?: { keyword?: string; imageUrl?: string },
 ): BriefingCoverImage {
   const existing = article.coverImage;
   const liveUrl = options?.imageUrl?.trim() || (existing?.source === "live" ? existing.src : "");
   const keyword = keywordFromArticle(article, options?.keyword);
+  const category = coverCategory(article);
 
   if (liveUrl && /^https?:\/\//i.test(liveUrl)) {
     return {
       src: liveUrl,
-      alt: existing?.alt || `${keyword} 관련 ${categoryLabel(article.category)} 브리핑 이미지`,
+      alt: existing?.alt || `${keyword} 관련 ${categoryLabel(category)} 브리핑 이미지`,
       photographer: existing?.photographer,
       source: "live",
     };
   }
 
-  const pool = COVERS[article.category] ?? COVERS.all;
-  const asset = pool[hash(`${article.slug}:${keyword}`) % pool.length] ?? pool[0] ?? COVERS.all[0];
+  const pool = COVERS[category] ?? COVERS.all ?? [];
+  const fallback = COVERS.all?.[0];
+  const asset = pool[hash(`${article.slug}:${keyword}`) % Math.max(pool.length, 1)] ?? pool[0] ?? fallback;
+  if (!asset) {
+    return {
+      src: unsplashSrc("photo-1540959733332-eab4deabeeaf"),
+      alt: `${keyword} 트렌드 브리핑`,
+      source: "fallback",
+    };
+  }
   return {
     src: unsplashSrc(asset.id),
-    alt: `${keyword} · ${asset.queries[0] ?? categoryLabel(article.category)} 트렌드 브리핑`,
+    alt: `${keyword} · ${asset.queries[0] ?? categoryLabel(category)} 트렌드 브리핑`,
     photographer: asset.photographer,
     source: "unsplash",
   };
@@ -123,6 +172,8 @@ export function withBriefingCover(
   article: BriefingArticle,
   options?: { keyword?: string; imageUrl?: string },
 ): BriefingArticle {
-  if (article.coverImage?.src && !options?.imageUrl) return article;
+  if (article.coverImage?.source === "live" && article.coverImage.src && !options?.imageUrl) {
+    return article;
+  }
   return { ...article, coverImage: briefingCoverFor(article, options) };
 }

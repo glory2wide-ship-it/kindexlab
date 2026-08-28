@@ -81,6 +81,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap"
+        />
       </head>
       <body className="flex min-h-full flex-col bg-board font-sans text-ink antialiased">
         {adsenseClient ? (
@@ -112,7 +116,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
         <ThemeProvider>
           <SiteHeader />
-          <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:py-8">{children}</main>
+          <main className="mx-auto w-full max-w-7xl px-4 py-4">{children}</main>
           <SiteFooter />
         </ThemeProvider>
       </body>

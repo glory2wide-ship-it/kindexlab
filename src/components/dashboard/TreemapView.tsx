@@ -1,9 +1,10 @@
 "use client";
 
 import { hierarchy, treemap, treemapSquarify } from "d3-hierarchy";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { HoverCard } from "@/components/dashboard/HoverCard";
-import { TYPE_ORDER } from "@/lib/categories";
+import { orderedEntityTypes } from "@/lib/categories";
 import { TYPE_LABEL, formatCompact, formatRate } from "@/lib/format";
 import { heatFill, heatText } from "@/lib/heatmap";
 import {
@@ -45,7 +46,7 @@ function heatSort(a: RankingEntity, b: RankingEntity, timeframe: Timeframe): num
 }
 
 function pickHeatmapItems(items: RankingEntity[], timeframe: Timeframe): RankingEntity[] {
-  const types = TYPE_ORDER.filter((type) => items.some((item) => item.type === type));
+  const types = orderedEntityTypes(items);
   if (types.length <= 1) {
     return [...items].sort((a, b) => heatSort(a, b, timeframe)).slice(0, TREEMAP_MAX_ITEMS);
   }
@@ -65,7 +66,7 @@ function cellWeight(entity: RankingEntity, timeframe: Timeframe, maxVolume: numb
 }
 
 function sectorTree(items: RankingEntity[]): TreeNode {
-  const groups = TYPE_ORDER.map((type: EntityType) => ({
+  const groups = orderedEntityTypes(items).map((type: EntityType) => ({
     name: TYPE_LABEL[type] ?? type,
     children: items
       .filter((entity) => entity.type === type)
@@ -79,11 +80,16 @@ export function TreemapView({
   items,
   category,
   timeframe,
+  selectedSlug,
+  onSelect,
 }: {
   items: RankingEntity[];
   category: CategoryId;
   timeframe: Timeframe;
+  selectedSlug?: string | null;
+  onSelect?: (slug: string) => void;
 }) {
+  const router = useRouter();
   const wrapRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState({ width: 1100, height: 640 });
   const [hover, setHover] = useState<HoverState | null>(null);
@@ -235,9 +241,21 @@ export function TreemapView({
             <a
               key={entity.id}
               href={rankingPath(entity.slug)}
+              className="cursor-pointer"
               aria-label={`${TYPE_LABEL[entity.type]} ${entity.rank}위 ${entity.name} ${rate} ${metric}`}
               onMouseEnter={(event) => moveHover(event, entity, series, change)}
               onMouseMove={(event) => moveHover(event, entity, series, change)}
+              onClick={(event) => {
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+                  return;
+                }
+                event.preventDefault();
+                if (onSelect) {
+                  onSelect(entity.slug);
+                  return;
+                }
+                router.push(rankingPath(entity.slug));
+              }}
             >
               <g clipPath={`url(#tm-clip-${entity.id})`}>
                 <rect
@@ -246,6 +264,8 @@ export function TreemapView({
                   width={Math.max(w, 0)}
                   height={Math.max(h, 0)}
                   fill={heatFill(change)}
+                  stroke={selectedSlug === entity.slug ? "var(--color-accent)" : "transparent"}
+                  strokeWidth={selectedSlug === entity.slug ? 3 : 0}
                 />
                 <text
                   x={leaf.x0 + padX}

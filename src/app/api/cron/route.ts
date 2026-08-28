@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { cronAuthorized } from "@/lib/cron";
 import { generateSeoPost, tapeRatio } from "@/lib/content-generator";
+import { channelHref, channelSectionHref, inferPostChannel } from "@/lib/posts/channels";
 import type { PostSlot } from "@/lib/posts/types";
 
 export const runtime = "nodejs";
@@ -25,8 +26,12 @@ async function handle(request: Request) {
   });
 
   if (result.post) {
+    const channel = inferPostChannel(result.post);
     revalidatePath("/posts");
     revalidatePath(`/posts/${result.post.slug}`);
+    revalidatePath(channelHref(channel));
+    revalidatePath(channelSectionHref(channel, "posts"));
+    revalidatePath(channelHref(channel, result.post.slug));
   }
 
   const compliant = result.spec?.ok ?? false;

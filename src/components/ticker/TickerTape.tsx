@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatRate } from "@/lib/format";
 import { rankingPath } from "@/lib/slugs";
 import type { RankingEntity } from "@/lib/types";
@@ -17,7 +18,7 @@ export function TickerTape({ items }: { items: RankingEntity[] }) {
           const down = item.fluctuationRate < 0;
           const tone = up ? "text-up" : down ? "text-down" : "text-muted";
           return (
-            <a
+            <Link
               key={`${item.id}-${index}`}
               href={rankingPath(item.slug)}
               suppressHydrationWarning
@@ -29,7 +30,7 @@ export function TickerTape({ items }: { items: RankingEntity[] }) {
                 {up ? "▲" : down ? "▼" : "–"} {formatRate(item.fluctuationRate)}
               </span>
               <span className="text-muted">{item.buzzScore.toFixed(1)}</span>
-            </a>
+            </Link>
           );
         })}
       </div>

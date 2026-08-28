@@ -3,6 +3,7 @@ import {
   getArchiveBriefings,
   getBriefingBySlug,
   getBriefingsByDate,
+  getChannelBriefingEdition,
   getTodaysBriefings,
   getTodaysMainBriefing,
   groupBriefingsByDate,
@@ -11,6 +12,7 @@ import {
   parseCategoryParam,
   parseScopeParam,
   searchBriefings,
+  splitChannelEdition,
 } from "@/lib/briefing/store";
 import {
   getAllSlugs,
@@ -47,6 +49,7 @@ export {
   getArchiveBriefings,
   getBriefingBySlug,
   getBriefingsByDate,
+  getChannelBriefingEdition,
   getTodaysBriefings,
   getTodaysMainBriefing,
   groupBriefingsByDate,
@@ -55,6 +58,7 @@ export {
   parseCategoryParam,
   parseScopeParam,
   searchBriefings,
+  splitChannelEdition,
 };
 
 export type { RankingEntity };

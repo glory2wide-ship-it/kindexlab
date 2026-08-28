@@ -4,10 +4,14 @@ import { notFound } from "next/navigation";
 import { ProductShelf } from "@/components/affiliate/ProductShelf";
 import { BuzzChart } from "@/components/entity/BuzzChart";
 import { EntityHero } from "@/components/entity/EntityHero";
-import { getAllSlugs, getEntityBySlug, getRelatedEntities } from "@/lib/api";
+import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
+import { PollDeskSection } from "@/components/politics/PollDeskSection";
+import { getAllSlugs, getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
+import { composeTodayAnalysis } from "@/lib/editorial/today-analysis";
 import { TYPE_LABEL, formatRate } from "@/lib/format";
 import { SITE } from "@/lib/site";
 import { rankingPath, rankingUrl } from "@/lib/slugs";
+import { parseTimeframeParam } from "@/lib/timeframes";
 import type { EntityType } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -40,13 +44,18 @@ export async function generateMetadata({
 
 export default async function RankingDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ tf?: string }>;
 }) {
   const { slug } = await params;
+  const query = searchParams ? await searchParams : {};
   const entity = await getEntityBySlug(slug);
   if (!entity) notFound();
-  const related = await getRelatedEntities(entity);
+  const [related, market] = await Promise.all([getRelatedEntities(entity), getRankings()]);
+  const initialTimeframe = parseTimeframeParam(query.tf) ?? "5m";
+  const todayAnalysis = composeTodayAnalysis({ entity, market, related });
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -62,7 +71,7 @@ export default async function RankingDetailPage({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -75,12 +84,10 @@ export default async function RankingDetailPage({
         {entity.name}
       </p>
       <EntityHero entity={entity} />
-      <BuzzChart entity={entity} />
-      <article className="rounded-2xl border border-line bg-panel p-6 md:p-8">
-        <h2 className="text-xl font-semibold">오늘의 분석</h2>
-        <p className="mt-4 text-[15px] leading-8">{entity.analysis}</p>
-      </article>
+      <BuzzChart entity={entity} initialTimeframe={initialTimeframe} />
+      <TodayAnalysis article={todayAnalysis} />
       <ProductShelf products={entity.products} entityName={entity.name} />
+      <PollDeskSection entity={entity} market={market} related={related} />
       <section>
         <h2 className="mb-3 text-lg font-semibold">같은 섹터 종목</h2>
         <ul className="grid gap-3 sm:grid-cols-2">
@@ -122,5 +129,15 @@ function schemaType(type: EntityType): string {
   if (type === "webtoon") return "ComicSeries";
   if (type === "shorts") return "VideoObject";
   if (type === "mobile_game" || type === "pc_game" || type === "console_game") return "VideoGame";
+  if (
+    type === "headline_news" ||
+    type === "political_search" ||
+    type === "local_policy" ||
+    type === "subsidy"
+  ) {
+    return "NewsArticle";
+  }
+  if (type === "party_support") return "Organization";
+  if (type === "political_ratings") return "TVSeries";
   return "Person";
 }

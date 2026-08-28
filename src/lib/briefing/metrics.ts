@@ -1,5 +1,6 @@
-import { CATEGORIES, TYPE_ORDER } from "@/lib/categories";
+import { ALL_CATEGORIES, TYPE_ORDER } from "@/lib/categories";
 import { formatCompact, formatRate, formatScore, TYPE_LABEL } from "@/lib/format";
+import { channelFromEntityType, channelHref } from "@/lib/posts/channels";
 import type { CategoryId, EntityType, MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
 
 const INDEX_TO_CATEGORY: Record<string, CategoryId> = {
@@ -15,6 +16,17 @@ const INDEX_TO_CATEGORY: Record<string, CategoryId> = {
   mobile: "mobile_game",
   pcgame: "pc_game",
   console: "console_game",
+  "pol-buzz": "all",
+  "pol-approval": "politician_support",
+  "pol-headline": "headline_news",
+  "pol-party": "party_support",
+  "pol-politician": "politician_support",
+  "pol-pundit": "political_pundit",
+  "pol-influencer": "political_influencer",
+  "pol-ratings": "political_ratings",
+  "pol-search": "political_search",
+  "pol-policy": "local_policy",
+  "pol-subsidy": "subsidy",
 };
 
 export interface MarketSnapshot {
@@ -27,11 +39,12 @@ export interface MarketSnapshot {
 }
 
 export function categoryLabel(id: CategoryId): string {
-  return CATEGORIES.find((item) => item.id === id)?.label ?? TYPE_LABEL[id] ?? id;
+  return ALL_CATEGORIES.find((item) => item.id === id)?.label ?? TYPE_LABEL[id] ?? id;
 }
 
 export function heatmapHref(category: CategoryId = "all"): string {
-  return category === "all" ? "/#heatmap" : `/?category=${category}#heatmap`;
+  if (category === "all") return "/#heatmap";
+  return `${channelHref(channelFromEntityType(category))}#heatmap`;
 }
 
 /** One SEO deep-dive per heatmap sector tab, excluding 종합. */
@@ -42,16 +55,17 @@ export function describeEntity(entity: RankingEntity): string {
 }
 
 export function snapshotFromPayload(payload: RankingsPayload): MarketSnapshot {
-  const ranked = [...payload.items];
-  const gainers = [...ranked].sort((a, b) => b.fluctuationRate - a.fluctuationRate);
-  const losers = [...ranked].sort((a, b) => a.fluctuationRate - b.fluctuationRate);
-  const volumeLeaders = [...ranked].sort((a, b) => b.volume - a.volume);
+  /** Board order only — never sort editorial triggers by rate/volume. */
+  const ranked = [...payload.items].sort((a, b) => a.rank - b.rank);
+  const gainers = ranked;
+  const losers = [...ranked].reverse();
+  const volumeLeaders = ranked;
   const byType = {} as Record<EntityType, RankingEntity[]>;
   for (const item of ranked) {
     byType[item.type] = [...(byType[item.type] ?? []), item];
   }
   for (const key of Object.keys(byType) as EntityType[]) {
-    byType[key].sort((a, b) => b.fluctuationRate - a.fluctuationRate);
+    byType[key].sort((a, b) => a.rank - b.rank);
   }
   const leadingSectors = payload.indices
     .map((index) => ({

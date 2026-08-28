@@ -12,14 +12,22 @@ export function MarketWorkspace({
   items,
   initialCategory = "all",
   flashNonce = 0,
+  initialView = "treemap",
+  categories = CATEGORIES,
+  title = "실시간 시세",
+  subtitle = "등락률·버즈·거래량을 트리맵과 리스트로 읽습니다.",
 }: {
   items: RankingEntity[];
   initialCategory?: CategoryId;
   flashNonce?: number;
+  initialView?: ViewMode;
+  categories?: { id: CategoryId; label: string }[];
+  title?: string;
+  subtitle?: string;
 }) {
-  const [view, setView] = useState<ViewMode>("treemap");
+  const [view, setView] = useState<ViewMode>(initialView);
   const [category, setCategory] = useState<CategoryId>(initialCategory);
-  const [timeframe, setTimeframe] = useState<Timeframe>("1m");
+  const [timeframe, setTimeframe] = useState<Timeframe>("5m");
   const [methodOpen, setMethodOpen] = useState(false);
 
   const filtered = useMemo(
@@ -31,18 +39,14 @@ export function MarketWorkspace({
     [filtered, timeframe],
   );
 
+  // Board tiles link straight to /ranking/[slug]; the analysis column lives there.
   return (
-    <section
-      id="heatmap"
-      className="scroll-mt-24 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm"
-    >
+    <section id="heatmap" className="scroll-mt-36 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm">
       <div className="flex flex-col gap-3 border-b border-line px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold">KindexLab Heatmap</h2>
-            <p className="text-xs text-muted">
-              박스 크기 = 거래량 · 색상 = 등락률 · 숏폼·게임 포함 섹터별 상위 종목
-            </p>
+            <h2 className="text-base font-semibold">{title}</h2>
+            <p className="text-xs text-muted">{subtitle}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex rounded-lg bg-board p-1">
@@ -75,7 +79,7 @@ export function MarketWorkspace({
         </div>
 
         <div className="flex gap-1 overflow-x-auto rounded-lg bg-board p-1">
-          {CATEGORIES.map((item) => (
+          {categories.map((item) => (
             <button
               key={item.id}
               type="button"

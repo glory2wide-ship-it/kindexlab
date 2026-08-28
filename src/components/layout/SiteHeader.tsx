@@ -1,17 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { KstClock } from "@/components/layout/KstClock";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { POST_CHANNELS } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 
-const nav = [
-  { href: "/", label: "시세판" },
-  { href: "/briefing", label: "일일 브리핑" },
-  { href: "/posts", label: "시세 칼럼" },
-  { href: "/briefing/archive", label: "아카이브" },
-  { href: "/about", label: "소개" },
-];
-
 export function SiteHeader() {
+  const pathname = usePathname();
+
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-board/90 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4">
@@ -24,16 +22,26 @@ export function SiteHeader() {
             <span className="block text-[11px] text-muted">{SITE.tagline}</span>
           </span>
         </Link>
-        <nav className="hidden items-center gap-1 text-sm md:flex">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-3 py-1.5 text-muted transition-colors hover:bg-panel hover:text-ink"
-            >
-              {item.label}
-            </Link>
-          ))}
+        <nav
+          className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-x-auto text-sm md:justify-center"
+          aria-label="최상위 카테고리"
+        >
+          {POST_CHANNELS.map((item) => {
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            return (
+              <Link
+                key={item.id}
+                href={item.href}
+                className={
+                  active
+                    ? "shrink-0 rounded-md bg-panel px-3 py-1.5 font-medium text-ink"
+                    : "shrink-0 rounded-md px-3 py-1.5 text-muted transition-colors hover:bg-panel hover:text-ink"
+                }
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <KstClock />
@@ -44,17 +52,6 @@ export function SiteHeader() {
           <ThemeToggle />
         </div>
       </div>
-      <nav className="flex gap-1 overflow-x-auto border-t border-line px-4 py-2 text-sm md:hidden">
-        {nav.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="shrink-0 rounded-md px-3 py-1 text-muted hover:bg-panel hover:text-ink"
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
     </header>
   );
 }

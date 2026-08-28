@@ -17,6 +17,13 @@ export function changeFromScores(current: number, previous?: number): number {
   return Number((((current - previous) / previous) * 100).toFixed(2));
 }
 
+export function pointsFromRate(value: number, rate: number): number {
+  if (!Number.isFinite(value) || !Number.isFinite(rate) || rate === 0) return 0;
+  const previous = value / (1 + rate / 100);
+  if (!Number.isFinite(previous)) return 0;
+  return Number((value - previous).toFixed(2));
+}
+
 export function sparklineFromHistory(history: number[], current: number): number[] {
   const points = [...history.slice(-6), current];
   while (points.length < 7) points.unshift(points[0] ?? current);

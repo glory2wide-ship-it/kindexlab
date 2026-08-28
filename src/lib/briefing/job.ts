@@ -2,8 +2,7 @@ import { composeArticle, composeEdition, ensureBriefingLength } from "@/lib/brie
 import { hasEdition, listSeeded } from "@/lib/briefing/catalog";
 import { editionDateTime, kstDateString } from "@/lib/briefing/dates";
 import { applyAiDraft, generateWithAi } from "@/lib/briefing/ai";
-import { TYPE_ORDER } from "@/lib/categories";
-import { describeEntity, snapshotFromPayload } from "@/lib/briefing/metrics";
+import { snapshotFromPayload } from "@/lib/briefing/metrics";
 import { persistEdition } from "@/lib/briefing/persist";
 import { getRankings } from "@/lib/providers/trends";
 import type { BriefingArticle, RankingsPayload } from "@/lib/types";
@@ -12,36 +11,18 @@ async function currentPayload(): Promise<RankingsPayload> {
   return getRankings();
 }
 
-function factsBlock(payload: RankingsPayload): string {
-  const snap = snapshotFromPayload(payload);
-  const indices = payload.indices
-    .map((row) => `${row.label} ${row.value} ${row.changeRate}% (${row.note})`)
-    .join("\n");
-  const movers = [...snap.gainers.slice(0, 8), ...snap.losers.slice(0, 4)]
-    .map(describeEntity)
-    .join("\n");
-  const sectors = TYPE_ORDER.map((type) => {
-    const items = snap.byType[type] ?? [];
-    const top = items.slice(0, 3).map(describeEntity).join(", ");
-    const bottom = [...items]
-      .sort((a, b) => a.fluctuationRate - b.fluctuationRate)
-      .slice(0, 2)
-      .map(describeEntity)
-      .join(", ");
-    return `${type}: 상승 ${top || "-"} / 하락 ${bottom || "-"}`;
-  }).join("\n");
-  return `지수\n${indices}\n\n종목\n${movers}\n\n카테고리\n${sectors}`;
-}
-
 async function maybeAi(article: BriefingArticle, payload: RankingsPayload): Promise<BriefingArticle> {
   const draft = await generateWithAi({
     editionDate: article.editionDate,
     kind: article.kind,
     category: article.category,
-    facts: factsBlock(payload),
+    focus: article.focusKeyword ?? "",
+    supportKw: article.supportKeyword ?? "",
   });
-  const next = draft ? applyAiDraft(article, draft) : article;
-  return ensureBriefingLength(next, snapshotFromPayload(payload));
+  if (!draft) return ensureBriefingLength(article, snapshotFromPayload(payload));
+  const next = applyAiDraft(article, draft);
+  const filled = ensureBriefingLength(next, snapshotFromPayload(payload));
+  return filled;
 }
 
 export async function generateEdition(

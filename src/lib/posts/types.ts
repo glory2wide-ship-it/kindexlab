@@ -1,4 +1,8 @@
+import type { AffiliateProduct, BriefingCoverImage } from "@/lib/types";
+
 export type PostSlot = "morning" | "afternoon" | "evening";
+
+export type PostChannel = "entertainment" | "economy" | "politics" | "culture";
 
 export interface PostSection {
   heading: string;
@@ -40,6 +44,7 @@ export interface GeneratedPost {
   publishedAt: string;
   updatedAt: string;
   slot: PostSlot;
+  channel: PostChannel;
   editionDate: string;
   wordCount: number;
   characterCount: number;
@@ -51,5 +56,7 @@ export interface GeneratedPost {
   externalLink: PostLink;
   internalLink: PostLink;
   sources: MarketFact[];
+  products?: AffiliateProduct[];
   sections: PostSection[];
+  coverImage?: BriefingCoverImage;
 }

@@ -7,6 +7,7 @@ import { fetchBuzzSources } from "@/lib/ingestion/sources/buzz";
 import { fetchGameSources } from "@/lib/ingestion/sources/games";
 import { fetchMusicSources } from "@/lib/ingestion/sources/music";
 import { fetchShortsSources } from "@/lib/ingestion/sources/shorts";
+import { fetchPoliticsSources } from "@/lib/ingestion/sources/politics";
 import { fetchWebtoonSources } from "@/lib/ingestion/sources/webtoon";
 import type { IngestReport, IngestSnapshot } from "@/lib/ingestion/types";
 import type { RankingsPayload } from "@/lib/types";
@@ -47,15 +48,16 @@ export async function ingestLivePayload(options?: {
   previous?: IngestSnapshot;
 }): Promise<IngestReport> {
   const previous = options?.previous ?? readPersistedSnapshot();
-  const [music, broadcast, buzz, webtoon, shorts, games] = await Promise.all([
+  const [music, broadcast, buzz, webtoon, shorts, games, politics] = await Promise.all([
     fetchMusicSources(),
     fetchBroadcastSources(),
     fetchBuzzSources(),
     fetchWebtoonSources(),
     fetchShortsSources(),
     fetchGameSources(),
+    fetchPoliticsSources(),
   ]);
-  const sources = [...music, ...broadcast, ...buzz, ...webtoon, ...shorts, ...games];
+  const sources = [...music, ...broadcast, ...buzz, ...webtoon, ...shorts, ...games, ...politics];
   const composed = await composeLiveSnapshot(sources, previous);
   const updatedAt = new Date().toISOString();
   let items = composed.items;

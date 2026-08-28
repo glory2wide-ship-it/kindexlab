@@ -1,6 +1,15 @@
 import { marketIndices, rankings, rankingsUpdatedAt } from "@/data/rankings";
 import { snapshotToPayload, buildIndices } from "@/lib/ingestion/compose";
+import {
+  APPROVAL_INDEX_ID,
+  COMPOSITE_INDEX_ID,
+  buildApprovalIndex,
+  buildKindexComposite,
+} from "@/lib/ingestion/composite";
 import { readPersistedSnapshot, runIngestJob } from "@/lib/ingestion/job";
+import { getPresidentialPolls } from "@/lib/politics/polls";
+import { seedPoliticsRankings } from "@/lib/politics/seed";
+import { isPoliticsEntityType, POLITICS_INDEX_META } from "@/lib/politics/types";
 import { trendsRevalidateSec } from "@/lib/refresh";
 import { attachTimeframeMetrics, buildTimeframeMetrics, rankItemsForTimeframe } from "@/lib/timeframes";
 import type {
@@ -30,11 +39,15 @@ export function getTrendsSource(): TrendsSource {
 
 function loadMockRankings(): RankingsPayload {
   console.warn("[kindexlab:trends] using mock fixture");
+  const items = [
+    ...rankings,
+    ...seedPoliticsRankings().filter((item) => !rankings.some((row) => row.slug === item.slug)),
+  ];
   return {
     updatedAt: rankingsUpdatedAt,
     status: "open",
     indices: marketIndices,
-    items: rankings,
+    items,
   };
 }
 
@@ -112,10 +125,26 @@ async function loadLiveRankings(options?: { refresh?: boolean }): Promise<Rankin
 export async function getRankings(options?: { refresh?: boolean }): Promise<RankingsPayload> {
   const payload = getTrendsSource() === "live" ? await loadLiveRankings(options) : loadMockRankings();
   const items = payload.items.map(attachTimeframeMetrics);
+  const cultureItems = items.filter((item) => !isPoliticsEntityType(item.type));
+  const politicsItems = items.filter((item) => isPoliticsEntityType(item.type));
+  const polls = await getPresidentialPolls();
+  const composite = buildKindexComposite({
+    cultureItems,
+    politicsItems,
+    polls,
+    previous: payload.indices,
+  });
+  const approval = buildApprovalIndex(polls, payload.indices);
+  const cultureIndices = buildIndices(cultureItems, payload.indices).filter(
+    (index) => index.id !== COMPOSITE_INDEX_ID,
+  );
+  const politicsIndices = buildIndices(politicsItems, payload.indices, POLITICS_INDEX_META).map((index) =>
+    index.id === APPROVAL_INDEX_ID ? approval : index,
+  );
   return {
     ...payload,
     items,
-    indices: buildIndices(items, payload.indices),
+    indices: [composite, ...cultureIndices, ...politicsIndices],
   };
 }
 

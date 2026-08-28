@@ -1,7 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import generatedFile from "@/data/posts/generated.json";
-import type { GeneratedPost, PostFaq, PostLink, PostTable } from "@/lib/posts/types";
+import { inferPostChannel } from "@/lib/posts/channels";
+import type { GeneratedPost, PostChannel, PostFaq, PostLink, PostTable } from "@/lib/posts/types";
 import { decodeRouteSlug, slugsMatch } from "@/lib/slugs";
 
 const EMPTY_TABLE: PostTable = { caption: "", headers: [], rows: [] };
@@ -26,6 +27,7 @@ function normalizePost(post: GeneratedPost): GeneratedPost {
     characterCount: post.characterCount ?? 0,
     focusKeyword: post.focusKeyword ?? "",
     supportKeyword: post.supportKeyword ?? "",
+    channel: inferPostChannel(post),
     table,
     faq,
     externalLink: post.externalLink ?? {
@@ -162,6 +164,11 @@ export async function listPosts(): Promise<GeneratedPost[]> {
     if (!prev || nextStamp >= prevStamp) bySlug.set(item.slug, item);
   }
   return [...bySlug.values()].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+}
+
+export async function listPostsByChannel(channel: PostChannel): Promise<GeneratedPost[]> {
+  const posts = await listPosts();
+  return posts.filter((item) => inferPostChannel(item) === channel);
 }
 
 export async function getPostBySlug(slug: string): Promise<GeneratedPost | undefined> {

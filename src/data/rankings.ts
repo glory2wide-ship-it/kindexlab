@@ -22,7 +22,8 @@ export const marketIndices: MarketIndex[] = [
     label: "KindexLab 종합",
     value: 1284.62,
     changeRate: 2.41,
-    note: "예능·아이돌 동반 강세",
+    changePoints: 30.24,
+    note: "정치 지지도·검색량·이슈 합산",
   },
   {
     id: "kpop",

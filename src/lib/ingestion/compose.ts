@@ -2,6 +2,7 @@ import { matchCatalog } from "@/lib/ingestion/catalog";
 import { namesOverlap, normalizeName, slugify } from "@/lib/ingestion/names";
 import {
   changeFromScores,
+  pointsFromRate,
   scoreFromMetric,
   scoreFromRank,
   sparklineFromHistory,
@@ -14,10 +15,13 @@ import { pickPrimaryShorts } from "@/lib/ingestion/sources/shorts";
 import { pickPrimaryWebtoon } from "@/lib/ingestion/sources/webtoon";
 import { attachTimeframeMetrics, changeForEntity, volumeForTimeframe } from "@/lib/timeframes";
 import type { CatalogMatch, ChartRow, IngestSnapshot, SourceResult } from "@/lib/ingestion/types";
+import { matchPoliticsCatalog } from "@/lib/politics/catalog";
+import { composePoliticsEntities } from "@/lib/politics/compose";
+import { isPoliticsEntityType, POLITICS_INDEX_META } from "@/lib/politics/types";
 import type { AffiliateProduct, EntityType, MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
 
 const INDEX_META: { id: string; label: string; type?: EntityType; note: string }[] = [
-  { id: "k-buzz", label: "KindexLab 종합", note: "실시간 수집 합산" },
+  { id: "k-buzz", label: "KindexLab 종합", note: "정치 지지도·검색량·이슈 합산" },
   { id: "kpop", label: "K-POP지수", type: "kpop", note: "차트 아티스트 수급" },
   { id: "broadcast", label: "방송지수", type: "tv_show", note: "편성·화제 합산" },
   { id: "celebrity", label: "셀럽지수", type: "celebrity", note: "검색·뉴스 버즈" },
@@ -62,6 +66,10 @@ function defaultProducts(name: string, type: EntityType): AffiliateProduct[] {
             ? [`${name} 관련 굿즈`, "스마트폰 거치대", "무선 이어폰"]
             : type === "mobile_game" || type === "pc_game" || type === "console_game"
               ? [`${name} 가이드북`, "게이밍 헤드셋", "컨트롤러"]
+              : isPoliticsEntityType(type)
+                ? type === "subsidy"
+                  ? [`${name}`, "가계부", "적금"]
+                  : [`${name} 시사 도서`, "정부 지원금", "노트북"]
           : [`${name} 굿즈`, `${name} 모자`, "포토카드 바인더"];
   return queries.map((searchQuery, index) => ({
     id: `live-${slugify(name)}-${index + 1}`,
@@ -144,7 +152,13 @@ function toEntity(
 ): RankingEntity {
   const title = cleanTitle(row.title);
   const catalog: CatalogMatch | undefined = matchCatalog(title, row.subtitle);
-  const chartLocked = type === "shorts" || type === "webtoon" || type === "mobile_game" || type === "pc_game" || type === "console_game";
+  const chartLocked =
+    type === "shorts" ||
+    type === "webtoon" ||
+    type === "mobile_game" ||
+    type === "pc_game" ||
+    type === "console_game" ||
+    isPoliticsEntityType(type);
   const knownType = chartLocked ? type : (catalog?.type ?? type);
   const slug =
     type === "shorts"
@@ -266,8 +280,12 @@ function directedSectorChange(items: RankingEntity[]): number {
   return mean(leaders.map(entityIndexChange));
 }
 
-export function buildIndices(items: RankingEntity[], previous?: MarketIndex[]): MarketIndex[] {
-  return INDEX_META.map((meta) => {
+export function buildIndices(
+  items: RankingEntity[],
+  previous?: MarketIndex[],
+  metas: { id: string; label: string; type?: EntityType; note: string }[] = INDEX_META,
+): MarketIndex[] {
+  return metas.map((meta) => {
     const subset = (meta.type ? items.filter((item) => item.type === meta.type) : items).map(
       attachTimeframeMetrics,
     );
@@ -285,11 +303,13 @@ export function buildIndices(items: RankingEntity[], previous?: MarketIndex[]): 
     const spark = subset.length ? mean(subset.map(sparklineChange)) : 0;
     const windowed = subset.length ? weightedWindowChange(subset) : 0;
     const directed = subset.length ? directedSectorChange(subset) : 0;
+    const changeRate = pickIndexChange([vsPrevious, stored, directed, windowed, vsOpen, spark]);
     return {
       id: meta.id,
       label: meta.label,
       value,
-      changeRate: pickIndexChange([vsPrevious, stored, directed, windowed, vsOpen, spark]),
+      changeRate,
+      changePoints: pointsFromRate(value, changeRate),
       note: meta.note,
     };
   });
@@ -333,6 +353,7 @@ export async function composeLiveSnapshot(
     if (title.length > 18) return false;
     if (/^(속보|단독|종합|영상|포토|오늘|이유|충격|공개|연예|뉴스|실시간)$/.test(title)) return false;
     if (/예산|부동산|날씨|주가|환율|대통령|국회|선거/.test(title) && !matchCatalog(title)) return false;
+    if (matchPoliticsCatalog(title).length) return false;
     return (row.metric ?? 0) >= 1;
   });
 
@@ -373,6 +394,7 @@ export async function composeLiveSnapshot(
     ...pcRows.map((row) => toEntity(row, "pc_game", previous, row.tags ?? [])),
     ...consoleRows.map((row) => toEntity(row, "console_game", previous, row.tags ?? [])),
     ...buzzEntities,
+    ...composePoliticsEntities(sources, previous),
   ]);
 
   const items = built
@@ -395,7 +417,17 @@ export async function composeLiveSnapshot(
   return {
     status: items.length ? "open" : "closed",
     sources: sources.map((item) => ({ id: item.id, ok: item.ok, count: item.count, error: item.error })),
-    indices: buildIndices(items, previous?.indices),
+    indices: [
+      ...buildIndices(
+        items.filter((item) => !isPoliticsEntityType(item.type)),
+        previous?.indices,
+      ),
+      ...buildIndices(
+        items.filter((item) => isPoliticsEntityType(item.type)),
+        previous?.indices,
+        POLITICS_INDEX_META,
+      ),
+    ],
     items,
     scoreHistory,
   };

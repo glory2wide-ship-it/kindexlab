@@ -34,6 +34,14 @@ export function formatRate(value: number): string {
   return `0.00%`;
 }
 
+export function formatPoints(value: number): string {
+  const n = Number.isFinite(value) ? value : 0;
+  const abs = Math.abs(n).toFixed(2);
+  if (n > 0) return `+${abs}pt`;
+  if (n < 0) return `-${abs}pt`;
+  return `0.00pt`;
+}
+
 export function formatKst(iso: string): string {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Seoul",
@@ -61,6 +69,15 @@ export const TYPE_LABEL: Record<string, string> = {
   mobile_game: "모바일",
   pc_game: "PC게임",
   console_game: "콘솔",
+  headline_news: "헤드라인",
+  party_support: "정당",
+  politician_support: "정치인",
+  political_pundit: "평론가",
+  political_influencer: "정치SNS",
+  political_ratings: "정치뉴스",
+  political_search: "검색어",
+  local_policy: "지자체",
+  subsidy: "지원금",
 };
 
 export function scoreLabel(type: string): string {
@@ -71,6 +88,14 @@ export function scoreLabel(type: string): string {
   if (type === "mobile_game") return "인기 지수";
   if (type === "pc_game") return "플레이 지수";
   if (type === "console_game") return "트렌드 지수";
+  if (type === "headline_news") return "헤드라인 지수";
+  if (type === "party_support" || type === "politician_support") return "지지도 지수";
+  if (type === "political_pundit") return "평론 지수";
+  if (type === "political_influencer") return "SNS 지수";
+  if (type === "political_ratings") return "시청률 지수";
+  if (type === "political_search") return "검색 지수";
+  if (type === "local_policy") return "정책 지수";
+  if (type === "subsidy") return "지원금 지수";
   return "버즈 점수";
 }
 
@@ -81,6 +106,9 @@ export function metricLabel(type: string): string {
   if (type === "console_game") return "트렌드";
   if (type === "tv_rating") return "시청";
   if (type === "music_chart") return "스트리밍";
+  if (type === "headline_news" || type === "political_search") return "언급";
+  if (type === "party_support" || type === "politician_support") return "지지도";
+  if (type === "subsidy" || type === "local_policy") return "관심";
   return "거래량";
 }
 

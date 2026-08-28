@@ -39,8 +39,8 @@
   --color-up: var(--up);
   --color-down: var(--down);
   --color-accent: var(--accent);
-  --font-sans: "Pretendard Variable", Pretendard, var(--font-inter), system-ui,
-    -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", var(--font-inter),
+    system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "Cascadia Mono", monospace;
 }
 
@@ -55,6 +55,10 @@ textarea {
 
 svg text {
   font-family: var(--font-sans);
+}
+
+svg a {
+  cursor: pointer;
 }
 
 body {
@@ -247,4 +251,10 @@ body {
   to {
     transform: rotateX(0deg);
   }
+}
+
+.index-gothic,
+.index-gothic * {
+  font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", var(--font-inter),
+    system-ui, -apple-system, "Segoe UI", sans-serif !important;
 }

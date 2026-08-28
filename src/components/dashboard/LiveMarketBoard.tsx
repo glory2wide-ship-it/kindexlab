@@ -5,6 +5,10 @@ import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
 import { fetchTrendsSnapshot, mergeTrendItems } from "@/lib/liveTrends";
+import { itemsForChannel } from "@/lib/posts/channels";
+import { isPoliticsEntityType, isPoliticsIndex, POLITICS_CATEGORIES } from "@/lib/politics/types";
+import { COMPOSITE_INDEX_ID } from "@/lib/ingestion/composite";
+import type { PostChannel } from "@/lib/posts/types";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { CategoryId, RankingsPayload } from "@/lib/types";
 
@@ -12,12 +16,17 @@ export function LiveMarketBoard({
   initialMarket,
   initialCategory = "all",
   refreshIntervalSec = DEFAULT_TRENDS_REVALIDATE_SEC,
+  channel,
   children,
+  afterOverview,
 }: {
   initialMarket: RankingsPayload;
   initialCategory?: CategoryId;
   refreshIntervalSec?: number;
+  channel?: PostChannel;
+  compact?: boolean;
   children?: ReactNode;
+  afterOverview?: ReactNode;
 }) {
   const intervalMs = Math.max(1, refreshIntervalSec) * 1000;
   const [indices, setIndices] = useState(initialMarket.indices);
@@ -82,26 +91,47 @@ export function LiveMarketBoard({
     return () => window.removeEventListener("kindexlab:refresh-now", forceRefresh);
   }, []);
 
+  const boardItems = channel
+    ? itemsForChannel(items, channel)
+    : items.filter((item) => !isPoliticsEntityType(item.type));
+  const boardIndices =
+    channel === "politics"
+      ? [
+          ...indices.filter((index) => index.id === COMPOSITE_INDEX_ID),
+          ...indices.filter(isPoliticsIndex),
+        ]
+      : indices.filter((index) => !isPoliticsIndex(index));
+  const politicsBoard = channel === "politics";
+
   return (
-    <>
-      <div className="-mx-4">
-        <TickerTape items={items} />
-      </div>
+    <div className="space-y-3">
       {children}
       <MarketOverview
-        indices={indices}
+        indices={boardIndices}
         updatedAt={updatedAt}
         status={status}
         remainingSec={remainingSec}
         refreshing={refreshing}
         flashNonce={flashNonce}
       />
+      {afterOverview}
+      <div className="-mx-4">
+        <TickerTape items={boardItems.length ? boardItems : items} />
+      </div>
       <MarketWorkspace
-        key={initialCategory}
-        items={items}
+        key={channel ?? initialCategory}
+        items={boardItems}
         initialCategory={initialCategory}
         flashNonce={flashNonce}
+        initialView="treemap"
+        categories={politicsBoard ? POLITICS_CATEGORIES : undefined}
+        title={politicsBoard ? "정치 실시간 시세" : "실시간 시세"}
+        subtitle={
+          politicsBoard
+            ? "9대 정치 지표를 트리맵과 리스트로 읽습니다. 기본 시계열은 5분봉입니다."
+            : "등락률·버즈·거래량을 트리맵과 리스트로 읽습니다."
+        }
       />
-    </>
+    </div>
   );
 }

@@ -9,7 +9,16 @@ export type EntityType =
   | "shorts"
   | "mobile_game"
   | "pc_game"
-  | "console_game";
+  | "console_game"
+  | "headline_news"
+  | "party_support"
+  | "politician_support"
+  | "political_pundit"
+  | "political_influencer"
+  | "political_ratings"
+  | "political_search"
+  | "local_policy"
+  | "subsidy";
 
 export type CategoryId = "all" | EntityType;
 
@@ -101,6 +110,8 @@ export interface MarketIndex {
   label: string;
   value: number;
   changeRate: number;
+  changePoints?: number;
+  previousValue?: number;
   note: string;
 }
 
@@ -126,17 +137,45 @@ export interface DailyBriefing {
 
 export type BriefingKind = "main" | "deep-dive";
 
+export interface BriefingTable {
+  caption: string;
+  headers: string[];
+  rows: string[][];
+  markdown?: string;
+}
+
+export interface BriefingFaq {
+  question: string;
+  answer: string;
+}
+
+export interface BriefingLink {
+  href: string;
+  label: string;
+  rel?: string;
+}
+
 export interface BriefingArticle extends DailyBriefing {
   kind: BriefingKind;
   category: CategoryId;
+  channel?: "entertainment" | "economy" | "politics" | "culture";
+  deskId?: string;
+  deskLabel?: string;
   editionDate: string;
   relatedEntitySlugs: string[];
+  focusKeyword?: string;
+  supportKeyword?: string;
+  table?: BriefingTable;
+  faq?: BriefingFaq[];
+  externalLink?: BriefingLink;
+  internalLink?: BriefingLink;
 }
 
 export interface BriefingSection {
   heading?: string;
   headingLevel?: 2 | 3;
   paragraphs: string[];
+  kind?: "tape" | "briefing";
 }
 
 export interface RankingsPayload {

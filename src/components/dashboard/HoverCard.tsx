@@ -1,4 +1,3 @@
-import { AffiliateTeaser } from "@/components/affiliate/AffiliateTeaser";
 import { TimeframeChart } from "@/components/charts/TimeframeChart";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel } from "@/lib/format";
 import { buildTimeframeMetrics, scoreForTimeframe, timeframeLabel, volumeForTimeframe } from "@/lib/timeframes";
@@ -58,12 +57,6 @@ export function HoverCard({
         <TimeframeChart points={series} positive={change >= 0} compact />
       </div>
       <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-muted">{entity.summary}</p>
-      <AffiliateTeaser
-        compact
-        products={entity.products}
-        entityName={entity.name}
-        entitySlug={entity.slug}
-      />
     </div>
   );
 }

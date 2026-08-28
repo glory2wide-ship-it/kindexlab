@@ -1,4 +1,5 @@
 import { countWords } from "@/lib/briefing/compose";
+import { editorialSystemPrompt, hasBannedCopy, MIN_WORDS } from "@/lib/editorial/rules";
 import type { BriefingArticle, BriefingKind, BriefingSection, CategoryId } from "@/lib/types";
 
 interface AiDraft {
@@ -11,7 +12,8 @@ export async function generateWithAi(input: {
   editionDate: string;
   kind: BriefingKind;
   category: CategoryId;
-  facts: string;
+  focus: string;
+  supportKw: string;
 }): Promise<AiDraft | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
@@ -35,12 +37,11 @@ export async function generateWithAi(input: {
         messages: [
           {
             role: "system",
-            content:
-              "You are KindexLab (킨덱스랩), a Korean K-culture market desk at kindexlab.com. Write analytical Korean journalism, not hype. Return JSON {title, excerpt, sections:[{heading, headingLevel: 2|3, paragraphs: string[]}]}. Mix H2 market-overview headings with H3 sub-analysis. At least 9 sections and 1200+ Korean space-separated words of rich context, not short summaries. Do not mention advertising revenue models.",
+            content: editorialSystemPrompt(input.focus, input.supportKw),
           },
           {
             role: "user",
-            content: `날짜 ${input.editionDate}, 유형 ${input.kind}, 카테고리 ${input.category}. 팩트:\n${input.facts}\n시세판 링크와 카테고리 히트맵을 본문에 자연스럽게 언급하세요.`,
+            content: `키워드만 제공됩니다: ${input.focus}. 보조 주제: ${input.supportKw}. 날짜 ${input.editionDate}. 수치 데이터는 일절 제공되지 않습니다. 이 키워드의 산업적·사회적 배경, 화제가 된 이유, 파급력, 초보자 가이드, 향후 전망만 쓰세요. 쇼핑몰·쿠팡·토스쇼핑 문장은 넣지 마세요.`,
           },
         ],
       }),
@@ -55,20 +56,24 @@ export async function generateWithAi(input: {
     if (!draft.title || !draft.excerpt || !Array.isArray(draft.sections) || draft.sections.length < 4) {
       return null;
     }
+    if (hasBannedCopy(`${draft.title}${draft.excerpt}${draft.sections.map((row) => row.paragraphs.join(" ")).join(" ")}`)) {
+      return null;
+    }
     const words = countWords({
       title: draft.title,
       excerpt: draft.excerpt,
       sections: draft.sections,
     });
-    if (words < 1000) return null;
+    if (words < MIN_WORDS - 200) return null;
     draft.sections = draft.sections.map((section, index) => ({
       ...section,
-    headingLevel:
-      section.headingLevel === 3 || section.headingLevel === 2
-        ? section.headingLevel
-        : index === 0 || index % 3 === 0
-          ? 2
-          : 3,
+      kind: index === 0 ? "tape" : "briefing",
+      headingLevel:
+        section.headingLevel === 3 || section.headingLevel === 2
+          ? section.headingLevel
+          : index === 0 || index % 3 === 0
+            ? 2
+            : 3,
     }));
     return draft;
   } catch {
@@ -84,14 +89,19 @@ export function applyAiDraft(
 ): BriefingArticle {
   const next = {
     ...base,
-    title: draft.title,
-    excerpt: draft.excerpt,
-    sections: draft.sections,
+    title: draft.title.includes(base.focusKeyword ?? "") ? draft.title : base.title,
+    excerpt: draft.excerpt || base.excerpt,
+    sections: draft.sections.length
+      ? [
+          { ...draft.sections[0], kind: "tape" as const },
+          ...draft.sections.slice(1).map((section) => ({ ...section, kind: "briefing" as const })),
+        ]
+      : base.sections,
   };
   const wordCount = countWords(next);
   return {
     ...next,
     wordCount,
-    readingMinutes: Math.max(8, Math.round(wordCount / 120)),
+    readingMinutes: Math.max(8, Math.round(wordCount / 180)),
   };
 }

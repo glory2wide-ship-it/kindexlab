@@ -37,18 +37,31 @@ export function tableRows(html: string): string[][] {
   return rows;
 }
 
-export function parseRssItems(xml: string): { title: string; link?: string; pubDate?: string }[] {
-  const items: { title: string; link?: string; pubDate?: string }[] = [];
+export function parseRssItems(xml: string): {
+  title: string;
+  link?: string;
+  pubDate?: string;
+  description?: string;
+}[] {
+  const items: { title: string; link?: string; pubDate?: string; description?: string }[] = [];
   const itemRe = /<item[\s\S]*?<\/item>/gi;
   let block: RegExpExecArray | null;
   while ((block = itemRe.exec(xml))) {
     const chunk = block[0];
-    const title = decodeHtml(
-      stripTags((chunk.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")),
-    );
+    const unwrap = (raw: string) =>
+      decodeHtml(stripTags(raw.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")));
+    const title = unwrap(chunk.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "");
     const link = stripTags(chunk.match(/<link[^>]*>([\s\S]*?)<\/link>/i)?.[1] ?? "").trim();
     const pubDate = stripTags(chunk.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i)?.[1] ?? "").trim();
-    if (title) items.push({ title, link: link || undefined, pubDate: pubDate || undefined });
+    const description = unwrap(chunk.match(/<description[^>]*>([\s\S]*?)<\/description>/i)?.[1] ?? "");
+    if (title) {
+      items.push({
+        title,
+        link: link || undefined,
+        pubDate: pubDate || undefined,
+        description: description || undefined,
+      });
+    }
   }
   return items;
 }
