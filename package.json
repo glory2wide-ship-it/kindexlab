@@ -12,7 +12,16 @@
         "lint": "eslint",
         "briefing:generate": "tsx scripts/generate-briefings.ts",
         "ingest:trends": "tsx scripts/ingest-trends.ts",
-        "posts:generate": "tsx scripts/generate-posts.ts"
+        "posts:generate": "tsx scripts/generate-posts.ts",
+        "analysis:check": "tsx scripts/check-analysis-override.ts",
+        "analysis:audit": "tsx scripts/audit-cache.ts",
+        "boards:generate": "tsx --env-file=.env.local scripts/generate-boards.ts",
+        "boards:audit": "tsx scripts/audit-boards.ts",
+        "premium:check": "tsx --env-file=.env.local scripts/check-premium-pipeline.ts",
+        "premium:try": "tsx --env-file=.env.local scripts/try-premium-article.ts",
+        "premium:why": "tsx --env-file=.env.local scripts/diagnose-thin-sources.ts",
+        "premium:verify": "node scripts/verify-premium-output.mjs",
+        "premium:render": "node scripts/verify-premium-render.mjs"
     },
     "dependencies": {
         "d3-hierarchy": "^3.1.2",
@@ -20,7 +29,8 @@
         "next": "16.3.2",
         "next-themes": "^0.4.6",
         "react": "19.2.8",
-        "react-dom": "19.2.8"
+        "react-dom": "19.2.8",
+        "rss-parser": "^3.13.0"
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4",

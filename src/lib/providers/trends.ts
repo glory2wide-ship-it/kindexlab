@@ -166,8 +166,8 @@ export function toTrendEntity(entity: RankingEntity, timeframe: Timeframe = "1d"
     sparkline: entity.sparkline,
     tags: entity.tags,
     summary: entity.summary,
-    analysis: entity.analysis,
-    products: entity.products,
+    analysis: entity.analysis ?? "",
+    products: entity.products ?? [],
   };
 }
 
@@ -208,9 +208,15 @@ function findBySlug(items: RankingEntity[], slug: string): RankingEntity | undef
   return items.find((item) => slugsMatch(item.slug, incoming));
 }
 
-export async function getEntityBySlug(slug: string): Promise<RankingEntity | undefined> {
+export async function getEntityBySlug(
+  slug: string,
+  fallbackName?: string,
+): Promise<RankingEntity | undefined> {
   const payload = await getRankings();
-  return findBySlug(payload.items, slug);
+  const live = findBySlug(payload.items, slug);
+  if (live) return live;
+  const { resolveBoardOrKeywordEntity } = await import("@/lib/entity/resolve");
+  return resolveBoardOrKeywordEntity(slug, fallbackName);
 }
 
 export async function getEntitiesBySlugs(slugs: string[]): Promise<RankingEntity[]> {

@@ -107,7 +107,7 @@ function storedChange(entity: RankingEntity): number {
 }
 
 function sparklineChange(entity: RankingEntity): number {
-  const series = entity.sparkline.filter((value) => Number.isFinite(value));
+  const series = (entity.sparkline ?? []).filter((value) => Number.isFinite(value));
   if (series.length < 2) return 0;
   const first = series[0] ?? 0;
   const last = series[series.length - 1] ?? first;
@@ -156,7 +156,8 @@ export function scoreForTimeframe(entity: RankingEntity, timeframe: Timeframe): 
     return stored as number;
   }
   const change = changeForEntity(entity, timeframe);
-  return Number((entity.buzzScore * (1 + change / 400)).toFixed(2));
+  const buzz = Number.isFinite(entity.buzzScore) && entity.buzzScore > 0 ? entity.buzzScore : 1;
+  return Number((buzz * (1 + change / 400)).toFixed(2));
 }
 
 export function heatForTimeframe(entity: RankingEntity, timeframe: Timeframe): number {
@@ -249,19 +250,29 @@ export function attachTimeframeMetrics(entity: RankingEntity): RankingEntity {
   return { ...entity, metrics: buildTimeframeMetrics(entity) };
 }
 
+/** Shared treemap/list sort: heat, then score, then volume, then existing rank. */
+export function compareEntitiesForTimeframe(
+  a: RankingEntity,
+  b: RankingEntity,
+  timeframe: Timeframe,
+): number {
+  const heat = heatForTimeframe(b, timeframe) - heatForTimeframe(a, timeframe);
+  if (heat !== 0) return heat;
+  const score = scoreForTimeframe(b, timeframe) - scoreForTimeframe(a, timeframe);
+  if (score !== 0) return score;
+  const volume = volumeForTimeframe(b, timeframe) - volumeForTimeframe(a, timeframe);
+  if (volume !== 0) return volume;
+  return a.rank - b.rank || a.name.localeCompare(b.name, "ko");
+}
+
 export function rankItemsForTimeframe(
   items: RankingEntity[],
   timeframe: Timeframe,
 ): RankingEntity[] {
-  return [...items]
-    .map(attachTimeframeMetrics)
-    .sort((a, b) => {
-      const heat = heatForTimeframe(b, timeframe) - heatForTimeframe(a, timeframe);
-      if (heat !== 0) return heat;
-      const score = scoreForTimeframe(b, timeframe) - scoreForTimeframe(a, timeframe);
-      if (score !== 0) return score;
-      return a.rank - b.rank;
-    })
+  const safe = (Array.isArray(items) ? items : []).filter((item) => item && typeof item.name === "string");
+  return [...safe]
+    .map((item) => attachTimeframeMetrics({ ...item, sparkline: Array.isArray(item.sparkline) ? item.sparkline : [] }))
+    .sort((a, b) => compareEntitiesForTimeframe(a, b, timeframe))
     .map((item, index) => ({
       ...item,
       rank: index + 1,

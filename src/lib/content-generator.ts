@@ -1,5 +1,4 @@
 import { kstDateString } from "@/lib/briefing/dates";
-import { briefingCoverFor } from "@/lib/briefing/cover";
 import {
   buildIssueCompareTable,
   buildIssueFaq,
@@ -163,7 +162,6 @@ export function evaluatePostSpec(post: GeneratedPost): PostSpecReport {
   }
   if (banned) failures.push("banned");
   if (sentenceIssues > 0) failures.push(`sentences:${sentenceIssues}:${sentenceReport.sample}`);
-  if (!post.coverImage?.src) failures.push("image");
   return {
     ok: failures.length === 0,
     tapeRatio: ratio,
@@ -462,16 +460,6 @@ function composeStructured(params: {
     ],
     products: [],
     sections,
-    coverImage: briefingCoverFor(
-      {
-        slug,
-        title,
-        category: lead.type,
-        kind: "main",
-        relatedEntitySlugs: [lead.slug],
-      },
-      { keyword: lead.name, imageUrl: lead.imageUrl },
-    ),
   };
 
   return finalizePost(draft, reserve);

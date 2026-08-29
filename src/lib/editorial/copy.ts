@@ -152,10 +152,17 @@ function topicLens(type: EntityType): {
   }
 }
 
+/**
+ * The support keyword is the bare topic noun rather than a coined phrase.
+ * The audit counts literal substrings, and a two-word collocation like
+ * "드라마 화제" only appears when a writer forces it — natural prose produces
+ * "화제의 드라마" instead, which does not match. A single noun is repeated
+ * naturally, and it still matches inside the older phrase.
+ */
 export function pickIssueKeywords(keyword: IssueKeyword): { focus: string; supportKw: string } {
   return {
     focus: `${briefName(keyword.name)} 이슈`,
-    supportKw: `${keyword.topicLabel} 화제`,
+    supportKw: keyword.topicLabel,
   };
 }
 

@@ -1,4 +1,11 @@
 import { matchCatalog } from "@/lib/ingestion/catalog";
+import {
+  matchTrafficChannel,
+  TOP_TRAFFIC_CHANNELS_WHITELIST,
+  type TrafficChannel,
+} from "@/lib/ingestion/channels";
+import { classifySmart, type SmartClassification } from "@/lib/ingestion/classify";
+import { ingestLog } from "@/lib/ingestion/log";
 import { namesOverlap, normalizeName, slugify } from "@/lib/ingestion/names";
 import {
   changeFromScores,
@@ -149,10 +156,12 @@ function toEntity(
   type: EntityType,
   previous: IngestSnapshot | undefined,
   extraTags: string[],
+  lockType = false,
 ): RankingEntity {
   const title = cleanTitle(row.title);
   const catalog: CatalogMatch | undefined = matchCatalog(title, row.subtitle);
   const chartLocked =
+    lockType ||
     type === "shorts" ||
     type === "webtoon" ||
     type === "mobile_game" ||
@@ -214,6 +223,122 @@ function toEntity(
     products: catalog?.products?.length ? catalog.products : defaultProducts(title, knownType),
     imageUrl: row.imageUrl,
   };
+}
+
+interface PromotedRow {
+  row: ChartRow;
+  type: EntityType;
+  channel?: TrafficChannel;
+}
+
+/**
+ * Decides the category of a trend row from its own text instead of trusting the
+ * feed it arrived on. YouTube trending is a single undifferentiated list, so
+ * without this every political talk show and web-variety clip was filed as 숏폼
+ * and never reached the politics or entertainment surfaces.
+ */
+function promoteTrendRow(row: ChartRow, fallback: EntityType): PromotedRow {
+  const title = cleanTitle(row.title);
+  const channel = matchTrafficChannel(title, row.subtitle);
+
+  if (channel) {
+    ingestLog("whitelist", {
+      channel: channel.name,
+      category: channel.category,
+      type: channel.type,
+      via: row.subtitle || title,
+    });
+    return {
+      // A feed row is one episode. The entity is the channel itself, which is
+      // what readers search and what a news query can actually resolve.
+      row: {
+        ...row,
+        title: channel.name,
+        tags: [...new Set([...(row.tags ?? []), ...channel.tags])],
+      },
+      type: channel.type,
+      channel,
+    };
+  }
+
+  const smart = classifySmart(title, row.subtitle, row.tags ?? []);
+  if (smart && shouldRetag(fallback, smart)) {
+    ingestLog("retag", {
+      title,
+      from: fallback,
+      to: smart.type,
+      category: smart.category,
+      matched: smart.matched,
+      via: smart.source,
+      strength: smart.strength,
+    });
+    return {
+      row: { ...row, tags: [...new Set([...(row.tags ?? []), smart.matched])] },
+      type: smart.type,
+    };
+  }
+
+  return { row, type: fallback };
+}
+
+/**
+ * Culture types that already place a row correctly on the entertainment side.
+ * A drama is not improved by being relabelled an influencer.
+ */
+const ENTERTAINMENT_FAMILY = new Set<EntityType>([
+  "tv_show",
+  "kpop",
+  "celebrity",
+  "influencer",
+  "music_chart",
+  "tv_rating",
+  "webtoon",
+]);
+
+/**
+ * Re-tagging is only worth doing when it moves a row to a category it is not
+ * already in. Without this gate the entertainment rule rewrote every drama and
+ * chart artist as an influencer, and a genre tag on a source batch was enough
+ * to file a period drama under politics because its tags mentioned 대통령.
+ */
+function shouldRetag(fallback: EntityType, smart: SmartClassification): boolean {
+  if (smart.category === "politics") {
+    // News/media talk shows still belong on the 정치 인기 유튜브 heatmap.
+    if (smart.type === "political_influencer" && fallback !== "political_influencer") {
+      return smart.strength === "strong" && smart.source === "text";
+    }
+    if (isPoliticsEntityType(fallback)) return false;
+    // Crossing into politics discards a working culture classification, so it
+    // needs the term in the row's own title, not in a shared genre tag.
+    return smart.strength === "strong" && smart.source === "text";
+  }
+  // Entertainment rules exist to rescue rows with no real category yet.
+  return !ENTERTAINMENT_FAMILY.has(fallback) && !isPoliticsEntityType(fallback);
+}
+
+/**
+ * Rank given to a whitelisted channel the trending feed did not return today.
+ * These channels carry the audience the site publishes for, so they are seeded
+ * at the top of their batch and interleave with the live charts rather than
+ * settling into the tail where nothing reaches them.
+ */
+const WHITELIST_BASE_RANK = 1;
+
+/** Rows for whitelisted channels missing from every live source. */
+function missingWhitelistRows(seen: string[]): ChartRow[] {
+  return TOP_TRAFFIC_CHANNELS_WHITELIST.filter(
+    (channel) =>
+      !seen.some(
+        (name) =>
+          namesOverlap(name, channel.name) ||
+          channel.aliases.some((alias) => namesOverlap(alias, name)),
+      ),
+  ).map((channel, index) => ({
+    rank: WHITELIST_BASE_RANK + index,
+    title: channel.name,
+    subtitle: channel.category === "politics" ? "시사 채널" : "웹예능 채널",
+    tags: [...channel.tags, "화이트리스트"],
+  }));
 }
 
 function uniqueBySlug(items: RankingEntity[]): RankingEntity[] {
@@ -378,10 +503,37 @@ export async function composeLiveSnapshot(
   const buzzEntities = boostedNews
     .filter((row) => !usedNames.some((name) => namesOverlap(name, row.title)))
     .map((row) => {
-      const type = classifyBuzzType(row.title, row.tags ?? []);
-      if (chartTypes.has(type)) return toEntity(row, "celebrity", previous, row.tags ?? []);
-      return toEntity(row, type, previous, row.tags ?? []);
+      const guess = classifyBuzzType(row.title, row.tags ?? []);
+      // Chart types are owned by their own source, so a news row landing on one
+      // would double-count the same subject.
+      const fallback: EntityType = chartTypes.has(guess) ? "celebrity" : guess;
+      const promoted = promoteTrendRow(row, fallback);
+      return toEntity(
+        promoted.row,
+        promoted.type,
+        previous,
+        promoted.row.tags ?? [],
+        Boolean(promoted.channel),
+      );
     });
+
+  // Shorts rows are re-tagged rather than filed wholesale as 숏폼, and any
+  // whitelisted channel the feed missed is added so the two categories are
+  // never empty.
+  const promotedShorts = shortsRows.map((row) => promoteTrendRow(row, "shorts"));
+  const seenNames = [...usedNames, ...promotedShorts.map((item) => item.row.title)];
+  const whitelistFill = missingWhitelistRows(seenNames).map((row) =>
+    promoteTrendRow(row, "influencer"),
+  );
+  const trafficRows = [...promotedShorts, ...whitelistFill];
+
+  ingestLog("category-map", {
+    shortsIn: shortsRows.length,
+    promoted: trafficRows.filter((item) => item.type !== "shorts").length,
+    whitelistSeen: promotedShorts.filter((item) => item.channel).length,
+    whitelistFilled: whitelistFill.length,
+    stillShorts: trafficRows.filter((item) => item.type === "shorts").length,
+  });
 
   const built = uniqueBySlug([
     ...musicRows.map((row) => toEntity(row, "music_chart", previous, row.tags ?? [])),
@@ -389,7 +541,9 @@ export async function composeLiveSnapshot(
     ...ratings.map((row) => toEntity(row, "tv_rating", previous, row.tags ?? [])),
     ...shows.map((row) => toEntity(row, "tv_show", previous, row.tags ?? [])),
     ...webtoonRows.map((row) => toEntity(row, "webtoon", previous, row.tags ?? [])),
-    ...shortsRows.map((row) => toEntity(row, "shorts", previous, row.tags ?? [])),
+    ...trafficRows.map((item) =>
+      toEntity(item.row, item.type, previous, item.row.tags ?? [], Boolean(item.channel)),
+    ),
     ...mobileRows.map((row) => toEntity(row, "mobile_game", previous, row.tags ?? [])),
     ...pcRows.map((row) => toEntity(row, "pc_game", previous, row.tags ?? [])),
     ...consoleRows.map((row) => toEntity(row, "console_game", previous, row.tags ?? [])),

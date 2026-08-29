@@ -50,7 +50,7 @@ export default async function BriefingArchivePage({
         <h1 className="text-3xl font-semibold tracking-tight">브리핑 아카이브</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
           어제 이전 에디션이 날짜별로 자동 분류됩니다. 카테고리와 키워드로 과거 수급 해설을
-          찾고, 각 기사에서 시세판 히트맵으로 돌아갈 수 있습니다.
+          찾고, 각 기사에서 지수(INDEX) 히트맵으로 돌아갈 수 있습니다.
         </p>
         <ArchiveSearchForm query={query} category={category} />
         <p className="font-mono text-[11px] text-muted">

@@ -62,7 +62,7 @@ export function MethodologyModal({
           onClick={onClose}
           className="mt-6 rounded-md bg-accent px-4 py-2 text-sm font-medium text-black"
         >
-          시세판으로 돌아가기
+          지수(INDEX)로 돌아가기
         </button>
       </div>
     </div>

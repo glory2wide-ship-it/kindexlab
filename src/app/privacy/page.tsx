@@ -22,7 +22,7 @@ export default function PrivacyPage() {
       </LegalSection>
       <LegalSection title="2. 수집하는 정보">
         <p>
-          회사는 원칙적으로 회원가입을 강제하지 않으며, 열람만으로 시세판과 브리핑을 이용할 수
+          회사는 원칙적으로 회원가입을 강제하지 않으며, 열람만으로 지수(INDEX)와 브리핑을 이용할 수
           있습니다. 처리될 수 있는 정보는 다음과 같습니다.
         </p>
         <ul className="list-disc space-y-2 pl-5">

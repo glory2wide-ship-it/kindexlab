@@ -1,4 +1,6 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["icn1"],
   "crons": [
     {
       "path": "/api/cron/briefings",
@@ -19,6 +21,14 @@
     {
       "path": "/api/cron",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/analysis/generate?limit=6",
+      "schedule": "30 * * * *"
+    },
+    {
+      "path": "/api/boards/generate?limit=4",
+      "schedule": "0 * * * *"
     }
   ]
 }

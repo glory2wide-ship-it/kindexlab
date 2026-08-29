@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ProductShelf } from "@/components/affiliate/ProductShelf";
 import { BuzzChart } from "@/components/entity/BuzzChart";
 import { EntityHero } from "@/components/entity/EntityHero";
+import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
+import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
 import { getAllSlugs, getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
 import { composeTodayAnalysis } from "@/lib/editorial/today-analysis";
-import { TYPE_LABEL, formatRate } from "@/lib/format";
+import { formatRate } from "@/lib/format";
 import { SITE } from "@/lib/site";
 import { rankingPath, rankingUrl } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
@@ -25,11 +26,14 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ name?: string; tf?: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const entity = await getEntityBySlug(slug);
+  const query = searchParams ? await searchParams : {};
+  const entity = await getEntityBySlug(slug, typeof query.name === "string" ? query.name : undefined);
   if (!entity) return { title: "종목을 찾을 수 없습니다" };
   return {
     title: `${entity.name} ${entity.rank}위 · ${formatRate(entity.fluctuationRate)}`,
@@ -47,15 +51,21 @@ export default async function RankingDetailPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ tf?: string }>;
+  searchParams?: Promise<{ name?: string; tf?: string }>;
 }) {
   const { slug } = await params;
   const query = searchParams ? await searchParams : {};
-  const entity = await getEntityBySlug(slug);
+  const entity = await getEntityBySlug(slug, typeof query.name === "string" ? query.name : undefined);
   if (!entity) notFound();
   const [related, market] = await Promise.all([getRelatedEntities(entity), getRankings()]);
   const initialTimeframe = parseTimeframeParam(query.tf) ?? "5m";
-  const todayAnalysis = composeTodayAnalysis({ entity, market, related });
+  let analysisArticle = composeTodayAnalysis({ entity, market, related });
+  try {
+    const analysis = await getOrCreateAnalysis({ entity, market, related });
+    analysisArticle = analysis.entry.article;
+  } catch {
+    /* template article already prepared so the 오늘의 분석 block always renders */
+  }
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -78,47 +88,16 @@ export default async function RankingDetailPage({
       />
       <p className="text-sm text-muted">
         <Link href="/" className="hover:text-ink">
-          시세판
+          지수(INDEX)
         </Link>
         <span className="mx-2">/</span>
         {entity.name}
       </p>
       <EntityHero entity={entity} />
       <BuzzChart entity={entity} initialTimeframe={initialTimeframe} />
-      <TodayAnalysis article={todayAnalysis} />
-      <ProductShelf products={entity.products} entityName={entity.name} />
+      <TodayAnalysis article={analysisArticle} keyword={entity.name} />
       <PollDeskSection entity={entity} market={market} related={related} />
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">같은 섹터 종목</h2>
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {related.map((item) => (
-            <li key={item.id}>
-              <Link
-                href={rankingPath(item.slug)}
-                className="flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3 hover:border-accent/40"
-              >
-                <span>
-                  <span className="block text-xs text-muted">
-                    {TYPE_LABEL[item.type]} · {item.rank}위
-                  </span>
-                  <span className="font-medium">{item.name}</span>
-                </span>
-                <span
-                  className={`font-mono text-sm ${
-                    item.fluctuationRate > 0
-                      ? "text-up"
-                      : item.fluctuationRate < 0
-                        ? "text-down"
-                        : "text-muted"
-                  }`}
-                >
-                  {formatRate(item.fluctuationRate)}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <RelatedRankingDesk entity={entity} related={related} />
     </div>
   );
 }

@@ -31,9 +31,9 @@ export default async function PresidentialApprovalPage() {
         <p className="max-w-2xl text-sm leading-6 text-muted">
           한국갤럽·리얼미터·엠브레인퍼블릭 등 국내 대표 여론조사 기관 TOP 10의 최근 공표를 한 표에서 비교합니다.{" "}
           <Link href="/politics" className="underline hover:text-ink">
-            정치 시세판
+            정치 지수(INDEX)
           </Link>
-          의 정당·정치인 칸은 뉴스 언급 대용치이며 이 표와 섞지 않습니다. 상승 빨강 · 하락 파랑.
+          의 정당·정치인 칸은 뉴스 언급 대용치이며 이 표와 섞지 않습니다. 상승 초록 · 하락 빨강.
         </p>
       </header>
       <AgencyPollComparisonBoard snapshot={desk.polls} />

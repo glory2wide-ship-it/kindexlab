@@ -222,9 +222,8 @@ function deskItems(
 ): RankingEntity[] {
   if (options.kind === "main") {
     const types = new Set(channelDeskTypes(channel));
-    if (!types.size) return snapshot.gainers;
-    const scoped = snapshot.gainers.filter((item) => types.has(item.type));
-    return scoped.length ? scoped : snapshot.gainers;
+    if (!types.size) return [];
+    return snapshot.gainers.filter((item) => types.has(item.type));
   }
   if (isPresidentialDesk(options.deskId)) {
     const pool = [...(snapshot.byType.politician_support ?? [])];

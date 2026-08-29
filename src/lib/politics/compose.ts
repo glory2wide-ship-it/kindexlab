@@ -1,8 +1,15 @@
 import { catalogByType, matchPoliticsCatalog, politicsProducts, POLITICS_CATALOG } from "@/lib/politics/catalog";
+import { carryForwardInfluencerEntities } from "@/lib/politics/fail-safe";
 import { politicsSlug, seedPoliticsRankings } from "@/lib/politics/seed";
 import { POLITICS_TYPE_LABEL, POLITICS_TYPE_ORDER, type PoliticsEntityType } from "@/lib/politics/types";
+import {
+  influencerSeedNames,
+  matchPoliticsYoutubeSeed,
+  POLITICS_YOUTUBE_SEEDS,
+} from "@/lib/politics/youtube-seeds";
 import { namesOverlap, normalizeName } from "@/lib/ingestion/names";
 import { changeFromScores, scoreFromRank, sparklineFromHistory, volumeFromRank } from "@/lib/ingestion/score";
+import { politicsYoutubeSeedRows } from "@/lib/ingestion/sources/youtube-politics";
 import type { ChartRow, IngestSnapshot, SourceResult } from "@/lib/ingestion/types";
 import type { RankingEntity } from "@/lib/types";
 
@@ -46,7 +53,9 @@ function toEntity(
   );
   const title = catalog?.name ?? row.title;
   const slug = politicsSlug(type, title);
-  const score = scoreFromRank(row.rank, size, 900, 1760) + Math.min(row.metric ?? 0, 24) * 7;
+  const cap = type === "political_influencer" ? 90 : 24;
+  const weight = type === "political_influencer" ? 5 : 7;
+  const score = scoreFromRank(row.rank, size, 900, 1760) + Math.min(row.metric ?? 0, cap) * weight;
   const historyScores = previous?.scoreHistory?.[slug] ?? [];
   const previousScore = historyScores.at(-1);
   const fluctuationRate = row.previousRank
@@ -87,9 +96,13 @@ function toEntity(
   };
 }
 
+function canonicalizeInfluencerTitle(title: string): string {
+  return matchPoliticsYoutubeSeed(title)?.name ?? title;
+}
+
 function rowsForType(sources: SourceResult[], type: PoliticsEntityType): ChartRow[] {
   const tagged = sources
-    .filter((source) => source.id.startsWith("news-") || source.id === "google-trends")
+    .filter((source) => source.id.startsWith("news-") || source.id === "google-trends" || source.id === "youtube-politics-seeds")
     .flatMap((source) => source.items.filter((item) => (item.tags ?? []).includes(type)));
   const mentioned = sources.flatMap((source) =>
     source.items.flatMap((item) =>
@@ -116,7 +129,29 @@ function rowsForType(sources: SourceResult[], type: PoliticsEntityType): ChartRo
           /대선|총선|국회|탄핵|공천|지지율|특검|개헌|계엄|정당|대통령/.test(item.title),
         )
       : [];
-  return mergeRows([tagged, mentioned, headlines, trends]).slice(0, PER_TYPE);
+  const youtube =
+    type === "political_influencer"
+      ? (sources.find((source) => source.id === "youtube-politics-seeds")?.items ?? politicsYoutubeSeedRows()).map(
+          (item) => ({
+            ...item,
+            title: canonicalizeInfluencerTitle(item.title),
+            tags: [...new Set([...(item.tags ?? []), "political_influencer"])],
+          }),
+        )
+      : [];
+  const dualSeeds =
+    type === "political_influencer"
+      ? POLITICS_YOUTUBE_SEEDS.filter((seed) => seed.influencer && seed.types.includes("political_pundit")).map(
+          (seed, index) => ({
+            rank: index + 1,
+            title: seed.name,
+            subtitle: seed.nameEn,
+            metric: Math.max(20, 70 - index * 4),
+            tags: ["political_influencer", "시사", "유튜브"],
+          }),
+        )
+      : [];
+  return mergeRows([tagged, mentioned, headlines, trends, youtube, dualSeeds]).slice(0, PER_TYPE);
 }
 
 function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRow[] {
@@ -130,7 +165,39 @@ function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRo
       metric: Math.max(1, 8 - index),
       tags: [...entry.tags, type],
     }));
-  return [...crawled, ...extras].slice(0, PER_TYPE).map((row, index) => ({ ...row, rank: index + 1 }));
+  const withCatalog = [...crawled, ...extras];
+  if (type === "political_influencer") {
+    for (const name of influencerSeedNames()) {
+      const exists = withCatalog.some((row) => namesOverlap(row.title, name) || namesOverlap(name, row.title));
+      if (exists) {
+        const row = withCatalog.find((item) => namesOverlap(item.title, name) || namesOverlap(name, item.title));
+        if (row) row.title = name;
+        continue;
+      }
+      withCatalog.push({
+        rank: withCatalog.length + 1,
+        title: name,
+        subtitle: matchPoliticsYoutubeSeed(name)?.nameEn,
+        metric: name.includes("뉴스공장") ? 88 : 48,
+        tags: ["political_influencer", "seed", "유튜브"],
+      });
+    }
+    withCatalog.sort((left, right) => {
+      const seeds = influencerSeedNames();
+      const leftSeed = seeds.some((name) => namesOverlap(left.title, name)) ? 1 : 0;
+      const rightSeed = seeds.some((name) => namesOverlap(right.title, name)) ? 1 : 0;
+      if (leftSeed !== rightSeed) return rightSeed - leftSeed;
+      const leftLead = /뉴스공장|겸손은/.test(left.title) ? 1 : 0;
+      const rightLead = /뉴스공장|겸손은/.test(right.title) ? 1 : 0;
+      if (leftLead !== rightLead) return rightLead - leftLead;
+      return (right.metric ?? 0) - (left.metric ?? 0);
+    });
+  }
+  return withCatalog.slice(0, Math.max(PER_TYPE, type === "political_influencer" ? 12 : PER_TYPE)).map((row, index) => ({
+    ...row,
+    rank: index + 1,
+    title: type === "political_influencer" ? canonicalizeInfluencerTitle(row.title) : row.title,
+  }));
 }
 
 export function composePoliticsEntities(
@@ -138,12 +205,14 @@ export function composePoliticsEntities(
   previous?: IngestSnapshot,
 ): RankingEntity[] {
   const liveCount = sources.filter((source) => source.ok && source.count > 0).length;
-  if (!liveCount) return seedPoliticsRankings();
+  if (!liveCount) {
+    return carryForwardInfluencerEntities(seedPoliticsRankings(), previous?.items);
+  }
 
   const items: RankingEntity[] = [];
   for (const type of POLITICS_TYPE_ORDER) {
     const rows = fillFromCatalog(type, rowsForType(sources, type));
     items.push(...rows.map((row) => toEntity(row, type, previous, rows.length)));
   }
-  return items;
+  return carryForwardInfluencerEntities(items, previous?.items);
 }

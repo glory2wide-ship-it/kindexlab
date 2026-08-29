@@ -1,5 +1,6 @@
 import { TimeframeChart } from "@/components/charts/TimeframeChart";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel } from "@/lib/format";
+import { formatEntityName } from "@/lib/boards/game-platforms";
 import { buildTimeframeMetrics, scoreForTimeframe, timeframeLabel, volumeForTimeframe } from "@/lib/timeframes";
 import type { RankingEntity, SeriesPoint, Timeframe } from "@/lib/types";
 
@@ -29,10 +30,10 @@ export function HoverCard({
       style={{ left: x, top: y }}
     >
       <p className="text-[10px] uppercase tracking-wider text-muted">
-        {TYPE_LABEL[entity.type]} · {timeframeLabel(timeframe)} · {entity.rank}위
+        {entity.heatmapGroup ?? TYPE_LABEL[entity.type]} · {timeframeLabel(timeframe)} · {entity.rank}위
       </p>
       <div className="mt-1 flex items-baseline justify-between gap-2">
-        <p className="font-semibold">{entity.name}</p>
+        <p className="font-semibold">{formatEntityName(entity)}</p>
         <p className={`font-mono text-sm ${up ? "text-up" : change < 0 ? "text-down" : "text-muted"}`}>
           {formatRate(change)}
         </p>

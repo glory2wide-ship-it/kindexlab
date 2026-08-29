@@ -18,6 +18,14 @@ export function rankingPath(slug: string, hash?: string): string {
   return hash ? `${path}#${hash}` : path;
 }
 
+/** Always stay on the internal ranking detail page. External hrefs are ignored. */
+export function entityHref(item: { slug: string; name?: string; href?: string }, hash?: string): string {
+  const path = rankingPath(item.slug);
+  const query = item.name?.trim() ? `?name=${encodeURIComponent(item.name.trim())}` : "";
+  const withQuery = `${path}${query}`;
+  return hash ? `${withQuery}#${hash}` : withQuery;
+}
+
 export function rankingUrl(origin: string, slug: string): string {
   return `${origin}${rankingPath(slug)}`;
 }

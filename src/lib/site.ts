@@ -9,9 +9,9 @@ export const SITE = {
   nameKo: "킨덱스랩",
   company: "디엘파크주식회사",
   companyShort: "디엘파크",
-  tagline: "실시간 화제 시세판",
+  tagline: "실시간 지수랭킹 서비스",
   description:
-    "K-POP, 셀럽, 방송, 인플루언서, 실시간 음원 차트, 시청률, 웹툰, 숏폼/SNS, 모바일·PC·콘솔 게임을 주식 시세판처럼 보여주는 트렌드 랭킹. kindexlab.com · 디엘파크가 운영합니다.",
+    "K-POP, 셀럽, 방송, 인플루언서, 실시간 음원 차트, 시청률, 웹툰, 숏폼/SNS, 모바일·PC·콘솔 게임을 주식 지수(INDEX)처럼 보여주는 트렌드 랭킹. kindexlab.com · 디엘파크가 운영합니다.",
   domain: "kindexlab.com",
   url: publicSiteUrl(),
   locale: "ko_KR",

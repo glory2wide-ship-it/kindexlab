@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { MarketOverview } from "@/components/dashboard/MarketOverview";
+import { MarketOverview, MarketStatusBar } from "@/components/dashboard/MarketOverview";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
 import { fetchTrendsSnapshot, mergeTrendItems } from "@/lib/liveTrends";
-import { itemsForChannel } from "@/lib/posts/channels";
+import { itemsForChannel, LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import { isPoliticsEntityType, isPoliticsIndex, POLITICS_CATEGORIES } from "@/lib/politics/types";
 import { COMPOSITE_INDEX_ID } from "@/lib/ingestion/composite";
 import type { PostChannel } from "@/lib/posts/types";
@@ -91,9 +91,7 @@ export function LiveMarketBoard({
     return () => window.removeEventListener("kindexlab:refresh-now", forceRefresh);
   }, []);
 
-  const boardItems = channel
-    ? itemsForChannel(items, channel)
-    : items.filter((item) => !isPoliticsEntityType(item.type));
+  const boardItems = channel ? itemsForChannel(items, channel) : items.filter((item) => !isPoliticsEntityType(item.type));
   const boardIndices =
     channel === "politics"
       ? [
@@ -103,20 +101,19 @@ export function LiveMarketBoard({
       : indices.filter((index) => !isPoliticsIndex(index));
   const politicsBoard = channel === "politics";
 
+  // Ranking rail (when provided) sits in children. Countdown + ticker follow,
+  // then the heatmap, then index summary cards.
   return (
     <div className="space-y-3">
       {children}
-      <MarketOverview
-        indices={boardIndices}
-        updatedAt={updatedAt}
-        status={status}
-        remainingSec={remainingSec}
-        refreshing={refreshing}
-        flashNonce={flashNonce}
-      />
-      {afterOverview}
       <div className="-mx-4">
-        <TickerTape items={boardItems.length ? boardItems : items} />
+        <MarketStatusBar
+          updatedAt={updatedAt}
+          status={status}
+          remainingSec={remainingSec}
+          refreshing={refreshing}
+        />
+        {boardItems.length ? <TickerTape items={boardItems} /> : null}
       </div>
       <MarketWorkspace
         key={channel ?? initialCategory}
@@ -125,13 +122,15 @@ export function LiveMarketBoard({
         flashNonce={flashNonce}
         initialView="treemap"
         categories={politicsBoard ? POLITICS_CATEGORIES : undefined}
-        title={politicsBoard ? "정치 실시간 시세" : "실시간 시세"}
+        title={politicsBoard ? `정치 ${LIVE_INDEX_LABEL}` : LIVE_INDEX_LABEL}
         subtitle={
           politicsBoard
-            ? "9대 정치 지표를 트리맵과 리스트로 읽습니다. 기본 시계열은 5분봉입니다."
-            : "등락률·버즈·거래량을 트리맵과 리스트로 읽습니다."
+            ? "9대 정치 지표를 히트맵과 리스트로 읽습니다. 기본 시계열은 5분봉입니다."
+            : "등락률·버즈·거래량을 히트맵과 리스트로 읽습니다."
         }
       />
+      <MarketOverview indices={boardIndices} flashNonce={flashNonce} />
+      {afterOverview}
     </div>
   );
 }

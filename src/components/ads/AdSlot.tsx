@@ -29,6 +29,18 @@ export function AdSlot({
 
   if (!client) return null;
 
+  if (!resolvedSlot) {
+    return (
+      <aside
+        data-monetization="adsense"
+        className="rounded-2xl border border-dashed border-line bg-panel px-4 py-6 text-center"
+      >
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted">Ad</p>
+        <p className="mt-1 text-xs text-muted">광고 슬롯을 준비 중입니다.</p>
+      </aside>
+    );
+  }
+
   return (
     <aside data-monetization="adsense" className="overflow-hidden rounded-2xl border border-line bg-panel p-2">
       <p className="mb-1 px-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted">Ad</p>
@@ -36,7 +48,7 @@ export function AdSlot({
         className="adsbygoogle block min-h-[90px] w-full"
         style={{ display: "block" }}
         data-ad-client={client}
-        data-ad-slot={resolvedSlot || undefined}
+        data-ad-slot={resolvedSlot}
         data-ad-format={format}
         data-full-width-responsive="true"
       />

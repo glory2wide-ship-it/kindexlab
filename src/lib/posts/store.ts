@@ -6,7 +6,7 @@ import type { GeneratedPost, PostChannel, PostFaq, PostLink, PostTable } from "@
 import { decodeRouteSlug, slugsMatch } from "@/lib/slugs";
 
 const EMPTY_TABLE: PostTable = { caption: "", headers: [], rows: [] };
-const EMPTY_LINK: PostLink = { href: "/#heatmap", label: "실시간 시세판" };
+const EMPTY_LINK: PostLink = { href: "/#heatmap", label: "실시간 지수(INDEX)" };
 
 function tableMarkdown(table: Pick<PostTable, "headers" | "rows">): string {
   if (!table.headers.length) return "";

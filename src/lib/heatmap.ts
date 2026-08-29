@@ -1,10 +1,25 @@
+/** Heatmap + indicators: green up, red down, charcoal flat. */
 export function heatFill(rate: number): string {
-  const intensity = Math.min(1, Math.abs(rate) / 10);
-  const mix = 22 + intensity * 78;
-  const key = rate >= 0 ? "var(--color-up)" : "var(--color-down)";
-  return `color-mix(in srgb, ${key} ${mix}%, var(--color-panel))`;
+  const n = Number.isFinite(rate) ? rate : 0;
+  if (n >= 3) return "#22c55e";
+  if (n >= 1) return "#16a34a";
+  if (n > 0.25) return "#14532D";
+  if (n <= -3) return "#ef4444";
+  if (n <= -1) return "#dc2626";
+  if (n < -0.25) return "#7F1D1D";
+  return "#27272A";
 }
 
-export function heatText(rate: number): string {
-  return Math.abs(rate) >= 3 ? "#fff" : "var(--color-ink)";
+export function heatText(_rate: number): string {
+  return "#FFFFFF";
 }
+
+export const HEAT_LEGEND_STOPS: { label: string; color: string }[] = [
+  { label: "-3%", color: "#ef4444" },
+  { label: "-2%", color: "#dc2626" },
+  { label: "-1%", color: "#7F1D1D" },
+  { label: "0%", color: "#27272A" },
+  { label: "+1%", color: "#14532D" },
+  { label: "+2%", color: "#16a34a" },
+  { label: "+3%", color: "#22c55e" },
+];

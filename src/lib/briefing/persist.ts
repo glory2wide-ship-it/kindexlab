@@ -4,6 +4,29 @@ import type { BriefingArticle } from "@/lib/types";
 
 const extraRel = path.join("src", "data", "briefings", "extra.json");
 
+/**
+ * Empties the persisted edition file. `published.ts` seeds stay compiled into
+ * the bundle, so the purge reports how many stored editions it dropped rather
+ * than claiming the archive is empty.
+ */
+export async function clearPersistedEditions(): Promise<number> {
+  const file = path.join(process.cwd(), extraRel);
+  try {
+    let removed = 0;
+    try {
+      const raw = await readFile(file, "utf8");
+      removed = ((JSON.parse(raw) as { articles?: BriefingArticle[] }).articles ?? []).length;
+    } catch {
+      removed = 0;
+    }
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, `${JSON.stringify({ articles: [] }, null, 2)}\n`, "utf8");
+    return removed;
+  } catch {
+    return 0;
+  }
+}
+
 export async function persistEdition(articles: BriefingArticle[]): Promise<{ wrote: boolean; path: string }> {
   const file = path.join(process.cwd(), extraRel);
   try {

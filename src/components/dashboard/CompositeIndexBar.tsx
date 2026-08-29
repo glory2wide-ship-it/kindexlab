@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FlipBoardNumber } from "@/components/dashboard/FlipBoardNumber";
 import { formatPoints, formatRate } from "@/lib/format";
-import { COMPOSITE_INDEX_ID } from "@/lib/ingestion/composite";
+import { COMPOSITE_INDEX_ID, withIndexPoints } from "@/lib/ingestion/composite";
 import { fetchTrendsSnapshot } from "@/lib/liveTrends";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { MarketIndex } from "@/lib/types";
@@ -41,9 +41,10 @@ export function CompositeIndexBar({
     return () => window.clearInterval(tick);
   }, []);
 
-  const up = index.changeRate > 0;
-  const down = index.changeRate < 0;
-  const points = index.changePoints ?? 0;
+  const resolved = withIndexPoints(index);
+  const up = resolved.changeRate > 0;
+  const down = resolved.changeRate < 0;
+  const points = resolved.changePoints ?? 0;
 
   return (
     <div className="index-gothic sticky top-14 z-30 border-b border-line bg-panel/95 font-sans backdrop-blur-md">
@@ -70,7 +71,7 @@ export function CompositeIndexBar({
           </span>
         </Link>
         <p className="hidden min-w-0 truncate text-[11px] text-muted sm:block">
-          {index.note} · 전일 대비 {up ? "상승" : down ? "하락" : "보합"} · 상승 빨강 / 하락 파랑
+          {index.note} · 전일 대비 {up ? "상승" : down ? "하락" : "보합"} · 상승 초록 / 하락 빨강
         </p>
       </div>
     </div>

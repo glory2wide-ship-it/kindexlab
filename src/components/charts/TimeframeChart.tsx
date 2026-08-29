@@ -31,8 +31,8 @@ export function TimeframeChart({
   const last = coords[coords.length - 1];
   const polyline = coords.map((point) => `${point.x},${point.y}`).join(" ");
   const area = `${padLeft},${height - padBottom} ${polyline} ${width - padRight},${height - padBottom}`;
-  const stroke = positive ? "#f43f5e" : "#60a5fa";
-  const fill = positive ? "rgba(244,63,94,0.14)" : "rgba(96,165,250,0.14)";
+  const stroke = positive ? "var(--color-up)" : "var(--color-down)";
+  const fill = positive ? "color-mix(in srgb, var(--color-up) 18%, transparent)" : "color-mix(in srgb, var(--color-down) 18%, transparent)";
   const ticks = compact
     ? []
     : [coords[0], coords[Math.floor(coords.length / 2)], coords[coords.length - 1]].filter(

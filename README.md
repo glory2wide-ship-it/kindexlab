@@ -1,6 +1,6 @@
 # KindexLab
 
-디엘파크주식회사가 운영하는 K-컬처 화제 시세판입니다. 도메인: [kindexlab.com](https://kindexlab.com). Finviz 스타일 트리맵과 리스트로 버즈·음원·시청률·웹툰·숏폼·게임을 보여 주며, Google AdSense 자동 광고와 쿠팡 파트너스 연동을 전제로 합니다.
+디엘파크주식회사가 운영하는 K-컬처 화제 지수(INDEX)입니다. 도메인: [kindexlab.com](https://kindexlab.com). Finviz 스타일 트리맵과 리스트로 버즈·음원·시청률·웹툰·숏폼·게임을 보여 주며, Google AdSense 자동 광고와 쿠팡 파트너스 연동을 전제로 합니다.
 
 문의: glory2wide@gmail.com
 
@@ -25,7 +25,7 @@ npm run dev
 
 | 경로 | 역할 |
 | --- | --- |
-| `/` | 트리맵/리스트 시세판, 타임프레임(1m~120m, Daily, Weekly, Monthly), 오늘의 브리핑 레일 |
+| `/` | 히트맵/리스트 지수(INDEX), 타임프레임(1m~120m, Daily, Weekly, Monthly), 오늘의 브리핑 레일 |
 | `/ranking/[slug]` | 분봉·일·주·월 차트, 쿠팡 상품 |
 | `/briefing` | 오늘 발행분 허브(종합 1 + 히트맵 카테고리 심층) |
 | `/briefing/[slug]` | 1,000단어+ H2/H3 브리핑 본문 |
@@ -38,7 +38,7 @@ npm run dev
 | `/api/rankings` | 랭킹 JSON |
 | `/api/cron/briefings` | 일일 브리핑 생성 잡(CRON_SECRET) |
 
-시세판 필터: 종합, K-POP 아이돌, 셀럽, 방송, 인플루언서, 실시간 음원 차트, 실시간 시청률 순위, 실시간 웹툰, 숏폼/SNS, 모바일·PC·콘솔 게임. 박스 크기는 거래량, 색상은 선택 타임프레임의 등락률입니다. 카테고리 딥링크는 `/?category=kpop#heatmap` 형식입니다.
+지수(INDEX) 필터: 종합, K-POP 아이돌, 셀럽, 방송, 인플루언서, 실시간 음원 차트, 실시간 시청률 순위, 실시간 웹툰, 숏폼/SNS, 모바일·PC·콘솔 게임. 박스 크기는 거래량, 색상은 선택 타임프레임의 등락률입니다. 카테고리 딥링크는 `/?category=kpop#heatmap` 형식입니다.
 
 ## 일일 브리핑 자동화
 

@@ -1,4 +1,5 @@
 import { pollDelta, formatPollDelta, pollMetricLabels, POLL_LINKS, type PollBoardSnapshot } from "@/lib/politics/polls";
+import { formatCount } from "@/lib/format";
 
 function tone(value: number): string {
   if (value > 0) return "text-up";
@@ -23,7 +24,7 @@ export function AgencyPollComparisonBoard({ snapshot }: { snapshot: PollBoardSna
           <h2 className="mt-1 text-lg font-semibold tracking-tight">{title}</h2>
         </div>
         <p className="text-[12px] text-muted">
-          {snapshot.subject} · {snapshot.live ? "뉴스 수집 반영" : "최근 공표 시드"} · 상승 빨강 / 하락 파랑
+          {snapshot.subject} · {snapshot.live ? "뉴스 수집 반영" : "최근 공표 시드"} · 상승 초록 / 하락 빨강
         </p>
       </div>
       <div className="overflow-x-auto rounded-xl border border-line bg-panel">
@@ -54,7 +55,7 @@ export function AgencyPollComparisonBoard({ snapshot }: { snapshot: PollBoardSna
                   <td className="border-b border-line px-3 py-2.5 font-medium">{poll.agencyLabel}</td>
                   <td className="border-b border-line px-3 py-2.5">{poll.surveyedAt}</td>
                   <td className="border-b border-line px-3 py-2.5 tabular-nums">
-                    {poll.sampleSize.toLocaleString("ko-KR")}명 · ±{poll.marginOfError}%p
+                    {formatCount(poll.sampleSize)}명 · ±{poll.marginOfError}%p
                   </td>
                   <td className={`border-b border-line px-3 py-2.5 tabular-nums font-semibold ${tone(posDelta)}`}>
                     {poll.positive}%

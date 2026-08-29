@@ -7,6 +7,7 @@ import { isLiveEdition } from "@/lib/briefing/dates";
 import { categoryLabel, heatmapHref } from "@/lib/briefing/metrics";
 import { rankingPath } from "@/lib/slugs";
 import { SITE } from "@/lib/site";
+import { formatCount } from "@/lib/format";
 import type { BriefingArticle, RankingEntity } from "@/lib/types";
 
 function SectionHeading({
@@ -65,8 +66,8 @@ export function DailyBriefing({
       </h1>
       <p className="mt-3 max-w-3xl whitespace-pre-line text-sm leading-6 text-muted">{briefing.excerpt}</p>
       <p className="mt-4 font-mono text-[11px] text-muted">
-        {briefing.editionDate} · {categoryLabel(briefing.category)} · {briefing.readingMinutes}분
-        읽기 · 약 {briefing.wordCount.toLocaleString("ko-KR")}단어 · 애드센스 고품질 본문 기준 충족
+        {briefing.editionDate} · {categoryLabel(briefing.category)} · {briefing.readingMinutes ?? 1}분
+        읽기 · 약 {formatCount(briefing.wordCount)}단어 · 애드센스 고품질 본문 기준 충족
       </p>
 
       {cover ? (
@@ -233,7 +234,7 @@ export function DailyBriefing({
       <p className="mt-8 text-sm text-muted">
         숫자 확인은{" "}
         <Link href="/#heatmap" className="text-accent hover:underline">
-          종합 시세판
+          종합 지수(INDEX)
         </Link>
         과{" "}
         <Link href={categoryHref} className="text-accent hover:underline">

@@ -49,7 +49,7 @@ function uniqueProducts(items: RankingEntity[]): AffiliateProduct[] {
   const seen = new Set<string>();
   const products: AffiliateProduct[] = [];
   for (const item of items) {
-    for (const product of item.products) {
+    for (const product of item.products ?? []) {
       if (seen.has(product.id)) continue;
       seen.add(product.id);
       products.push(product);

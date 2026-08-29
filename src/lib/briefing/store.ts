@@ -3,6 +3,7 @@ import { compareArticles, listSeeded } from "@/lib/briefing/catalog";
 import { composeChannelEdition } from "@/lib/briefing/compose";
 import { withBriefingCover } from "@/lib/briefing/cover";
 import { compareDatesDesc, editionDateTime, isLiveEdition, kstDateString } from "@/lib/briefing/dates";
+import { channelUsesBoardBriefing, composeBoardChannelEdition } from "@/lib/briefing/from-boards";
 import { ALL_CATEGORIES } from "@/lib/categories";
 import { POST_CHANNELS } from "@/lib/posts/channels";
 import { getRankings } from "@/lib/providers/trends";
@@ -11,10 +12,13 @@ import type { BriefingArticle, CategoryId } from "@/lib/types";
 
 const composeLiveChannelEdition = unstable_cache(
   async (editionDate: string, channel: PostChannel) => {
+    if (channelUsesBoardBriefing(channel)) {
+      return composeBoardChannelEdition(channel, editionDate, editionDateTime(editionDate));
+    }
     const payload = await getRankings();
     return composeChannelEdition(payload, channel, editionDate, editionDateTime(editionDate));
   },
-  ["briefing-channel-edition-v10"],
+  ["briefing-channel-edition-v12-boards"],
   { revalidate: 3600 },
 );
 

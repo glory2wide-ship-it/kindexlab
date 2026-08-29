@@ -4,40 +4,64 @@ import { isPoliticsEntityType, POLITICS_TYPE_ORDER } from "@/lib/politics/types"
 
 export type ChannelSectionId = "board" | "briefing" | "posts" | "archive" | "about";
 
+/** Page heading for a channel's live index board, and the tab title it drives. */
+export const LIVE_INDEX_LABEL = "실시간 지수 / LIVE INDEX";
+
+/**
+ * Two-character desk tags for the unified landing heatmap.
+ *
+ * A tile is often narrower than 100px, so the full 문화/여행/맛집/레져/생활 label
+ * cannot ride along with the rank badge.
+ */
+export const CHANNEL_SHORT_LABEL: Record<PostChannel, string> = {
+  entertainment: "엔터",
+  politics: "정치",
+  economy: "경제",
+  culture: "문화",
+};
+
 export const POST_CHANNELS: {
   id: PostChannel;
   href: `/${PostChannel}`;
   label: string;
   eyebrow: string;
+  /** H1 on the channel board page. Spelled out per channel rather than derived
+   *  from `label`, since 엔터테인먼트 drops the 이슈 qualifier the others carry. */
+  indexTitle: string;
   description: string;
 }[] = [
   {
     id: "entertainment",
     href: "/entertainment",
     label: "엔터테인먼트",
-    eyebrow: "K-CULTURE DESK",
+    eyebrow: "K ENTERTAINMENT DESK",
+    indexTitle: "엔터테인먼트 지수(INDEX)",
     description: "아이돌·방송·셀럽 이슈 키워드로 독립 매거진 칼럼을 발행합니다.",
   },
   {
     id: "politics",
     href: "/politics",
     label: "정치",
-    eyebrow: "ISSUE DESK",
-    description: "정당·정치인·지원금 이슈를 시세판 키워드에서 골라 독립 칼럼으로 풉니다.",
+    eyebrow: "POLITICS ISSUE INDEX DESK",
+    indexTitle: "정치 이슈 지수(INDEX)",
+    description: "정당·정치인·지원금 이슈를 지수(INDEX) 키워드에서 골라 독립 칼럼으로 풉니다.",
   },
   {
     id: "economy",
     href: "/economy",
     label: "경제",
-    eyebrow: "FX · LIVING DESK",
-    description: "환율·생활 화제 키워드를 시세판에서 고른 뒤 독립 칼럼으로 하루 세 번 풉니다.",
+    eyebrow: "ECONOMY ISSUE INDEX DESK",
+    indexTitle: "경제 이슈 지수(INDEX)",
+    description: "환율·생활 화제 키워드를 지수(INDEX)에서 고른 뒤 독립 칼럼으로 하루 세 번 풉니다.",
   },
   {
     id: "culture",
     href: "/culture",
-    label: "문화",
-    eyebrow: "CULTURE DESK",
-    description: "웹툰·숏폼·게임 등 문화 이슈 키워드를 같은 매거진 규격으로 다룹니다.",
+    label: "문화/여행/맛집/레져/생활",
+    eyebrow: "CULTURE & LIVING ISSUE INDEX DESK",
+    indexTitle: "문화/여행/맛집/레져/생활 이슈 지수(INDEX)",
+    description:
+      "공연·여행·맛집·레져·생활 이슈 키워드를 같은 매거진 규격으로 다룹니다.",
   },
 ];
 
@@ -50,7 +74,7 @@ export const CHANNEL_SECTIONS: {
   {
     id: "board",
     path: "",
-    label: "시세판",
+    label: LIVE_INDEX_LABEL,
     description: "실시간 수치와 5분봉 히트맵. 글 생성에는 이름만 넘깁니다.",
   },
   {
@@ -102,13 +126,14 @@ export function channelSectionHref(channel: PostChannel, section: ChannelSection
 
 export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
   entertainment: ["kpop", "celebrity", "tv_show", "influencer", "music_chart", "tv_rating"],
-  culture: ["webtoon", "shorts", "mobile_game", "pc_game", "console_game"],
-  economy: [],
+  culture: ["culture_board", "webtoon", "shorts", "mobile_game", "pc_game", "console_game"],
+  economy: ["economy_board"],
   politics: [...POLITICS_TYPE_ORDER],
 };
 
 export function channelFromEntityType(type: EntityType): PostChannel {
-  if (CHANNEL_ENTITY_TYPES.culture.includes(type)) return "culture";
+  if (type === "economy_board") return "economy";
+  if (type === "culture_board" || CHANNEL_ENTITY_TYPES.culture.includes(type)) return "culture";
   if (isPoliticsEntityType(type)) return "politics";
   return "entertainment";
 }

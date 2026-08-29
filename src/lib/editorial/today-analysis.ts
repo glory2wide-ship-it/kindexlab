@@ -1,5 +1,4 @@
-import { briefingCoverFor } from "@/lib/briefing/cover";
-import { editionDateTime, formatKoreanDate, kstDateString } from "@/lib/briefing/dates";
+﻿import { editionDateTime, formatKoreanDate, kstDateString } from "@/lib/briefing/dates";
 import {
   buildIssueCompareTable,
   buildIssueFaq,
@@ -34,14 +33,11 @@ import { constituentsForIndex, entityFromIndex, listIndexIds } from "@/lib/indic
 import { channelFromEntityType, channelSectionHref, getPostChannel } from "@/lib/posts/channels";
 import type { PostChannel, PostFaq, PostLink, PostTable } from "@/lib/posts/types";
 import { rankingPath } from "@/lib/slugs";
-import type {
-  BriefingCoverImage,
-  RankingEntity,
-  RankingsPayload,
-} from "@/lib/types";
+import type { RankingEntity, RankingsPayload } from "@/lib/types";
 
-export const ANALYSIS_MIN = 700;
-export const ANALYSIS_MAX = 900;
+/** Korean 자수: characters with whitespace excluded, the usual editorial unit. */
+export const ANALYSIS_MIN = 800;
+export const ANALYSIS_MAX = 1000;
 
 export interface TodayAnalysisSection {
   heading: string;
@@ -57,37 +53,56 @@ export interface TodayAnalysisArticle {
   excerpt: string;
   editionDate: string;
   publishedAt: string;
-  wordCount: number;
+  /** 자수: characters excluding whitespace. */
+  characterCount: number;
   readingMinutes: number;
   focusKeyword: string;
   supportKeyword: string;
-  coverImage: BriefingCoverImage;
   sections: TodayAnalysisSection[];
   table: PostTable;
   faq: PostFaq[];
   externalLink: PostLink;
   internalLink: PostLink;
   reviewed: boolean;
+  /** Premium rebuild only: body with ad containers and the affiliate shelf placed. */
+  bodyMarkdown?: string;
+  /** Premium rebuild only: Schema.org Article + FAQPage block. */
+  jsonLd?: string;
+  /** Premium rebuild only: the retrieved articles the column is allowed to cite. */
+  sources?: { title: string; url: string; publisher: string; publishedAt?: string }[];
 }
 
 export interface TodayAnalysisReport {
   ok: boolean;
-  wordCount: number;
+  characterCount: number;
   failures: string[];
 }
 
-function analysisPlainText(article: TodayAnalysisArticle): string {
+/**
+ * Body produced by the news-grounded LLM chain. Only the prose is replaced: the
+ * table, FAQ, links, cover image and the length/keyword audit all stay on the
+ * deterministic path, so a weak model degrades to a valid column rather than a
+ * broken one.
+ */
+export interface TodayAnalysisOverride {
+  title?: string;
+  excerpt?: string;
+  sections?: TodayAnalysisSection[];
+}
+
+export function analysisPlainText(article: TodayAnalysisArticle | null | undefined): string {
+  if (!article) return "";
   return [
-    article.title,
-    article.excerpt,
-    ...article.sections.flatMap((section) => [section.heading, ...section.paragraphs]),
-    ...article.faq.flatMap((item) => [item.question, item.answer]),
-    `내부 링크 추천: [${article.internalLink.label}]`,
+    article.title ?? "",
+    article.excerpt ?? "",
+    ...(article.sections ?? []).flatMap((section) => [section.heading, ...(section.paragraphs ?? [])]),
+    ...(article.faq ?? []).flatMap((item) => [item.question, item.answer]),
+    article.internalLink?.label ? `내부 링크 추천: [${article.internalLink.label}]` : "",
   ].join(" ");
 }
 
-export function countAnalysisWords(article: TodayAnalysisArticle): number {
-  return analysisPlainText(article).trim().split(/\s+/).filter(Boolean).length;
+export function countAnalysisChars(article: TodayAnalysisArticle): number {
+  return analysisPlainText(article).replace(/\s+/g, "").length;
 }
 
 function pickKeywords(keyword: ReturnType<typeof issueKeywordFromEntity>) {
@@ -120,10 +135,10 @@ function countSentenceIssues(article: TodayAnalysisArticle): { count: number; sa
 export function evaluateTodayAnalysis(article: TodayAnalysisArticle): TodayAnalysisReport {
   const text = analysisPlainText(article);
   const firstPara = article.sections[0]?.paragraphs[0] ?? "";
-  const words = countAnalysisWords(article);
+  const chars = countAnalysisChars(article);
   const numberedHeadings = article.sections.filter((section) => /^(?:[1-5]\.|[❶❷❸❹❺])\s/.test(section.heading));
   const failures: string[] = [];
-  if (words < ANALYSIS_MIN || words > ANALYSIS_MAX + 40) failures.push(`wordCount:${words}`);
+  if (chars < ANALYSIS_MIN || chars > ANALYSIS_MAX + 60) failures.push(`charCount:${chars}`);
   if (!article.table?.rows?.length || !article.table.markdown?.includes("|")) failures.push("table");
   if (article.faq.length !== 3) failures.push(`faq:${article.faq.length}`);
   if (!article.internalLink?.href || !article.internalLink.label) failures.push("internalLink");
@@ -143,10 +158,23 @@ export function evaluateTodayAnalysis(article: TodayAnalysisArticle): TodayAnaly
     failures.push(`numberedHeadings:${numberedHeadings.length}`);
   }
   if (hasBannedCopy(text)) failures.push("banned");
-  if (!article.coverImage?.src) failures.push("image");
   const sentenceIssues = countSentenceIssues(article);
   if (sentenceIssues.count > 0) failures.push(`sentences:${sentenceIssues.count}:${sentenceIssues.sample}`);
-  return { ok: failures.length === 0, wordCount: words, failures };
+  return { ok: failures.length === 0, characterCount: chars, failures };
+}
+
+/**
+ * Re-imposes ❶..❺ numbering and alternating H2/H3 levels on override sections.
+ * The audit requires three to five numbered subheads with both levels present,
+ * and an upstream model that ignored the instruction would otherwise sink an
+ * otherwise usable body.
+ */
+function normalizeOverrideSections(sections: TodayAnalysisSection[]): TodayAnalysisSection[] {
+  return sections.slice(0, 5).map((section, index) => ({
+    heading: numberedHeading(index, section.heading.replace(/^[❶❷❸❹❺\d.\s]+/, "").trim()),
+    headingLevel: index % 2 === 0 ? 2 : 3,
+    paragraphs: [...section.paragraphs],
+  }));
 }
 
 function normalizeArticle(article: TodayAnalysisArticle): void {
@@ -195,24 +223,48 @@ function lastLongSection(article: TodayAnalysisArticle) {
   return undefined;
 }
 
+/**
+ * Drops one paragraph, preferring one whose removal does not push a keyword
+ * under the required five. ensureKeywords appends its backfill to the last
+ * section, which is exactly where trimming used to bite, so the two passes
+ * would undo each other until the guard ran out and the article failed on
+ * supportCount.
+ */
+function popTrimmable(section: TodayAnalysisSection, article: TodayAnalysisArticle): void {
+  const text = analysisPlainText(article);
+  const focusSlack = countKeyword(text, article.focusKeyword) - 5;
+  const supportSlack = countKeyword(text, article.supportKeyword) - 5;
+
+  for (let i = section.paragraphs.length - 1; i >= 0; i -= 1) {
+    const paragraph = section.paragraphs[i] ?? "";
+    const focusCost = countKeyword(paragraph, article.focusKeyword);
+    const supportCost = countKeyword(paragraph, article.supportKeyword);
+    if (focusCost <= focusSlack && supportCost <= supportSlack) {
+      section.paragraphs.splice(i, 1);
+      return;
+    }
+  }
+  section.paragraphs.pop();
+}
+
 function trimToMax(article: TodayAnalysisArticle): void {
-  let words = countAnalysisWords(article);
-  while (words > ANALYSIS_MAX && article.sections.length > 3) {
+  let chars = countAnalysisChars(article);
+  while (chars > ANALYSIS_MAX && article.sections.length > 3) {
     const last = article.sections[article.sections.length - 1];
     if (last && last.paragraphs.length > 2) {
-      last.paragraphs.pop();
+      popTrimmable(last, article);
     } else if (article.sections.length > 3) {
       article.sections.pop();
     } else {
       break;
     }
-    words = countAnalysisWords(article);
+    chars = countAnalysisChars(article);
   }
-  while (words > ANALYSIS_MAX) {
+  while (chars > ANALYSIS_MAX) {
     const last = lastLongSection(article);
     if (!last) break;
-    last.paragraphs.pop();
-    words = countAnalysisWords(article);
+    popTrimmable(last, article);
+    chars = countAnalysisChars(article);
   }
 }
 
@@ -239,7 +291,7 @@ function reviewUntilReady(
   ensureKeywords(article);
 
   let guard = 0;
-  while (countAnalysisWords(article) < ANALYSIS_MIN && guard < 14) {
+  while (countAnalysisChars(article) < ANALYSIS_MIN && guard < 14) {
     if (!appendReserve(article, reserve, cursor)) break;
     normalizeArticle(article);
     guard += 1;
@@ -255,10 +307,10 @@ function reviewUntilReady(
   let report = evaluateTodayAnalysis(article);
   guard = 0;
   while (!report.ok && guard < 8) {
-    if (report.failures.some((item) => item.startsWith("wordCount") && report.wordCount < ANALYSIS_MIN)) {
+    if (report.failures.some((item) => item.startsWith("charCount") && report.characterCount < ANALYSIS_MIN)) {
       if (!appendReserve(article, reserve, cursor)) break;
     }
-    if (report.failures.some((item) => item.startsWith("wordCount") && report.wordCount > ANALYSIS_MAX)) {
+    if (report.failures.some((item) => item.startsWith("charCount") && report.characterCount > ANALYSIS_MAX)) {
       trimToMax(article);
     }
     if (report.failures.some((item) => item.startsWith("focusCount") || item.startsWith("supportCount"))) {
@@ -269,8 +321,9 @@ function reviewUntilReady(
     guard += 1;
   }
 
-  article.wordCount = countAnalysisWords(article);
-  article.readingMinutes = Math.max(4, Math.round(article.wordCount / 180));
+  article.characterCount = countAnalysisChars(article);
+  // Korean reading speed sits near 500 characters a minute.
+  article.readingMinutes = Math.max(2, Math.round(article.characterCount / 500));
   article.reviewed = report.ok;
   return article;
 }
@@ -280,6 +333,7 @@ export function composeTodayAnalysis(options: {
   market: RankingsPayload;
   related?: RankingEntity[];
   editionDate?: string;
+  override?: TodayAnalysisOverride;
 }): TodayAnalysisArticle {
   resetEditorialPass();
   const { entity, market } = options;
@@ -354,32 +408,27 @@ export function composeTodayAnalysis(options: {
     },
   ];
 
-  const coverImage = briefingCoverFor(
-    {
-      slug: `today-${entity.slug}`,
-      title: `${focus}가 지금 화제인 이유`,
-      category: entity.type,
-      kind: "deep-dive",
-      channel,
-      relatedEntitySlugs: [entity.slug],
-    },
-    { keyword: entity.name, imageUrl: entity.imageUrl },
-  );
+  const override = options.override;
+  const baseTitle = `${focus}가 지금 화제인 이유, 오늘 ${label} 입문`;
+  // The audit requires the focus keyword in the headline, so an LLM title that
+  // dropped it is discarded rather than patched.
+  const title = override?.title?.includes(focus) ? override.title : baseTitle;
 
   const draft: TodayAnalysisArticle = {
     id: `today-${editionDate}-${entity.slug}`,
     slug: `${editionDate}-${entity.slug}-today`,
     entitySlug: entity.slug,
-    title: `${focus}가 지금 화제인 이유, 오늘 ${label} 입문`,
-    excerpt: `${focus}의 배경과 ${supportKw} 파급을 입문으로 푼다.`,
+    title,
+    excerpt: override?.excerpt || `${focus}의 배경과 ${supportKw} 파급을 입문으로 푼다.`,
     editionDate,
     publishedAt: editionDateTime(editionDate),
-    wordCount: 0,
+    characterCount: 0,
     readingMinutes: 4,
     focusKeyword: focus,
     supportKeyword: supportKw,
-    coverImage,
-    sections,
+    sections: override?.sections?.length
+      ? normalizeOverrideSections(override.sections)
+      : sections,
     table,
     faq,
     externalLink: officialLinkForTopic(entity.type, channel),
@@ -426,6 +475,7 @@ export function composeTodayAnalysisForSlug(
   slug: string,
   market: RankingsPayload,
   editionDate?: string,
+  override?: TodayAnalysisOverride,
 ): TodayAnalysisArticle | null {
   const resolved = resolveAnalysisEntity(slug, market);
   if (!resolved) return null;
@@ -434,5 +484,6 @@ export function composeTodayAnalysisForSlug(
     market,
     related: resolved.related,
     editionDate,
+    override,
   });
 }

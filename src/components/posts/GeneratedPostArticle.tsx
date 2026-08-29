@@ -1,19 +1,25 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import { BriefingCover } from "@/components/briefing/BriefingCover";
+import { AffiliateWidget } from "@/components/affiliate/AffiliateWidget";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
+import { stripRowQualifier } from "@/lib/boards/heatmap";
+import { FactTable } from "@/components/article/FactTable";
+import { FaqList } from "@/components/article/FaqList";
+import { SectionHeading } from "@/components/article/SectionHeading";
 import { SITE } from "@/lib/site";
+import { formatCount } from "@/lib/format";
 import { channelHref, channelSectionHref, getPostChannel, inferPostChannel } from "@/lib/posts/channels";
 import type { GeneratedPost } from "@/lib/posts/types";
 
 export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
   const channel = getPostChannel(inferPostChannel(post));
   const canonicalPath = channelHref(channel.id, post.slug);
-  const hasTapeKind = post.sections.some((section) => section.kind === "tape");
+  const sections = post.sections ?? [];
+  const hasTapeKind = sections.some((section) => section.kind === "tape");
   const tapeSections = hasTapeKind
-    ? post.sections.filter((section) => section.kind === "tape")
-    : post.sections.slice(0, 1);
-  const restSections = post.sections.filter(
+    ? sections.filter((section) => section.kind === "tape")
+    : sections.slice(0, 1);
+  const restSections = sections.filter(
     (section) => !tapeSections.includes(section) && section.heading !== "교차 확인 자료",
   );
   const jsonLd = {
@@ -67,20 +73,18 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
       <h1 className="max-w-3xl text-2xl font-semibold tracking-tight md:text-3xl">{post.title}</h1>
       <p className="max-w-3xl whitespace-pre-line text-sm leading-6 text-muted">{post.excerpt}</p>
       <p className="font-mono text-[11px] text-muted">
-        {post.editionDate} · {post.readingMinutes}분 · {(post.wordCount || post.characterCount).toLocaleString("ko-KR")}
+        {post.editionDate} · {post.readingMinutes ?? 1}분 · {formatCount(post.wordCount || post.characterCount)}
         어절 · 키워드 기반 이슈 칼럼
       </p>
 
-      {post.coverImage?.src ? (
-        <div className="max-w-3xl">
-          <BriefingCover image={post.coverImage} />
-        </div>
-      ) : null}
+      <div className="prose-board mt-4 max-w-3xl">
+        {/* Fact table first: with the stock cover gone it opens the body and
+            doubles as the summary for a reader who only scans. */}
+        {post.table ? <FactTable table={post.table} /> : null}
 
-      <div className="prose-board mt-4 max-w-3xl space-y-8">
         {tapeSections.map((section, index) => (
           <section key={`tape-${section.heading}-${index}`}>
-            <h2 className="mb-3 text-lg font-semibold">{section.heading}</h2>
+            <SectionHeading as="h2">{section.heading}</SectionHeading>
             {section.paragraphs.map((paragraph, paragraphIndex) => (
               <p
                 key={`tape-${index}-${paragraphIndex}`}
@@ -94,50 +98,14 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
 
         <ContentSlot placement="intro" label={post.focusKeyword} />
 
-        {post.table?.rows?.length ? (
-          <section>
-            <h2 className="mb-3 text-lg font-semibold">{post.table.caption}</h2>
-            <div className="overflow-x-auto rounded-xl border border-line">
-              <table className="w-full min-w-[32rem] border-collapse text-sm">
-                <thead className="bg-panel">
-                  <tr>
-                    {post.table.headers.map((header) => (
-                      <th key={header} className="border-b border-line px-3 py-2 text-left font-semibold">
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {post.table.rows.map((row, rowIndex) => (
-                    <tr key={`${row[0]}-${rowIndex}`} className="odd:bg-transparent even:bg-panel/40">
-                      {row.map((cell, cellIndex) => (
-                        <td key={`${rowIndex}-${cellIndex}`} className="border-b border-line px-3 py-2">
-                          {cell}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ) : null}
-
         {restSections.map((section, index) => {
-          const Heading = section.headingLevel === 3 ? "h3" : "h2";
+          const minor = section.headingLevel === 3;
           return (
             <Fragment key={`${section.heading}-${index}`}>
               <section>
-                <Heading
-                  className={
-                    section.headingLevel === 3
-                      ? "mb-3 text-base font-semibold tracking-tight"
-                      : "mb-3 text-lg font-semibold"
-                  }
-                >
+                <SectionHeading as={minor ? "h3" : "h2"} tone={minor ? "minor" : "major"}>
                   {section.heading}
-                </Heading>
+                </SectionHeading>
                 {section.paragraphs.map((paragraph, paragraphIndex) => (
                   <p
                     key={`${index}-${paragraphIndex}`}
@@ -154,7 +122,7 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
 
         {post.externalLink || post.internalLink ? (
           <section>
-            <h2 className="mb-3 text-lg font-semibold">교차 확인 자료</h2>
+            <SectionHeading as="h2">교차 확인 자료</SectionHeading>
             <div className="space-y-2 text-sm leading-7">
               {post.externalLink ? (
                 <p>
@@ -183,21 +151,17 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
 
         {post.faq?.length ? (
           <section>
-            <h2 className="mb-3 text-lg font-semibold">FAQ</h2>
-            <div className="space-y-4 text-sm leading-7">
-              {post.faq.map((item) => (
-                <div key={item.question}>
-                  <p>
-                    <strong>Q. {item.question}</strong>
-                  </p>
-                  <p className="mt-1 whitespace-pre-line text-ink">A. {item.answer}</p>
-                </div>
-              ))}
-            </div>
+            <SectionHeading as="h2">자주 묻는 질문</SectionHeading>
+            <FaqList items={post.faq} />
           </section>
         ) : null}
 
         <ContentSlot placement="footer" label={post.focusKeyword} adFormat="auto" />
+        {post.focusKeyword ? (
+          <div className="mt-8 border-t border-line pt-8">
+            <AffiliateWidget keyword={stripRowQualifier(post.focusKeyword)} channel={channel.id} placement="footer" />
+          </div>
+        ) : null}
       </div>
 
       <p className="max-w-3xl text-xs leading-6 text-muted">

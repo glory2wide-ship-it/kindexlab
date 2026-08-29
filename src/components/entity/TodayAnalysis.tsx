@@ -1,20 +1,29 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import { BriefingCover } from "@/components/briefing/BriefingCover";
+import { AffiliateWidget } from "@/components/affiliate/AffiliateWidget";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
+import { FactTable } from "@/components/article/FactTable";
+import { FaqList } from "@/components/article/FaqList";
+import { SectionHeading } from "@/components/article/SectionHeading";
+import { stripRowQualifier } from "@/lib/boards/heatmap";
 import { rankingPath } from "@/lib/slugs";
 import { SITE } from "@/lib/site";
-import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
+import { analysisPlainText, type TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
+import { formatCount } from "@/lib/format";
 
 export function TodayAnalysis({
   article,
   compact = false,
   entityHref,
+  keyword,
 }: {
   article: TodayAnalysisArticle;
   compact?: boolean;
   entityHref?: string;
+  /** Clicked heatmap/list keyword, rendered in this section for later generated copy. */
+  keyword?: string;
 }) {
+  const topic = stripRowQualifier(keyword ?? article.focusKeyword ?? "");
   const boardHref = entityHref ?? rankingPath(article.entitySlug);
   // The host page already owns the H1 (the keyword itself), so the column
   // headline is an H2 and its numbered subheads sit one level below that.
@@ -29,14 +38,15 @@ export function TodayAnalysis({
         datePublished: article.publishedAt,
         dateModified: article.publishedAt,
         inLanguage: "ko",
-        wordCount: article.wordCount,
+        // schema.org wordCount means words, so it is derived rather than reusing 자수.
+        wordCount: analysisPlainText(article).trim().split(/\s+/).filter(Boolean).length,
         keywords: [article.focusKeyword, article.supportKeyword].join(", "),
         author: { "@type": "Organization", name: SITE.name },
         publisher: { "@type": "Organization", name: SITE.name },
       },
       {
         "@type": "FAQPage",
-        mainEntity: article.faq.map((item) => ({
+        mainEntity: (article.faq ?? []).map((item) => ({
           "@type": "Question",
           name: item.question,
           acceptedAnswer: { "@type": "Answer", text: item.answer },
@@ -57,40 +67,44 @@ export function TodayAnalysis({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <p className="font-sans text-[11px] font-semibold tracking-[0.14em] text-accent">오늘의 분석</p>
+      {topic ? (
+        <p data-analysis-keyword={topic} className="mt-2 text-sm font-semibold text-ink">
+          키워드 · {topic}
+        </p>
+      ) : null}
       <TitleTag className={`mt-2 font-semibold tracking-tight ${compact ? "text-xl" : "text-2xl md:text-3xl"}`}>
         {article.title}
       </TitleTag>
       <p className="mt-3 text-sm leading-6 text-muted">{article.excerpt}</p>
       <p className="mt-2 font-sans text-[11px] text-muted">
-        {article.editionDate} · {article.readingMinutes}분 · {article.wordCount.toLocaleString("ko-KR")}어절
+        {article.editionDate} · {article.readingMinutes ?? 1}분 · {formatCount(article.characterCount)}자
       </p>
       <p className="mt-3 text-sm">
         <Link href={boardHref} className="underline hover:text-accent">
-          시세판에서 이 키워드 보기
+          지수(INDEX)에서 이 키워드 보기
         </Link>
       </p>
 
-      {article.coverImage?.src ? (
-        <div className="mt-5">
-          <BriefingCover image={article.coverImage} />
-        </div>
-      ) : null}
+      {/* The fact table leads the body: it is the densest block on the page and
+          now carries the opening visual weight on its own. */}
+      <FactTable table={article.table} />
 
-      <div className={`mt-6 space-y-6 ${compact ? "text-[15px]" : ""}`}>
+      <ContentSlot placement="intro" label={article.focusKeyword} />
+
+      <div className={`mt-6 ${compact ? "text-[15px]" : ""}`}>
         {article.sections.map((section, index) => {
-          const Heading = section.headingLevel === 3 ? "h4" : "h3";
+          const minor = section.headingLevel === 3;
           return (
             <Fragment key={`${section.heading}-${index}`}>
+            {/* Mirrors the generated body: an ad band sits directly above every
+                H2 except the first, which already follows the intro slot. */}
+            {index > 0 && section.headingLevel === 2 ? (
+              <ContentSlot placement="mid" label={article.focusKeyword} />
+            ) : null}
             <section>
-              <Heading
-                className={
-                  section.headingLevel === 3
-                    ? "mb-3 text-base font-semibold tracking-tight"
-                    : "mb-3 text-lg font-semibold tracking-tight"
-                }
-              >
+              <SectionHeading as={minor ? "h4" : "h3"} tone={minor ? "minor" : "major"}>
                 {section.heading}
-              </Heading>
+              </SectionHeading>
               {section.paragraphs.map((paragraph, paragraphIndex) => (
                 <AnalysisParagraph
                   key={`${index}-${paragraphIndex}`}
@@ -98,41 +112,13 @@ export function TodayAnalysis({
                   internal={article.internalLink}
                 />
               ))}
-              {index === 0 && article.table?.rows?.length ? (
-                <div className="mt-5 overflow-x-auto rounded-xl border border-line">
-                  <p className="border-b border-line px-3 py-2 text-sm font-semibold">{article.table.caption}</p>
-                  <table className="w-full min-w-[28rem] border-collapse text-sm">
-                    <thead className="bg-board/60">
-                      <tr>
-                        {article.table.headers.map((header) => (
-                          <th key={header} className="border-b border-line px-3 py-2 text-left font-semibold">
-                            {header}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {article.table.rows.map((row, rowIndex) => (
-                        <tr key={`${row[0]}-${rowIndex}`} className="odd:bg-transparent even:bg-board/40">
-                          {row.map((cell, cellIndex) => (
-                            <td key={`${rowIndex}-${cellIndex}`} className="border-b border-line px-3 py-2">
-                              {cell}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
             </section>
-            {index === 0 ? <ContentSlot placement="mid" label={article.focusKeyword} /> : null}
             </Fragment>
           );
         })}
 
         <section>
-          <h3 className="mb-3 text-lg font-semibold tracking-tight">교차 확인 자료</h3>
+          <SectionHeading as="h3">교차 확인 자료</SectionHeading>
           <p className="mb-2 text-sm leading-7">
             외부 자료:{" "}
             <a
@@ -150,23 +136,38 @@ export function TodayAnalysis({
               [{article.internalLink.label}]
             </Link>
           </p>
+          {article.sources?.length ? (
+            <ul className="mt-3 space-y-1 text-sm leading-7">
+              {article.sources.map((source) => (
+                <li key={source.url}>
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-accent"
+                  >
+                    {source.title}
+                  </a>
+                  <span className="ml-2 text-xs text-muted">
+                    {[source.publisher, source.publishedAt].filter(Boolean).join(" · ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </section>
 
         <section>
-          <h3 className="mb-3 text-lg font-semibold tracking-tight">FAQ</h3>
-          <div className="space-y-4 text-sm leading-7">
-            {article.faq.map((item) => (
-              <div key={item.question}>
-                <p>
-                  <strong>Q. {item.question}</strong>
-                </p>
-                <p className="mt-1 whitespace-pre-line">A. {item.answer}</p>
-              </div>
-            ))}
-          </div>
+          <SectionHeading as="h3">자주 묻는 질문</SectionHeading>
+          <FaqList items={article.faq ?? []} />
         </section>
 
         <ContentSlot placement="footer" label={article.focusKeyword} adFormat="auto" />
+        {topic ? (
+          <div className="mt-8 border-t border-line pt-8">
+            <AffiliateWidget keyword={topic} placement="footer" />
+          </div>
+        ) : null}
       </div>
     </article>
   );

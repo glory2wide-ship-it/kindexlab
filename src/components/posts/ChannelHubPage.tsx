@@ -3,12 +3,13 @@ import Link from "next/link";
 import { channelHref, channelSectionHref, getPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import { listPosts, listPostsByChannel } from "@/lib/posts/store";
 import type { GeneratedPost, PostChannel } from "@/lib/posts/types";
+import { formatCount } from "@/lib/format";
 
 function PostCard({ post, href }: { post: GeneratedPost; href: string }) {
   return (
     <Link href={href} className="block rounded-2xl border border-line bg-panel p-5 hover:border-accent">
       <p className="font-mono text-[11px] text-muted">
-        {post.editionDate} · {(post.wordCount || post.characterCount).toLocaleString("ko-KR")}
+        {post.editionDate} · {formatCount(post.wordCount || post.characterCount)}
         {post.wordCount ? "어절" : "자"}
       </p>
       <h2 className="mt-2 text-lg font-semibold tracking-tight">{post.title}</h2>
@@ -59,7 +60,7 @@ export async function ChannelHubPage({ channel }: { channel: PostChannel }) {
         </ul>
       ) : (
         <p className="rounded-2xl border border-dashed border-line bg-panel p-6 text-sm leading-6 text-muted">
-          이 카테고리 칼럼은 시세판에서 고른 키워드만으로 쓰는 매거진 생성기(대비표, 내·외부 링크, FAQ)로
+          이 카테고리 칼럼은 지수(INDEX)에서 고른 키워드만으로 쓰는 매거진 생성기(대비표, 내·외부 링크, FAQ)로
           발행됩니다. 다음 크론부터 이 허브에 쌓입니다.
         </p>
       )}
@@ -75,7 +76,7 @@ export async function PostsIndexWithChannels() {
         <p className="font-mono text-xs text-accent">FX · LIVING DESK</p>
         <h1 className="text-3xl font-semibold tracking-tight">이슈 칼럼</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          시세판은 오늘의 키워드를 고르는 트리거입니다. 본문은 그 키워드만으로 쓴 700~900어절 매거진 칼럼이며
+          지수(INDEX)는 오늘의 키워드를 고르는 트리거입니다. 본문은 그 키워드만으로 쓴 700~900어절 매거진 칼럼이며
           하루 세 번 발행합니다. 투자 권유가 아닙니다.
         </p>
       </header>

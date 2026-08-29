@@ -44,6 +44,9 @@ export const metadata: Metadata = {
     "모바일 게임",
     "스팀",
     "콘솔 게임",
+    "맛집",
+    "여행",
+    "레져",
     "트리맵",
     "버즈 지수",
   ],
@@ -61,7 +64,10 @@ export const metadata: Metadata = {
     description: SITE.description,
   },
   robots: { index: true, follow: true },
-  alternates: { canonical: "/" },
+  alternates: {
+    canonical: "/",
+    types: { "application/rss+xml": `${SITE.url}/feed.xml` },
+  },
   other: {
     "application-name": SITE.name,
   },
@@ -77,23 +83,39 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
     >
       <head>
+        {/*
+         * Pretendard is the brand face, so its stylesheet stays render-blocking —
+         * swapping it in late would reflow every heading. The preconnect is what
+         * makes that affordable: DNS, TCP and TLS to the CDN start with the
+         * document instead of after the parser reaches this tag.
+         *
+         * The Noto Sans KR stylesheet that used to sit here was a second blocking
+         * cross-origin request for a face that only ever applied if Pretendard
+         * failed. `system-ui` already resolves to a Korean face on every target
+         * platform (Malgun Gothic, Apple SD Gothic Neo, Noto Sans CJK), so the
+         * family name is kept in the stack for locally installed copies and the
+         * network request is gone.
+         */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap"
-        />
       </head>
       <body className="flex min-h-full flex-col bg-board font-sans text-ink antialiased">
+        {/*
+         * Ads load after the page is idle. `afterInteractive` puts the AdSense
+         * bundle in contention with hydration, and it is a large script that
+         * spawns further requests — on a mid-range phone that lands squarely on
+         * INP and TBT. Nothing above the fold depends on it.
+         */}
         {adsenseClient ? (
           <Script
             id="adsense"
             async
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
             crossOrigin="anonymous"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
           />
         ) : null}
         <script

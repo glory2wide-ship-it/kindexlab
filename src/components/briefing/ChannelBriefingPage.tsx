@@ -12,8 +12,17 @@ export async function ChannelBriefingPage({
   heading?: string;
   titleLevel?: 1 | 2;
 }) {
-  const edition = await getChannelBriefingEdition(channel);
-  const { main, dives } = splitChannelEdition(edition);
+  let main;
+  let dives: Awaited<ReturnType<typeof splitChannelEdition>>["dives"] = [];
+  try {
+    const edition = await getChannelBriefingEdition(channel);
+    const split = splitChannelEdition(edition);
+    main = split.main;
+    dives = split.dives;
+  } catch {
+    main = undefined;
+    dives = [];
+  }
   return (
     <ChannelBriefingLayout
       channel={channel}

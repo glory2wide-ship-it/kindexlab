@@ -4,6 +4,7 @@ import { categoryLabel } from "@/lib/briefing/metrics";
 import { isLiveEdition } from "@/lib/briefing/dates";
 import { withBriefingCover } from "@/lib/briefing/cover";
 import type { BriefingArticle } from "@/lib/types";
+import { formatCount } from "@/lib/format";
 
 export function FeaturedBriefingCard({
   article,
@@ -38,7 +39,7 @@ export function FeaturedBriefingCard({
         <p className="mt-3 text-sm leading-7 text-muted">{article.excerpt}</p>
         <p className="mt-4 font-mono text-[11px] text-muted">
           {article.editionDate} · {article.deskLabel || categoryLabel(article.category)} ·{" "}
-          {article.readingMinutes}분 · {article.wordCount.toLocaleString("ko-KR")}단어
+          {article.readingMinutes ?? 1}분 · {formatCount(article.wordCount)}단어
         </p>
         <Link href={href} className="mt-5 inline-flex font-medium text-accent hover:underline">
           종합 브리핑 본문 읽기 →

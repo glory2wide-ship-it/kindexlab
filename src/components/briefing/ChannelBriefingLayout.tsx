@@ -33,7 +33,7 @@ export function ChannelBriefingLayout({
           {heading ?? `${meta.label} 일일브리핑`}
         </TitleTag>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          상단은 {channelMainLabel(channel)}이고, 아래는 하부 메뉴별 심층 분석입니다. 시세판은 키워드를 고르는
+          상단은 {channelMainLabel(channel)}이고, 아래는 하부 메뉴별 심층 분석입니다. 지수(INDEX)는 키워드를 고르는
           트리거이고, 본문은 그 키워드만으로 쓴 독립 칼럼입니다.
         </p>
       </header>

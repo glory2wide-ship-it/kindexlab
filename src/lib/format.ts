@@ -23,7 +23,13 @@ export function formatCompact(value: number): string {
 }
 
 export function formatScore(value: number): string {
-  return scoreFmt.format(value);
+  return scoreFmt.format(Number.isFinite(value) ? value : 0);
+}
+
+/** Safe integer/count formatter — never throws on undefined cache fields. */
+export function formatCount(value: number | null | undefined, locale = "ko-KR"): string {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n.toLocaleString(locale) : "0";
 }
 
 export function formatRate(value: number): string {
@@ -32,6 +38,13 @@ export function formatRate(value: number): string {
   if (n > 0) return `+${abs}%`;
   if (n < 0) return `-${abs}%`;
   return `0.00%`;
+}
+
+/** Board index on a 100-point scale, e.g. "98.5 pt". */
+export function formatIndexPoints(buzzScore: number): string {
+  const raw = Number.isFinite(buzzScore) ? buzzScore : 0;
+  const points = raw > 120 ? raw / 10 : raw;
+  return `${points.toFixed(1)} pt`;
 }
 
 export function formatPoints(value: number): string {
@@ -73,11 +86,13 @@ export const TYPE_LABEL: Record<string, string> = {
   party_support: "정당",
   politician_support: "정치인",
   political_pundit: "평론가",
-  political_influencer: "정치SNS",
+  political_influencer: "정치유튜브",
   political_ratings: "정치뉴스",
   political_search: "검색어",
   local_policy: "지자체",
   subsidy: "지원금",
+  economy_board: "경제 지수",
+  culture_board: "문화/여행/맛집/레져/생활",
 };
 
 export function scoreLabel(type: string): string {
@@ -91,11 +106,13 @@ export function scoreLabel(type: string): string {
   if (type === "headline_news") return "헤드라인 지수";
   if (type === "party_support" || type === "politician_support") return "지지도 지수";
   if (type === "political_pundit") return "평론 지수";
-  if (type === "political_influencer") return "SNS 지수";
+  if (type === "political_influencer") return "유튜브 지수";
   if (type === "political_ratings") return "시청률 지수";
   if (type === "political_search") return "검색 지수";
   if (type === "local_policy") return "정책 지수";
   if (type === "subsidy") return "지원금 지수";
+  if (type === "economy_board") return "경제 지수";
+  if (type === "culture_board") return "문화/여행/맛집/레져/생활 지수";
   return "버즈 점수";
 }
 

@@ -37,6 +37,15 @@ yarn-error.log*
 # vercel
 .vercel
 
+# on-demand analysis cache (TTL data; Supabase is the durable store)
+/src/data/analysis/
+/src/data/boards/
+
+# Google News handle→publisher URL cache. Local rebuild accelerator only:
+# `flushUnwrapCache` refuses to write when VERCEL=1 and the resolver has no
+# bundled fallback, so shipping it would add weight without helping production.
+/src/data/news/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -12,7 +12,7 @@ export const MARKET_TAPE =
   /시세판|시세|등락률|등락|거래량|버즈 점수|버즈|시가총액|분봉|호가창|호가|급등주|급등|급락|전일 대비|박스 면적|트리맵|히트맵|차트|가격|순위|체결가|캔들|\+\d+\.\d+%|-\d+\.\d+%|\d+\s*위/;
 
 export const BANNED =
-  /결론적으로|요약하자면|이 글에서는|이 글은|정리하면|마무리하며|알아보겠습니다|살펴보겠습니다|추천한다|추천합니다|좋은 선택|좋은 기회|반드시 사야|투자하세요|좋습니다|한 줄로 남기면|가설을 한 줄|위키백과|위키식|간단히 정리|다음과 같습니다|이번 글에서|보드에서 다시 대조|보드에서 대조|다시 대조한다|검색 태그로 한 번 더|한 번 더 확인한다|상단의 실시간 숫자를 먼저 읽는다|관측값이고 이유는|한 칸 이동한 스냅샷|프로필을 다시 쓰는|관측 \d+은|브리핑 \d+은|보드 실습 \d+은|속도 \d+은|틱 \d+은/;
+  /결론적으로|요약하자면|이 글에서는|이 글은|정리하면|마무리하며|알아보겠습니다|살펴보겠습니다|추천한다|추천합니다|좋은 선택|좋은 기회|반드시 사야|투자하세요|좋습니다|한 줄로 남기면|가설을 한 줄|위키백과|위키식|간단히 정리|다음과 같습니다|이번 글에서|보드에서 다시 대조|보드에서 대조|다시 대조한다|검색 태그로 한 번 더|한 번 더 확인한다|상단의 실시간 숫자를 먼저 읽는다|관측값이고 이유는|한 칸 이동한 스냅샷|프로필을 다시 쓰는|관측 \d+은|브리핑 \d+은|보드 실습 \d+은|속도 \d+은|틱 \d+은|종합하면|주목받고 있|주목을 받고 있|이목이 집중되고|귀추가 주목|다양한 관점이 있|다양한 시각이 존재|화제를 모으고 있|기대를 모으고 있|관심이 모아지고 있/;
 
 const FILLER_SRC =
   "검색 태그로 한 번 더 확인한다|보드에서 다시 대조한다|다시 대조한다|한 줄로 남기면|가설을 한 줄|결론적으로|요약하자면|이 글에서는|정리하면|마무리하며|알아보겠습니다|살펴보겠습니다|상단의 실시간 숫자를 먼저 읽는다|위키식";
@@ -149,10 +149,52 @@ export function splitToSentences(raw: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Korean connective endings. A chunk closing on one of these is a mid-sentence
+ * clause, not a sentence: sealing it with a period yields "…있으며." Splitting
+ * long prose produces these, so such fragments are dropped rather than shipped.
+ */
+const CONNECTIVE_TAIL =
+  /(으며|하며|이며|면서|으면|하고|이고|지만|때문에|통해|위해|따라|와|과|및|이나|거나|는데|은데|아서|어서|으로|보다|처럼|라는|이라는|에서)$/;
+
+function endsMidClause(value: string): boolean {
+  return CONNECTIVE_TAIL.test(value.replace(/[.\s]+$/, "").trim());
+}
+
+/**
+ * Closes a clause as a sentence. Splitting happens at commas and connectives, so
+ * the trailing separator has to go before the period lands, otherwise the body
+ * fills with "…있으며,." artifacts.
+ */
+function seal(value: string): string {
+  const trimmed = value.replace(/[\s,，·/]+$/, "").trim();
+  if (!trimmed) return "";
+  if (endsMidClause(trimmed)) return "";
+  return trimmed.endsWith(".") ? trimmed : `${trimmed}.`;
+}
+
+/** Trims an over-long clause at a word boundary; never mid-word. */
+function trimToBudget(sentence: string): string {
+  const body = sentence.replace(/\.+$/, "");
+  const words = body.split(" ");
+  let out = "";
+  for (const word of words) {
+    const next = out ? `${out} ${word}` : word;
+    if (charLen(next) > SENT_MAX) break;
+    out = next;
+  }
+  // Walk back to the last word that closes a sentence cleanly.
+  let candidate = out;
+  while (candidate && endsMidClause(candidate)) {
+    candidate = candidate.slice(0, candidate.lastIndexOf(" ")).trim();
+  }
+  return seal(candidate);
+}
+
 export function clipLong(sentence: string): string[] {
   const clean = stripFiller(sentence.replace(/\s+/g, " "));
   if (!clean) return [];
-  if (charLen(clean) <= SENT_MAX) return [clean.endsWith(".") ? clean : `${clean}.`];
+  if (charLen(clean) <= SENT_MAX) return [seal(clean)].filter(Boolean);
   const parts = clean.split(/(?<=[다요임까,，·/])\s+/);
   const out: string[] = [];
   let buf = "";
@@ -161,12 +203,14 @@ export function clipLong(sentence: string): string[] {
     if (charLen(next) <= SENT_MAX) {
       buf = next;
     } else {
-      if (buf) out.push(buf.endsWith(".") ? buf : `${buf}.`);
+      if (buf) out.push(seal(buf));
       buf = part;
     }
   }
-  if (buf) out.push(buf.endsWith(".") ? buf : `${buf}.`);
-  return out.flatMap((item) => (charLen(item) > SENT_MAX ? clipLong(`${item.slice(0, 34)}.`) : [item]));
+  if (buf) out.push(seal(buf));
+  return out
+    .map((item) => (charLen(item) > SENT_MAX ? trimToBudget(item) : item))
+    .filter(Boolean);
 }
 
 function isCompleteSentence(value: string): boolean {
@@ -220,7 +264,7 @@ export function fitSentenceLength(sentence: string, used: Set<string> = new Set(
   }
   if (charLen(body) < SENT_MIN || charLen(body) > SENT_MAX) return "";
   if (hasBannedCopy(body)) return "";
-  return `${body}.`;
+  return seal(body);
 }
 
 export function mergeShort(sentences: string[]): string[] {
@@ -242,7 +286,7 @@ export function mergeShort(sentences: string[]): string[] {
       continue;
     }
     if (len <= SENT_MAX) {
-      out.push(`${candidate}.`);
+      out.push(seal(candidate));
       buf = "";
       continue;
     }

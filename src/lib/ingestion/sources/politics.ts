@@ -57,7 +57,7 @@ const FEEDS: { id: string; label: string; url: string; type: PoliticsEntityType;
     label: "Google News 정치 유튜브",
     url: "https://news.google.com/rss/search?q=%EC%A0%95%EC%B9%98%20%EC%9C%A0%ED%8A%9C%EB%B8%8C%20OR%20%EC%8B%9C%EC%82%AC%20%EC%B1%84%EB%84%90&hl=ko&gl=KR&ceid=KR:ko",
     type: "political_influencer",
-    tag: "정치SNS",
+    tag: "정치유튜브",
   },
   {
     id: "news-pol-ratings",

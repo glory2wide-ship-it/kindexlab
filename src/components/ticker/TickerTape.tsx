@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { formatRate } from "@/lib/format";
-import { rankingPath } from "@/lib/slugs";
+import { entityHref } from "@/lib/slugs";
 import type { RankingEntity } from "@/lib/types";
 
 export function TickerTape({ items }: { items: RankingEntity[] }) {
-  const loop = [...items, ...items];
-  const durationSec = Math.max(120, Math.round(Math.max(items.length, 1) * 2.4));
+  const safe = (items ?? []).filter((item) => item?.id && item?.name);
+  if (!safe.length) return null;
+  const loop = [...safe, ...safe];
+  const durationSec = Math.max(120, Math.round(Math.max(safe.length, 1) * 2.4));
 
   return (
     <div className="relative overflow-hidden border-b border-line bg-panel">
@@ -20,7 +22,7 @@ export function TickerTape({ items }: { items: RankingEntity[] }) {
           return (
             <Link
               key={`${item.id}-${index}`}
-              href={rankingPath(item.slug)}
+              href={entityHref(item)}
               suppressHydrationWarning
               className="flex shrink-0 items-center gap-2 font-sans text-[13.8px] font-medium tracking-tight"
             >
@@ -29,7 +31,7 @@ export function TickerTape({ items }: { items: RankingEntity[] }) {
               <span className={tone}>
                 {up ? "▲" : down ? "▼" : "–"} {formatRate(item.fluctuationRate)}
               </span>
-              <span className="text-muted">{item.buzzScore.toFixed(1)}</span>
+              <span className="text-muted">{Number(item.buzzScore ?? 0).toFixed(1)}</span>
             </Link>
           );
         })}

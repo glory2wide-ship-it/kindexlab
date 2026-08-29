@@ -10,7 +10,7 @@ import { SITE } from "@/lib/site";
 export const metadata: Metadata = {
   title: "데일리 트렌드 브리핑",
   description:
-    "엔터테인먼트·정치·경제·문화 각 채널의 종합 브리핑과 하부 메뉴 심층 분석을 매일 발행합니다. 어제 글은 매거진 아카이브로 쌓입니다.",
+    "엔터테인먼트·정치·경제·문화/여행/맛집/레져/생활 각 채널의 종합 브리핑과 하부 메뉴 심층 분석을 매일 발행합니다. 어제 글은 매거진 아카이브로 쌓입니다.",
   alternates: { canonical: "/briefing" },
 };
 

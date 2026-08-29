@@ -1,4 +1,4 @@
-import { composeChannelEdition, evaluateBriefingSpec } from "../src/lib/briefing/compose";
+﻿import { composeChannelEdition, evaluateBriefingSpec } from "../src/lib/briefing/compose";
 import { editionDateTime, kstDateString } from "../src/lib/briefing/dates";
 import { composeTodayAnalysis, evaluateTodayAnalysis } from "../src/lib/editorial/today-analysis";
 import { MARKET_TAPE } from "../src/lib/editorial/rules";
@@ -55,7 +55,7 @@ async function main() {
     rows.push({
       surface: `today:${entity.slug}`,
       ok: report.ok,
-      words: report.wordCount,
+      words: report.characterCount,
       tape: tape(text),
       failures: report.failures,
     });

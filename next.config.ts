@@ -1,6 +1,50 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        /*
+         * Content-hashed build output. Next already marks `/_next/static` this
+         * way; repeating it here keeps the rule in force behind a proxy or CDN
+         * that rewrites upstream headers.
+         */
+        source: "/_next/static/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
+        /*
+         * Files served straight from `public/`. These have no hash in their
+         * name, so they cannot be immutable — a day at the edge with a week of
+         * stale-while-revalidate keeps repeat visits instant while still letting
+         * a replacement roll out without a rename.
+         */
+        source: "/:file*.(svg|png|jpg|jpeg|webp|avif|gif|ico|woff|woff2|ttf|otf)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=604800",
+          },
+        ],
+      },
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
+  async redirects() {
+    return [
+      {
+        source: "/board/us-stock-trend-index",
+        destination: "/board/kospi-fomo-index",
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },

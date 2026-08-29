@@ -7,7 +7,7 @@ const catalog: CatalogMatch[] = rankings.map((item) => ({
   name: item.name,
   nameEn: item.nameEn,
   type: item.type,
-  products: item.products,
+  products: item.products ?? [],
   tags: item.tags,
 }));
 

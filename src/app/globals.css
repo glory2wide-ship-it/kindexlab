@@ -10,8 +10,8 @@
   --line: #e2dacb;
   --muted: #667085;
   --ink: #141821;
-  --up: #e11d48;
-  --down: #2563eb;
+  --up: #16a34a;
+  --down: #dc2626;
   --accent: #c9a227;
 }
 
@@ -23,8 +23,8 @@
   --line: #232833;
   --muted: #8b93a7;
   --ink: #e8eaf1;
-  --up: #f43f5e;
-  --down: #60a5fa;
+  --up: #22c55e;
+  --down: #ef4444;
   --accent: #e8b923;
 }
 
@@ -105,11 +105,34 @@ body {
   animation: market-pulse 0.75s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+@keyframes board-rank-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Rows stagger in when the demographic filter changes; the list is remounted on
+   segment change so the sequence replays rather than snapping to the new order. */
+.board-rank-row {
+  animation: board-rank-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .market-live-flash,
+  .board-rank-row,
   .flip-leaf-top,
   .flip-leaf-bottom {
     animation: none;
+  }
+
+  .board-rank-row {
+    opacity: 1;
+    transform: none;
   }
 }
 

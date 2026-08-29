@@ -34,7 +34,7 @@ export function PoliticsSeoSection({
     "@graph": [
       {
         "@type": "WebPage",
-        name: "정치 시세판",
+        name: "정치 지수(INDEX)",
         description: copy.excerpt,
         url: `${SITE.url}/politics`,
         inLanguage: "ko",
@@ -79,7 +79,7 @@ export function PoliticsSeoSection({
       <section className="space-y-4">
         <h2 className="text-xl font-semibold tracking-tight">9대 지표 심층</h2>
         <p className="text-sm leading-6 text-muted">
-          각 메뉴(헤드라인·정당·정치인·평론가·인플루언서·시청률·검색어·지자체 정책·정부 지원금)별 해설입니다.
+          각 메뉴(헤드라인·정당·정치인·지자체 정책·정부 지원금·정치 유튜브·평론가·이슈 키워드)별 해설입니다.
         </p>
         <div className="grid gap-4 lg:grid-cols-2">
           {dives.map((dive) => (

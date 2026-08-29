@@ -1,28 +1,34 @@
-const MIN_NAME = 19.2;
-const MAX_NAME = 62;
-const MIN_RATE = 12;
-const MAX_RATE = 28;
+const MIN_NAME = 12;
+const MAX_NAME = 38;
+const MIN_RATE = 10;
+const MAX_RATE = 18;
+const MIN_ARTIST = 10;
+const MAX_ARTIST = 16;
 
 export interface TreemapLabelLayout {
   showName: boolean;
   showRate: boolean;
   showType: boolean;
+  showMeta: boolean;
   name: string;
+  rate: string;
   nameSize: number;
   rateSize: number;
   typeSize: number;
+  metaSize: number;
   padX: number;
   padY: number;
   nameY: number;
   rateY: number;
   typeY: number;
+  metaY: number;
+  meta: string;
 }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-/** Approximate rendered width in px for Pretendard/Inter at `fontSize`. */
 export function measureTextWidth(text: string, fontSize: number): number {
   let units = 0;
   for (const char of text) {
@@ -60,8 +66,8 @@ function ellipsize(text: string, fontSize: number, maxWidth: number): string {
 }
 
 /**
- * Name + fluctuation are always shown. Sector is optional.
- * Shrink or ellipsize the title instead of dropping the percentage.
+ * Centered stack: title, optional artist, then change % (and pt when it fits).
+ * Rank is drawn separately in the tile corner — do not prepend it here.
  */
 export function layoutTreemapLabel(input: {
   width: number;
@@ -70,70 +76,85 @@ export function layoutTreemapLabel(input: {
   name: string;
   rate: string;
   typeLabel: string;
+  rank?: string;
+  artist?: string;
+  metaLabel?: string;
+  forceType?: boolean;
 }): TreemapLabelLayout | null {
-  const { width: w, height: h, y, name, rate, typeLabel } = input;
-  if (w < 48 || h < 36) return null;
+  const { width: w, height: h, y, name, rate, typeLabel, artist } = input;
+  if (w < 28 || h < 18) return null;
 
-  const padX = w < 96 ? 6 : clamp(Math.round(Math.min(16, w * 0.08)), 8, 16);
-  const padY = h < 72 ? 5 : clamp(Math.round(Math.min(14, h * 0.1)), 7, 14);
-  const innerW = w - padX * 2;
-  const innerH = h - padY * 2;
-  if (innerW < 28 || innerH < 24) return null;
-
+  const innerW = Math.max(12, w - 16);
+  const innerH = Math.max(12, h - 18);
   const areaScale = Math.sqrt(Math.max(1, w * h));
-  let nameSize = clamp(areaScale * 0.17, MIN_NAME, MAX_NAME);
-  nameSize = Math.min(nameSize, innerH * 0.5, innerW * 0.5);
+  let nameSize = clamp(areaScale * 0.13, MIN_NAME, MAX_NAME);
+  nameSize = Math.min(nameSize, innerH * 0.42, innerW * 0.42);
   nameSize = fitSizeToWidth(name, nameSize, innerW, MIN_NAME);
 
-  let rateSize = clamp(nameSize * 0.72, MIN_RATE, MAX_RATE);
-  rateSize = fitSizeToWidth(rate, rateSize, innerW, Math.min(MIN_RATE, innerW * 0.22));
-
-  const lineGap = Math.max(2, nameSize * 0.14);
-  const stacked = () => nameSize + lineGap + rateSize * 0.92;
-
-  if (stacked() > innerH) {
-    const scale = innerH / stacked();
-    nameSize = Math.max(16.8, nameSize * scale);
-    rateSize = Math.max(11, rateSize * scale);
-  }
-  if (stacked() > innerH) {
-    rateSize = Math.min(rateSize, Math.max(11, innerH * 0.28));
-    nameSize = Math.max(16.8, innerH - lineGap - rateSize * 0.92);
+  const showArtist = Boolean(artist) && w >= 48 && h >= 32;
+  let artistSize = 0;
+  if (showArtist && artist) {
+    artistSize = clamp(nameSize * 0.78, MIN_ARTIST, MAX_ARTIST);
+    artistSize = fitSizeToWidth(artist, artistSize, innerW, MIN_ARTIST);
   }
 
-  nameSize = fitSizeToWidth(name, nameSize, innerW, 16.8);
-  rateSize = fitSizeToWidth(rate, rateSize, innerW, 11);
+  const combine = Boolean(typeLabel) && w >= 72 && h >= 40;
+  const rateText = combine ? `${rate}  ${typeLabel}` : rate;
+  const showRate = h >= 28;
+  let rateSize = showRate ? clamp(nameSize * 0.68, MIN_RATE, MAX_RATE) : 0;
+  if (showRate) rateSize = fitSizeToWidth(rateText, rateSize, innerW, MIN_RATE);
+
+  const gap = Math.max(3, nameSize * 0.14);
+  let stack = nameSize;
+  if (showArtist) stack += gap + artistSize;
+  if (showRate) stack += gap + rateSize;
+
+  if (stack > innerH) {
+    const scale = innerH / stack;
+    nameSize = Math.max(MIN_NAME, nameSize * scale);
+    if (showArtist) artistSize = Math.max(MIN_ARTIST, artistSize * scale);
+    if (showRate) rateSize = Math.max(MIN_RATE, rateSize * scale);
+    stack = nameSize;
+    if (showArtist) stack += gap + artistSize;
+    if (showRate) stack += gap + rateSize;
+  }
+
   const displayName = ellipsize(name, nameSize, innerW);
-
-  let typeSize = clamp(nameSize * 0.48, 10, 13);
-  const typeGap = Math.max(2, nameSize * 0.12);
-  let showType =
-    innerH > stacked() + typeGap + typeSize + 2 &&
-    w >= 108 &&
-    measureTextWidth(typeLabel, typeSize) <= innerW;
-
-  const nameY = y + padY + nameSize * 0.84;
-  let rateY = nameY + lineGap + rateSize * 0.9;
-  const maxRateY = y + h - padY - 1;
-  if (rateY > maxRateY) {
-    rateY = maxRateY;
-    showType = false;
+  const displayArtist = showArtist && artist ? ellipsize(artist, artistSize, innerW) : "";
+  const displayRate = showRate ? ellipsize(rateText, rateSize, innerW) : "";
+  const mid = y + h / 2 + 2;
+  let cursor = mid - stack / 2;
+  const nameY = cursor + nameSize * 0.82;
+  cursor += nameSize;
+  let artistY = 0;
+  if (showArtist) {
+    cursor += gap;
+    artistY = cursor + artistSize * 0.82;
+    cursor += artistSize;
   }
-  const typeY = rateY + typeGap + typeSize * 0.88;
-  if (typeY > y + h - 2) showType = false;
+  let rateY = nameY;
+  if (showRate) {
+    cursor += gap;
+    rateY = cursor + rateSize * 0.82;
+  }
 
   return {
     showName: true,
-    showRate: true,
-    showType,
+    showRate,
+    showType: combine,
+    showMeta: showArtist,
     name: displayName,
+    rate: displayRate,
+    meta: displayArtist,
     nameSize: Math.round(nameSize * 10) / 10,
     rateSize: Math.round(rateSize * 10) / 10,
-    typeSize: Math.round(typeSize * 10) / 10,
-    padX,
-    padY,
+    typeSize: Math.round(rateSize * 10) / 10,
+    metaSize: Math.round(artistSize * 10) / 10,
+    padX: 6,
+    padY: 4,
     nameY: Math.round(nameY * 10) / 10,
     rateY: Math.round(rateY * 10) / 10,
-    typeY: Math.round(typeY * 10) / 10,
+    typeY: Math.round(rateY * 10) / 10,
+    metaY: Math.round(artistY * 10) / 10,
   };
 }

@@ -19,15 +19,15 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
       <section className="space-y-3 text-[15px] leading-8">
         <h2 className="text-xl font-semibold">무엇을 보나</h2>
         <p>
-          {SITE.name}는 K-컬처 화제성을 금융 시세판의 문법으로 읽습니다. 트리맵은 거래량(검색·언급)을
+          {SITE.name}는 K-컬처 화제성을 금융 지수(INDEX)의 문법으로 읽습니다. 트리맵은 거래량(검색·언급)을
           면적으로, 등락률을 색으로 보여 주고, 리스트는 같은 데이터를 정렬 가능한 표로 제공합니다.
           분봉부터 월봉까지 타임프레임을 바꾸면 단기 노이즈와 중기 추세를 같은 보드에서 비교할 수
           있습니다.
         </p>
         {meta ? (
           <p>
-            이 페이지는 {meta.label} 데스크입니다. 상단 GNB의 네 카테고리(엔터테인먼트·정치·경제·문화)마다
-            시세판, 일일브리핑, 시세칼럼, 아카이브, 소개가 같은 규격으로 붙어 있습니다.
+            이 페이지는 {meta.label} 데스크입니다. 상단 GNB의 네 카테고리(엔터테인먼트·정치·경제·문화/여행/맛집/레져/생활)마다
+            지수(INDEX), 일일브리핑, 시세칼럼, 아카이브, 소개가 같은 규격으로 붙어 있습니다.
           </p>
         ) : null}
         <ul className="grid gap-2 sm:grid-cols-2">
@@ -41,7 +41,7 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
         </ul>
       </section>
       <section className="space-y-3 text-[15px] leading-8">
-        <h2 className="text-xl font-semibold">시세판은 어떻게 구성되나</h2>
+        <h2 className="text-xl font-semibold">지수(INDEX)는 어떻게 구성되나</h2>
         <p>
           각 종목은 검색량, 소셜 언급, 영상·스트리밍, 뉴스 톤, 쇼핑 의도 키워드를 가중 평균한
           버즈 점수로 정렬됩니다. 실시간 음원 차트는 스트리밍·검색 속도를, 실시간 시청률 순위는

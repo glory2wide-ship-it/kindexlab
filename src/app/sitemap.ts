@@ -1,20 +1,59 @@
+import { listAnalysis } from "@/lib/analysis/store";
 import { getAllBriefingSlugs, getAllSlugs, listEditionDates } from "@/lib/api";
 import { CHANNEL_SECTIONS, channelHref, channelSectionHref, inferPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import { listPosts } from "@/lib/posts/store";
 import { SITE } from "@/lib/site";
-import { rankingUrl } from "@/lib/slugs";
+import { decodeRouteSlug, rankingUrl } from "@/lib/slugs";
 import type { MetadataRoute } from "next";
 
-export const dynamic = "force-dynamic";
+/**
+ * Rebuilt on a timer rather than per request.
+ *
+ * Assembling this list means a live rankings fetch plus a full read of the
+ * column store, which measured around 24s under load — long enough that a
+ * crawler is liable to give up on it. The underlying data turns over on the
+ * order of hours, so serving a ten-minute-old list costs nothing in freshness
+ * and hands Googlebot an immediate response.
+ */
+export const revalidate = 600;
+
+/** Falls back to the crawl time only when an entry carries no usable date. */
+function toDate(raw: string | undefined, fallback: Date): Date {
+  if (!raw) return fallback;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [slugs, briefingSlugs, editionDates, posts] = await Promise.all([
+  const [slugs, briefingSlugs, editionDates, posts, analyses] = await Promise.all([
     getAllSlugs(),
     getAllBriefingSlugs(),
     listEditionDates(),
     listPosts(),
+    listAnalysis(),
   ]);
   const now = new Date();
+
+  /**
+   * Ranking detail URLs.
+   *
+   * `getAllSlugs()` only covers live heatmap entities, but a generated column is
+   * keyed on the board row slug it was written for — the two sets barely
+   * overlap, so relying on the heatmap alone leaves most published articles
+   * undiscoverable. Entries that carry a column are listed with their real
+   * generation time and a higher priority, since those are the pages worth
+   * spending crawl budget on.
+   */
+  const rankingEntries = new Map<string, { lastModified: Date; priority: number }>();
+  for (const slug of slugs) {
+    rankingEntries.set(decodeRouteSlug(slug), { lastModified: now, priority: 0.8 });
+  }
+  for (const entry of analyses) {
+    rankingEntries.set(decodeRouteSlug(entry.slug), {
+      lastModified: toDate(entry.generatedAt ?? entry.article?.publishedAt, now),
+      priority: 0.9,
+    });
+  }
   return [
     { url: SITE.url, lastModified: now, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE.url}/briefing`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
@@ -52,15 +91,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     ...posts.map((post) => ({
       url: `${SITE.url}${channelHref(inferPostChannel(post), post.slug)}`,
-      lastModified: now,
+      lastModified: toDate(post.updatedAt ?? post.publishedAt, now),
       changeFrequency: "daily" as const,
       priority: 0.72,
     })),
-    ...slugs.map((slug) => ({
+    ...[...rankingEntries].map(([slug, meta]) => ({
       url: rankingUrl(SITE.url, slug),
-      lastModified: now,
+      lastModified: meta.lastModified,
       changeFrequency: "hourly" as const,
-      priority: 0.8,
+      priority: meta.priority,
     })),
   ];
 }

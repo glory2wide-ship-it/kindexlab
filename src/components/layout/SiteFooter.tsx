@@ -11,7 +11,7 @@ export function SiteFooter() {
         <div>
           <p className="font-semibold">{SITE.name}</p>
           <p className="mt-2 text-sm leading-6 text-muted">
-            K-컬처·엔터테인먼트·인플루언서 화제성을 주식 시세판처럼 보여주는 트렌드
+            K-컬처·엔터테인먼트·인플루언서 화제성을 주식 지수(INDEX)처럼 보여주는 트렌드
             랭킹. {SITE.domain}에서 제공합니다. 데이터는 관측값이며 실제 투자 정보가 아닙니다.
           </p>
         </div>
@@ -20,7 +20,7 @@ export function SiteFooter() {
           <ul className="mt-2 space-y-1.5 text-muted">
             <li>
               <Link href="/" className="hover:text-ink">
-                실시간 시세판
+                실시간 지수(INDEX)
               </Link>
             </li>
             <li>

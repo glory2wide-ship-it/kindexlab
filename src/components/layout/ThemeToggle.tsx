@@ -1,14 +1,23 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <button
       type="button"
-      onClick={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
+      onClick={() => {
+        if (!mounted) return;
+        setTheme(resolvedTheme === "light" ? "dark" : "light");
+      }}
       className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-line bg-panel text-muted transition-colors hover:text-ink"
       aria-label="테마 전환"
     >

@@ -1,4 +1,5 @@
 import { TYPE_ORDER } from "@/lib/categories";
+import { menuBoardsForChannel } from "@/lib/boards/registry";
 import { POLITICS_INDEX_META } from "@/lib/politics/types";
 import { CHANNEL_ENTITY_TYPES, getPostChannel } from "@/lib/posts/channels";
 import type { CategoryId, EntityType } from "@/lib/types";
@@ -44,7 +45,7 @@ const POLITICS_DESK_LABEL: Record<(typeof POLITICS_DESK_ORDER)[number], string> 
   "pol-party": "정당 지수",
   "pol-politician": "정치인 지수",
   "pol-pundit": "평론가 지수",
-  "pol-influencer": "정치 SNS 지수",
+  "pol-influencer": "정치 유튜브 지수",
   "pol-ratings": "정치방송시청지수",
   "pol-search": "정치 검색어 지수",
   "pol-policy": "지자체 정책지수",
@@ -60,7 +61,7 @@ function desksFromTypes(types: EntityType[]): ChannelBriefingDesk[] {
   }));
 }
 
-/** Lower-menu deep-dive desks for a top-level channel. Economy/culture inherit the same rule automatically. */
+/** Lower-menu deep-dive desks. Economy/culture bind to the 7 ranking boards. */
 export function desksForChannel(channel: PostChannel): ChannelBriefingDesk[] {
   if (channel === "entertainment") {
     return desksFromTypes([...TYPE_ORDER]);
@@ -75,6 +76,16 @@ export function desksForChannel(channel: PostChannel): ChannelBriefingDesk[] {
         indexId: id,
       };
     });
+  }
+  const boards = menuBoardsForChannel(channel).filter((board) => !board.deskKind);
+  if (boards.length) {
+    const category: CategoryId = channel === "economy" ? "economy_board" : "culture_board";
+    return boards.map((board) => ({
+      id: board.slug,
+      label: board.shortTitle,
+      category,
+      indexId: board.slug,
+    }));
   }
   return desksFromTypes(CHANNEL_ENTITY_TYPES[channel]);
 }

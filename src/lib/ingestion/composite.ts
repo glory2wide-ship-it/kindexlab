@@ -119,6 +119,16 @@ export function buildKindexComposite(options: {
 }
 
 export function withIndexPoints(index: MarketIndex): MarketIndex {
-  const changePoints = index.changePoints ?? pointsFromRate(index.value, index.changeRate);
-  return { ...index, changePoints };
+  const stored = index.changePoints;
+  const changePoints =
+    Number.isFinite(stored) && !(stored === 0 && index.changeRate !== 0)
+      ? Number(stored)
+      : pointsFromRate(index.value, index.changeRate);
+  const previousValue =
+    Number.isFinite(index.previousValue)
+      ? Number(index.previousValue)
+      : index.changeRate === 0
+        ? index.value
+        : Number((index.value / (1 + index.changeRate / 100)).toFixed(2));
+  return { ...index, changePoints, previousValue };
 }

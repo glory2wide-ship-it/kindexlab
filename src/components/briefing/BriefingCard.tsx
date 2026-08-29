@@ -5,6 +5,7 @@ import { isLiveEdition } from "@/lib/briefing/dates";
 import { withBriefingCover } from "@/lib/briefing/cover";
 import { channelSectionHref, isPostChannel } from "@/lib/posts/channels";
 import type { BriefingArticle } from "@/lib/types";
+import { formatCount } from "@/lib/format";
 
 export function BriefingCard({
   article,
@@ -45,15 +46,15 @@ export function BriefingCard({
         </h2>
         <p className="mt-2 text-sm leading-6 text-muted">{article.excerpt}</p>
         <p className="mt-3 font-mono text-[11px] text-muted">
-          {article.editionDate} · {categoryLabel(article.category)} · {article.readingMinutes}분 ·{" "}
-          {article.wordCount.toLocaleString("ko-KR")}단어
+          {article.editionDate} · {categoryLabel(article.category)} · {article.readingMinutes ?? 1}분 ·{" "}
+          {formatCount(article.wordCount)}단어
         </p>
         <div className="mt-4 flex flex-wrap gap-3 text-sm">
           <Link href={articleHref} className="font-medium text-accent hover:underline">
             본문 읽기 →
           </Link>
           <Link href={heatmapHref(article.category)} className="text-muted hover:text-ink">
-            {categoryLabel(article.category)} 시세판
+            {categoryLabel(article.category)} 지수(INDEX)
           </Link>
         </div>
       </div>
