@@ -1,6 +1,8 @@
 import { listAnalysis } from "@/lib/analysis/store";
+import { channelHref, inferPostChannel } from "@/lib/posts/channels";
+import { listPosts } from "@/lib/posts/store";
 import { SITE } from "@/lib/site";
-import { rankingUrl } from "@/lib/slugs";
+import { decodeRouteSlug, rankingUrl } from "@/lib/slugs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,8 +13,23 @@ export const dynamic = "force-dynamic";
  * A sitemap tells a crawler which URLs exist; a feed tells it which ones are
  * new. Publishing both means a column written minutes ago can be picked up on
  * the feed poll rather than waiting for the next full sitemap crawl.
+ *
+ * Both stores are read because they are populated on different deployments.
+ * `listAnalysis` is backed by `src/data/analysis/`, which is git-ignored TTL
+ * data and therefore never ships to Vercel — on production it answers empty
+ * unless Supabase is configured, which is how this feed went out with zero
+ * items. The column store is committed and bundled at build time, so it is
+ * what actually carries published work into a deploy.
  */
 const MAX_ITEMS = 100;
+
+interface FeedItem {
+  url: string;
+  title: string;
+  excerpt: string;
+  stamp: string;
+  category?: string;
+}
 
 function escapeXml(value: string): string {
   return value
@@ -29,25 +46,53 @@ function rfc822(raw: string | undefined): string {
 }
 
 export async function GET() {
-  const analyses = (await listAnalysis()).slice(0, MAX_ITEMS);
+  const [analyses, posts] = await Promise.all([listAnalysis(), listPosts()]);
 
-  const items = analyses
-    .map((entry) => {
-      const article = entry.article;
-      const url = rankingUrl(SITE.url, entry.slug);
-      return [
+  const bySlug = new Map<string, FeedItem>();
+  for (const post of posts) {
+    // Column slugs carry the Korean keyword. Percent-encode it the way
+    // `rankingPath` does, so the feed publishes a URI rather than an IRI that
+    // each aggregator would have to normalise on its own.
+    const slug = encodeURIComponent(decodeRouteSlug(post.slug));
+    const url = `${SITE.url}${channelHref(inferPostChannel(post), slug)}`;
+    bySlug.set(url, {
+      url,
+      title: post.title,
+      excerpt: post.excerpt ?? "",
+      stamp: post.updatedAt || post.publishedAt,
+      category: post.focusKeyword || undefined,
+    });
+  }
+  for (const entry of analyses) {
+    const url = rankingUrl(SITE.url, entry.slug);
+    bySlug.set(url, {
+      url,
+      title: entry.article.title,
+      excerpt: entry.article.excerpt ?? "",
+      stamp: entry.generatedAt ?? entry.article.publishedAt,
+      category: entry.keyword || undefined,
+    });
+  }
+
+  const feed = [...bySlug.values()]
+    .sort((a, b) => (b.stamp || "").localeCompare(a.stamp || ""))
+    .slice(0, MAX_ITEMS);
+
+  const items = feed
+    .map((entry) =>
+      [
         "    <item>",
-        `      <title>${escapeXml(article.title)}</title>`,
-        `      <link>${escapeXml(url)}</link>`,
-        `      <guid isPermaLink="true">${escapeXml(url)}</guid>`,
-        `      <pubDate>${rfc822(entry.generatedAt ?? article.publishedAt)}</pubDate>`,
-        `      <description>${escapeXml(article.excerpt ?? "")}</description>`,
-        entry.keyword ? `      <category>${escapeXml(entry.keyword)}</category>` : "",
+        `      <title>${escapeXml(entry.title)}</title>`,
+        `      <link>${escapeXml(entry.url)}</link>`,
+        `      <guid isPermaLink="true">${escapeXml(entry.url)}</guid>`,
+        `      <pubDate>${rfc822(entry.stamp)}</pubDate>`,
+        `      <description>${escapeXml(entry.excerpt)}</description>`,
+        entry.category ? `      <category>${escapeXml(entry.category)}</category>` : "",
         "    </item>",
       ]
         .filter(Boolean)
-        .join("\n");
-    })
+        .join("\n"),
+    )
     .join("\n");
 
   const xml = [
@@ -58,7 +103,7 @@ export async function GET() {
     `    <link>${escapeXml(SITE.url)}</link>`,
     `    <description>${escapeXml(SITE.description)}</description>`,
     "    <language>ko</language>",
-    `    <lastBuildDate>${rfc822(analyses[0]?.generatedAt)}</lastBuildDate>`,
+    `    <lastBuildDate>${rfc822(feed[0]?.stamp)}</lastBuildDate>`,
     `    <atom:link href="${escapeXml(`${SITE.url}/feed.xml`)}" rel="self" type="application/rss+xml" />`,
     items,
     "  </channel>",
