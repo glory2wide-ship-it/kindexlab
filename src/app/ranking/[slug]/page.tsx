@@ -9,7 +9,7 @@ import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
 import { getAllSlugs, getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
-import { composeTodayAnalysis } from "@/lib/editorial/today-analysis";
+import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import { formatRate } from "@/lib/format";
 import { SITE } from "@/lib/site";
 import { rankingPath, rankingUrl } from "@/lib/slugs";
@@ -39,17 +39,21 @@ const loadDetail = cache(async (slug: string, name?: string) => {
 
   const [related, market] = await Promise.all([getRelatedEntities(entity), getRankings()]);
 
-  let article = composeTodayAnalysis({ entity, market, related });
-  let grounded = false;
+  // Only a news-grounded column is worth printing. The deterministic composer
+  // fills one skeleton per keyword — the same sentences, the same FAQ answers,
+  // the subject's name dropped into the slots — and noindex only hides that from
+  // the crawler, not from a reader who clicks through from the heatmap. Dropping
+  // the block leaves the index card, the buzz chart and the related rail, all of
+  // which are measured data rather than prose written around an empty middle.
+  let article: TodayAnalysisArticle | undefined;
   try {
     const analysis = await getOrCreateAnalysis({ entity, market, related });
-    article = analysis.entry.article;
-    grounded = analysis.entry.provenance.kind === "chain";
+    if (analysis.entry.provenance.kind === "chain") article = analysis.entry.article;
   } catch {
-    /* template article already prepared so the 오늘의 분석 block always renders */
+    /* leave the block out; the data sections below stand on their own */
   }
 
-  return { entity, related, market, article, grounded };
+  return { entity, related, market, article, grounded: Boolean(article) };
 });
 
 export async function generateMetadata({
@@ -124,7 +128,7 @@ export default async function RankingDetailPage({
       </p>
       <EntityHero entity={entity} />
       <BuzzChart entity={entity} initialTimeframe={initialTimeframe} />
-      <TodayAnalysis article={analysisArticle} keyword={entity.name} />
+      {analysisArticle ? <TodayAnalysis article={analysisArticle} keyword={entity.name} /> : null}
       <PollDeskSection entity={entity} market={market} related={related} />
       <RelatedRankingDesk entity={entity} related={related} />
     </div>
