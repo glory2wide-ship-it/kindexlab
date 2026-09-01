@@ -1,5 +1,5 @@
 import { listAnalysis } from "@/lib/analysis/store";
-import { getAllBriefingSlugs, getAllSlugs, listEditionDates } from "@/lib/api";
+import { getAllBriefingSlugs, listEditionDates } from "@/lib/api";
 import { CHANNEL_SECTIONS, channelHref, channelSectionHref, inferPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import { listPosts } from "@/lib/posts/store";
 import { SITE } from "@/lib/site";
@@ -25,8 +25,7 @@ function toDate(raw: string | undefined, fallback: Date): Date {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [slugs, briefingSlugs, editionDates, posts, analyses] = await Promise.all([
-    getAllSlugs(),
+  const [briefingSlugs, editionDates, posts, analyses] = await Promise.all([
     getAllBriefingSlugs(),
     listEditionDates(),
     listPosts(),
@@ -35,20 +34,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   /**
-   * Ranking detail URLs.
+   * Ranking detail URLs, restricted to columns the chain grounded in reporting.
    *
-   * `getAllSlugs()` only covers live heatmap entities, but a generated column is
-   * keyed on the board row slug it was written for — the two sets barely
-   * overlap, so relying on the heatmap alone leaves most published articles
-   * undiscoverable. Entries that carry a column are listed with their real
-   * generation time and a higher priority, since those are the pages worth
-   * spending crawl budget on.
+   * Every live heatmap entity used to be listed here, which advertised a few
+   * hundred URLs whose 오늘의 분석 block is the deterministic template — one
+   * skeleton with the keyword swapped in. Submitting those in bulk is what a
+   * crawler reads as scaled low-value content, so the sitemap now carries only
+   * what `robots` on the detail page is willing to let be indexed. The set
+   * refills on its own as the pipeline grounds more keywords.
    */
   const rankingEntries = new Map<string, { lastModified: Date; priority: number }>();
-  for (const slug of slugs) {
-    rankingEntries.set(decodeRouteSlug(slug), { lastModified: now, priority: 0.8 });
-  }
   for (const entry of analyses) {
+    if (entry.provenance?.kind !== "chain") continue;
     rankingEntries.set(decodeRouteSlug(entry.slug), {
       lastModified: toDate(entry.generatedAt ?? entry.article?.publishedAt, now),
       priority: 0.9,

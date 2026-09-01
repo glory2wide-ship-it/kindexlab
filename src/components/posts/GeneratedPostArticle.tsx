@@ -22,6 +22,9 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
   const restSections = sections.filter(
     (section) => !tapeSections.includes(section) && section.heading !== "교차 확인 자료",
   );
+  const citations = (post.sources ?? []).filter(
+    (source): source is typeof source & { url: string } => Boolean(source.url),
+  );
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -38,6 +41,17 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
         author: { "@type": "Organization", name: SITE.name },
         publisher: { "@type": "Organization", name: SITE.name },
         mainEntityOfPage: `${SITE.url}${canonicalPath}`,
+        ...(citations.length
+          ? {
+              citation: citations.map((source) => ({
+                "@type": "NewsArticle",
+                headline: source.summary,
+                url: source.url,
+                ...(source.label ? { publisher: { "@type": "Organization", name: source.label } } : {}),
+                ...(source.publishedAt ? { datePublished: source.publishedAt } : {}),
+              })),
+            }
+          : {}),
       },
       {
         "@type": "FAQPage",
@@ -120,7 +134,7 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
           );
         })}
 
-        {post.externalLink || post.internalLink ? (
+        {post.externalLink || post.internalLink || citations.length ? (
           <section>
             <SectionHeading as="h2">교차 확인 자료</SectionHeading>
             <div className="space-y-2 text-sm leading-7">
@@ -146,6 +160,26 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
                 </p>
               ) : null}
             </div>
+            {/* The column is written from retrieved reporting, so the reader gets
+                the same list the writer worked from. Publisher names alone are
+                not checkable, which is why entries without a URL are dropped. */}
+            {citations.length ? (
+              <ul className="mt-3 space-y-1 text-sm leading-7">
+                {citations.map((source) => (
+                  <li key={source.id}>
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-accent"
+                    >
+                      {source.summary}
+                    </a>
+                    <span className="ml-2 text-xs text-muted">{source.label}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </section>
         ) : null}
 

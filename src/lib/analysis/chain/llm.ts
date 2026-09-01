@@ -34,7 +34,7 @@ export function llmModel(): string {
 }
 
 /** Rate-limit retries. Batched rebuilds burst well past the per-minute quota. */
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5;
 
 /**
  * Ceiling on in-flight completions across the process.
@@ -76,8 +76,14 @@ function retryDelayMs(response: Response, attempt: number): number {
   // exponentially from one second.
   const header = response.headers.get("retry-after");
   const seconds = header ? Number.parseFloat(header) : Number.NaN;
-  if (Number.isFinite(seconds) && seconds > 0) return Math.min(seconds * 1000, 30_000);
-  return Math.min(1_000 * 2 ** attempt, 30_000);
+  const base = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 1_000 * 2 ** attempt;
+
+  // Jitter, because the callers arrive in lockstep. An article fans out to five
+  // section calls at once; when the quota rejects them they all read the same
+  // `retry-after`, sleep the same 4s and re-fire together, which is the burst
+  // that was refused in the first place. Spreading the wake-ups over the window
+  // lets them land one after another instead of colliding again.
+  return Math.min(base, 30_000) * (0.5 + Math.random());
 }
 
 export async function chatJson<T>(options: ChatOptions): Promise<T | null> {

@@ -64,6 +64,9 @@ export async function GET() {
     });
   }
   for (const entry of analyses) {
+    // Matches the sitemap and the detail page's robots tag: a template column is
+    // not something to push at an aggregator.
+    if (entry.provenance?.kind !== "chain") continue;
     const url = rankingUrl(SITE.url, entry.slug);
     bySlug.set(url, {
       url,

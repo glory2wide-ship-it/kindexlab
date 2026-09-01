@@ -95,11 +95,33 @@ function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map(text).filter(Boolean) : [];
 }
 
+/**
+ * Cells the model wrote to satisfy the row count rather than to state a fact.
+ *
+ * The outline call is asked for a table on every column, including the ones
+ * where the retrieved reporting only supports a row or two. Told to fill three,
+ * it invents the remainder — a published column carried "미공개 신작1 |
+ * 2026-09-15 | 협동 플레이 강조", a release date for a game that had not been
+ * announced. A short table is honest; an invented one is not.
+ */
+const PLACEHOLDER_CELL =
+  /(미공개|미정|미상|추정치|예상치|알\s*수\s*없음|확인\s*불가|해당\s*없음|준비\s*중|미확정|TBD|TBA|N\/A)/i;
+
+function isPlaceholderRow(cells: string[]): boolean {
+  return cells.some((cell) => {
+    const value = cell.trim();
+    if (!value || value === "-" || value === "—" || value === "?") return true;
+    return PLACEHOLDER_CELL.test(value);
+  });
+}
+
 function parseTable(value: unknown): PostTable {
   const row = (value ?? {}) as { caption?: unknown; headers?: unknown; rows?: unknown };
   const headers = stringList(row.headers);
   const rows = Array.isArray(row.rows)
-    ? row.rows.map((cells) => stringList(cells)).filter((cells) => cells.length > 0)
+    ? row.rows
+        .map((cells) => stringList(cells))
+        .filter((cells) => cells.length > 0 && !isPlaceholderRow(cells))
     : [];
   return { caption: text(row.caption) || "팩트 요약", headers, rows };
 }
@@ -296,8 +318,16 @@ async function planOutline(input: {
       "[강제 조건]",
       "- heading은 번호 없는 한국어 소제목입니다.",
       "- covers는 그 섹션이 무엇을 주장할지 한 문장으로 적어 섹션 간 주제가 겹치지 않게 하세요.",
-      "- 구성 흐름: 배경 → 핵심 쟁점 → 이해관계와 파급 → 전문가 시각의 장단점 → 향후 전망과 실행 팁.",
-      "- table.headers는 3개 이상, table.rows는 3행 이상입니다.",
+      // Naming the arc's stages verbatim made the model copy them into the
+      // headings: one wording ended up on more than half the published columns,
+      // which reads as one template refilled per keyword.
+      "- 전개는 배경에서 출발해 쟁점, 파급, 평가, 전망으로 나아갑니다. 단 이 다섯 단어를 소제목에 그대로 쓰지 마세요.",
+      "- heading에는 이 사안에서만 나올 수 있는 고유명사나 구체적 사실을 넣으세요. 키워드만 바꾸면 다른 칼럼에도 그대로 들어맞는 소제목은 실패로 처리됩니다.",
+      "  (실패 예: '향후 전망과 실행 팁', '전문가 시각의 장단점', '이해관계와 사회적 파급', '사회적 파급 효과', '미래 전망')",
+      "- '파급', '전망', '의미', '배경'처럼 추상적인 말로 끝나는 소제목은 최대 1개까지만 허용합니다.",
+      "- table.headers는 3개 이상, table.rows는 2~4행입니다.",
+      "- 표의 모든 값은 위 [최신 뉴스 데이터]에서 확인되는 사실이어야 합니다. 확인할 수 없는 수치·날짜·명칭은 쓰지 마세요.",
+      "- '미공개 신작1', '미정', '추정치'처럼 자리를 채우려고 지어낸 값을 넣느니 행을 줄이세요.",
       "- faq는 2개 이상이며 답변은 각각 2문장 이상입니다.",
       "- externalLink.href는 위 [최신 뉴스 데이터] 목록의 URL을 그대로 복사한 값이어야 합니다. 다른 주소를 쓰면 실패로 처리됩니다.",
       "- internalLink.href는 반드시 /search?q= 로 시작합니다.",
@@ -379,7 +409,11 @@ async function writeSection(input: {
       // The mention is anchored to a specific sentence because "use it once"
       // alone gets dropped entirely once the model starts reaching for pronouns.
       `"${input.keyword}"를 이 섹션의 첫 문단 안에 반드시 정확히 1회 쓰세요. 빠뜨리면 실패로 처리됩니다.`,
-      `나머지 문단에서는 "${input.keyword}"를 다시 쓰지 말고 '이 제도', '해당 사안' 같은 대용 표현이나 대명사로 받으세요.`,
+      // Naming two stand-ins made them the default regardless of subject, so
+      // columns about a game or an idol shipped with "이 제도의 성공 배경" in
+      // the body. The substitute has to agree with what the subject actually is.
+      `나머지 문단에서는 "${input.keyword}"를 반복하지 말고, 대상의 성격에 실제로 들어맞는 표현으로 받으세요. 인물이면 '그'·'그녀', 작품이나 게임이면 '이 작품', 방송이면 '이 프로그램', 가게면 '이 매장'처럼 씁니다.`,
+      `'이 제도', '해당 사안', '본 사안'은 대상이 정말로 제도나 사건일 때만 쓸 수 있습니다. 인물·작품·상품·장소에 쓰면 실패로 처리됩니다.`,
       "본문에 URL, 마크다운 링크, 광고 코드, 위젯 태그를 넣지 마세요.",
       "소제목은 출력하지 마세요. 문단 배열만 출력합니다.",
       "",

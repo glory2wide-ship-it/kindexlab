@@ -77,6 +77,8 @@ function toGeneratedPost(
       label: source.publisher,
       ok: true,
       summary: source.title,
+      url: source.url,
+      publishedAt: source.publishedAt,
     })),
     sections: article.sections.map((section) => ({
       heading: section.heading,

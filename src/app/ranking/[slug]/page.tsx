@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { BuzzChart } from "@/components/entity/BuzzChart";
 import { EntityHero } from "@/components/entity/EntityHero";
 import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
@@ -24,6 +25,33 @@ export async function generateStaticParams() {
   return slugs.map((slug) => ({ slug }));
 }
 
+/**
+ * Builds the whole detail view once per request.
+ *
+ * `generateMetadata` needs the column's provenance to decide whether the page
+ * may be indexed, and the body needs the column itself. Both used to resolve
+ * the entity and the rankings payload independently, which also meant two
+ * chances to start the analysis pipeline for one slug.
+ */
+const loadDetail = cache(async (slug: string, name?: string) => {
+  const entity = await getEntityBySlug(slug, name);
+  if (!entity) return null;
+
+  const [related, market] = await Promise.all([getRelatedEntities(entity), getRankings()]);
+
+  let article = composeTodayAnalysis({ entity, market, related });
+  let grounded = false;
+  try {
+    const analysis = await getOrCreateAnalysis({ entity, market, related });
+    article = analysis.entry.article;
+    grounded = analysis.entry.provenance.kind === "chain";
+  } catch {
+    /* template article already prepared so the 오늘의 분석 block always renders */
+  }
+
+  return { entity, related, market, article, grounded };
+});
+
 export async function generateMetadata({
   params,
   searchParams,
@@ -33,12 +61,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const query = searchParams ? await searchParams : {};
-  const entity = await getEntityBySlug(slug, typeof query.name === "string" ? query.name : undefined);
-  if (!entity) return { title: "종목을 찾을 수 없습니다" };
+  const detail = await loadDetail(slug, typeof query.name === "string" ? query.name : undefined);
+  if (!detail) return { title: "종목을 찾을 수 없습니다" };
+  const { entity, grounded } = detail;
+
   return {
     title: `${entity.name} ${entity.rank}위 · ${formatRate(entity.fluctuationRate)}`,
     description: entity.summary,
     alternates: { canonical: rankingPath(entity.slug) },
+    // A template column is the same skeleton with the keyword swapped in, so a
+    // few hundred of them read as scaled low-value content no matter how the
+    // individual page looks. Those stay out of the index until the chain finds
+    // enough reporting to ground them; `follow` keeps the board links crawlable
+    // so the columns that are grounded still get discovered through here.
+    robots: grounded ? undefined : { index: false, follow: true },
     openGraph: {
       title: `${entity.name} 버즈 시세`,
       description: entity.summary,
@@ -55,17 +91,10 @@ export default async function RankingDetailPage({
 }) {
   const { slug } = await params;
   const query = searchParams ? await searchParams : {};
-  const entity = await getEntityBySlug(slug, typeof query.name === "string" ? query.name : undefined);
-  if (!entity) notFound();
-  const [related, market] = await Promise.all([getRelatedEntities(entity), getRankings()]);
+  const detail = await loadDetail(slug, typeof query.name === "string" ? query.name : undefined);
+  if (!detail) notFound();
+  const { entity, related, market, article: analysisArticle } = detail;
   const initialTimeframe = parseTimeframeParam(query.tf) ?? "5m";
-  let analysisArticle = composeTodayAnalysis({ entity, market, related });
-  try {
-    const analysis = await getOrCreateAnalysis({ entity, market, related });
-    analysisArticle = analysis.entry.article;
-  } catch {
-    /* template article already prepared so the 오늘의 분석 block always renders */
-  }
 
   const jsonLd = {
     "@context": "https://schema.org",

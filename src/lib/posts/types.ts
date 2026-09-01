@@ -16,6 +16,14 @@ export interface MarketFact {
   label: string;
   ok: boolean;
   summary: string;
+  /**
+   * Original article URL, set when the entry is a news citation rather than a
+   * data probe. The premium pipeline grounds every column in retrieved
+   * reporting, and a publisher name with no link is not a citation a reader can
+   * check — which is the whole point of listing sources.
+   */
+  url?: string;
+  publishedAt?: string;
 }
 
 export interface PostTable {
