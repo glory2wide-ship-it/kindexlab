@@ -32,19 +32,28 @@ function parseNielsen(html: string, tags: string[]): ChartRow[] {
     const metric = parseNumber(cells[3]?.replace(/,/g, ""));
     if (!title || /순위|프로그램/.test(title)) continue;
     if (/^\d{1,2}:\d{2}$/.test(title)) continue;
+    if (!metric || metric <= 0) continue;
+    // The page stacks two tables that share this shape: household rating, then
+    // viewer count in thousands. Both were being read as a rating, and since
+    // scoreFromMetric saturates at 18 every viewer-count row pinned to the
+    // ceiling -- 18 programmes tied at 2116, frozen across the top of the board
+    // for as long as the page kept publishing them. A rating in the hundreds is
+    // not a rating, so route those rows to volume and leave the score to rank.
+    const isViewerCount = metric > 50;
     items.push({
       rank,
       title,
       subtitle: channel,
-      metric,
-      volume: metric && metric > 50 ? Math.round(metric * 1000) : undefined,
-      // The table's fourth column is the household rating itself. Values above
-      // 50 are not ratings -- that column carries viewer counts on some pages --
-      // so only the plausible range is quotable.
-      measurement:
-        metric && metric > 0 && metric <= 50
-          ? { value: metric, unit: "%", label: "가구 시청률", source: "닐슨코리아" }
-          : undefined,
+      metric: isViewerCount ? undefined : metric,
+      volume: isViewerCount ? Math.round(metric * 1000) : undefined,
+      measurement: isViewerCount
+        ? {
+            value: Math.round(metric * 1000),
+            unit: "명",
+            label: "시청자 수",
+            source: "닐슨코리아",
+          }
+        : { value: metric, unit: "%", label: "가구 시청률", source: "닐슨코리아" },
       tags,
     });
   }

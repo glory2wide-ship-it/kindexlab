@@ -211,7 +211,8 @@ function shortsFallbackRows(): ChartRow[] {
     rank: index + 1,
     title: row.title,
     subtitle: row.subtitle,
-    metric: Math.max(1, 22 - index),
+    // No metric: this fallback has no view count, and deriving one from the
+    // index only saturates the scoring bonus so every top row ties.
     volume: Math.round((28 - index) * 120_000),
     tags: ["숏폼 인기 관측", row.subtitle],
   }));

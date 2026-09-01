@@ -49,7 +49,8 @@ function parseAppleFeed(data: AppleFeed, tag: string): ChartRow[] {
       rank: index + 1,
       title,
       subtitle: entry["im:artist"]?.label,
-      metric: Math.max(0, 40 - index) + (price > 0 ? 4 : 0),
+      // The store publishes an order, not a number. A metric derived from the
+      // index adds nothing and pins the bonus at its cap.
       volume: Math.round((48 - index) * 95_000),
       imageUrl: appleImage(entry),
       tags: [tag, price > 0 ? "유료" : "무료"],
@@ -184,7 +185,6 @@ async function fetchPlaystationStore(): Promise<SourceResult> {
           rank: index + 1,
           title,
           subtitle: links[index]?.provider_name,
-          metric: Math.max(1, 32 - index),
           volume: Math.round((36 - index) * 80_000),
           imageUrl: links[index]?.images?.[0]?.url,
           tags: ["PS 스토어", "콘솔"],
@@ -223,7 +223,6 @@ function consoleFallbackRows(): ChartRow[] {
     rank: index + 1,
     title: game.title,
     subtitle: game.subtitle,
-    metric: Math.max(1, 24 - index),
     volume: Math.round((30 - index) * 88_000),
     tags: ["콘솔 인기 관측", game.subtitle],
   }));

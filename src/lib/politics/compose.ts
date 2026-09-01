@@ -53,9 +53,15 @@ function toEntity(
   );
   const title = catalog?.name ?? row.title;
   const slug = politicsSlug(type, title);
-  const cap = type === "political_influencer" ? 90 : 24;
-  const weight = type === "political_influencer" ? 5 : 7;
-  const score = scoreFromRank(row.rank, size, 900, 1760) + Math.min(row.metric ?? 0, cap) * weight;
+  // Mention counts were folded in linearly against a hard cap, so every board's
+  // leader cleared it and landed on the same score: 당 지지도, 정치인 지지도, 시사
+  // 채널, 검색어 all tied at 1928 and sat together near the top of the board
+  // regardless of how their coverage moved. A log curve keeps the busiest
+  // subjects apart without letting one runaway count dominate the band.
+  const weight = type === "political_influencer" ? 150 : 105;
+  const ceiling = type === "political_influencer" ? 450 : 250;
+  const bonus = Math.min(Math.log10(1 + Math.max(row.metric ?? 0, 0)) * weight, ceiling);
+  const score = scoreFromRank(row.rank, size, 900, 1760) + bonus;
   const historyScores = previous?.scoreHistory?.[slug] ?? [];
   const previousScore = historyScores.at(-1);
   const fluctuationRate = row.previousRank

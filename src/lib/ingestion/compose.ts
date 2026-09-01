@@ -184,6 +184,13 @@ function toEntity(
   previous: IngestSnapshot | undefined,
   extraTags: string[],
   lockType = false,
+  /**
+   * How many rows the source returned. Passing the real length matters: the
+   * band was previously divided by a hardcoded 20 or 40, so a 48-row feed piled
+   * everything past that point onto the floor and a 12-row feed used only a
+   * sliver of the range. Both produce ties, and tied rows never reorder.
+   */
+  listSize?: number,
 ): RankingEntity {
   const title = cleanTitle(row.title);
   const catalog: CatalogMatch | undefined = matchCatalog(title, row.subtitle);
@@ -200,14 +207,15 @@ function toEntity(
     type === "shorts"
       ? `shorts-${slugify(title) || catalog?.slug || `item-${row.rank}`}`
       : (catalog?.slug ?? slugify(title));
+  const span = listSize && listSize > 1 ? listSize : 20;
   const score =
     row.metric && type === "tv_rating"
       ? scoreFromMetric(row.metric)
       : row.metric && (type === "webtoon" || type === "shorts" || type === "mobile_game" || type === "pc_game" || type === "console_game")
-        ? scoreFromRank(row.rank, 40, 900, 1860) + Math.min(Math.max(row.metric, 0), 12) * 8
+        ? scoreFromRank(row.rank, span, 900, 1860) + Math.min(Math.max(row.metric, 0), 12) * 8
         : row.metric && (type === "celebrity" || type === "influencer")
-          ? scoreFromRank(row.rank, 20, 900, 1700) + Math.min(row.metric, 30) * 6
-          : scoreFromRank(row.rank, 20);
+          ? scoreFromRank(row.rank, span, 900, 1700) + Math.min(row.metric, 30) * 6
+          : scoreFromRank(row.rank, span);
   const history = previous?.scoreHistory?.[slug] ?? [];
   const previousScore = history.at(-1);
   const measurement = row.measurement
@@ -571,23 +579,27 @@ export async function composeLiveSnapshot(
   });
 
   const built = uniqueBySlug([
-    ...musicRows.map((row) => toEntity(row, "music_chart", previous, row.tags ?? [])),
-    ...artists.map((row) => toEntity(row, "kpop", previous, ["차트 아티스트"])),
-    ...ratings.map((row) => toEntity(row, "tv_rating", previous, row.tags ?? [])),
-    ...shows.map((row) => toEntity(row, "tv_show", previous, row.tags ?? [])),
-    ...webtoonRows.map((row) => toEntity(row, "webtoon", previous, row.tags ?? [])),
-    ...trafficRows.map((item) =>
-      toEntity(item.row, item.type, previous, item.row.tags ?? [], Boolean(item.channel)),
+    ...musicRows.map((row, _i, all) => toEntity(row, "music_chart", previous, row.tags ?? [], false, all.length)),
+    ...artists.map((row, _i, all) => toEntity(row, "kpop", previous, ["차트 아티스트"], false, all.length)),
+    ...ratings.map((row, _i, all) => toEntity(row, "tv_rating", previous, row.tags ?? [], false, all.length)),
+    ...shows.map((row, _i, all) => toEntity(row, "tv_show", previous, row.tags ?? [], false, all.length)),
+    ...webtoonRows.map((row, _i, all) => toEntity(row, "webtoon", previous, row.tags ?? [], false, all.length)),
+    ...trafficRows.map((item, _i, all) =>
+      toEntity(item.row, item.type, previous, item.row.tags ?? [], Boolean(item.channel), all.length),
     ),
-    ...mobileRows.map((row) => toEntity(row, "mobile_game", previous, row.tags ?? [])),
-    ...pcRows.map((row) => toEntity(row, "pc_game", previous, row.tags ?? [])),
-    ...consoleRows.map((row) => toEntity(row, "console_game", previous, row.tags ?? [])),
+    ...mobileRows.map((row, _i, all) => toEntity(row, "mobile_game", previous, row.tags ?? [], false, all.length)),
+    ...pcRows.map((row, _i, all) => toEntity(row, "pc_game", previous, row.tags ?? [], false, all.length)),
+    ...consoleRows.map((row, _i, all) => toEntity(row, "console_game", previous, row.tags ?? [], false, all.length)),
     ...buzzEntities,
     ...composePoliticsEntities(sources, previous),
   ]);
 
   const items = built
-    .sort((a, b) => b.buzzScore - a.buzzScore)
+    // Score alone leaves large tied blocks, and a stable sort freezes those in
+    // source order however the underlying numbers move. Volume breaks the tie
+    // on something measured — views, concurrents, viewers — so a tied group
+    // still reorders when its traffic does.
+    .sort((a, b) => b.buzzScore - a.buzzScore || b.volume - a.volume)
     .map((item, index) => {
       const rank = index + 1;
       const prev = previous?.items.find((row) => row.slug === item.slug);

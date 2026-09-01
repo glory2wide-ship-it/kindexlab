@@ -106,7 +106,9 @@ async function fetchFeed(feed: (typeof FEEDS)[number]): Promise<SourceResult> {
           counts.set(key, {
             rank: headlineRank,
             title: headline,
-            metric: Math.max(1, 24 - headlineRank),
+            // Feed position only. Turning it into a metric saturates the
+            // politics bonus at its cap, which put every board's top row on the
+            // same score and froze that block at the head of the board.
             tags: [feed.tag, feed.type],
             subtitle: item.title,
           });
