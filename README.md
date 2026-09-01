@@ -37,6 +37,7 @@ npm run dev
 | `/contact` | 문의하기 |
 | `/api/rankings` | 랭킹 JSON |
 | `/api/cron/briefings` | 일일 브리핑 생성 잡(CRON_SECRET) |
+| `/search?q=` | 칼럼·지수 항목 통합 검색 |
 
 지수(INDEX) 필터: 종합, K-POP 아이돌, 셀럽, 방송, 인플루언서, 실시간 음원 차트, 실시간 시청률 순위, 실시간 웹툰, 숏폼/SNS, 모바일·PC·콘솔 게임. 박스 크기는 거래량, 색상은 선택 타임프레임의 등락률입니다. 카테고리 딥링크는 `/?category=kpop#heatmap` 형식입니다.
 
@@ -51,7 +52,19 @@ npm run briefing:generate -- --force 2026-08-25
 
 성공 시 `src/data/briefings/extra.json`에 병합됩니다. Vercel 서버리스 파일시스템은 유지되지 않으므로, 장기 SEO 아카이브는 GitHub Actions(`.github/workflows/daily-briefings.yml`)로 커밋하거나 같은 명령을 CI에서 돌리면 됩니다. 런타임에 오늘 날짜 에디션이 시드에 없으면 요청 시 생성해 1시간 캐시합니다.
 
-Vercel Cron은 `CRON_SECRET`을 설정한 뒤 `GET/POST /api/cron/briefings`를 호출합니다. 이미 같은 날짜 슬러그가 있으면 건너뜁니다(`?force=1`로 재생성).
+정기 실행은 GitHub Actions가 전담합니다. Vercel Cron은 생성 결과를 저장할 수 없어(런타임 파일시스템이 읽기 전용) 매번 만든 것을 그대로 버리므로 `vercel.json`에서 제거했습니다. 같은 잡을 `/api/cron/briefings`로 직접 호출할 수는 있으며, 이때는 `CRON_SECRET`이 필요합니다. 이미 같은 날짜 슬러그가 있으면 건너뜁니다(`?force=1`로 재생성).
+
+## 이슈 칼럼 자동화
+
+`.github/workflows/premium-columns.yml`이 매일 KST 05:20에 뉴스 근거를 모아 칼럼을 생성하고 `src/data/posts/generated.json`을 커밋합니다. 커밋이 곧 배포이므로 이 경로로만 생성물이 프로덕션에 남습니다.
+
+```bash
+npm run premium:generate -- --dry --limit=10     # 대상만 확인
+npm run premium:generate -- --limit=10           # 10편 생성
+npm run premium:generate -- --purge --date=2026-09-01
+```
+
+뉴스 근거를 3건 이상 찾지 못한 키워드는 건너뛰고, 해당 랭킹 상세 페이지는 `noindex`로 남아 사이트맵과 RSS에서도 빠집니다.
 
 ## 실제 데이터 연결
 
