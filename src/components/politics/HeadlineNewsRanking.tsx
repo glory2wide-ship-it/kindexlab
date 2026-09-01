@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
 import { headlinesToEntities } from "@/lib/news/headline-entities";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import type { HeadlineRankingSnapshot, HeadlineChannel } from "@/lib/politics/headlines";
 import type { PostChannel } from "@/lib/posts/types";
 import type { RankingEntity } from "@/lib/types";
@@ -11,7 +12,7 @@ import type { RankingEntity } from "@/lib/types";
 function headlineTopic(channel: PostChannel): HeadlineChannel {
   if (channel === "entertainment") return "entertainment";
   if (channel === "economy") return "economy";
-  if (channel === "culture") return "culture";
+  if (channel === "culture" || channel === "travel") return "culture";
   return "politics";
 }
 
@@ -35,7 +36,7 @@ const COPY: Record<
     source: "네이버·다음 경제 섹션과 포털 헤드라인을 합산합니다. 박스를 누르면 내부 상세 페이지로 이동합니다.",
   },
   culture: {
-    title: "문화/여행/맛집/레져/생활 헤드라인 뉴스 랭킹",
+    title: "문화/생활 헤드라인 뉴스 랭킹",
     boardSlug: "culture-headline-news-ranking",
     source:
       "문화·예술, 전시·공연, 여행·숙박, 음식·맛집, 캠핑·레저, 생활·건강·트렌드 기사만 수집합니다. 박스를 누르면 내부 상세 페이지로 이동합니다.",
@@ -91,9 +92,9 @@ export function HeadlineNewsRanking({
     <section className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2 px-1">
         <div>
-          <p className="font-sans text-xs font-semibold tracking-[0.14em] text-accent">
+          <DeskEyebrow variant="xs">
             HEADLINE RANKING · TOP {topic === "economy" || topic === "culture" ? 25 : 20}
-          </p>
+          </DeskEyebrow>
           <h2 className="mt-1 text-lg font-semibold tracking-tight">{copy.title}</h2>
         </div>
         <p className="text-[12px] text-muted">{copy.source}</p>

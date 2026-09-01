@@ -2,10 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { AffiliateWidget } from "@/components/affiliate/AffiliateWidget";
-import { ProductShelf } from "@/components/affiliate/ProductShelf";
 import { DemographicTabs } from "@/components/boards/DemographicTabs";
-import { defaultAffiliateForChannel } from "@/lib/affiliate/catalog";
 import { applyDemographicSkew } from "@/lib/boards/entity-skew";
 import { filterKey, filterLabel } from "@/lib/boards/demographics";
 import { TYPE_LABEL, formatRate } from "@/lib/format";
@@ -15,8 +12,8 @@ import type { AgeSegment, GenderSegment } from "@/lib/boards/types";
 import type { RankingEntity } from "@/lib/types";
 
 /**
- * Related-name ranking plus the affiliate shelf, both keyed off the same
- * gender/age tabs so a 30s filter reorders the list and swaps the widget.
+ * Related-name ranking, keyed off the same gender/age tabs so a 30s filter
+ * reorders the list.
  */
 export function RelatedRankingDesk({
   entity,
@@ -47,15 +44,6 @@ export function RelatedRankingDesk({
           </p>
         ) : null}
       </div>
-
-      <ProductShelf products={entity.products ?? []} entityName={entity.name} />
-      <AffiliateWidget
-        category={defaultAffiliateForChannel(channel)}
-        channel={channel}
-        gender={gender}
-        age={age}
-        placement="footer"
-      />
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">{heading}</h2>

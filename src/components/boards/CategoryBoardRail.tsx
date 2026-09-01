@@ -99,7 +99,7 @@ export function CategoryBoardRail({
           <h2 className="text-sm font-semibold">랭킹·지수 보드</h2>
           {onSelect ? (
             <p className="mt-0.5 text-xs text-muted">
-              보드를 고르면 아래 히트맵이 그 주제로 바뀝니다. 여론조사 차트와 헤드라인은 전용 화면으로 열립니다.
+              보드를 고르면 아래 히트맵이 그 주제로 바뀝니다. 종목을 누르면 분석·여론조사 상세가 열립니다.
             </p>
           ) : (
             <p className="mt-0.5 text-xs text-muted">

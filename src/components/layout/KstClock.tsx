@@ -21,15 +21,20 @@ export function KstClock() {
     <time
       suppressHydrationWarning
       dateTime={now?.toISOString()}
-      className="flex min-w-[10.4rem] flex-col items-end font-sans leading-tight"
+      className="flex min-w-[6.4rem] flex-col items-center justify-center py-0 text-center font-sans leading-none"
       aria-label="한국 표준시"
     >
-      <span className="hidden text-[14.4px] font-medium tracking-tight text-muted sm:inline">
+      <span
+        className="hidden font-medium tracking-tight text-muted sm:inline"
+        style={{ fontSize: 13 }}
+      >
         {dateLine}
       </span>
-      <span className="text-[17.3px] font-semibold tabular-nums tracking-tight">
+      <span className="mt-0.5 font-semibold tabular-nums tracking-tight" style={{ fontSize: 15.5 }}>
         {timeLine}
-        <span className="ml-1 text-[14.4px] font-medium text-muted">KST</span>
+        <span className="ml-1 font-medium text-muted" style={{ fontSize: 13 }}>
+          KST
+        </span>
       </span>
     </time>
   );

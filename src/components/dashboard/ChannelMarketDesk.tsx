@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CategoryBoardRail } from "@/components/boards/CategoryBoardRail";
-import { MarketOverview, MarketStatusBar } from "@/components/dashboard/MarketOverview";
+import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
 import { computeBoardIndex } from "@/lib/boards/board-index";
@@ -16,11 +16,10 @@ import {
 } from "@/lib/boards/heatmap";
 import { clampAgeForBoard } from "@/lib/boards/age-tabs";
 import { boardPath, getBoard } from "@/lib/boards/registry";
-import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
 import { filterLabel } from "@/lib/boards/demographics";
 import { boardUsesRegionFilter, entityMatchesRegion } from "@/lib/boards/regions";
+import { channelUsesBoardHeatmap, rankLimitForBoard, rankLimitForChannel } from "@/lib/boards/limits";
 import { HeadlineNewsRanking } from "@/components/politics/HeadlineNewsRanking";
-import { SupportIndexChart } from "@/components/politics/SupportIndexChart";
 import { withIndexPoints } from "@/lib/ingestion/composite";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { PostChannel } from "@/lib/posts/types";
@@ -46,40 +45,49 @@ export interface ChannelLiveMarket {
   indices: MarketIndex[];
 }
 
-/**
- * Per-desk tile caps. 엔터테인먼트 and 정치 draw from far deeper pools than the
- * map can label legibly, so they stop at 25; the rest keep the shared ceiling.
- */
-const CHANNEL_HEATMAP_MAX_ITEMS: Partial<Record<PostChannel, number>> = {
-  entertainment: 25,
-  politics: 25,
-};
+function heatmapMaxItems(channel: PostChannel, boardSlug: string, region: HeatmapRegion = "all"): number {
+  if (boardSlug) {
+    const board = getBoard(boardSlug);
+    if (board) return rankLimitForBoard(board, region);
+  }
+  return rankLimitForChannel(channel);
+}
 
 export function ChannelMarketDesk({
   channel,
   boards,
   liveMarket,
+  initialBoardSlug = "",
+  initialRegion = "all",
 }: {
   channel: PostChannel;
   boards: HeatmapBoardPayload[];
   liveMarket: ChannelLiveMarket;
+  /** Pre-select a board tab (e.g. travel region sub-routes). */
+  initialBoardSlug?: string;
+  /** Pre-select a region tab when the board supports it. */
+  initialRegion?: HeatmapRegion;
 }) {
   const boardHeatmap = usesBoardHeatmap(channel);
-  const [selectedSlug, setSelectedSlug] = useState("");
+  const [selectedSlug, setSelectedSlug] = useState(initialBoardSlug);
   const [gender, setGender] = useState<HeatmapGender>("all");
   const [age, setAge] = useState<HeatmapAge>("all");
-  const [region, setRegion] = useState<HeatmapRegion>("all");
+  const [region, setRegion] = useState<HeatmapRegion>(() =>
+    boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
+  );
   const liveItems = liveMarket.items;
   const [items, setItems] = useState<RankingEntity[]>(() =>
     buildHeatmapItems({
       boards,
       liveItems,
+      board: initialBoardSlug || undefined,
       gender: "all",
       age: "all",
-      preferLive: !boardHeatmap,
+      region: boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
+      preferLive: !boardHeatmap && !initialBoardSlug,
     }),
   );
-  const [title, setTitle] = useState(() => heatmapBoardTitle(boards));
+  const [title, setTitle] = useState(() => heatmapBoardTitle(boards, initialBoardSlug || undefined));
   const [flashNonce, setFlashNonce] = useState(0);
   const [headlineItems, setHeadlineItems] = useState<RankingEntity[]>([]);
   const [boardIndices, setBoardIndices] = useState<MarketIndex[]>(() =>
@@ -115,7 +123,7 @@ export function ChannelMarketDesk({
         gender: nextGender,
         age: nextAge,
         region: boardUsesRegionFilter(board) ? nextRegion : "all",
-        preferLive: !boardHeatmap,
+        preferLive: !boardHeatmap && !board,
       });
       setItems(next);
       setTitle(heatmapBoardTitle(boards, board || undefined));
@@ -124,8 +132,10 @@ export function ChannelMarketDesk({
     [boards, liveItems, boardHeatmap],
   );
 
+  const heatmapRequestRef = useRef(0);
   const fetchHeatmap = useCallback(
     async (board: string, nextGender: HeatmapGender, nextAge: HeatmapAge, nextRegion: HeatmapRegion) => {
+      const requestId = ++heatmapRequestRef.current;
       applyLocal(board, nextGender, nextAge, nextRegion);
       const params = new URLSearchParams({
         category: channel,
@@ -136,18 +146,25 @@ export function ChannelMarketDesk({
       params.set("region", boardUsesRegionFilter(board) ? nextRegion : "all");
       try {
         const response = await fetch(`/api/heatmap?${params.toString()}`, { cache: "no-store" });
-        if (!response.ok) return;
+        if (!response.ok || requestId !== heatmapRequestRef.current) return;
         const payload = (await response.json()) as {
           items?: RankingEntity[];
           title?: string;
+          board?: string | null;
         };
+        if (requestId !== heatmapRequestRef.current) return;
+        if (board && (payload.board ?? "") !== board) {
+          applyLocal(board, nextGender, nextAge, nextRegion);
+          return;
+        }
         if (Array.isArray(payload.items) && payload.items.length) {
           const locked =
             boardUsesRegionFilter(board) && nextRegion !== "all"
               ? payload.items.filter((item) => entityMatchesRegion(item, nextRegion))
               : payload.items;
-          if (locked.length) {
-            setItems(locked);
+          const nextItems = locked.length ? locked : payload.items;
+          if (nextItems.length) {
+            setItems(nextItems);
             if (payload.title) setTitle(payload.title);
             return;
           }
@@ -245,19 +262,13 @@ export function ChannelMarketDesk({
   const selectedBoard = boards.find((item) => item.slug === selectedSlug);
   const showRegion = boardUsesRegionFilter(selectedSlug);
   const demo = filterLabel(gender, age, showRegion ? region : "all");
-  const showHeatmap = !deskKind;
+  const showHeatmap = deskKind !== "headlines";
   const tickerItems = deskKind === "headlines" ? headlineItems : showHeatmap ? items : [];
   const boardRail = (
     <CategoryBoardRail channel={channel} selectedSlug={selectedSlug} onSelect={onSelectBoard} />
   );
   const statusAndTicker = (
     <div className="-mx-4">
-      <MarketStatusBar
-        updatedAt={liveMarket.updatedAt}
-        status={liveMarket.status}
-        remainingSec={remainingSec}
-        refreshing={refreshing}
-      />
       {tickerItems.length ? <TickerTape items={tickerItems} /> : null}
     </div>
   );
@@ -269,8 +280,6 @@ export function ChannelMarketDesk({
       {deskKind === "headlines" ? (
         <HeadlineNewsRanking channel={channel} onItems={setHeadlineItems} />
       ) : null}
-      {deskKind === "party-poll" ? <SupportIndexChart kind="party" /> : null}
-      {deskKind === "politician-poll" ? <SupportIndexChart kind="politician" /> : null}
       {showHeatmap ? (
         <MarketWorkspace
           items={items}
@@ -287,7 +296,9 @@ export function ChannelMarketDesk({
           onRegion={setRegion}
           showRegion={showRegion}
           boardSlug={selectedSlug || undefined}
-          maxItems={CHANNEL_HEATMAP_MAX_ITEMS[channel]}
+          maxItems={heatmapMaxItems(channel, selectedSlug, region)}
+          remainingSec={remainingSec}
+          refreshing={refreshing}
           title={selectedBoard ? selectedBoard.title : title}
           subtitle={
             selectedBoard

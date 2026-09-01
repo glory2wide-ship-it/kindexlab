@@ -2,6 +2,7 @@ import { analysisLogger } from "@/lib/analysis/log";
 import { generatePremiumArticle, type PremiumFailure } from "@/lib/premium/generate";
 import type { PremiumTarget } from "@/lib/premium/keywords";
 import { persistPremiumArticle } from "@/lib/premium/persist";
+import { getRankings } from "@/lib/providers/trends";
 
 /** Five per batch, per the rebuild contract: small enough to stay inside a
  *  serverless invocation and gentle enough on the OpenAI rate limit. */
@@ -64,18 +65,25 @@ export async function runPremiumRebuild(
   const batches = chunk(targets, batchSize);
   const items: PremiumRunItem[] = [];
   let position = 0;
+  const market = await getRankings();
 
   for (const [batchIndex, batch] of batches.entries()) {
     const settled = await Promise.all(
       batch.map(async (target): Promise<PremiumRunItem> => {
         const startedAt = Date.now();
         const logger = analysisLogger(`premium:${target.keyword}`);
+        const entity = market.items.find((item) => item.slug === target.slug);
+        const relatedEntities = entity
+          ? market.items.filter((item) => item.type === entity.type && item.slug !== entity.slug).slice(0, 4)
+          : [];
         try {
           const result = await generatePremiumArticle({
             keyword: target.keyword,
             slug: target.slug,
             category: target.category,
             related: target.related,
+            entity,
+            relatedEntities,
             logger,
             timeoutMs: options.timeoutMs,
           });

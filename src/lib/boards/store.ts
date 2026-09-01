@@ -3,7 +3,7 @@ import path from "node:path";
 import { AGE_SEGMENTS, applyDemographicWeights, dedupeSegments, isUnusableRankName } from "@/lib/boards/demographics";
 import { rankLimitForBoard, segmentLimitForBoard } from "@/lib/boards/limits";
 import { getBoard } from "@/lib/boards/registry";
-import { boardUsesRegionFilter, ensureFoodRestaurantRanking } from "@/lib/boards/regions";
+import { boardUsesRegionFilter, ensureFoodRestaurantRanking, ensureHousingApartmentRanking, HOUSING_BOARD_SLUG } from "@/lib/boards/regions";
 import type { BoardRankEntry, CachedBoard, DemographicRanking } from "@/lib/boards/types";
 import { ensureInfluencerBoardRanking } from "@/lib/politics/fail-safe";
 import {
@@ -92,6 +92,9 @@ function padRankingFromSeeds(ranking: BoardRankEntry[], slug: string): BoardRank
   }
   if (slug === "political-pundit-ranking") {
     return enforceScoreOrder(ensurePunditRanking(ranking).slice(0, limit));
+  }
+  if (slug === HOUSING_BOARD_SLUG) {
+    return enforceScoreOrder(ensureHousingApartmentRanking(ranking, limit));
   }
   if (boardUsesRegionFilter(slug)) {
     return enforceScoreOrder(ensureFoodRestaurantRanking(ranking, def.seeds).slice(0, limit));

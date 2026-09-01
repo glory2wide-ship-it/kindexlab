@@ -18,6 +18,7 @@ export const CHANNEL_SHORT_LABEL: Record<PostChannel, string> = {
   politics: "정치",
   economy: "경제",
   culture: "문화",
+  travel: "여행",
 };
 
 export const POST_CHANNELS: {
@@ -35,7 +36,7 @@ export const POST_CHANNELS: {
     href: "/entertainment",
     label: "엔터테인먼트",
     eyebrow: "K ENTERTAINMENT DESK",
-    indexTitle: "엔터테인먼트 지수(INDEX)",
+    indexTitle: "엔터테인먼트 지수",
     description: "아이돌·방송·셀럽 이슈 키워드로 독립 매거진 칼럼을 발행합니다.",
   },
   {
@@ -43,7 +44,7 @@ export const POST_CHANNELS: {
     href: "/politics",
     label: "정치",
     eyebrow: "POLITICS ISSUE INDEX DESK",
-    indexTitle: "정치 이슈 지수(INDEX)",
+    indexTitle: "정치 이슈 지수",
     description: "정당·정치인·지원금 이슈를 지수(INDEX) 키워드에서 골라 독립 칼럼으로 풉니다.",
   },
   {
@@ -51,17 +52,24 @@ export const POST_CHANNELS: {
     href: "/economy",
     label: "경제",
     eyebrow: "ECONOMY ISSUE INDEX DESK",
-    indexTitle: "경제 이슈 지수(INDEX)",
+    indexTitle: "경제 이슈 지수",
     description: "환율·생활 화제 키워드를 지수(INDEX)에서 고른 뒤 독립 칼럼으로 하루 세 번 풉니다.",
   },
   {
     id: "culture",
     href: "/culture",
-    label: "문화/여행/맛집/레져/생활",
+    label: "문화/생활",
     eyebrow: "CULTURE & LIVING ISSUE INDEX DESK",
-    indexTitle: "문화/여행/맛집/레져/생활 이슈 지수(INDEX)",
-    description:
-      "공연·여행·맛집·레져·생활 이슈 키워드를 같은 매거진 규격으로 다룹니다.",
+    indexTitle: "문화/생활 이슈 지수",
+    description: "공연·전시·웹툰·생활 이슈 키워드를 같은 매거진 규격으로 다룹니다.",
+  },
+  {
+    id: "travel",
+    href: "/travel",
+    label: "여행/맛집",
+    eyebrow: "TRAVEL & FOOD ISSUE INDEX DESK",
+    indexTitle: "여행/맛집 이슈 지수",
+    description: "국내·해외 여행과 나들이·맛집 이슈 키워드를 같은 매거진 규격으로 다룹니다.",
   },
 ];
 
@@ -127,6 +135,8 @@ export function channelSectionHref(channel: PostChannel, section: ChannelSection
 export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
   entertainment: ["kpop", "celebrity", "tv_show", "influencer", "music_chart", "tv_rating"],
   culture: ["culture_board", "webtoon", "shorts", "mobile_game", "pc_game", "console_game"],
+  /** Travel desks are board-seeded; no dedicated ingest entity type yet. */
+  travel: [],
   economy: ["economy_board"],
   politics: [...POLITICS_TYPE_ORDER],
 };
@@ -156,6 +166,7 @@ export function inferPostChannel(
   if (post.slug.startsWith("fx-life")) return "economy";
   const hay = `${post.slug} ${post.title}`;
   if (/정치|국회|대선|선거|여야/.test(hay)) return "politics";
+  if (/여행|맛집|나들이|숙소|항공/.test(hay)) return "travel";
   if (/웹툰|숏폼|문화/.test(hay)) return "culture";
   return "entertainment";
 }
@@ -171,6 +182,7 @@ export function briefingMatchesChannel(
   const hay = article.title ?? "";
   if (channel === "politics" && /정치|국회|대선|선거|여야/.test(hay)) return true;
   if (channel === "economy" && /환율|경제|물가|금리|생활/.test(hay)) return true;
+  if (channel === "travel" && /여행|맛집|나들이|숙소|항공/.test(hay)) return true;
   if (article.category === "all") return channel === "entertainment";
   return false;
 }
@@ -186,6 +198,8 @@ export function affiliateKeyword(channel: PostChannel, fallback?: string): strin
       return "정부 지원금";
     case "culture":
       return "웹툰 단행본";
+    case "travel":
+      return "국내 숙박";
   }
 }
 

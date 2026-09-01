@@ -96,8 +96,8 @@ export interface CachedBoard {
   provenance: BoardProvenance;
 }
 
-/** Special politics desks that are not LLM heatmap rankings. */
-export type BoardDeskKind = "headlines" | "party-poll" | "politician-poll";
+/** Custom desks that replace the treemap (headline feeds). */
+export type BoardDeskKind = "headlines";
 
 export interface BoardDefinition {
   id: string;

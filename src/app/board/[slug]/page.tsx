@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { BoardDesk } from "@/components/boards/BoardRankingPanel";
 import { HeadlineNewsRanking } from "@/components/politics/HeadlineNewsRanking";
-import { SupportIndexChart } from "@/components/politics/SupportIndexChart";
 import { getOrCreateBoard } from "@/lib/boards/pipeline";
 import {
   BOARD_SLUG_ALIASES,
@@ -17,6 +16,7 @@ import {
 import { boardUsesRegionFilter } from "@/lib/boards/regions";
 import { getPostChannel } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 export const dynamic = "force-dynamic";
 export const dynamicParams = true;
@@ -68,15 +68,11 @@ export default async function BoardDetailPage({ params }: { params: Promise<{ sl
           {board.title}
         </p>
         <header className="space-y-1">
-          <p className="font-sans text-xs font-semibold tracking-[0.14em] text-accent">
-            {channel.eyebrow}
-          </p>
+          <DeskEyebrow variant="xs">{channel.eyebrow}</DeskEyebrow>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{board.title}</h1>
           <p className="max-w-2xl text-sm leading-6 text-muted">산출 기준 · {board.criteria}</p>
         </header>
         {board.deskKind === "headlines" ? <HeadlineNewsRanking channel={board.channel} /> : null}
-        {board.deskKind === "party-poll" ? <SupportIndexChart kind="party" /> : null}
-        {board.deskKind === "politician-poll" ? <SupportIndexChart kind="politician" /> : null}
         {siblings.length ? (
           <section>
             <h2 className="mb-3 text-lg font-semibold">{channel.label} 다른 랭킹</h2>
@@ -127,19 +123,12 @@ export default async function BoardDetailPage({ params }: { params: Promise<{ sl
       </p>
 
       <header className="space-y-1">
-        <p className="font-sans text-xs font-semibold tracking-[0.14em] text-accent">
-          {channel.eyebrow}
-        </p>
+        <DeskEyebrow variant="xs">{channel.eyebrow}</DeskEyebrow>
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{board.title}</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">산출 기준 · {board.criteria}</p>
       </header>
 
-      <BoardDesk
-        board={entry}
-        affiliateCategory={board.affiliateCategory}
-        unitLabel={board.unitLabel}
-        channel={board.channel}
-      />
+      <BoardDesk board={entry} unitLabel={board.unitLabel} />
 
       {entry.pump ? (
         <section className="rounded-2xl border border-line bg-panel p-5">

@@ -4,6 +4,7 @@ import { channelHref, channelSectionHref, getPostChannel, POST_CHANNELS } from "
 import { listPosts, listPostsByChannel } from "@/lib/posts/store";
 import type { GeneratedPost, PostChannel } from "@/lib/posts/types";
 import { formatCount } from "@/lib/format";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 function PostCard({ post, href }: { post: GeneratedPost; href: string }) {
   return (
@@ -33,7 +34,7 @@ export async function ChannelHubPage({ channel }: { channel: PostChannel }) {
   return (
     <div className="space-y-8">
       <header className="space-y-3">
-        <p className="font-mono text-xs text-accent">{meta.eyebrow}</p>
+        <DeskEyebrow variant="xs">{meta.eyebrow}</DeskEyebrow>
         <h1 className="text-3xl font-semibold tracking-tight">{meta.label} 이슈 칼럼</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">{meta.description}</p>
         <p className="text-sm text-muted">
@@ -73,7 +74,7 @@ export async function PostsIndexWithChannels() {
   return (
     <div className="space-y-8">
       <header className="space-y-3">
-        <p className="font-mono text-xs text-accent">FX · LIVING DESK</p>
+        <DeskEyebrow variant="xs">FX · LIVING DESK</DeskEyebrow>
         <h1 className="text-3xl font-semibold tracking-tight">이슈 칼럼</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
           지수(INDEX)는 오늘의 키워드를 고르는 트리거입니다. 본문은 그 키워드만으로 쓴 700~900어절 매거진 칼럼이며
@@ -87,7 +88,7 @@ export async function PostsIndexWithChannels() {
               href={channelSectionHref(item.id, "posts")}
               className="block rounded-2xl border border-line bg-panel p-4 hover:border-accent"
             >
-              <p className="font-mono text-[11px] text-accent">{item.eyebrow}</p>
+              <DeskEyebrow variant="base">{item.eyebrow}</DeskEyebrow>
               <h2 className="mt-2 font-semibold tracking-tight">{item.label}</h2>
               <p className="mt-1 text-xs leading-5 text-muted">{item.description}</p>
             </Link>

@@ -4,6 +4,7 @@ import { DailyBriefing } from "@/components/briefing/DailyBriefing";
 import { AgencyPollComparisonBoard } from "@/components/politics/AgencyPollComparisonBoard";
 import { loadPoliticsDeskCopy } from "@/lib/politics/desk-store";
 import { SITE } from "@/lib/site";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +25,7 @@ export default async function PresidentialApprovalPage() {
   return (
     <div className="space-y-4">
       <header className="space-y-1">
-        <p className="font-sans text-xs font-semibold tracking-[0.14em] text-accent">
-          PRESIDENTIAL POLL DESK
-        </p>
+        <DeskEyebrow variant="sans">PRESIDENTIAL POLL DESK</DeskEyebrow>
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">대통령 지지도</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
           한국갤럽·리얼미터·엠브레인퍼블릭 등 국내 대표 여론조사 기관 TOP 10의 최근 공표를 한 표에서 비교합니다.{" "}

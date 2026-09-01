@@ -5,6 +5,7 @@ import { CATEGORIES, POLITICS_CATEGORIES } from "@/lib/categories";
 import { INDEX_INPUTS, METHODOLOGY } from "@/data/methodology";
 import { getPostChannel } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 export function AboutArticle({ channel }: { channel?: PostChannel }) {
   const meta = channel ? getPostChannel(channel) : null;
@@ -12,7 +13,7 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
   return (
     <article className="mx-auto max-w-3xl space-y-8">
       <header>
-        <p className="font-mono text-xs text-accent">{meta?.eyebrow ?? "ABOUT"}</p>
+        <DeskEyebrow variant="xs">{meta?.eyebrow ?? "ABOUT"}</DeskEyebrow>
         <h1 className="mt-2 text-3xl font-semibold">
           {meta ? `${meta.label} 소개` : `${SITE.name} 소개`}
         </h1>
@@ -28,7 +29,7 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
         </p>
         {meta ? (
           <p>
-            이 페이지는 {meta.label} 데스크입니다. 상단 GNB의 네 카테고리(엔터테인먼트·정치·경제·문화/여행/맛집/레져/생활)마다
+            이 페이지는 {meta.label} 데스크입니다. 상단 GNB의 카테고리(엔터테인먼트·정치·경제·문화/생활·여행/맛집)마다
             지수(INDEX), 일일브리핑, 시세칼럼, 아카이브, 소개가 같은 규격으로 붙어 있습니다.
           </p>
         ) : null}

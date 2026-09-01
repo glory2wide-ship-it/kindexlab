@@ -2,10 +2,11 @@ import { buildHeatmapItems, type HeatmapBoardPayload } from "@/lib/boards/heatma
 import { loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
 import { itemsForChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
+import { attachTimeframeMetrics, changeForEntity } from "@/lib/timeframes";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
 
 /** Tiles on the unified landing heatmap. */
-export const UNIFIED_HEATMAP_TILES = 25;
+export const UNIFIED_HEATMAP_TILES = 20;
 /** Rows shown on each desk summary card. */
 export const DESK_TOP_N = 3;
 
@@ -80,6 +81,33 @@ async function boardPool(channel: PostChannel): Promise<RankingEntity[]> {
   return boards.length ? buildHeatmapItems({ boards, gender: "all", age: "all" }) : [];
 }
 
+/** Cross-category heatmap — prefers the ingest snapshot when a channel has live rows. */
+async function channelHeatmapPool(
+  channel: PostChannel,
+  market?: RankingsPayload,
+): Promise<RankingEntity[]> {
+  const live = market ? itemsForChannel(market.items, channel) : [];
+  if (live.length) return live;
+  return boardPool(channel);
+}
+
+/** Desk summary cards — mirror each channel board so change rates stay in sync. */
+async function channelDeskPool(
+  channel: PostChannel,
+  market?: RankingsPayload,
+): Promise<RankingEntity[]> {
+  const boardItems = await boardPool(channel);
+  if (boardItems.length) return boardItems;
+  const live = market ? itemsForChannel(market.items, channel) : [];
+  return live;
+}
+
+/** Uses the same 5m change field the channel heatmap paints. */
+function deskTopItem(item: RankingEntity): RankingEntity {
+  const enriched = attachTimeframeMetrics(item);
+  return { ...enriched, fluctuationRate: changeForEntity(enriched, "5m") };
+}
+
 /**
  * The landing page's cross-category board.
  *
@@ -97,10 +125,13 @@ async function boardPool(channel: PostChannel): Promise<RankingEntity[]> {
 export async function loadUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMarket> {
   const loaded = await Promise.all(
     POST_CHANNELS.map(async (meta) => {
-      const live = market ? itemsForChannel(market.items, meta.id) : [];
-      const pool = live.length ? live : await boardPool(meta.id);
-      const ranked = tagChannel([...pool].sort(byHeat), meta.id);
-      return { meta, ranked };
+      const [heatmapPool, deskPoolItems] = await Promise.all([
+        channelHeatmapPool(meta.id, market),
+        channelDeskPool(meta.id, market),
+      ]);
+      const ranked = tagChannel([...heatmapPool].sort(byHeat), meta.id);
+      const deskRanked = tagChannel([...deskPoolItems].sort(byHeat), meta.id);
+      return { meta, ranked, deskRanked };
     }),
   );
 
@@ -109,12 +140,12 @@ export async function loadUnifiedMarket(market?: RankingsPayload): Promise<Unifi
     UNIFIED_HEATMAP_TILES,
   ).map((item, index) => ({ ...item, rank: index + 1, previousRank: index + 1 }));
 
-  const desks: ChannelDesk[] = loaded.map(({ meta, ranked }) => ({
+  const desks: ChannelDesk[] = loaded.map(({ meta, deskRanked }) => ({
     channel: meta.id,
     label: meta.label,
     href: meta.href,
     eyebrow: meta.eyebrow,
-    top: ranked.slice(0, DESK_TOP_N),
+    top: deskRanked.slice(0, DESK_TOP_N).map(deskTopItem),
   }));
 
   return { items, desks };

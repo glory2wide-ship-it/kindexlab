@@ -7,6 +7,7 @@ import { EntityHero } from "@/components/entity/EntityHero";
 import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
+import { SupportIndexChart } from "@/components/politics/SupportIndexChart";
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
 import { getAllSlugs, getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
 import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
@@ -128,6 +129,12 @@ export default async function RankingDetailPage({
       </p>
       <EntityHero entity={entity} />
       <BuzzChart entity={entity} initialTimeframe={initialTimeframe} />
+      {entity.type === "party_support" ? (
+        <SupportIndexChart kind="party" subject={entity.name} />
+      ) : null}
+      {entity.type === "politician_support" ? (
+        <SupportIndexChart kind="politician" subject={entity.name} />
+      ) : null}
       {analysisArticle ? <TodayAnalysis article={analysisArticle} keyword={entity.name} /> : null}
       <PollDeskSection entity={entity} market={market} related={related} />
       <RelatedRankingDesk entity={entity} related={related} />
@@ -150,6 +157,7 @@ function schemaType(type: EntityType): string {
     return "NewsArticle";
   }
   if (type === "party_support") return "Organization";
+  if (type === "politician_support") return "Person";
   if (type === "political_ratings") return "TVSeries";
   return "Person";
 }

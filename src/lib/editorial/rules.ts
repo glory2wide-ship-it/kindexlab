@@ -12,7 +12,7 @@ export const MARKET_TAPE =
   /시세판|시세|등락률|등락|거래량|버즈 점수|버즈|시가총액|분봉|호가창|호가|급등주|급등|급락|전일 대비|박스 면적|트리맵|히트맵|차트|가격|순위|체결가|캔들|\+\d+\.\d+%|-\d+\.\d+%|\d+\s*위/;
 
 export const BANNED =
-  /결론적으로|요약하자면|이 글에서는|이 글은|정리하면|마무리하며|알아보겠습니다|살펴보겠습니다|추천한다|추천합니다|좋은 선택|좋은 기회|반드시 사야|투자하세요|좋습니다|한 줄로 남기면|가설을 한 줄|위키백과|위키식|간단히 정리|다음과 같습니다|이번 글에서|보드에서 다시 대조|보드에서 대조|다시 대조한다|검색 태그로 한 번 더|한 번 더 확인한다|상단의 실시간 숫자를 먼저 읽는다|관측값이고 이유는|한 칸 이동한 스냅샷|프로필을 다시 쓰는|관측 \d+은|브리핑 \d+은|보드 실습 \d+은|속도 \d+은|틱 \d+은|종합하면|주목받고 있|주목을 받고 있|이목이 집중되고|귀추가 주목|다양한 관점이 있|다양한 시각이 존재|화제를 모으고 있|기대를 모으고 있|관심이 모아지고 있/;
+  /결론적으로|요약하자면|이 글에서는|이 글은|정리하면|마무리하며|알아보겠습니다|살펴보겠습니다|추천한다|추천합니다|좋은 선택|좋은 기회|반드시 사야|투자하세요|좋습니다|한 줄로 남기면|가설을 한 줄|위키백과|위키식|간단히 정리|다음과 같습니다|이번 글에서|보드에서 다시 대조|보드에서 대조|다시 대조한다|검색 태그로 한 번 더|한 번 더 확인한다|상단의 실시간 숫자를 먼저 읽는다|관측값이고 이유는|한 칸 이동한 스냅샷|프로필을 다시 쓰는|관측 \d+은|브리핑 \d+은|보드 실습 \d+은|속도 \d+은|틱 \d+은|종합하면|주목받고 있|주목을 받고 있|이목이 집중되고|귀추가 주목|다양한 관점이 있|다양한 시각이 존재|화제를 모으고 있|기대를 모으고 있|관심이 모아지고 있|긍정적인 반응을 보였|이 소식에 긍정|생일을 축하하며|뜨거운 관심을 (끌|받)|많은 관심을 (끌|받)|뜨거운 호응을 얻|긍정과 부정을 나란히/;
 
 const FILLER_SRC =
   "검색 태그로 한 번 더 확인한다|보드에서 다시 대조한다|다시 대조한다|한 줄로 남기면|가설을 한 줄|결론적으로|요약하자면|이 글에서는|정리하면|마무리하며|알아보겠습니다|살펴보겠습니다|상단의 실시간 숫자를 먼저 읽는다|위키식";
@@ -84,7 +84,6 @@ const POLL_EXTEND = [
   "공표와 관심을 처음부터 가르면",
   "한 주의 잔여까지 살피면",
   "조사 기간이 겹치는지를 보면",
-  "긍정과 부정을 나란히 읽으면",
   "공표 자료를 먼저 펼치면",
 ];
 
@@ -107,7 +106,8 @@ export function editorialSystemPrompt(focus: string, supportKw: string): string 
     "Write an independent trend column: industrial and social background, why it is topical, ripple effects, and a beginner guide.",
     "You are NOT given prices, ranks, volumes, rates, charts, heatmaps, or ticker data. Do not invent, imply, or mention any of them.",
     "Forbidden in every sentence: 시세, 시세판, 등락, 거래량, 버즈, 분봉, 호가, 급등, 급락, 히트맵, 트리맵, 차트, 가격, 체결, 순위, 1위, 전일 대비.",
-    "Forbidden filler: 결론적으로, 요약하자면, 이 글에서는, 이 글은, 정리하면, 마무리하며, 알아보겠습니다, 살펴보겠습니다, 추천한다, 좋습니다, 위키식, 보드에서 대조한다.",
+    "Forbidden filler: 결론적으로, 요약하자면, 이 글에서는, 이 글은, 정리하면, 마무리하며, 알아보겠습니다, 살펴보겠습니다, 추천한다, 좋습니다, 위키식, 보드에서 대조한다, 긍정적인 반응을 보였다, 생일을 축하하며, 이 소식에 긍정적인 반응, 긍정과 부정을 나란히 읽으면.",
+    "Never repeat the same fact, event, or sentence in more than one section. If a birthday, release, or quote is already used, move on to a different fact.",
     "Voice: a domain expert briefing a curious newcomer. Declarative, concrete, never promotional.",
     "Length: 700-900 Korean space-separated words.",
     "Each sentence 20-40 Korean characters excluding spaces. One idea per sentence. Group 3-4 sentences into one paragraph and break lines between paragraphs.",
@@ -119,7 +119,7 @@ export function editorialSystemPrompt(focus: string, supportKw: string): string 
     "Use H2 and H3 subheads prefixed with ❶ ❷ ❸ ❹ ❺. Three to five numbered subheads.",
     `Use focus keyword "${focus}" at least 5 times and support keyword "${supportKw}" at least 5 times, naturally.`,
     "Include one markdown comparison table. Include one official external URL and 내부 링크 추천: [title].",
-    "FAQ: exactly 3 items rendered as **Q. question** on one line and A. answer on the next.",
+    "FAQ: exactly 3 items. Each answer must cite a distinct concrete detail (who, what, when) and must not reuse a sentence from the body or from another answer.",
     "Not investment advice.",
   ].join(" ");
 }
@@ -220,7 +220,7 @@ function isCompleteSentence(value: string): boolean {
 function nextExtension(body: string, used: Set<string>): string | undefined {
   const tapeLike = /검색 창은|태그는|화제는/.test(body) && /관측|메모/.test(body);
   const pollLike =
-    /여론조사|직무 평가|직무|지지도|전화면접|표본오차|표본 크기|조사 기간|선관위|무선 ARS|긍정|부정|호감|갤럽|리얼미터|시세판|공표|히트맵/.test(
+    /여론조사|직무 평가|직무평가|지지도|전화면접|표본오차|표본 크기|조사 기간|선관위|무선 ARS|갤럽|리얼미터/.test(
       body,
     );
   const pool = tapeLike ? TAPE_EXTEND : pollLike ? POLL_EXTEND : EXTEND;
@@ -303,9 +303,11 @@ export function mergeShort(sentences: string[]): string[] {
 
 export function toParagraphs(sentences: string[]): string[] {
   const used = new Set<string>();
-  const merged = mergeShort(sentences)
-    .map((item) => fitSentenceLength(item, used))
-    .filter(Boolean);
+  const merged = collapseRepeatedClaims(
+    mergeShort(sentences)
+      .map((item) => fitSentenceLength(item, used))
+      .filter(Boolean),
+  );
   const paras: string[] = [];
   let i = 0;
   let cycle = 0;
@@ -336,6 +338,60 @@ export function line(text: string): string {
   return trimmed ? `${trimmed}.` : "";
 }
 
+function stripConnectivePrefix(value: string): string {
+  let out = value.replace(/\.+$/, "").trim();
+  for (const pool of [EXTEND, TAPE_EXTEND, POLL_EXTEND]) {
+    for (const clause of pool) {
+      if (out.startsWith(clause)) {
+        out = out.slice(clause.length).trim();
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Same claim with a different prefix still reads as repetition. Compare the
+ * core after dropping connective clauses, particles, and the subject name.
+ */
+function claimFingerprint(sentence: string): string {
+  return stripConnectivePrefix(sentence)
+    .replace(/긍정적인 반응을 보였\S*/g, "긍정반응")
+    .replace(/생일을 축하하며\S*/g, "생일축하")
+    .replace(/이 소식에\s*/g, "")
+    .replace(/대중은\s*/g, "")
+    .replace(/[은는이가을를의와과도만]\s*/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[.]+$/g, "");
+}
+
+export function collapseRepeatedClaims(sentences: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const sentence of sentences) {
+    const key = claimFingerprint(sentence);
+    if (!key) continue;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(sentence);
+  }
+  return out;
+}
+
+/** Drop later sentences that restate an earlier claim, including across paragraphs. */
+export function dropRepeatedSentences(text: string, seen: Set<string> = new Set()): string {
+  const kept: string[] = [];
+  for (const sentence of extractSentences(text)) {
+    if (hasBannedCopy(sentence)) continue;
+    const key = claimFingerprint(sentence);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    kept.push(sentence);
+  }
+  return kept.join(" ");
+}
+
 export function uniqueLines(raw: string[]): string[] {
   const seen = new Set<string>();
   const used = new Set<string>();
@@ -348,7 +404,7 @@ export function uniqueLines(raw: string[]): string[] {
       out.push(next);
     }
   }
-  return out;
+  return collapseRepeatedClaims(out);
 }
 
 export function tableMarkdown(table: Pick<PostTable, "headers" | "rows">): string {
@@ -466,7 +522,7 @@ export function normalizeEditorialSentences(doc: EditorialDoc): void {
   }
 }
 
-export function officialLinkForChannel(channel: "entertainment" | "economy" | "politics" | "culture" | "all"): PostLink {
+export function officialLinkForChannel(channel: "entertainment" | "economy" | "politics" | "culture" | "travel" | "all"): PostLink {
   if (channel === "politics") {
     return {
       href: "https://www.assembly.go.kr/portal/main/main.do",
@@ -478,6 +534,13 @@ export function officialLinkForChannel(channel: "entertainment" | "economy" | "p
     return {
       href: "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html",
       label: "ECB 유로 참고환율",
+      rel: "noopener noreferrer",
+    };
+  }
+  if (channel === "travel") {
+    return {
+      href: "https://korean.visitkorea.or.kr/",
+      label: "대한민국 구석구석 공식",
       rel: "noopener noreferrer",
     };
   }
@@ -498,7 +561,7 @@ export function officialLinkForChannel(channel: "entertainment" | "economy" | "p
 /** Picks the authoritative source that matches the keyword's own field. */
 export function officialLinkForTopic(
   type: EntityType,
-  channel: "entertainment" | "economy" | "politics" | "culture" | "all",
+  channel: "entertainment" | "economy" | "politics" | "culture" | "travel" | "all",
 ): PostLink {
   if (type === "webtoon") {
     return { href: "https://comic.naver.com/index", label: "네이버웹툰 공식", rel: "noopener noreferrer" };

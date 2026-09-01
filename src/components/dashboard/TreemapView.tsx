@@ -1,6 +1,5 @@
-﻿"use client";
+"use client";
 
-import { hierarchy, treemap, treemapSquarify, type HierarchyRectangularNode } from "d3-hierarchy";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { HoverCard } from "@/components/dashboard/HoverCard";
@@ -11,7 +10,7 @@ import { heatmapNameLines } from "@/lib/musicTitle";
 import { CHANNEL_SHORT_LABEL } from "@/lib/posts/channels";
 import { CULTURE_GRANT_TITLE } from "@/lib/boards/culture-grants";
 import { heatmapSourceCaption, summarizeHeadlineTitle } from "@/lib/news/headline-title";
-import { calculateHeatmapSizeRatios, RANK_1_AREA_RATIO } from "@/lib/treemapLayout";
+import { layoutHeatmapLeaves } from "@/lib/treemapLayout";
 import { TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import {
   changeForEntity,
@@ -36,12 +35,13 @@ interface HoverState {
   y: number;
 }
 
-interface TreeNode {
-  name: string;
-  rank?: number;
-  sizeRatio?: number;
-  entity?: RankingEntity;
-  children?: TreeNode[];
+interface HeatmapLeaf {
+  entity: RankingEntity;
+  rank: number;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
 }
 
 function pickHeatmapItems(items: RankingEntity[]): RankingEntity[] {
@@ -105,45 +105,24 @@ export function TreemapView({
     return () => observer.disconnect();
   }, []);
 
-  const leaves = useMemo((): HierarchyRectangularNode<TreeNode>[] => {
+  const leaves = useMemo((): HeatmapLeaf[] => {
     try {
-    if (!visible.length) return [];
-    const gap = 2;
-    const allocation = calculateHeatmapSizeRatios(
-      visible.map((entity, index) => ({
-        id: entity.id,
-        rank: index + 1,
-        score: scoreForTimeframe(entity, timeframe),
-      })),
-    );
-    // One squarified pass over every tile, rank 1 included. Laying the leader out
-    // separately as a full-height column made its area a function of width alone,
-    // so holding it to 15% would have stretched it into a narrow strip. Letting
-    // squarify place it keeps the 15% share exact and the shape close to square.
-    const children: TreeNode[] = visible.map((entity, index) => ({
-      name: entity.name,
-      rank: index + 1,
-      sizeRatio:
-        allocation.ratios.get(entity.id) ?? (index === 0 ? RANK_1_AREA_RATIO : 0),
-      entity,
-    }));
-    if (allocation.leftover > 0.002) {
-      children.push({ name: "__gap__", sizeRatio: allocation.leftover });
-    }
-    return treemap<TreeNode>()
-      .size([width, height])
-      .tile(treemapSquarify.ratio(1.15))
-      .paddingInner(gap)
-      .paddingOuter(0)
-      .round(true)(
-        hierarchy<TreeNode>({ name: "root", children })
-          .sum((node) => (node.children?.length ? 0 : Math.max(node.sizeRatio ?? 0, 0)))
-          .sort((a, b) => (a.data.rank ?? 999) - (b.data.rank ?? 999)),
-      )
-      .leaves()
-      .filter((leaf) => {
-        if (!leaf.data.entity) return false;
-        return [leaf.x0, leaf.x1, leaf.y0, leaf.y1].every((value) => Number.isFinite(value));
+      if (!visible.length) return [];
+      const byId = new Map(visible.map((entity) => [entity.id, entity]));
+      return layoutHeatmapLeaves(
+        visible.map((entity, index) => ({
+          id: entity.id,
+          rank: index + 1,
+          score: scoreForTimeframe(entity, timeframe),
+        })),
+        width,
+        height,
+        2,
+      ).flatMap((box) => {
+        const entity = byId.get(box.id);
+        if (!entity) return [];
+        if (![box.x0, box.x1, box.y0, box.y1].every((value) => Number.isFinite(value))) return [];
+        return [{ entity, rank: box.rank, x0: box.x0, y0: box.y0, x1: box.x1, y1: box.y1 }];
       });
     } catch {
       return [];
@@ -178,11 +157,12 @@ export function TreemapView({
         viewBox={`0 0 ${width} ${height}`}
         className="h-full w-full"
         role="img"
+        suppressHydrationWarning
         aria-label={`${TYPE_LABEL[category] ?? "종합"} 화제 지수 히트맵 섹터 ${visible.length}종목`}
       >
         <defs>
           {leaves.map((leaf) => {
-            const entity = leaf.data.entity;
+            const entity = leaf.entity;
             if (!entity) return null;
             return (
               <clipPath key={entity.id} id={`tm-clip-${entity.id}`}>
@@ -197,15 +177,14 @@ export function TreemapView({
           })}
         </defs>
         {leaves.map((leaf) => {
-          const entity = leaf.data.entity;
-          if (!entity) return null;
+          const entity = leaf.entity;
           const series = getTimeframeSeries(entity, timeframe);
           const change = changeForEntity(entity, timeframe);
           const w = leaf.x1 - leaf.x0;
           const h = leaf.y1 - leaf.y0;
           const rate = formatRate(change);
           const scoreLabel = formatIndexPoints(scoreForTimeframe(entity, timeframe));
-          const rank = displayRankById.get(entity.id) ?? leaf.data.rank ?? entity.rank;
+          const rank = displayRankById.get(entity.id) ?? leaf.rank ?? entity.rank;
           const rankBadge = formatHeatmapRank(rank);
           const group = groupLabel(entity);
           const lines = heatmapNameLines(entity);
@@ -244,6 +223,7 @@ export function TreemapView({
               href={href}
               className="cursor-pointer"
               aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name} ${rate} ${scoreLabel}`}
+              data-heatmap-rank={rank}
               onMouseEnter={(event) => moveHover(event, entity, series, change)}
               onMouseMove={(event) => moveHover(event, entity, series, change)}
               onClick={(event) => {
@@ -325,6 +305,7 @@ export function TreemapView({
                     >
                       <p
                         className="w-full font-extrabold tracking-tight"
+                        suppressHydrationWarning
                         style={{
                           display: "-webkit-box",
                           WebkitLineClamp: 2,
@@ -378,6 +359,7 @@ export function TreemapView({
                     >
                       <p
                         className="w-full font-extrabold tracking-tight"
+                        suppressHydrationWarning
                         style={{
                           display: "-webkit-box",
                           WebkitLineClamp: 2,

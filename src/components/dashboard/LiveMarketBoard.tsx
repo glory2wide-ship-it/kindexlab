@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { MarketOverview, MarketStatusBar } from "@/components/dashboard/MarketOverview";
+import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
 import { fetchTrendsSnapshot, mergeTrendItems } from "@/lib/liveTrends";
@@ -31,8 +31,8 @@ export function LiveMarketBoard({
   const intervalMs = Math.max(1, refreshIntervalSec) * 1000;
   const [indices, setIndices] = useState(initialMarket.indices);
   const [items, setItems] = useState(initialMarket.items);
-  const [updatedAt, setUpdatedAt] = useState(initialMarket.updatedAt);
-  const [status, setStatus] = useState(initialMarket.status);
+  const [, setUpdatedAt] = useState(initialMarket.updatedAt);
+  const [, setStatus] = useState(initialMarket.status);
   const [remainingSec, setRemainingSec] = useState(refreshIntervalSec);
   const [refreshing, setRefreshing] = useState(false);
   const [flashNonce, setFlashNonce] = useState(0);
@@ -107,12 +107,6 @@ export function LiveMarketBoard({
     <div className="space-y-3">
       {children}
       <div className="-mx-4">
-        <MarketStatusBar
-          updatedAt={updatedAt}
-          status={status}
-          remainingSec={remainingSec}
-          refreshing={refreshing}
-        />
         {boardItems.length ? <TickerTape items={boardItems} /> : null}
       </div>
       <MarketWorkspace
@@ -128,6 +122,8 @@ export function LiveMarketBoard({
             ? "9대 정치 지표를 히트맵과 리스트로 읽습니다. 기본 시계열은 5분봉입니다."
             : "등락률·버즈·거래량을 히트맵과 리스트로 읽습니다."
         }
+        remainingSec={remainingSec}
+        refreshing={refreshing}
       />
       <MarketOverview indices={boardIndices} flashNonce={flashNonce} />
       {afterOverview}

@@ -44,6 +44,22 @@ function factBlock(brief: FactBrief): string {
     .join("\n");
 }
 
+/** One fact per section so the birthday/reaction line cannot leak into every H2. */
+function factBlockForSection(brief: FactBrief, index: number, total: number): string {
+  const own = brief.facts[index];
+  const leftover = brief.facts.filter((_, i) => i !== index);
+  const events =
+    index === 0 || index === total - 1 ? brief.events : brief.events.slice(index, index + 1);
+  return [
+    "이 섹션에서만 쓸 팩트:",
+    own ? `· ${own}` : "이 슬롯의 확인된 팩트가 없으니 고유명사만 짧게 쓰세요.",
+    events.length ? `이 섹션 고유명사: ${events.join(", ")}` : "",
+    leftover.length ? `다른 섹션 전용(절대 쓰지 마세요): ${leftover.join(" / ")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 /** First call: headline plus a plan for what each of the five sections covers. */
 async function planOutline(input: {
   keyword: string;
@@ -60,8 +76,8 @@ async function planOutline(input: {
       'Output JSON: { "title": string, "excerpt": string, "sections": [{ "heading": string, "covers": string }] }.',
       `sections must contain exactly ${SECTION_COUNT} entries.`,
       "heading is a Korean subhead without any number prefix.",
-      "covers is one sentence naming what that section will argue, so the sections do not overlap.",
-      "Plan a progression: 배경 → 핵심 사건 → 반응과 파급 → 앞으로 볼 지점.",
+      "covers is one sentence naming what that section will argue. Each section must cover a different fact — do not reuse the same event, quote, or reaction.",
+      "Plan a progression: 배경 → 핵심 사건 → 파급과 일정 → 앞으로 볼 지점. Do not plan a 'crowd reaction' section.",
       "Never mention 시세, 등락, 거래량, 순위, 차트, 가격.",
     ].join(" "),
     user: [
@@ -136,18 +152,16 @@ async function writeSection(input: {
       plan.covers ? `이 섹션이 다룰 내용: ${plan.covers}` : "",
       others ? `다른 섹션이 맡은 주제(중복 금지): ${others}` : "",
       "",
-      factBlock(input.brief),
+      factBlockForSection(input.brief, input.index, input.outline.sections.length),
       "",
       'JSON으로만 출력하세요: { "paragraphs": [string, string] }',
       `문단은 정확히 ${PARAGRAPHS_PER_SECTION}개이고, 각 문단은 ${SENTENCES_PER_PARAGRAPH}문장입니다. 즉 이 섹션은 ${PARAGRAPHS_PER_SECTION * SENTENCES_PER_PARAGRAPH}문장입니다.`,
       "한 문장은 공백 제외 20~40자입니다. 40자를 넘기지 마세요.",
       "문장을 연결어미(-으며, -하고, -지만, -면서)로 끝내지 말고 완결된 서술형으로 닫으세요.",
-      // The audit wants each keyword five times across the article. With four
-      // sections, one mention per section tops out at four, so the support
-      // keyword needs two per section; the focus keyword also appears in the
-      // title, headings and internal link, so one per section is enough there.
       `포커스 키워드 "${input.focus}"를 이 섹션에서 1회 이상 쓰세요.`,
-      `보조 키워드 "${input.supportKw}"는 이 섹션에서 반드시 2회 이상 쓰세요. 이것은 필수입니다.`,
+      `보조 키워드 "${input.supportKw}"는 이 섹션에서 1회만 쓰세요. 같은 문장을 바꿔 쓰지 마세요.`,
+      "위에 적힌 '이 섹션에서만 쓸 팩트' 밖 사건·인용·반응을 쓰지 마세요.",
+      "금지 표현: 긍정적인 반응을 보였다, 생일을 축하하며, 이 소식에 긍정적인 반응, 뜨거운 관심을 끌었다, 긍정과 부정을 나란히 읽으면, 대중은 … 반응을 보였다.",
       input.index === 0
         ? `이 섹션의 첫 문장에는 반드시 "${input.focus}"가 들어가야 합니다.`
         : "",

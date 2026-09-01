@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SITE } from "@/lib/site";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 const LEGAL_LINKS = [
   { href: "/privacy", label: "개인정보처리방침" },
@@ -23,7 +24,7 @@ export function LegalPage({
   return (
     <article className="mx-auto max-w-3xl space-y-8">
       <header>
-        <p className="font-mono text-xs text-accent">{eyebrow}</p>
+        <DeskEyebrow variant="xs">{eyebrow}</DeskEyebrow>
         <h1 className="mt-2 text-3xl font-semibold">{title}</h1>
         <p className="mt-2 text-sm text-muted">
           시행일 {updated} · 운영 {SITE.companyShort} · {SITE.name} ({SITE.nameKo})

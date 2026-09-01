@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     gender,
     age,
     region,
-    preferLive: category === "politics",
+    preferLive: category === "politics" && !board,
   }).map(toTileEntity);
   const selected = board ? boards.find((item) => item.slug === board) : undefined;
 

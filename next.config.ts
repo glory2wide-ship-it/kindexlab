@@ -3,15 +3,14 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   async headers() {
     return [
-      {
-        /*
-         * Content-hashed build output. Next already marks `/_next/static` this
-         * way; repeating it here keeps the rule in force behind a proxy or CDN
-         * that rewrites upstream headers.
-         */
-        source: "/_next/static/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
-      },
+      ...(process.env.NODE_ENV === "production"
+        ? [
+            {
+              source: "/_next/static/:path*",
+              headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+            },
+          ]
+        : []),
       {
         /*
          * Files served straight from `public/`. These have no hash in their
@@ -32,6 +31,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Debug-Marker", value: "probe-9f81" },
         ],
       },
     ];

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import {
   CHANNEL_SECTIONS,
   channelSectionHref,
@@ -17,9 +18,11 @@ export function CategorySubNav({ channel }: { channel: PostChannel }) {
 
   return (
     <div className="sticky top-14 z-30 -mx-4 border-b border-line bg-board/95 px-4 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl flex-col gap-1 py-2 md:flex-row md:items-center md:justify-between">
-        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent">{meta.eyebrow}</p>
-        <nav className="flex gap-1 overflow-x-auto text-sm" aria-label={`${meta.label} 서브 메뉴`}>
+      <div className="category-sub-nav-bar mx-auto max-w-7xl py-2">
+        <DeskEyebrow variant="subnav" className="category-sub-nav-eyebrow shrink-0">
+          {meta.eyebrow}
+        </DeskEyebrow>
+        <nav className="category-sub-nav flex gap-1 overflow-x-auto text-sm" aria-label={`${meta.label} 서브 메뉴`}>
           {CHANNEL_SECTIONS.map((item) => {
             const href = channelSectionHref(channel, item.id);
             const isActive = item.id === active;

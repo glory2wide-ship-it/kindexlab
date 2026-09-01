@@ -4,7 +4,7 @@ import { chatJson, editorModel } from "@/lib/analysis/chain/llm";
 import { bodyCharCount, sanitizeParagraph, sanitizeParagraphs } from "@/lib/analysis/chain/sanitize";
 import type { AnalysisLogger } from "@/lib/analysis/log";
 import { numberedHeading } from "@/lib/editorial/copy";
-import { BANNED } from "@/lib/editorial/rules";
+import { BANNED, dropRepeatedSentences } from "@/lib/editorial/rules";
 import type { TodayAnalysisSection } from "@/lib/editorial/today-analysis";
 
 /**
@@ -123,6 +123,13 @@ const CLICHE: [RegExp, string][] = [
   [/좋은 기회/g, "눈여겨볼 지점"],
   [/향후 전망이 밝다/g, "다음 일정이 남았다"],
   [/앞으로의 행보에 관심이 쏠린다/g, "다음 행보가 남았다"],
+  [/긍정적인 반응을 보였다/g, "반응이 갈렸다"],
+  [/이 소식에 긍정적인 반응을 보였다/g, "반응이 갈렸다"],
+  [/긍정과 부정을 나란히 읽으면,?\s*/g, ""],
+  [/대중은\s.{0,24}반응을 보였\S*/g, "반응이 갈렸다"],
+  [/생일을 축하하며/g, ""],
+  [/뜨거운 관심을 끌었다/g, "검색이 붙었다"],
+  [/많은 관심을 받았다/g, "이름이 다시 올랐다"],
 ];
 
 export function stripCliche(text: string): string {
@@ -150,13 +157,16 @@ function countCliche(draft: ColumnDraft): number {
 }
 
 function applyStrip(draft: ColumnDraft): ColumnDraft {
+  const seen = new Set<string>();
   return {
     title: stripCliche(sanitizeParagraph(draft.title)),
     excerpt: stripCliche(sanitizeParagraph(draft.excerpt)),
     sections: draft.sections.map((section) => ({
       ...section,
       heading: stripCliche(section.heading),
-      paragraphs: sanitizeParagraphs(section.paragraphs.map(stripCliche)),
+      paragraphs: sanitizeParagraphs(section.paragraphs.map(stripCliche))
+        .map((paragraph) => dropRepeatedSentences(paragraph, seen))
+        .filter(Boolean),
     })),
   };
 }
@@ -164,7 +174,8 @@ function applyStrip(draft: ColumnDraft): ColumnDraft {
 const SYSTEM = [
   "You are a demanding Korean desk editor. You receive a draft column and return the edited version.",
   "Output JSON: { \"title\": string, \"excerpt\": string, \"sections\": [{ \"heading\": string, \"paragraphs\": [string] }] }.",
-  "Delete every mechanical stock phrase: 결론적으로, 요약하자면, 종합하면, 주목받고 있다, 이목이 집중되고 있다, 귀추가 주목된다, 다양한 관점이 있다, 화제를 모으고 있다, 기대를 모으고 있다.",
+  "Delete every mechanical stock phrase: 결론적으로, 요약하자면, 종합하면, 주목받고 있다, 이목이 집중되고 있다, 귀추가 주목된다, 다양한 관점이 있다, 화제를 모으고 있다, 기대를 모으고 있다, 긍정적인 반응을 보였다, 생일을 축하하며, 이 소식에 긍정적인 반응, 긍정과 부정을 나란히 읽으면.",
+  "If the same fact, quote, or reaction appears twice, keep the first occurrence and rewrite or drop the rest.",
   "Rewrite any sentence that only restates the heading. Every sentence must add information.",
   "Replace vague hedging with the concrete fact it refers to: 작품명, 프로그램명, 행사명, 시점, 인물명.",
   "Split every sentence longer than 40 Korean characters (spaces excluded) into separate sentences.",

@@ -1,4 +1,5 @@
-import { DEFAULT_SEGMENT_SIZE, rankLimitForBoard, segmentLimitForBoard } from "@/lib/boards/limits";
+import { DEFAULT_SEGMENT_SIZE, isTravelRegionalHeatmapBoard, rankLimitForBoard, segmentLimitForBoard } from "@/lib/boards/limits";
+import { TRAVEL_HEATMAP_BOARD_NAV } from "@/lib/constants/nav";
 import {
   boardUsesRegionFilter,
   deriveRegionRankings,
@@ -131,7 +132,7 @@ export function selectRanking(
   total: BoardRankEntry[],
   gender: "all" | GenderSegment,
   age: "all" | AgeSegment,
-  options?: { limit?: number; dropNames?: string[]; region?: "all" | RegionSegment },
+  options?: { limit?: number; dropNames?: string[]; region?: "all" | RegionSegment; boardSlug?: string },
 ): BoardRankEntry[] {
   const limit = options?.limit ?? Math.max(total.length, DEFAULT_SEGMENT_SIZE);
   const dropNames = options?.dropNames ?? [];
@@ -161,7 +162,7 @@ export function selectRanking(
   const regionSource = demographics.region?.[region];
   const fromSlice = filterRowsByRegion(drop(regionSource ?? []), region);
   const fromTotal = filterRowsByRegion(drop(total), region);
-  const filledRegion = padRegionOnly(fromSlice.length ? fromSlice : fromTotal, region, limit);
+  const filledRegion = padRegionOnly(fromSlice.length ? fromSlice : fromTotal, region, limit, options?.boardSlug);
   if (gender === "all" && age === "all") return filledRegion;
   return reweightRegionByDemographic(
     filledRegion,
@@ -169,6 +170,7 @@ export function selectRanking(
     fromTotal,
     limit,
     region,
+    options?.boardSlug,
   );
 }
 
@@ -294,7 +296,13 @@ export function applyDemographicWeights(
     );
   }
   const region = boardUsesRegionFilter(board.slug)
-    ? deriveRegionRankings(ranking, rankLimitForBoard(board))
+    ? deriveRegionRankings(
+        ranking,
+        isTravelRegionalHeatmapBoard(board.slug)
+          ? TRAVEL_HEATMAP_BOARD_NAV[board.slug].heatmapLimitRegion
+          : rankLimitForBoard(board),
+        board.slug,
+      )
     : demographics.region;
   return { gender, age, region };
 }

@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { CategoryDeskGrid } from "@/components/dashboard/CategoryDeskGrid";
 import { UnifiedMarketBoard } from "@/components/dashboard/UnifiedMarketBoard";
+import { LandingDeskHeader } from "@/components/layout/LandingDeskHeader";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
 import { PremiumColumnRail } from "@/components/posts/PremiumColumnRail";
 import { getRankings } from "@/lib/api";
 import { loadUnifiedMarket } from "@/lib/boards/composite-desk";
 import { loadFeaturedColumns } from "@/lib/posts/featured";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
-import { SITE } from "@/lib/site";
+import { SITE, SITE_INDEX_HEADLINE, SITE_LANDING_HEADLINE } from "@/lib/site";
 import { rankingUrl } from "@/lib/slugs";
 
 /**
@@ -21,9 +23,8 @@ import { rankingUrl } from "@/lib/slugs";
  */
 export const revalidate = 60;
 
-const TITLE = "KINDEXLAB 실시간 화제 종합 지수(INDEX)";
-const DESCRIPTION =
-  "엔터테인먼트·정치·경제·문화/여행/맛집/레져/생활 실시간 지수를 한눈에 파악하는 통합 지수(INDEX)입니다.";
+const TITLE = SITE_INDEX_HEADLINE;
+const DESCRIPTION = SITE_LANDING_HEADLINE;
 
 /** The landing page owns its own copy; the channel desks keep theirs. */
 export const metadata: Metadata = {
@@ -67,27 +68,24 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-8">
-      <script
+      <Script
+        id="home-itemlist-jsonld"
         type="application/ld+json"
+        strategy="afterInteractive"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <header className="space-y-1">
-        <p className="font-sans text-xs font-semibold tracking-[0.14em] text-accent">
-          KINDEXLAB MARKET MAP
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{TITLE}</h1>
-        <p className="max-w-3xl text-sm leading-6 text-muted">{DESCRIPTION}</p>
-      </header>
-
       <ContentSlot placement="intro" label="종합 지수" />
 
-      <UnifiedMarketBoard
-        items={unified.items}
-        updatedAt={market.updatedAt}
-        status={market.status}
-        refreshIntervalSec={DEFAULT_TRENDS_REVALIDATE_SEC}
-      />
+      <div className="space-y-4">
+        <LandingDeskHeader />
+        <UnifiedMarketBoard
+          items={unified.items}
+          updatedAt={market.updatedAt}
+          status={market.status}
+          refreshIntervalSec={DEFAULT_TRENDS_REVALIDATE_SEC}
+        />
+      </div>
 
       <CategoryDeskGrid desks={unified.desks} />
 

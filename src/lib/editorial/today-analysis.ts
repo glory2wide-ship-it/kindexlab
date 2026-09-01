@@ -1,4 +1,4 @@
-﻿import { editionDateTime, formatKoreanDate, kstDateString } from "@/lib/briefing/dates";
+import { editionDateTime, formatKoreanDate, kstDateString } from "@/lib/briefing/dates";
 import {
   buildIssueCompareTable,
   buildIssueFaq,
@@ -21,6 +21,7 @@ import {
   SENT_MIN,
   charLen,
   countKeyword,
+  dropRepeatedSentences,
   extractSentences,
   hasBannedCopy,
   officialLinkForTopic,
@@ -178,13 +179,25 @@ function normalizeOverrideSections(sections: TodayAnalysisSection[]): TodayAnaly
 }
 
 function normalizeArticle(article: TodayAnalysisArticle): void {
+  const seen = new Set<string>();
   for (const section of article.sections) {
-    section.paragraphs = toParagraphs(section.paragraphs.flatMap(extractSentences));
+    section.paragraphs = toParagraphs(section.paragraphs.flatMap(extractSentences))
+      .map((paragraph) => dropRepeatedSentences(paragraph, seen))
+      .filter(Boolean);
   }
-  article.faq = article.faq.map((item) => ({
-    ...item,
-    answer: toParagraphs(extractSentences(item.answer)).join("\n"),
-  }));
+  article.faq = article.faq.map((item) => {
+    const shaped = toParagraphs(extractSentences(item.answer)).join("\n");
+    const kept = dropRepeatedSentences(shaped, seen);
+    return {
+      ...item,
+      answer:
+        kept ||
+        uniqueLines([
+          `${article.focusKeyword} 본문은 공개된 화제만 풀어 준다`,
+          `원문이 있으면 그 페이지에서 사실을 다시 맞춘다`,
+        ]).join(" "),
+    };
+  });
 }
 
 function ensureKeywords(article: TodayAnalysisArticle): void {
@@ -334,6 +347,7 @@ export function composeTodayAnalysis(options: {
   related?: RankingEntity[];
   editionDate?: string;
   override?: TodayAnalysisOverride;
+  facts?: string[];
 }): TodayAnalysisArticle {
   resetEditorialPass();
   const { entity, market } = options;
@@ -365,7 +379,7 @@ export function composeTodayAnalysis(options: {
         label: `${channelMeta.label} 일일브리핑`,
       };
   const table = buildTable([keyword, ...relatedKeywords]);
-  const faq = buildIssueFaq({ keyword, focus, supportKw, label }).map((item) => {
+  const faq = buildIssueFaq({ keyword, focus, supportKw, label, facts: options.facts }).map((item) => {
     const shaped = toParagraphs(extractSentences(item.answer)).join("\n");
     return { question: item.question, answer: shaped || item.answer };
   });

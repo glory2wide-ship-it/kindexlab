@@ -2,7 +2,7 @@ import type { AffiliateProduct, BriefingCoverImage } from "@/lib/types";
 
 export type PostSlot = "morning" | "afternoon" | "evening";
 
-export type PostChannel = "entertainment" | "economy" | "politics" | "culture";
+export type PostChannel = "entertainment" | "economy" | "politics" | "culture" | "travel";
 
 export interface PostSection {
   heading: string;

@@ -18,7 +18,7 @@
         "boards:generate": "tsx --env-file=.env.local scripts/generate-boards.ts",
         "boards:audit": "tsx scripts/audit-boards.ts",
         "premium:generate": "tsx --env-file=.env.local scripts/generate-premium.ts",
-    "premium:check": "tsx --env-file=.env.local scripts/check-premium-pipeline.ts",
+        "premium:check": "tsx --env-file=.env.local scripts/check-premium-pipeline.ts",
         "premium:try": "tsx --env-file=.env.local scripts/try-premium-article.ts",
         "premium:why": "tsx --env-file=.env.local scripts/diagnose-thin-sources.ts",
         "premium:verify": "node scripts/verify-premium-output.mjs",
@@ -27,6 +27,7 @@
     "dependencies": {
         "d3-hierarchy": "^3.1.2",
         "iconv-lite": "^0.6.3",
+        "lucide-react": "^1.39.0",
         "next": "16.3.2",
         "next-themes": "^0.4.6",
         "react": "19.2.8",

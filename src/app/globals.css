@@ -41,6 +41,8 @@
   --color-accent: var(--accent);
   --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", var(--font-inter),
     system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-gothic: var(--font-noto-sans-kr), "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo",
+    "Pretendard Variable", Pretendard, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "Cascadia Mono", monospace;
 }
 
@@ -105,6 +107,20 @@ body {
   animation: market-pulse 0.75s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.header-live-blink {
+  animation: blink 3s infinite;
+}
+
 @keyframes board-rank-in {
   0% {
     opacity: 0;
@@ -126,7 +142,9 @@ body {
   .market-live-flash,
   .board-rank-row,
   .flip-leaf-top,
-  .flip-leaf-bottom {
+  .flip-leaf-bottom,
+  .live-blink,
+  .header-live-blink {
     animation: none;
   }
 
@@ -276,8 +294,28 @@ body {
   }
 }
 
+.category-sub-nav {
+  margin-left: auto;
+}
+
+nav[aria-label$="서브 메뉴"] {
+  margin-left: auto;
+}
+
+.category-sub-nav-bar {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.category-sub-nav-eyebrow {
+  min-width: 0;
+}
+
 .index-gothic,
 .index-gothic * {
-  font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", var(--font-inter),
-    system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  font-family: var(--font-gothic) !important;
 }
+

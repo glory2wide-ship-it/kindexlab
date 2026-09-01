@@ -42,12 +42,6 @@ export default async function PoliticsBoardPage() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-1">
-        <p className="font-sans text-xs font-semibold tracking-[0.14em] text-accent">
-          {meta.eyebrow}
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{meta.indexTitle}</h1>
-      </header>
       <ChannelMarketDesk
         channel="politics"
         boards={stripBoardDemographics(boards)}

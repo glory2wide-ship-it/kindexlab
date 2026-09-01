@@ -384,6 +384,8 @@ export function defaultAffiliateForChannel(channel: PostChannel): string {
       return "생필품 핫딜";
     case "culture":
       return "시즌 의류 · 뷰티";
+    case "travel":
+      return "국내 숙박 · 나들이";
     case "politics":
       return "정치 · 역사 도서";
     case "entertainment":

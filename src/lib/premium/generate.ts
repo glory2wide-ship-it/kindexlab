@@ -1,9 +1,9 @@
 import { chatJson, editorModel, llmConfigured } from "@/lib/analysis/chain/llm";
 import type { AnalysisLogger } from "@/lib/analysis/log";
 import {
+  canGenerateContext,
   collectPremiumContext,
   isRetrievedUrl,
-  MIN_PREMIUM_SOURCES,
   type PremiumContext,
   type PremiumSource,
 } from "@/lib/premium/context";
@@ -19,8 +19,10 @@ import {
   premiumCharCount,
 } from "@/lib/premium/prompt";
 import { describePlacements, injectMonetization, type PremiumPlacement } from "@/lib/premium/widgets";
+import { dropRepeatedSentences } from "@/lib/editorial/rules";
 import { SITE } from "@/lib/site";
 import type { PostFaq, PostLink, PostTable } from "@/lib/posts/types";
+import type { RankingEntity } from "@/lib/types";
 
 /**
  * Structure targets sized so a compliant draft clears the 1,800자 floor on the
@@ -65,6 +67,7 @@ export interface PremiumArticle {
 export type PremiumFailure =
   | "llm-not-configured"
   | "thin-sources"
+  | "thin-context"
   | "llm-empty"
   | "malformed"
   | "too-short"
@@ -302,6 +305,9 @@ async function planOutline(input: {
       "",
       input.category ? `[분류] ${input.category}` : "",
       input.related.length ? `[연관 키워드] ${input.related.join(", ")}` : "",
+      input.context.intentHints.length
+        ? `[FAQ·소제목 참고(사실 근거 아님)]\n${input.context.intentHints.map((hint, index) => `${index + 1}. ${hint}`).join("\n")}`
+        : "",
       "",
       "이번 호출에서는 본문 문단을 쓰지 않습니다. 제목과 구성 계획, 부속 요소만 JSON으로 출력하세요.",
       "{",
@@ -329,6 +335,7 @@ async function planOutline(input: {
       "- 표의 모든 값은 위 [최신 뉴스 데이터]에서 확인되는 사실이어야 합니다. 확인할 수 없는 수치·날짜·명칭은 쓰지 마세요.",
       "- '미공개 신작1', '미정', '추정치'처럼 자리를 채우려고 지어낸 값을 넣느니 행을 줄이세요.",
       "- faq는 2개 이상이며 답변은 각각 2문장 이상입니다.",
+      "- faq 각 답변은 위 뉴스의 서로 다른 고유명사·날짜·사건을 인용하세요. '반응이 갈렸다', '관심을 끌었다' 같은 감정 평가는 쓰지 마세요.",
       "- externalLink.href는 위 [최신 뉴스 데이터] 목록의 URL을 그대로 복사한 값이어야 합니다. 다른 주소를 쓰면 실패로 처리됩니다.",
       "- internalLink.href는 반드시 /search?q= 로 시작합니다.",
       "- takeaways는 구체적 실행 팁 2~4개입니다.",
@@ -400,6 +407,7 @@ async function writeSection(input: {
       `이 섹션의 소제목: ${plan.heading}`,
       plan.covers ? `이 섹션이 다룰 내용: ${plan.covers}` : "",
       others ? `다른 섹션이 맡은 주제(중복 금지): ${others}` : "",
+      "이미 다른 섹션이 쓴 사건·인용·반응을 다시 쓰지 마세요. 이 섹션의 covers에 해당하는 새 사실만 쓰세요.",
       "",
       'JSON으로만 출력하세요: { "paragraphs": [string, ...] }',
       `문단은 정확히 ${PARAGRAPHS_PER_SECTION}개이고, 각 문단은 ${SENTENCES_PER_PARAGRAPH}문장입니다.`,
@@ -528,6 +536,8 @@ export async function generatePremiumArticle(input: {
   slug: string;
   category?: string;
   related?: string[];
+  entity?: RankingEntity;
+  relatedEntities?: RankingEntity[];
   logger: AnalysisLogger;
   timeoutMs?: number;
   publishedAt?: string;
@@ -539,21 +549,34 @@ export async function generatePremiumArticle(input: {
 
   if (!llmConfigured()) return { ok: false, reason: "llm-not-configured" };
 
-  const context = await collectPremiumContext(keyword);
+  const context = await collectPremiumContext(keyword, {
+    entity: input.entity,
+    related: input.relatedEntities,
+    relatedKeywords: input.related,
+  });
   logger.step("premium-rag", {
     keyword,
     sources: context.sources.length,
+    signalFacts: context.signalFacts.length,
+    score: context.score,
     providers: context.providers.join(","),
     unwrapped: context.unwrapped.resolved,
     unresolvable: context.unwrapped.failed,
     lookbackHours: context.lookbackHours,
   });
+  for (const fact of context.signalFacts) {
+    logger.detail(`· [signal] ${fact.slice(0, 100)}`);
+  }
   for (const source of context.sources) {
-    logger.detail(`· [${source.publisher}] ${source.title} ${source.url}`);
+    logger.detail(`· [${source.tier ?? "news"}:${source.publisher}] ${source.title} ${source.url}`);
   }
 
-  if (context.sources.length < MIN_PREMIUM_SOURCES) {
-    return { ok: false, reason: "thin-sources", detail: `sources=${context.sources.length}` };
+  if (!canGenerateContext(context)) {
+    return {
+      ok: false,
+      reason: "thin-context",
+      detail: `score=${context.score} sources=${context.sources.length}`,
+    };
   }
 
   const outline = await planOutline({
@@ -591,9 +614,17 @@ export async function generatePremiumArticle(input: {
     ),
   );
 
-  const sections = written
+  let sections = written
     .filter((section): section is PremiumSection => Boolean(section))
     .map((section, index) => ({ ...section, headingLevel: (index % 2 === 0 ? 2 : 3) as 2 | 3 }));
+
+  const seenClaims = new Set<string>();
+  for (const section of sections) {
+    section.paragraphs = section.paragraphs
+      .map((paragraph) => dropRepeatedSentences(paragraph, seenClaims))
+      .filter(Boolean);
+  }
+  sections = sections.filter((section) => section.paragraphs.length > 0);
 
   if (sections.length < 3) {
     return { ok: false, reason: "malformed", detail: `sections=${sections.length}` };

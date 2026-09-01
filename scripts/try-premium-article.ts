@@ -8,6 +8,7 @@
 import { analysisLogger } from "../src/lib/analysis/log";
 import { slugify } from "../src/lib/ingestion/names";
 import { isGoogleNewsUrl } from "../src/lib/news/unwrap";
+import { getEntityBySlug } from "../src/lib/providers/trends";
 import { generatePremiumArticle } from "../src/lib/premium/generate";
 import { PREMIUM_MAX_CHARS, PREMIUM_MIN_CHARS } from "../src/lib/premium/prompt";
 
@@ -19,11 +20,14 @@ async function main() {
     return;
   }
 
+  const slug = slugify(keyword);
+  const entity = await getEntityBySlug(slug, keyword);
   const startedAt = Date.now();
   const result = await generatePremiumArticle({
     keyword,
-    slug: slugify(keyword),
+    slug,
     category: process.argv[3],
+    entity,
     logger: analysisLogger(`try:${keyword}`),
   });
 

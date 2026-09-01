@@ -1,4 +1,4 @@
-﻿import { draftColumn } from "@/lib/analysis/chain/draft";
+import { draftColumn } from "@/lib/analysis/chain/draft";
 import { summarizeFacts } from "@/lib/analysis/chain/facts";
 import { reviewColumn } from "@/lib/analysis/chain/editor";
 import { llmConfigured, llmModel } from "@/lib/analysis/chain/llm";
@@ -23,12 +23,15 @@ import {
 } from "@/lib/editorial/today-analysis";
 import { TYPE_LABEL } from "@/lib/format";
 import { findTrafficChannelByName } from "@/lib/ingestion/channels";
-import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
+import { canGenerateContext } from "@/lib/context/score";
+import { collectArticleContext } from "@/lib/context/collect-context";
+import type { ContextSource } from "@/lib/context/types";
+import type { NewsDoc, NewsSourceId } from "@/lib/news/types";
 import { SITE } from "@/lib/site";
 import { rankingPath } from "@/lib/slugs";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
 
-/** Below this many usable articles the chain is skipped: too little to ground. */
+/** @deprecated Hybrid gate uses canGenerateContext (score >= 6 + 1 URL). */
 const MIN_DOCS = 3;
 /** Two weeks, wide enough to catch a whitelisted channel's last episode cycle. */
 const CHANNEL_LOOKBACK_HOURS = 336;
@@ -49,12 +52,31 @@ export interface AnalysisResult {
   cache: "hit" | "stale" | "miss";
 }
 
+function contextSourcesToDocs(sources: ContextSource[]): NewsDoc[] {
+  const tierToSource: Record<ContextSource["tier"], NewsSourceId> = {
+    news: "google-news",
+    web: "serper",
+    youtube: "serper",
+    signal: "google-news",
+  };
+  return sources.map((source) => ({
+    title: source.title,
+    publisher: source.publisher,
+    link: source.url,
+    publishedAt: source.publishedAt,
+    snippet: source.snippet,
+    source: tierToSource[source.tier],
+    publisherKind: source.tier === "news" ? "trusted" : "unknown",
+  }));
+}
+
 function buildTemplate(options: {
   entity: RankingEntity;
   market: RankingsPayload;
   related?: RankingEntity[];
   editionDate: string;
   override?: TodayAnalysisOverride;
+  facts?: string[];
 }): TodayAnalysisArticle {
   return composeTodayAnalysis({
     entity: options.entity,
@@ -62,6 +84,7 @@ function buildTemplate(options: {
     related: options.related,
     editionDate: options.editionDate,
     override: options.override,
+    facts: options.facts,
   });
 }
 
@@ -105,36 +128,44 @@ async function generate(options: {
     // though coverage exists. Their columns are evergreen, so a wider window is
     // both available and appropriate.
     const channel = findTrafficChannelByName(keyword);
-    const retrieval = await retrieveNewsForKeyword(keyword, {
-      limit: 8,
+    const articleContext = await collectArticleContext(keyword, {
+      entity,
+      related,
       lookbackHours: channel ? CHANNEL_LOOKBACK_HOURS : undefined,
     });
-    logger.step("news", {
-      country: retrieval.country,
-      providers: retrieval.providers.join(","),
-      aliases: retrieval.aliases.length > 1 ? retrieval.aliases.join("|") : undefined,
-      fetched: retrieval.stats.fetched,
-      kept: retrieval.stats.kept,
-      trusted: retrieval.stats.keptTrusted,
+    logger.step("context", {
+      score: articleContext.score,
+      signalFacts: articleContext.signalFacts.length,
+      sources: articleContext.sources.length,
+      providers: articleContext.providers.join(","),
+      tiers: articleContext.sources.map((source) => source.tier).join(","),
+      lookbackHours: articleContext.lookbackHours,
     });
-    for (const doc of retrieval.docs) {
-      logger.detail(`· [${doc.publisher ?? "?"}] ${doc.title}`);
-      if (doc.snippet) logger.detail(`    ${doc.snippet.slice(0, 120)}`);
+    for (const fact of articleContext.signalFacts) {
+      logger.detail(`· [signal:${fact.kind}] ${fact.text.slice(0, 100)}`);
     }
-    for (const error of retrieval.errors) {
-      logger.warn("news-source", { source: error.source, message: error.message });
+    for (const source of articleContext.sources) {
+      logger.detail(`· [${source.tier}:${source.publisher ?? "?"}] ${source.title}`);
+      if (source.snippet) logger.detail(`    ${source.snippet.slice(0, 120)}`);
     }
 
-    provenance = { ...provenance, newsDocs: retrieval.docs.length };
+    const retrievalDocs = contextSourcesToDocs(articleContext.sources);
+    provenance = { ...provenance, newsDocs: retrievalDocs.length };
 
     if (!llmConfigured()) {
       logger.step("chain", { skipped: "OPENAI_API_KEY missing" });
-    } else if (retrieval.docs.length < MIN_DOCS) {
-      logger.step("chain", { skipped: "thin coverage", docs: retrieval.docs.length, need: MIN_DOCS });
+    } else if (!canGenerateContext(articleContext)) {
+      logger.step("chain", {
+        skipped: "thin context",
+        score: articleContext.score,
+        sources: articleContext.sources.length,
+        need: "score>=6 and sources>=1",
+      });
     } else {
       brief = await summarizeFacts({
         keyword,
-        docs: retrieval.docs,
+        docs: retrievalDocs,
+        signalFacts: articleContext.signalFacts.map((fact) => fact.text),
         logger,
         timeoutMs: remaining(),
       });
@@ -168,7 +199,7 @@ async function generate(options: {
           };
           provenance = {
             kind: "chain",
-            newsDocs: retrieval.docs.length,
+            newsDocs: retrievalDocs.length,
             publishers: brief.publishers.slice(0, 6),
             facts: brief.facts,
             model: llmModel(),
@@ -179,7 +210,7 @@ async function generate(options: {
     }
   }
 
-  let article = buildTemplate({ entity, market, related, editionDate, override });
+  let article = buildTemplate({ entity, market, related, editionDate, override, facts: brief?.facts });
 
   if (override) {
     const report = evaluateTodayAnalysis(article);
@@ -187,7 +218,7 @@ async function generate(options: {
       // The chain body could not be brought into spec, so publish the
       // deterministic column rather than an article that fails the audit.
       logger.warn("audit", { rejected: "chain body", failures: report.failures.slice(0, 4) });
-      article = buildTemplate({ entity, market, related, editionDate });
+      article = buildTemplate({ entity, market, related, editionDate, facts: brief?.facts });
       provenance = { ...provenance, kind: "template" };
     } else {
       logger.step("audit", { ok: true, chars: report.characterCount });

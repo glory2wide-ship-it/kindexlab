@@ -1,23 +1,23 @@
 import Link from "next/link";
-import { BriefingCover } from "@/components/briefing/BriefingCover";
 import { categoryLabel, heatmapHref } from "@/lib/briefing/metrics";
 import { isLiveEdition } from "@/lib/briefing/dates";
-import { withBriefingCover } from "@/lib/briefing/cover";
 import { channelSectionHref, isPostChannel } from "@/lib/posts/channels";
 import type { BriefingArticle } from "@/lib/types";
 import { formatCount } from "@/lib/format";
 
+/** Text-only briefing card — matches landing `PremiumColumnRail` layout. */
 export function BriefingCard({
   article,
   href,
   kicker,
+  lead = false,
 }: {
   article: BriefingArticle;
   href?: string;
   kicker?: string;
+  lead?: boolean;
 }) {
   const live = isLiveEdition(article.editionDate);
-  const cover = withBriefingCover(article).coverImage;
   const articleHref =
     href ??
     (isPostChannel(article.channel)
@@ -27,37 +27,30 @@ export function BriefingCard({
     kicker ||
     article.deskLabel ||
     (article.kind === "main" ? "Daily Briefing" : "Category Deep Dive");
+
   return (
-    <article className="overflow-hidden rounded-2xl border border-line bg-panel">
-      {cover ? (
-        <Link href={articleHref} className="block">
-          <BriefingCover image={cover} variant="flush" showCaption={false} />
-        </Link>
-      ) : null}
-      <div className="p-5">
-        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent">
-          {badge}
-          {live ? " · Live" : " · Archive"}
-        </p>
-        <h2 className="mt-2 text-lg font-semibold tracking-tight">
-          <Link href={articleHref} className="hover:text-accent">
-            {article.title}
-          </Link>
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-muted">{article.excerpt}</p>
-        <p className="mt-3 font-mono text-[11px] text-muted">
-          {article.editionDate} · {categoryLabel(article.category)} · {article.readingMinutes ?? 1}분 ·{" "}
-          {formatCount(article.wordCount)}단어
-        </p>
-        <div className="mt-4 flex flex-wrap gap-3 text-sm">
-          <Link href={articleHref} className="font-medium text-accent hover:underline">
-            본문 읽기 →
-          </Link>
-          <Link href={heatmapHref(article.category)} className="text-muted hover:text-ink">
-            {categoryLabel(article.category)} 지수(INDEX)
-          </Link>
+    <article className="rounded-2xl border border-line bg-panel transition-colors hover:border-accent/50">
+      <Link href={articleHref} className="block p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-accent/40 px-2 py-0.5 font-sans text-[10px] font-semibold text-accent">
+            {badge}
+            {live ? " · Live" : " · Archive"}
+          </span>
+          <span className="font-sans text-[11px] text-muted">
+            {article.editionDate} · {categoryLabel(article.category)} · {article.readingMinutes ?? 1}분 ·{" "}
+            {formatCount(article.wordCount)}단어
+          </span>
         </div>
-      </div>
+        <h3
+          className={`mt-2 font-semibold tracking-tight ${lead ? "text-lg md:text-xl" : "text-sm leading-6"}`}
+        >
+          {article.title}
+        </h3>
+        <p className={`mt-2 text-sm leading-6 text-muted ${lead ? "line-clamp-3" : "line-clamp-2"}`}>
+          {article.excerpt}
+        </p>
+        <span className="mt-3 inline-flex text-sm font-medium text-accent">본문 읽기 →</span>
+      </Link>
     </article>
   );
 }

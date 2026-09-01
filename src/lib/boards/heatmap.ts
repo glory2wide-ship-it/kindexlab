@@ -1,16 +1,19 @@
-﻿import { rankingPath } from "@/lib/slugs";
+import { rankingPath } from "@/lib/slugs";
 import { LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import { computeBoardIndex, toneRankEntry } from "@/lib/boards/board-index";
 import { dropNamesForFilter, deriveDemographics, selectRanking } from "@/lib/boards/demographics";
 import {
   compositePerBoard,
+  rankLimitForBoard,
   rankLimitForChannel,
 } from "@/lib/boards/limits";
 import {
   boardUsesRegionFilter,
   deriveRegionRankings,
   ensureFoodRestaurantRanking,
+  ensureHousingApartmentRanking,
   filterRowsByRegion,
+  HOUSING_BOARD_SLUG,
   padRankEntries,
   padRegionOnly,
   regionFromName,
@@ -80,6 +83,8 @@ const BOARD_ENTITY_TYPE: Record<string, EntityType> = {
   "governor-approval-index": "local_policy",
   "government-support-fund": "subsidy",
   "culture-leisure-grant-ranking": "subsidy",
+  "party-support-chart": "party_support",
+  "politician-support-chart": "politician_support",
   "shortform-meme-velocity": "shorts",
   "realtime-webtoon-rank": "webtoon",
 };
@@ -92,6 +97,9 @@ function normalizeBoardRanking(def: BoardDefinition, rows: BoardRankEntry[]): Bo
   }
   if (isCultureGrantBoard(def.slug)) return ensureCultureGrantRanking(rows);
   if (def.slug === "political-pundit-ranking") return ensurePunditRanking(rows);
+  if (def.slug === HOUSING_BOARD_SLUG) {
+    return ensureHousingApartmentRanking(rows, rankLimitForChannel(def.channel));
+  }
   if (boardUsesRegionFilter(def.slug)) {
     return ensureFoodRestaurantRanking(rows, def.seeds);
   }
@@ -119,7 +127,7 @@ export function toHeatmapPayload(def: BoardDefinition, cached: CachedBoard): Hea
       boardUsesRegionFilter(def.slug)
         ? {
             ...demographics,
-            region: deriveRegionRankings(ranking, rankLimitForChannel(def.channel)),
+            region: deriveRegionRankings(ranking, rankLimitForChannel(def.channel), def.slug),
           }
         : demographics,
     indexValue: index.value,
@@ -132,7 +140,7 @@ export function toHeatmapPayload(def: BoardDefinition, cached: CachedBoard): Hea
 function entityTypeForBoard(board: HeatmapBoardPayload): EntityType {
   if (BOARD_ENTITY_TYPE[board.slug]) return BOARD_ENTITY_TYPE[board.slug];
   if (board.channel === "economy") return "economy_board";
-  if (board.channel === "culture") return "culture_board";
+  if (board.channel === "culture" || board.channel === "travel") return "culture_board";
   if (board.channel === "politics") return "political_search";
   return "influencer";
 }
@@ -246,30 +254,42 @@ export function selectHeatmapRows(
   limit?: number,
   region: HeatmapRegion = "all",
 ): BoardRankEntry[] {
-  const cap = Math.max(1, limit ?? rankLimitForChannel(board.channel));
+  const cap = Math.max(
+    1,
+    limit ?? rankLimitForBoard({ channel: board.channel, slug: board.slug }, region),
+  );
   const ranking = board.ranking ?? [];
   const demographics = board.demographics ?? NO_DEMOGRAPHICS;
+  if (board.slug === HOUSING_BOARD_SLUG) {
+    const tiles = 25;
+    if (region !== "all") {
+      return padRegionOnly(filterRowsByRegion(ranking, region), region, tiles, board.slug);
+    }
+    return ensureHousingApartmentRanking(ranking, tiles);
+  }
   if (region !== "all") {
     try {
       const selected = selectRanking(demographics, ranking, gender, age, {
         limit: cap,
         dropNames: dropNamesForFilter(board, gender, age),
         region,
+        boardSlug: board.slug,
       });
       const local = filterRowsByRegion(selected, region);
-      if (local.length) return padRegionOnly(local, region, cap);
+      if (local.length) return padRegionOnly(local, region, cap, board.slug);
     } catch {
       /* same-region catalog still fills the board */
     }
     const cached = filterRowsByRegion(demographics.region?.[region], region);
     const fromTotal = filterRowsByRegion(ranking, region);
-    return padRegionOnly(cached.length ? cached : fromTotal, region, cap);
+    return padRegionOnly(cached.length ? cached : fromTotal, region, cap, board.slug);
   }
   try {
     const selected = selectRanking(demographics, ranking, gender, age, {
       limit: cap,
       dropNames: dropNamesForFilter(board, gender, age),
       region,
+      boardSlug: board.slug,
     });
     const blocked = new Set(
       dropNamesForFilter(board, gender, age).map((name) => name.replace(/\s+/g, "").toLowerCase()),
@@ -309,11 +329,18 @@ export function buildHeatmapItems({
   preferLive?: boolean;
 }): RankingEntity[] {
   const selected = board ? boards.find((item) => item.slug === board) : undefined;
+  if (board && !selected) {
+    return [];
+  }
   if (selected) {
-    const entities = rankRowsToEntities(
-      selectHeatmapRows(selected, gender, age, undefined, region),
-      selected,
+    const boardLimit = rankLimitForBoard(
+      { channel: selected.channel, slug: selected.slug },
+      region,
     );
+    const entities = rankRowsToEntities(
+      selectHeatmapRows(selected, gender, age, boardLimit, region),
+      selected,
+    ).slice(0, boardLimit);
     if (region !== "all" && boardUsesRegionFilter(selected.slug)) {
       return entities.filter((item) => item.region === region || regionFromName(item.name) === region);
     }
@@ -336,7 +363,7 @@ export function buildHeatmapItems({
         heatmapGroup: item.shortTitle,
       }));
     });
-    if (channel === "economy" || channel === "culture") {
+    if (channel === "economy" || channel === "culture" || channel === "travel") {
       return merged.slice(0, rankLimitForChannel(channel)).map((entity, index) => ({
         ...entity,
         rank: index + 1,

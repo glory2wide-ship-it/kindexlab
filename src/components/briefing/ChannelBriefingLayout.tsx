@@ -2,6 +2,7 @@ import { BriefingCard } from "@/components/briefing/BriefingCard";
 import { FeaturedBriefingCard } from "@/components/briefing/FeaturedBriefingCard";
 import { channelMainLabel, desksForChannel } from "@/lib/briefing/desks";
 import { channelSectionHref, getPostChannel } from "@/lib/posts/channels";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import type { PostChannel } from "@/lib/posts/types";
 import type { BriefingArticle } from "@/lib/types";
 
@@ -28,7 +29,7 @@ export function ChannelBriefingLayout({
   return (
     <div className="space-y-8">
       <header className="space-y-2">
-        <p className="font-mono text-xs text-accent">BRIEFING DESK</p>
+        <DeskEyebrow variant="xs">BRIEFING DESK</DeskEyebrow>
         <TitleTag className="text-2xl font-semibold tracking-tight md:text-3xl">
           {heading ?? `${meta.label} 일일브리핑`}
         </TitleTag>
@@ -52,7 +53,7 @@ export function ChannelBriefingLayout({
           <p className="font-mono text-[11px] text-muted">{desks.length}개 데스크</p>
         </div>
         {desks.length ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {desks.map((desk) => {
               const article = dives.find((item) => item.deskId === desk.id);
               if (article) {
@@ -70,9 +71,9 @@ export function ChannelBriefingLayout({
                   key={desk.id}
                   className="rounded-2xl border border-dashed border-line bg-panel p-5"
                 >
-                  <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent">
+                  <span className="rounded-full border border-accent/40 px-2 py-0.5 font-sans text-[10px] font-semibold text-accent">
                     {desk.label}
-                  </p>
+                  </span>
                   <p className="mt-3 text-sm leading-6 text-muted">
                     {desk.label} 심층 분석은 같은 그리드 규격으로 다음 에디션에 붙습니다.
                   </p>

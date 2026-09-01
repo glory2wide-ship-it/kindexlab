@@ -10,6 +10,7 @@ import {
 } from "@/lib/api";
 import { categoryLabel } from "@/lib/briefing/metrics";
 import { SITE } from "@/lib/site";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 export const metadata: Metadata = {
   title: "브리핑 아카이브",
@@ -46,7 +47,7 @@ export default async function BriefingArchivePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <header className="space-y-3">
-        <p className="font-mono text-xs text-accent">MAGAZINE ARCHIVE</p>
+        <DeskEyebrow variant="xs">MAGAZINE ARCHIVE</DeskEyebrow>
         <h1 className="text-3xl font-semibold tracking-tight">브리핑 아카이브</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
           어제 이전 에디션이 날짜별로 자동 분류됩니다. 카테고리와 키워드로 과거 수급 해설을

@@ -18,9 +18,19 @@ export function rankingPath(slug: string, hash?: string): string {
   return hash ? `${path}#${hash}` : path;
 }
 
+export function politicsDetailPath(slug: string, hash?: string): string {
+  const path = `/politics/${encodeURIComponent(decodeRouteSlug(slug))}`;
+  return hash ? `${path}#${hash}` : path;
+}
+
 /** Always stay on the internal ranking detail page. External hrefs are ignored. */
-export function entityHref(item: { slug: string; name?: string; href?: string }, hash?: string): string {
-  const path = rankingPath(item.slug);
+export function entityHref(
+  item: { slug: string; name?: string; href?: string; type?: string },
+  hash?: string,
+): string {
+  const isPoliticsSupport =
+    item.type === "party_support" || item.type === "politician_support";
+  const path = isPoliticsSupport ? politicsDetailPath(item.slug) : rankingPath(item.slug);
   const query = item.name?.trim() ? `?name=${encodeURIComponent(item.name.trim())}` : "";
   const withQuery = `${path}${query}`;
   return hash ? `${withQuery}#${hash}` : withQuery;

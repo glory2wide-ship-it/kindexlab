@@ -115,9 +115,6 @@ export default async function CategoryBoardsPage({
   return (
     <div className="space-y-8">
       <header className="space-y-1">
-        <p className="font-sans text-xs font-semibold tracking-[0.14em] text-accent">
-          {meta.eyebrow}
-        </p>
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
           {meta.label} 랭킹·지수 보드
         </h1>

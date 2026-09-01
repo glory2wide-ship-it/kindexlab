@@ -92,7 +92,7 @@ export const TYPE_LABEL: Record<string, string> = {
   local_policy: "지자체",
   subsidy: "지원금",
   economy_board: "경제 지수",
-  culture_board: "문화/여행/맛집/레져/생활",
+  culture_board: "문화/생활",
 };
 
 export function scoreLabel(type: string): string {
@@ -112,7 +112,7 @@ export function scoreLabel(type: string): string {
   if (type === "local_policy") return "정책 지수";
   if (type === "subsidy") return "지원금 지수";
   if (type === "economy_board") return "경제 지수";
-  if (type === "culture_board") return "문화/여행/맛집/레져/생활 지수";
+  if (type === "culture_board") return "문화/생활 지수";
   return "버즈 점수";
 }
 

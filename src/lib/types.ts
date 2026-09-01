@@ -223,7 +223,7 @@ export interface BriefingLink {
 export interface BriefingArticle extends DailyBriefing {
   kind: BriefingKind;
   category: CategoryId;
-  channel?: "entertainment" | "economy" | "politics" | "culture";
+  channel?: "entertainment" | "economy" | "politics" | "culture" | "travel";
   deskId?: string;
   deskLabel?: string;
   editionDate: string;

@@ -10,7 +10,7 @@ import type { TodayAnalysisSection } from "@/lib/editorial/today-analysis";
 
 function boardCategory(channel: PostChannel): CategoryId {
   if (channel === "economy") return "economy_board";
-  if (channel === "culture") return "culture_board";
+  if (channel === "culture" || channel === "travel") return "culture_board";
   if (channel === "politics") return "political_search";
   return "influencer";
 }
@@ -234,5 +234,5 @@ export async function composeBoardChannelEdition(
 }
 
 export function channelUsesBoardBriefing(channel: PostChannel): boolean {
-  return channel === "economy" || channel === "culture";
+  return channel === "economy" || channel === "culture" || channel === "travel";
 }

@@ -1,7 +1,20 @@
 "use client";
 
+import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/providers/ThemeProvider";
+
+/** Previous gap 15.12px × 0.8 */
+const ICON_GAP_PX = 12.096;
+const TRACK_WIDTH_PX = 76;
+const THUMB_TRAVEL_PX = TRACK_WIDTH_PX - 36;
+
+const LIGHT_THUMB =
+  "bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 shadow-md";
+const DARK_THUMB =
+  "bg-gradient-to-br from-indigo-500 via-blue-600 to-slate-800 shadow-md";
+const SUN_SKY = "#38bdf8";
+const MOON_GOLD = "#fbbf24";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -11,35 +24,53 @@ export function ThemeToggle() {
     setMounted(true);
   }, []);
 
+  const isDark = mounted && resolvedTheme === "dark";
+
   return (
-    <button
-      type="button"
-      onClick={() => {
-        if (!mounted) return;
-        setTheme(resolvedTheme === "light" ? "dark" : "light");
-      }}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-line bg-panel text-muted transition-colors hover:text-ink"
+    <div
+      className="relative flex h-[34px] shrink-0 items-center justify-center rounded-full bg-[#e2e8f0] p-1 shadow-inner dark:bg-[#334155]"
+      style={{ width: TRACK_WIDTH_PX }}
+      role="group"
       aria-label="테마 전환"
+      suppressHydrationWarning
     >
-      <svg
-        viewBox="0 0 24 24"
-        className="hidden h-4 w-4 dark:block"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      >
-        <circle cx="12" cy="12" r="4" />
-        <path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
-      </svg>
-      <svg
-        viewBox="0 0 24 24"
-        className="block h-4 w-4 dark:hidden"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      >
-        <path d="M21 14.5A8.5 8.5 0 1 1 9.5 3 7 7 0 0 0 21 14.5z" />
-      </svg>
-    </button>
+      <span
+        aria-hidden
+        className={`absolute top-1 left-1 flex h-7 w-7 items-center justify-center rounded-full transition-all duration-300 ease-in-out ${
+          isDark ? DARK_THUMB : LIGHT_THUMB
+        }`}
+        style={{ transform: isDark ? `translateX(${THUMB_TRAVEL_PX}px)` : "translateX(0)" }}
+      />
+      <div className="relative z-10 flex items-center justify-center" style={{ gap: ICON_GAP_PX }}>
+        <button
+          type="button"
+          disabled={!mounted}
+          onClick={() => setTheme("light")}
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full"
+          aria-label="라이트 모드"
+          aria-pressed={!isDark}
+        >
+          <Sun
+            className="h-[15px] w-[15px] stroke-[2.25]"
+            style={{ color: SUN_SKY }}
+            aria-hidden
+          />
+        </button>
+        <button
+          type="button"
+          disabled={!mounted}
+          onClick={() => setTheme("dark")}
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full"
+          aria-label="다크 모드"
+          aria-pressed={isDark}
+        >
+          <Moon
+            className="h-[14px] w-[14px] stroke-[2.25]"
+            style={{ color: MOON_GOLD }}
+            aria-hidden
+          />
+        </button>
+      </div>
+    </div>
   );
 }

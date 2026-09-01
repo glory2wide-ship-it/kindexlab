@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MultiLineChart } from "@/components/charts/MultiLineChart";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import {
   POLL_METHOD_CARD,
   SUPPORT_AGENCIES,
@@ -29,8 +30,14 @@ function formatWhen(iso?: string): string {
   }).format(date);
 }
 
-export function SupportIndexChart({ kind }: { kind: SupportKind }) {
-  const [subject, setSubject] = useState("");
+export function SupportIndexChart({
+  kind,
+  subject: lockedSubject,
+}: {
+  kind: SupportKind;
+  subject?: string;
+}) {
+  const [subject, setSubject] = useState(lockedSubject ?? "");
   const [bar, setBar] = useState<SupportBar>("1w");
   const [payload, setPayload] = useState<SupportChartPayload | null>(null);
   const [error, setError] = useState("");
@@ -54,8 +61,8 @@ export function SupportIndexChart({ kind }: { kind: SupportKind }) {
   );
 
   useEffect(() => {
-    void load("", "1w");
-  }, [kind, load]);
+    void load(lockedSubject ?? "", "1w");
+  }, [kind, load, lockedSubject]);
 
   const lines = useMemo(() => {
     if (!payload) return [];
@@ -77,15 +84,17 @@ export function SupportIndexChart({ kind }: { kind: SupportKind }) {
     ];
   }, [payload]);
 
-  const title = kind === "party" ? "정당 지지도 차트" : "정치인 지지도 차트";
+  const title = lockedSubject
+    ? `${lockedSubject} ${kind === "party" ? "정당 지지도" : "정치인 지지도"}`
+    : kind === "party"
+      ? "정당 지지도 랭킹"
+      : "정치인 지지도 랭킹";
 
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p className="font-sans text-xs font-semibold tracking-[0.14em] text-accent">
-            KINDEX POLL COMPOSITE · 6M
-          </p>
+          <DeskEyebrow variant="xs">KINDEX POLL COMPOSITE · 6M</DeskEyebrow>
           <h2 className="mt-1 text-lg font-semibold tracking-tight">{title}</h2>
         </div>
         <p className="text-[12px] text-muted">
@@ -93,23 +102,25 @@ export function SupportIndexChart({ kind }: { kind: SupportKind }) {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {(payload?.subjects ?? []).map((name) => (
-          <button
-            key={name}
-            type="button"
-            onClick={() => {
-              setSubject(name);
-              void load(name, bar);
-            }}
-            className={`rounded-md border px-3 py-1.5 text-xs ${
-              subject === name ? "border-accent bg-accent text-black" : "border-line text-muted hover:text-ink"
-            }`}
-          >
-            {name}
-          </button>
-        ))}
-      </div>
+      {lockedSubject ? null : (
+        <div className="flex flex-wrap gap-2">
+          {(payload?.subjects ?? []).map((name) => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => {
+                setSubject(name);
+                void load(name, bar);
+              }}
+              className={`rounded-md border px-3 py-1.5 text-xs ${
+                subject === name ? "border-accent bg-accent text-black" : "border-line text-muted hover:text-ink"
+              }`}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {BARS.map((item) => (

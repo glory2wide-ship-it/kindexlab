@@ -46,13 +46,12 @@ export function affiliateWidgetTag(keyword: string, placement: PremiumSlotPlacem
 }
 
 /**
- * Inserts an ad container directly above every H2 and, after the FAQ block, the
- * footer ad plus the affiliate shelf. `faqAnchor` marks where the FAQ ends; when
- * it is absent the footer pair is appended.
+ * Inserts an ad container directly above every H2 and a footer ad after the
+ * FAQ block. Shopping shelves stay off until AdSense is approved.
  */
 export function injectMonetization(
   markdown: string,
-  keyword: string,
+  _keyword: string,
   options: { faqAnchor?: string } = {},
 ): string {
   const lines = markdown.split("\n");
@@ -68,8 +67,6 @@ export function injectMonetization(
   const footer = [
     "",
     adsenseContainer("footer", "auto"),
-    "",
-    affiliateWidgetTag(keyword, "footer"),
     "",
   ].join("\n");
 

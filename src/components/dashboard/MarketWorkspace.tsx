@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { DemographicTabs } from "@/components/boards/DemographicTabs";
+import { HeatmapCountdownFallback } from "@/components/dashboard/HeatmapCountdown";
 import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundary";
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
 import { RankingTable } from "@/components/dashboard/RankingTable";
@@ -10,22 +11,18 @@ import { TreemapSkeleton } from "@/components/dashboard/TreemapSkeleton";
 import { TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 
 /**
- * The heatmap and its `d3-hierarchy` layout code load as their own chunk.
- *
- * SSR is deliberately left on, and that was measured rather than assumed:
- * building this boundary with `ssr: false` moved the landing page from 968 KB
- * to 949 KB of referenced JavaScript — 2% — while removing all 25 heatmap tiles
- * and their ranking links from the HTML. The tiles are anchors carrying the
- * entity names and the page's `ItemList` structured data points at them, so
- * that trade buys almost no bytes and costs the page its crawlable content plus
- * an LCP that now waits on a JavaScript round trip.
- *
- * Kept as a boundary anyway: the skeleton covers client-side navigations, and
- * the chunk stays separable if the view grows heavier.
+ * Heatmap + d3-hierarchy load as their own chunk. SSR is off so a stale
+ * client bundle cannot hydrate against a newer server tree (the overlay
+ * that kept firing after layout/search edits). The skeleton keeps height
+ * stable until the chunk arrives.
  */
 const TreemapView = dynamic(
-  () => import("@/components/dashboard/TreemapView").then((mod) => mod.TreemapView),
-  { loading: () => <TreemapSkeleton /> },
+  () => import("@/components/dashboard/TreemapCanvas").then((mod) => mod.TreemapView),
+  { ssr: false, loading: () => <TreemapSkeleton /> },
+);
+const HeatmapCountdown = dynamic(
+  () => import("@/components/dashboard/HeatmapCountdown").then((mod) => mod.HeatmapCountdown),
+  { ssr: false, loading: () => <HeatmapCountdownFallback /> },
 );
 import { MethodologyModal } from "@/components/methodology/MethodologyModal";
 import { applyDemographicSkew } from "@/lib/boards/entity-skew";
@@ -35,6 +32,7 @@ import type { AgeSegment, GenderSegment, RegionSegment } from "@/lib/boards/type
 import { isHeadlineFeed, rankHeadlineFeed } from "@/lib/news/headline-rank";
 import { LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import { entityMatchesRegion } from "@/lib/boards/regions";
+import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import { rankItemsForTimeframe } from "@/lib/timeframes";
 import type { CategoryId, RankingEntity, Timeframe, ViewMode } from "@/lib/types";
 
@@ -58,6 +56,8 @@ export function MarketWorkspace({
   boardSlug,
   showRegion = false,
   maxItems = TREEMAP_MAX_ITEMS,
+  remainingSec = DEFAULT_TRENDS_REVALIDATE_SEC,
+  refreshing = false,
 }: {
   items: RankingEntity[];
   initialCategory?: CategoryId;
@@ -79,6 +79,8 @@ export function MarketWorkspace({
   showRegion?: boolean;
   /** Tile cap for this desk. Defaults to the shared ceiling. */
   maxItems?: number;
+  remainingSec?: number;
+  refreshing?: boolean;
 }) {
   const [view, setView] = useState<ViewMode>(initialView);
   const [category, setCategory] = useState<CategoryId>(initialCategory);
@@ -132,10 +134,10 @@ export function MarketWorkspace({
       <div className="flex flex-col gap-3 border-b border-line px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold">{title}</h2>
+            <h1 className="text-base font-semibold">{title}</h1>
             <p className="text-xs text-muted">{subtitle}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <div className="flex rounded-lg bg-board p-1">
               {(
                 [
@@ -158,10 +160,12 @@ export function MarketWorkspace({
             <button
               type="button"
               onClick={() => setMethodOpen(true)}
-              className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:text-ink"
+              className="inline-flex items-center rounded-md border border-line px-3 text-xs text-muted hover:text-ink"
+              style={{ height: 30, boxSizing: "border-box" }}
             >
               시세 산출 방식
             </button>
+            <HeatmapCountdown remainingSec={remainingSec} refreshing={refreshing} />
           </div>
         </div>
 
@@ -223,17 +227,20 @@ export function MarketWorkspace({
         ) : null}
       </div>
 
-      <div key={`${demoKey}-${timeframe}`} className={flashNonce > 0 ? "market-live-flash" : undefined}>
+      <div
+        key={`${demoKey}-${timeframe}`}
+        className={`relative flex h-full min-h-0 flex-1 flex-col items-stretch ${flashNonce > 0 ? "market-live-flash" : ""}`}
+      >
         {sortedItems.length === 0 ? (
           <div className="px-5 py-16 text-center">
             <p className="text-sm font-semibold">
               {showRegion && region !== "all"
-                ? `${filterLabel("all", "all", region)} 맛집 데이터를 모으는 중입니다`
+                ? `${filterLabel("all", "all", region)} 데이터를 모으는 중입니다`
                 : "이 카테고리 시세 데이터가 아직 없습니다"}
             </p>
             <p className="mt-2 text-xs leading-5 text-muted">
               {showRegion && region !== "all"
-                ? "타 지역 맛집은 섞지 않습니다. 해당 시/도 목록이 채워지면 히트맵이 다시 그려집니다."
+                ? "다른 시/도 항목은 섞지 않습니다. 해당 지역 목록이 채워지면 히트맵이 다시 그려집니다."
                 : "하단 랭킹·지수 보드에서 성별·연령별 순위를 볼 수 있습니다. 시세 종목은 다음 집계 주기에 채워집니다."}
             </p>
           </div>
@@ -263,7 +270,7 @@ export function MarketWorkspace({
         {view === "treemap" && sortedItems.length > 0 ? (
           <HeatmapLegend />
         ) : (
-          <span>KindexLab Hierarchical Heatmap</span>
+          <span>KOREA INDEX LAB. Hierarchical Heatmap</span>
         )}
       </div>
 

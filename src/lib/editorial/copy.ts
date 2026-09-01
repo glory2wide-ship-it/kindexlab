@@ -594,39 +594,41 @@ export function buildIssueFaq(opts: {
   focus: string;
   supportKw: string;
   label: string;
+  facts?: string[];
 }): { question: string; answer: string }[] {
-  const { keyword, focus, supportKw, label } = opts;
+  const { keyword, focus, supportKw, label, facts = [] } = opts;
   const name = briefName(keyword.name);
   const lens = topicLens(keyword.topic);
-  // FAQ answers are authored at full sentence length on purpose: they bypass
-  // the reserve-clause padding, so a short line here would be dropped outright.
+  const usable = facts
+    .map((item) => item.replace(/\s+/g, " ").replace(/[.。]+$/g, "").trim())
+    .filter((item) => item && !/긍정적인 반응|생일을 축하|뜨거운 관심|이 소식에|긍정과 부정을 나란히/.test(item));
+  const cause = usable[0];
+  const follow = usable[1];
+  const extra = usable[2];
   return [
     {
-      question: `${focus}가 지금 화제인 이유는 뭔가?`,
-      answer:
-        [
-          `${name} 이야기가 ${lens.scene} 안에서 꾸준히 반복되고 있다`,
-          `${lens.spark} 같은 재료가 같은 시기에 한꺼번에 겹친 자리다`,
-          `${supportKw}가 같이 붙으면 단독 유행이 아니라 테마로 읽는다`,
-        ].join(" "),
+      question: `${name}${sp(name)} 지금 회자되는 직접적인 계기는 뭔가?`,
+      answer: uniqueLines([
+        cause || `${lens.spark}${sp(lens.spark)} ${name} 이름을 같은 주에 여러 창에서 다시 올렸다`,
+        `${focus}는 프로필 요약이 아니라 그 재료가 겹친 시점의 이야기다`,
+        extra || `${supportKw} 현장이 같이 열리면 단발 소문보다 주제가 길어진다`,
+      ]).join(" "),
     },
     {
-      question: `${label} 초보자는 ${focus}를 어디서 시작하나?`,
-      answer:
-        [
-          `${lens.scene} 배경을 짧게 읽은 뒤에 대중의 습관을 확인한다`,
-          `${lens.ripple}${sp(lens.ripple)} 생활 대화로 새는지를 이어서 살펴본다`,
-          `소문만 있고 습관이 따라오지 않으면 짧은 유행으로 본다`,
-        ].join(" "),
+      question: `${name} 이슈를 처음 보는 사람이 먼저 확인하면 좋은 건?`,
+      answer: uniqueLines([
+        follow || `${lens.scene}에서 ${name}${op(name)} 다루는 최근 보도·공식 안내를 연다`,
+        `그다음 ${lens.habit}${op(lens.habit)} 실제로 따라가는지 본다`,
+        `${lens.noise}만 쌓여 있으면 이해보다 소음에 가깝다`,
+      ]).join(" "),
     },
     {
-      question: `${focus} 설명이 투자 신호나 공식 통계인가?`,
-      answer:
-        [
-          `공개된 화제와 문화 배경만 읽는 입문 성격의 글이다`,
-          `공식 통계나 투자 조언이 아니라 맥락을 적은 메모에 가깝다`,
-          `전망도 습관이 남는지로만 가르고 숫자로 단정하지 않는다`,
-        ].join(" "),
+      question: `${focus} 본문을 투자 신호나 공식 통계로 읽어도 되나?`,
+      answer: uniqueLines([
+        `${label} 칼럼은 공개된 화제와 배경만 풀어 주는 입문 메모다`,
+        `집계 기관의 공식 수치를 대신하지 않고 전망도 단정하지 않는다`,
+        `${name} 관련 원문이 있으면 그 페이지에서 사실을 다시 맞춘다`,
+      ]).join(" "),
     },
   ];
 }

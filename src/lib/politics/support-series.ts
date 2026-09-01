@@ -88,6 +88,11 @@ export const PARTY_SUBJECTS = [
   "조국혁신당",
   "개혁신당",
   "진보당",
+  "기본소득당",
+  "사회민주당",
+  "정의당",
+  "새로운미래",
+  "무소속",
 ] as const;
 
 export const POLITICIAN_SUBJECTS = [
@@ -98,6 +103,9 @@ export const POLITICIAN_SUBJECTS = [
   "조국",
   "김문수",
   "김동연",
+  "박찬대",
+  "배현진",
+  "정청래",
 ] as const;
 
 export const POLL_METHOD_CARD = {

@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { MarketStatusBar } from "@/components/dashboard/MarketOverview";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { MarketStatus, RankingEntity } from "@/lib/types";
+
+const HEATMAP_PANEL_TITLE = "실시간 지수";
 
 /**
  * Landing board for the cross-category heatmap.
@@ -19,8 +20,6 @@ import type { MarketStatus, RankingEntity } from "@/lib/types";
  */
 export function UnifiedMarketBoard({
   items,
-  updatedAt,
-  status,
   refreshIntervalSec = DEFAULT_TRENDS_REVALIDATE_SEC,
 }: {
   items: RankingEntity[];
@@ -49,20 +48,16 @@ export function UnifiedMarketBoard({
   return (
     <div className="space-y-3">
       <div className="-mx-4">
-        <MarketStatusBar
-          updatedAt={updatedAt}
-          status={status}
-          remainingSec={remainingSec}
-          refreshing={pending}
-        />
         {items.length ? <TickerTape items={items} /> : null}
       </div>
       <MarketWorkspace
         items={items}
         initialView="treemap"
         hideCategoryTabs
-        title="종합 지수(INDEX)"
-        subtitle="엔터·정치·경제·문화 데스크를 한 판에 올린 통합 히트맵입니다. 타일 우측 상단이 출처 데스크입니다."
+        title={HEATMAP_PANEL_TITLE}
+        subtitle="등락률·버즈·거래량을 히트맵과 리스트로 읽습니다."
+        remainingSec={remainingSec}
+        refreshing={pending}
       />
     </div>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AffiliateWidget } from "@/components/affiliate/AffiliateWidget";
 import { DemographicTabs } from "@/components/boards/DemographicTabs";
 import { BoardReportBody } from "@/components/boards/BoardReportBody";
 import { clampAgeForBoard } from "@/lib/boards/age-tabs";
@@ -21,7 +20,6 @@ import type {
   GenderSegment,
   RegionSegment,
 } from "@/lib/boards/types";
-import type { PostChannel } from "@/lib/posts/types";
 
 function tone(rate: number): string {
   if (rate > 0) return "text-up";
@@ -116,9 +114,7 @@ function RankRow({
 
 export function BoardRankingPanel({
   board,
-  affiliateCategory,
   unitLabel,
-  channel,
   gender,
   age,
   region = "all",
@@ -127,9 +123,7 @@ export function BoardRankingPanel({
   onRegion,
 }: {
   board: CachedBoard;
-  affiliateCategory: string;
   unitLabel: string;
-  channel: PostChannel;
   gender: "all" | GenderSegment;
   age: "all" | AgeSegment;
   region?: "all" | RegionSegment;
@@ -225,29 +219,16 @@ export function BoardRankingPanel({
           {unitLabel} 단위 집계 · 지수는 편집 기준에 따른 추정값이며 실측 통계가 아닙니다.
         </p>
       </section>
-
-      <AffiliateWidget
-        category={affiliateCategory}
-        channel={channel}
-        boardSlug={board.slug}
-        gender={gender}
-        age={age}
-        placement="mid"
-      />
     </div>
   );
 }
 
 export function BoardDesk({
   board,
-  affiliateCategory,
   unitLabel,
-  channel,
 }: {
   board: CachedBoard;
-  affiliateCategory: string;
   unitLabel: string;
-  channel: PostChannel;
 }) {
   const [gender, setGender] = useState<"all" | GenderSegment>("all");
   const [age, setAge] = useState<"all" | AgeSegment>("all");
@@ -262,9 +243,7 @@ export function BoardDesk({
     <div className="space-y-8">
       <BoardRankingPanel
         board={board}
-        affiliateCategory={affiliateCategory}
         unitLabel={unitLabel}
-        channel={channel}
         gender={gender}
         age={age}
         region={region}
@@ -272,13 +251,7 @@ export function BoardDesk({
         onAge={setAge}
         onRegion={setRegion}
       />
-      <BoardReportBody
-        board={board}
-        affiliateCategory={affiliateCategory}
-        channel={channel}
-        gender={gender}
-        age={age}
-      />
+      <BoardReportBody board={board} />
     </div>
   );
 }

@@ -1,29 +1,14 @@
 "use client";
 
-import { AffiliateWidget } from "@/components/affiliate/AffiliateWidget";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
-import type { AgeSegment, CachedBoard, GenderSegment } from "@/lib/boards/types";
+import type { CachedBoard } from "@/lib/boards/types";
 import { formatCount } from "@/lib/format";
-import type { PostChannel } from "@/lib/posts/types";
 
 /**
- * The ranking report. AdSense slots sit at the intro/mid/footer marks and the
- * affiliate shelf lands mid-body, matching the placement contract the entity
- * columns already use.
+ * The ranking report. AdSense slots sit at the intro/mid/footer marks.
+ * Shopping shelves stay off until AdSense approval.
  */
-export function BoardReportBody({
-  board,
-  affiliateCategory,
-  channel,
-  gender = "all",
-  age = "all",
-}: {
-  board: CachedBoard;
-  affiliateCategory: string;
-  channel: PostChannel;
-  gender?: "all" | GenderSegment;
-  age?: "all" | AgeSegment;
-}) {
+export function BoardReportBody({ board }: { board: CachedBoard }) {
   const report = board.report;
   const sections = report?.sections ?? [];
   const midpoint = Math.max(1, Math.ceil(sections.length / 2));
@@ -109,19 +94,7 @@ export function BoardReportBody({
             </div>
           ) : null}
 
-          {index === midpoint - 1 ? (
-            <>
-              <ContentSlot placement="mid" />
-              <AffiliateWidget
-                category={affiliateCategory}
-                channel={channel}
-                boardSlug={board.slug}
-                gender={gender}
-                age={age}
-                placement="mid"
-              />
-            </>
-          ) : null}
+          {index === midpoint - 1 ? <ContentSlot placement="mid" /> : null}
         </div>
       ))}
 
@@ -145,14 +118,6 @@ export function BoardReportBody({
       </section>
 
       <ContentSlot placement="footer" />
-      <AffiliateWidget
-        category={affiliateCategory}
-        channel={channel}
-        boardSlug={board.slug}
-        gender={gender}
-        age={age}
-        placement="footer"
-      />
     </article>
   );
 }

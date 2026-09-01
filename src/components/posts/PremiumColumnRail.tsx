@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatCount } from "@/lib/format";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import { channelHref, getPostChannel } from "@/lib/posts/channels";
 import type { FeaturedColumn } from "@/lib/posts/featured";
 
@@ -18,9 +19,9 @@ export function PremiumColumnRail({ columns }: { columns: FeaturedColumn[] }) {
     <section aria-labelledby="trend-briefing-heading" className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+          <DeskEyebrow variant="sans">
             Today&apos;s Desk
-          </p>
+          </DeskEyebrow>
           <h2 id="trend-briefing-heading" className="mt-1 text-xl font-semibold tracking-tight">
             오늘의 트렌드 브리핑
           </h2>

@@ -17,7 +17,7 @@ function slugifyName(name: string): string {
 
 function typeFromBoardChannel(channel: HeatmapBoardPayload["channel"]): EntityType {
   if (channel === "economy") return "economy_board";
-  if (channel === "culture") return "culture_board";
+  if (channel === "culture" || channel === "travel") return "culture_board";
   if (channel === "politics") return "political_search";
   return "influencer";
 }

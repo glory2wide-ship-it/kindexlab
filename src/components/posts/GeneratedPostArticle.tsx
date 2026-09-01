@@ -1,8 +1,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import { AffiliateWidget } from "@/components/affiliate/AffiliateWidget";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
-import { stripRowQualifier } from "@/lib/boards/heatmap";
 import { FactTable } from "@/components/article/FactTable";
 import { FaqList } from "@/components/article/FaqList";
 import { SectionHeading } from "@/components/article/SectionHeading";
@@ -10,6 +8,7 @@ import { SITE } from "@/lib/site";
 import { formatCount } from "@/lib/format";
 import { channelHref, channelSectionHref, getPostChannel, inferPostChannel } from "@/lib/posts/channels";
 import type { GeneratedPost } from "@/lib/posts/types";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
   const channel = getPostChannel(inferPostChannel(post));
@@ -81,9 +80,9 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
         <span className="mx-2">/</span>
         {post.editionDate}
       </p>
-      <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-accent">
+      <DeskEyebrow variant="base">
         {channel.eyebrow} · Magazine
-      </p>
+      </DeskEyebrow>
       <h1 className="max-w-3xl text-2xl font-semibold tracking-tight md:text-3xl">{post.title}</h1>
       <p className="max-w-3xl whitespace-pre-line text-sm leading-6 text-muted">{post.excerpt}</p>
       <p className="font-mono text-[11px] text-muted">
@@ -191,11 +190,6 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
         ) : null}
 
         <ContentSlot placement="footer" label={post.focusKeyword} adFormat="auto" />
-        {post.focusKeyword ? (
-          <div className="mt-8 border-t border-line pt-8">
-            <AffiliateWidget keyword={stripRowQualifier(post.focusKeyword)} channel={channel.id} placement="footer" />
-          </div>
-        ) : null}
       </div>
 
       <p className="max-w-3xl text-xs leading-6 text-muted">

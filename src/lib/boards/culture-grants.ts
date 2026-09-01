@@ -42,6 +42,10 @@ export function isTwoLineBracketHeatmap(heatmapGroup?: string): boolean {
   return (
     heatmapGroup === "경제 정부지원금" ||
     heatmapGroup === "음식/맛집 랭킹" ||
+    heatmapGroup === "부동산 관심 랭킹" ||
+    heatmapGroup === "부동산 지수" ||
+    heatmapGroup === "공연 랭킹" ||
+    heatmapGroup === "전시·팝업스토어" ||
     heatmapGroup === CULTURE_GRANT_TITLE
   );
 }

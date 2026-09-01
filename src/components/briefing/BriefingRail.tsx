@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BriefingCard } from "@/components/briefing/BriefingCard";
 import type { BriefingArticle } from "@/lib/types";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 export function BriefingRail({
   main,
@@ -13,9 +14,9 @@ export function BriefingRail({
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-accent">
+          <DeskEyebrow variant="sans">
             Today&apos;s Desk
-          </p>
+          </DeskEyebrow>
           <h2 className="mt-1 text-xl font-semibold tracking-tight">오늘의 트렌드 브리핑</h2>
         </div>
         <div className="flex gap-3 text-sm">

@@ -1,6 +1,5 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import { AffiliateWidget } from "@/components/affiliate/AffiliateWidget";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
 import { FactTable } from "@/components/article/FactTable";
 import { FaqList } from "@/components/article/FaqList";
@@ -163,11 +162,6 @@ export function TodayAnalysis({
         </section>
 
         <ContentSlot placement="footer" label={article.focusKeyword} adFormat="auto" />
-        {topic ? (
-          <div className="mt-8 border-t border-line pt-8">
-            <AffiliateWidget keyword={topic} placement="footer" />
-          </div>
-        ) : null}
       </div>
     </article>
   );

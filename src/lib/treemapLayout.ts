@@ -1,3 +1,5 @@
+import { hierarchy, treemap, treemapSquarify, type HierarchyRectangularNode } from "d3-hierarchy";
+
 export interface RankedTile {
   id: string;
   rank: number;
@@ -21,8 +23,6 @@ export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
  * apart when the share is retuned.
  */
 export const RANK_BELOW_CAP = RANK_1_AREA_RATIO - 0.001;
-/** Fewest tiles for which the fixed rank-1 share still exceeds an equal split. */
-const MIN_ITEMS_FOR_FIXED_LEAD = Math.ceil(1 / RANK_1_AREA_RATIO);
 
 export interface HeatmapSizeInput {
   id: string;
@@ -33,7 +33,7 @@ export interface HeatmapSizeInput {
 export interface HeatmapSizeAllocation {
   /** id → area share of the full treemap (sums to ≤ 1). */
   ratios: Map<string, number>;
-  /** Unassigned share after the 24.9% cap; rendered as empty gap. */
+  /** Unassigned share after the rank-1 pin and rank-2+ caps; rendered as empty gap. */
   leftover: number;
 }
 
@@ -41,7 +41,10 @@ function safeScore(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-/** Rank Zipf × normalized score. Rank 2 leads; a higher index still enlarges a tile. */
+/**
+ * Rank Zipf × index score. Rank decay keeps 2 > 3 > … even when scores bunch;
+ * the score term still stretches neighbors so a higher index reads larger.
+ */
 function rankScoreWeight(
   rank: number,
   score: number,
@@ -53,11 +56,23 @@ function rankScoreWeight(
   const rankPart = 1 / place ** exponent;
   const peak = Math.max(peakScore, 1);
   const scoreNorm = Math.min(1, safeScore(score) / peak);
-  const scorePart = 0.28 + 0.72 * scoreNorm ** 1.12;
+  const scorePart = 0.18 + 0.82 * scoreNorm ** 1.05;
   return rankPart * scorePart;
 }
 
-/** Split a pool by weight, capping every tile below the rank-1 25% share. */
+/** Walk rank 2+ and shrink any tile that would match or exceed the one above it. */
+function enforceDescending(leaderShare: number, rest: number[]): number[] {
+  const out = [...rest];
+  let previous = leaderShare;
+  for (let i = 0; i < out.length; i++) {
+    const ceiling = previous * 0.9;
+    if (out[i] >= ceiling) out[i] = ceiling;
+    previous = out[i];
+  }
+  return out;
+}
+
+/** Split a pool by weight, capping every tile below the rank-1 15% share. */
 function allocatePool(weights: number[], pool = REMAINING_AREA_RATIO, cap = RANK_BELOW_CAP): number[] {
   const n = weights.length;
   if (!n) return [];
@@ -101,9 +116,180 @@ function allocatePool(weights: number[], pool = REMAINING_AREA_RATIO, cap = RANK
   return ratios;
 }
 
+interface PanelNode {
+  id?: string;
+  rank?: number;
+  value?: number;
+  children?: PanelNode[];
+}
+
+/** Pixel box for rank 1: a full-height left column of exactly 15% of the map. */
+export function rank1Rectangle(
+  width: number,
+  height: number,
+): { x0: number; y0: number; x1: number; y1: number } {
+  const w = Math.max(1, Math.round(Math.max(width, 1) * RANK_1_AREA_RATIO));
+  return { x0: 0, y0: 0, x1: Math.min(w, width), y1: height };
+}
+
+function squarifyPanel(
+  nodes: PanelNode[],
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  padding: number,
+): TreemapBox[] {
+  const w = x1 - x0;
+  const h = y1 - y0;
+  if (w < 2 || h < 2 || !nodes.length) return [];
+  const root = hierarchy<PanelNode>({ children: nodes }).sum((node) =>
+    node.children?.length ? 0 : Math.max(node.value ?? 0, 0),
+  );
+  root.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+  const laid: HierarchyRectangularNode<PanelNode> = treemap<PanelNode>()
+    .size([w, h])
+    .tile(treemapSquarify.ratio(1.15))
+    .paddingInner(padding)
+    .paddingOuter(0)
+    .round(true)(root);
+
+  return laid.leaves().flatMap((leaf) => {
+    const id = leaf.data.id;
+    if (!id) return [];
+    return [
+      {
+        id,
+        rank: leaf.data.rank ?? 0,
+        x0: leaf.x0 + x0,
+        y0: leaf.y0 + y0,
+        x1: leaf.x1 + x0,
+        y1: leaf.y1 + y0,
+      },
+    ];
+  });
+}
+
 /**
- * Rank 1 is always 25% of the map. Rank 2+ share the other 75% by rank × score,
- * each capped below 25%. Incoming order is the display rank (same as the list).
+ * Rank-1 pixel box: exactly ~15% of map area, forced near 1:1 (square).
+ * Never stretches into a full-height column.
+ */
+function rank1SquareBox(
+  width: number,
+  height: number,
+): { x0: number; y0: number; x1: number; y1: number } {
+  const mapArea = Math.max(width, 1) * Math.max(height, 1);
+  const targetArea = mapArea * RANK_1_AREA_RATIO;
+  let side = Math.round(Math.sqrt(targetArea));
+
+  // Leave room for the L-shaped remainder; keep aspect within ~1:1.15.
+  const maxSide = Math.min(width - 64, height - 64, Math.round(Math.min(width, height) * 0.72));
+  const minSide = Math.max(48, Math.round(Math.min(width, height) * 0.22));
+  side = Math.max(minSide, Math.min(maxSide, side));
+
+  let leadW = side;
+  let leadH = Math.round(targetArea / Math.max(leadW, 1));
+  if (leadH > side * 1.12) {
+    leadH = Math.round(side * 1.12);
+    leadW = Math.round(targetArea / Math.max(leadH, 1));
+  } else if (leadH < side / 1.12) {
+    leadH = Math.round(side / 1.12);
+    leadW = Math.round(targetArea / Math.max(leadH, 1));
+  }
+  leadW = Math.max(minSide, Math.min(leadW, width - 48));
+  leadH = Math.max(minSide, Math.min(leadH, height - 48));
+  // Re-pin area after clamping so painted share stays near 15%.
+  const area = leadW * leadH;
+  if (area > 0 && Math.abs(area - targetArea) / targetArea > 0.04) {
+    const scale = Math.sqrt(targetArea / area);
+    leadW = Math.max(minSide, Math.min(width - 48, Math.round(leadW * scale)));
+    leadH = Math.max(minSide, Math.min(height - 48, Math.round(targetArea / Math.max(leadW, 1))));
+  }
+  return { x0: 0, y0: 0, x1: leadW, y1: leadH };
+}
+
+/**
+ * Rank 1 top-left (~15% area, near-square). Rank 2 directly under it (same
+ * column width). Ranks 3+ fill the full-height panel to the right.
+ */
+export function layoutHeatmapLeaves(
+  items: HeatmapSizeInput[],
+  width: number,
+  height: number,
+  padding = 2,
+): TreemapBox[] {
+  if (!items.length || width <= 0 || height <= 0) return [];
+
+  if (items.length === 1) {
+    return [{ id: items[0].id, rank: items[0].rank ?? 1, x0: 0, y0: 0, x1: width, y1: height }];
+  }
+
+  const allocation = calculateHeatmapSizeRatios(items);
+  const gutter = Math.max(1, padding);
+  const lead = rank1SquareBox(width, height);
+  const colW = lead.x1;
+  const rank1H = lead.y1;
+
+  const boxes: TreemapBox[] = [
+    {
+      id: items[0].id,
+      rank: items[0].rank ?? 1,
+      x0: 0,
+      y0: 0,
+      x1: colW,
+      y1: rank1H,
+    },
+  ];
+
+  const rank2 = items[1];
+  const rank2Y0 = Math.min(rank1H + gutter, height - 1);
+  // Stretch rank 2 to the bottom edge so no empty gap sits under the left column.
+  const rank2Y1 = height;
+
+  boxes.push({
+    id: rank2.id,
+    rank: rank2.rank ?? 2,
+    x0: 0,
+    y0: rank2Y0,
+    x1: colW,
+    y1: rank2Y1,
+  });
+
+  const rightItems = items.slice(2);
+  if (!rightItems.length) return boxes;
+
+  const rightX = Math.min(colW + gutter, width);
+  if (width - rightX < 8) return boxes;
+
+  const rightNodes: PanelNode[] = rightItems.map((item, index) => ({
+    id: item.id,
+    rank: item.rank ?? index + 3,
+    value: Math.max(allocation.ratios.get(item.id) ?? 0, 1e-6),
+  }));
+
+  boxes.push(...squarifyPanel(rightNodes, rightX, 0, width, height, padding));
+  return boxes;
+}
+
+function fillRestPool(leaderShare: number, rest: number[], pool: number): number[] {
+  let values = enforceDescending(leaderShare, rest);
+  for (let round = 0; round < 4; round++) {
+    const sum = values.reduce((total, value) => total + value, 0);
+    if (sum <= 1e-12) break;
+    values = enforceDescending(
+      leaderShare,
+      values.map((value) => (value / sum) * pool),
+    );
+    const used = values.reduce((total, value) => total + value, 0);
+    if (Math.abs(used - pool) < 1e-6) break;
+  }
+  return values;
+}
+
+/**
+ * Rank 1 is always 15% of the map. Rank 2+ share the other 85% by rank × index
+ * score, each capped below 15% and strictly smaller than the tile above it.
+ * Incoming order is the display rank (same as the list).
  */
 export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSizeAllocation {
   const ratios = new Map<string, number>();
@@ -114,35 +300,20 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
     return { ratios, leftover: 0 };
   }
 
-  // Below this count an equal split would already hand every tile more than the
-  // leader's fixed share, so pinning rank 1 to it would shrink the leader below
-  // its followers and force the rest into a wall of identical capped tiles.
-  // Small maps fall back to a straight weighted split, where rank 1 leads on its
-  // own merits.
-  if (items.length < MIN_ITEMS_FOR_FIXED_LEAD) {
-    const peak = Math.max(...items.map((item) => safeScore(item.score)), 1);
-    const weights = items.map((item, index) =>
-      rankScoreWeight(item.rank ?? index + 1, item.score, peak, 1.28, 1),
-    );
-    const total = weights.reduce((sum, value) => sum + value, 0) || 1;
-    items.forEach((item, index) => ratios.set(item.id, weights[index] / total));
-    return { ratios, leftover: 0 };
-  }
-
   ratios.set(items[0].id, RANK_1_AREA_RATIO);
   const rest = items.slice(1);
   const packed = items.length >= 20;
-  const exponent = packed ? 0.88 : 1.28;
-  // Held clearly under the leader rather than just below it. At the bare cap the
-  // runner-up lands within a tenth of a point of rank 1 and the two read as the
-  // same size, which defeats the fixed share. A packed map is squeezed further
-  // still so the tail keeps usable area.
-  const cap = packed ? Math.min(0.11, RANK_BELOW_CAP) : RANK_1_AREA_RATIO * 0.8;
+  const exponent = packed ? 1.12 : 1.28;
+  const cap = packed ? Math.min(0.11, RANK_BELOW_CAP) : RANK_1_AREA_RATIO * 0.82;
   const peak = Math.max(...rest.map((item) => safeScore(item.score)), 1);
   const weights = rest.map((item, index) =>
     rankScoreWeight(item.rank ?? index + 2, item.score, peak, exponent),
   );
-  const restRatios = allocatePool(weights, REMAINING_AREA_RATIO, cap);
+  const restRatios = fillRestPool(
+    RANK_1_AREA_RATIO,
+    allocatePool(weights, REMAINING_AREA_RATIO, cap),
+    REMAINING_AREA_RATIO,
+  );
   rest.forEach((item, index) => {
     ratios.set(item.id, restRatios[index] ?? 0);
   });

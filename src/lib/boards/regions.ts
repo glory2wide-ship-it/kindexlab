@@ -1,8 +1,25 @@
 import { namesOverlap, normalizeName } from "@/lib/ingestion/names";
 import { formatBracketLabel, parseBracketLabel } from "@/lib/politics/labeled-rank";
 import type { BoardRankEntry, RegionSegment } from "@/lib/boards/types";
+import type { RegionCatalog } from "@/lib/boards/region-catalogs";
+import {
+  DOMESTIC_TRAVEL_SLUG,
+  EXHIBITION_BOARD_SLUG,
+  FOOD_RESTAURANT_SLUG,
+  HOUSING_BOARD_SLUG,
+  PERFORMANCE_BOARD_SLUG,
+  POLITICS_HOUSING_SLUG,
+  REGION_DOMESTIC_TRAVEL_CATALOG,
+  REGION_EXHIBITION_CATALOG,
+  REGION_FILTER_SLUGS,
+  REGION_HOUSING_CATALOG,
+  REGION_PERFORMANCE_CATALOG,
+  REGION_POLITICS_HOUSING_CATALOG,
+  REGION_WEEKEND_OUTING_CATALOG,
+  WEEKEND_OUTING_SLUG,
+} from "@/lib/boards/region-catalogs";
 
-export const FOOD_RESTAURANT_SLUG = "food-restaurant-ranking";
+export { FOOD_RESTAURANT_SLUG, HOUSING_BOARD_SLUG, POLITICS_HOUSING_SLUG };
 
 export const REGION_SEGMENTS: RegionSegment[] = [
   "seoul",
@@ -354,7 +371,31 @@ export function isRegionSegment(key: string): key is RegionSegment {
 }
 
 export function boardUsesRegionFilter(slug?: string): boolean {
-  return slug === FOOD_RESTAURANT_SLUG;
+  return Boolean(slug && (REGION_FILTER_SLUGS as readonly string[]).includes(slug));
+}
+
+function catalogForBoard(slug?: string): RegionCatalog {
+  if (slug === HOUSING_BOARD_SLUG) return REGION_HOUSING_CATALOG;
+  if (slug === POLITICS_HOUSING_SLUG) return REGION_POLITICS_HOUSING_CATALOG;
+  if (slug === PERFORMANCE_BOARD_SLUG) return REGION_PERFORMANCE_CATALOG;
+  if (slug === EXHIBITION_BOARD_SLUG) return REGION_EXHIBITION_CATALOG;
+  if (slug === DOMESTIC_TRAVEL_SLUG) return REGION_DOMESTIC_TRAVEL_CATALOG;
+  if (slug === WEEKEND_OUTING_SLUG) return REGION_WEEKEND_OUTING_CATALOG;
+  return REGION_FOOD_CATALOG;
+}
+
+/** `[지역] 항목` seeds covering every 시/도, interleaved so 전체 순위가 한 지역에 치우치지 않는다. */
+export function regionalSeeds(slug: string): string[] {
+  const catalog = catalogForBoard(slug);
+  const max = Math.max(...REGION_SEGMENTS.map((region) => catalog[region].length), 0);
+  const out: string[] = [];
+  for (let index = 0; index < max; index++) {
+    for (const region of REGION_SEGMENTS) {
+      const subject = catalog[region][index];
+      if (subject) out.push(`[${REGION_LABEL[region]}] ${subject}`);
+    }
+  }
+  return out;
 }
 
 function aliasToRegion(token: string): RegionSegment | undefined {
@@ -403,13 +444,13 @@ export function entityMatchesRegion(
   return (item.tags ?? []).some((tag) => normalizeRegionInput(tag) === region || tag === label);
 }
 
-function catalogRowsForRegion(region: RegionSegment): BoardRankEntry[] {
-  return REGION_FOOD_CATALOG[region].map((subject, index) => ({
+function catalogRowsForRegion(region: RegionSegment, slug?: string): BoardRankEntry[] {
+  return catalogForBoard(slug)[region].map((subject, index) => ({
     rank: index + 1,
     name: formatBracketLabel(REGION_LABEL[region], subject),
     score: Number((86 - index * 1.15).toFixed(2)),
     changeRate: Number((((index % 5) - 2) * 1.05).toFixed(2)),
-    note: `${REGION_LABEL[region]} 지역 맛집 카탈로그`,
+    note: `${REGION_LABEL[region]} 지역 카탈로그`,
     region,
   }));
 }
@@ -419,9 +460,10 @@ export function padRegionOnly(
   rows: BoardRankEntry[],
   region: RegionSegment,
   limit: number,
+  slug?: string,
 ): BoardRankEntry[] {
   const local = filterRowsByRegion(rows, region).map((row) => tagRegionOnRow({ ...row, region }));
-  return padRankEntries(local, catalogRowsForRegion(region), limit);
+  return padRankEntries(local, catalogRowsForRegion(region, slug), limit);
 }
 
 export function regionFromName(name: string): RegionSegment | undefined {
@@ -452,6 +494,32 @@ export function tagRegionOnRow(row: BoardRankEntry, seeds: readonly string[] = [
   };
 }
 
+export function ensureHousingApartmentRanking(
+  rows: BoardRankEntry[],
+  limit = regionalSeeds(HOUSING_BOARD_SLUG).length,
+): BoardRankEntry[] {
+  const cap = Math.max(1, limit);
+  const byName = new Map(rows.map((row) => [normalizeName(row.name), row]));
+  return regionalSeeds(HOUSING_BOARD_SLUG)
+    .slice(0, cap)
+    .map((seed, index) => {
+      const tagged = tagRegionOnRow({
+        rank: index + 1,
+        name: seed,
+        score: Number((92 - index * 1.05).toFixed(2)),
+        changeRate: Number((((index % 7) - 3) * 0.85).toFixed(2)),
+        note: "시/도별 아파트 단지 관심도",
+      });
+      const hit = byName.get(normalizeName(tagged.name)) ?? byName.get(normalizeName(seed));
+      return {
+        ...tagged,
+        score: hit?.score ?? tagged.score,
+        changeRate: hit?.changeRate ?? tagged.changeRate,
+        rank: index + 1,
+      };
+    });
+}
+
 export function ensureFoodRestaurantRanking(
   rows: BoardRankEntry[],
   seeds: readonly string[] = [],
@@ -475,7 +543,7 @@ export function ensureFoodRestaurantRanking(
         name: seed,
         score: Number((88 - unique.length * 1.15).toFixed(2)),
         changeRate: Number((((unique.length % 5) - 2) * 1.1).toFixed(2)),
-        note: "지역 맛집 씨드 보완",
+        note: "지역 씨드 보완",
       }),
     );
   }
@@ -511,6 +579,7 @@ export function reweightRegionByDemographic(
   fallback: BoardRankEntry[],
   limit: number,
   region?: RegionSegment,
+  slug?: string,
 ): BoardRankEntry[] {
   const demoIndex = new Map(demographicRows.map((row, index) => [normalizeName(row.name), index]));
   const orderGroup = (rows: BoardRankEntry[]) =>
@@ -534,19 +603,20 @@ export function reweightRegionByDemographic(
   }
   const preferred = filterRowsByRegion(regionRows, region);
   const localFallback = filterRowsByRegion(fallback, region);
-  return padRegionOnly(orderGroup(preferred.length ? preferred : localFallback), region, limit);
+  return padRegionOnly(orderGroup(preferred.length ? preferred : localFallback), region, limit, slug);
 }
 
 /** One slice per 시/도. Only that region's names — no adjacent/national fill. */
 export function deriveRegionRankings(
   total: BoardRankEntry[],
   limit: number,
+  slug?: string,
 ): Record<RegionSegment, BoardRankEntry[]> {
   const tagged = total.map((row) => tagRegionOnRow(row));
   const cap = Math.max(1, limit);
   return REGION_SEGMENTS.reduce(
     (acc, region) => {
-      acc[region] = padRegionOnly(filterRowsByRegion(tagged, region), region, cap);
+      acc[region] = padRegionOnly(filterRowsByRegion(tagged, region), region, cap, slug);
       return acc;
     },
     {} as Record<RegionSegment, BoardRankEntry[]>,
