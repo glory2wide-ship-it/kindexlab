@@ -21,11 +21,24 @@ import { pickPrimaryMusic } from "@/lib/ingestion/sources/music";
 import { pickPrimaryShorts } from "@/lib/ingestion/sources/shorts";
 import { pickPrimaryWebtoon } from "@/lib/ingestion/sources/webtoon";
 import { attachTimeframeMetrics, changeForEntity, volumeForTimeframe } from "@/lib/timeframes";
-import type { CatalogMatch, ChartRow, IngestSnapshot, SourceResult } from "@/lib/ingestion/types";
+import type {
+  CatalogMatch,
+  ChartRow,
+  IngestSnapshot,
+  MeasurementPoint,
+  SourceResult,
+} from "@/lib/ingestion/types";
 import { matchPoliticsCatalog } from "@/lib/politics/catalog";
 import { composePoliticsEntities } from "@/lib/politics/compose";
 import { isPoliticsEntityType, POLITICS_INDEX_META } from "@/lib/politics/types";
 import type { AffiliateProduct, EntityType, MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
+
+/**
+ * How many observations to keep per slug. Sources refresh on their own cadence
+ * (Nielsen daily, Steam continuously), so this is a count of distinct values
+ * rather than a fixed span of time.
+ */
+const MEASUREMENT_HISTORY_LIMIT = 60;
 
 const INDEX_META: { id: string; label: string; type?: EntityType; note: string }[] = [
   { id: "k-buzz", label: "KindexLab 종합", note: "정치 지지도·검색량·이슈 합산" },
@@ -87,6 +100,20 @@ function defaultProducts(name: string, type: EntityType): AffiliateProduct[] {
     searchQuery,
     category: index === 0 ? "팬굿즈" : "리빙",
   }));
+}
+
+/**
+ * Percent change against the last stored observation of the same quantity.
+ *
+ * Unlike the rank-derived rate this compares like with like — 8.4% against
+ * yesterday's 8.1% — so it is the only change figure on the entity that can be
+ * stated as fact. Returns undefined on the first sighting, when there is
+ * genuinely nothing to compare against.
+ */
+function measuredChange(points: MeasurementPoint[] | undefined, value: number): number | undefined {
+  const last = points?.at(-1)?.v;
+  if (last === undefined || last <= 0) return undefined;
+  return Number((((value - last) / last) * 100).toFixed(2));
 }
 
 function historyPoints(values: number[]): RankingEntity["history"] {
@@ -183,6 +210,13 @@ function toEntity(
           : scoreFromRank(row.rank, 20);
   const history = previous?.scoreHistory?.[slug] ?? [];
   const previousScore = history.at(-1);
+  const measurement = row.measurement
+    ? {
+        ...row.measurement,
+        observedAt: new Date().toISOString(),
+        changeRate: measuredChange(previous?.measurementHistory?.[slug], row.measurement.value),
+      }
+    : undefined;
   const fluctuationRate = row.previousRank
     ? Number((((row.previousRank - row.rank) / Math.max(row.previousRank, 1)) * 12).toFixed(2))
     : changeFromScores(score, previousScore);
@@ -214,6 +248,7 @@ function toEntity(
     buzzScore: score,
     openScore: previousScore ?? Number((score / (1 + fluctuationRate / 100)).toFixed(2)),
     fluctuationRate,
+    measurement,
     volume,
     sparkline,
     history: historyPoints(sparkline),
@@ -568,6 +603,21 @@ export async function composeLiveSnapshot(
     scoreHistory[item.slug] = [...(scoreHistory[item.slug] ?? []).slice(-6), item.buzzScore];
   }
 
+  // Observations accumulate on their own track. Ingest runs every five minutes
+  // but most sources refresh far slower, so an unchanged value is not recorded
+  // twice -- otherwise the series would fill with repeats and a real move would
+  // be pushed out of the window by them.
+  const measurementHistory = { ...(previous?.measurementHistory ?? {}) };
+  for (const item of items) {
+    if (!item.measurement) continue;
+    const points = measurementHistory[item.slug] ?? [];
+    if (points.at(-1)?.v === item.measurement.value) continue;
+    measurementHistory[item.slug] = [
+      ...points.slice(-(MEASUREMENT_HISTORY_LIMIT - 1)),
+      { t: item.measurement.observedAt ?? new Date().toISOString(), v: item.measurement.value },
+    ];
+  }
+
   return {
     status: items.length ? "open" : "closed",
     sources: sources.map((item) => ({ id: item.id, ok: item.ok, count: item.count, error: item.error })),
@@ -584,6 +634,7 @@ export async function composeLiveSnapshot(
     ],
     items,
     scoreHistory,
+    measurementHistory,
   };
 }
 

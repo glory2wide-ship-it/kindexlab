@@ -78,6 +78,14 @@ function rowFromTitle(title: NaverTitle, rank: number, tag: string): ChartRow | 
     subtitle: title.author,
     metric: stars,
     volume: views > 0 ? views : undefined,
+    // The star score is the reader-facing number Naver publishes, so prefer it
+    // over the view count, which the API reports inconsistently across weekdays.
+    measurement:
+      stars > 0
+        ? { value: stars, unit: "점", label: "독자 별점", source: "네이버웹툰" }
+        : views > 0
+          ? { value: views, unit: "회", label: "조회수", source: "네이버웹툰" }
+          : undefined,
     imageUrl: title.thumbnailUrl,
     tags: [tag, ...flags].slice(0, 5),
   };

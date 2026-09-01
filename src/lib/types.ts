@@ -64,6 +64,30 @@ export interface TimeframeMetric {
 
 export type TimeframeMetrics = Record<Timeframe, TimeframeMetric>;
 
+/**
+ * A number a source actually published, kept in its original unit.
+ *
+ * The index derives from these but is not one of them: a rank normalised onto a
+ * band cannot be quoted as "8.4% 시청률". Only sources that report a real
+ * external measurement fill this in — a rank position dressed up as a metric
+ * (`Math.max(1, 24 - index)`) does not qualify, because it carries no
+ * information the rank does not already carry.
+ */
+export interface Measurement {
+  /** The value as published, untransformed. */
+  value: number;
+  /** Display unit, e.g. "%", "명", "회", "점". */
+  unit: string;
+  /** What was measured, e.g. "가구 시청률", "동시 접속자". */
+  label: string;
+  /** Who published it, e.g. "닐슨코리아". */
+  source: string;
+  /** ISO time this value was read. */
+  observedAt?: string;
+  /** Percent change against the previous stored observation, when one exists. */
+  changeRate?: number;
+}
+
 export interface RankingEntity {
   id: string;
   slug: string;
@@ -90,6 +114,12 @@ export interface RankingEntity {
   /** Detail-page affiliate shelf. Omitted from tile payloads — see `analysis`. */
   products?: AffiliateProduct[];
   metrics?: TimeframeMetrics;
+  /**
+   * The source's own number, when it published one worth quoting. Unlike
+   * `buzzScore` this can be cited directly, so it is what detail copy and
+   * structured data should lean on.
+   */
+  measurement?: Measurement;
   imageUrl?: string;
   /** When set, heatmap/list tiles open this path instead of `/ranking/[slug]`. */
   href?: string;

@@ -90,13 +90,19 @@ async function fetchSteamSpy(): Promise<SourceResult> {
       .sort((a, b) => (b.ccu ?? b.average_2weeks ?? 0) - (a.ccu ?? a.average_2weeks ?? 0))
       .slice(0, 40)
       .map((game, index) => {
-        const players = game.ccu || game.average_2weeks || Math.max(1, 40 - index) * 8_000;
+        const reported = game.ccu || game.average_2weeks;
+        const players = reported || Math.max(1, 40 - index) * 8_000;
         return {
           rank: index + 1,
           title: game.name!.trim(),
           subtitle: game.developer,
           metric: Math.log10(players + 1),
           volume: players,
+          // Only when SteamSpy actually reported a count; the rank-derived
+          // fallback above is a placeholder and must not be quoted as one.
+          measurement: reported
+            ? { value: reported, unit: "명", label: "동시 접속자", source: "SteamSpy" }
+            : undefined,
           imageUrl: game.appid
             ? `https://cdn.akamai.steamstatic.com/steam/apps/${game.appid}/header.jpg`
             : undefined,
@@ -137,6 +143,10 @@ async function fetchSteamCharts(): Promise<SourceResult> {
         title: appid ? `Steam ${appid}` : `PC Game ${rank}`,
         metric: peak > 0 ? Math.log10(peak + 1) : undefined,
         volume: peak > 0 ? peak : undefined,
+        measurement:
+          peak > 0
+            ? { value: peak, unit: "명", label: "최고 동시 접속자", source: "스팀" }
+            : undefined,
         imageUrl: appid ? `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg` : undefined,
         tags: ["스팀 차트", "동접"],
       } satisfies ChartRow;

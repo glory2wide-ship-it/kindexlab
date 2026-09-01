@@ -3,6 +3,15 @@ import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel, scoreL
 import { buildTimeframeMetrics } from "@/lib/timeframes";
 import type { RankingEntity } from "@/lib/types";
 
+/** Ratings and star scores read wrong when abbreviated; counts read wrong when not. */
+function formatMeasurement(value: number, unit: string): string {
+  const shown =
+    unit === "%" || unit === "점"
+      ? value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })
+      : formatCompact(value);
+  return `${shown}${unit}`;
+}
+
 export function EntityHero({
   entity,
   kicker,
@@ -55,6 +64,33 @@ export function EntityHero({
           <dd className="mt-1">{entity.tags.join(" · ")}</dd>
         </div>
       </dl>
+      {/* The one figure on this page that can be quoted as a fact: the source's
+          own number in the source's own unit. Everything above it is derived. */}
+      {entity.measurement ? (
+        <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3">
+          <p className="text-[11px] text-muted">
+            {entity.measurement.source} 발표 · {entity.measurement.label}
+          </p>
+          <p className="mt-1 flex flex-wrap items-baseline gap-2">
+            <span className="font-sans text-2xl font-semibold tabular-nums">
+              {formatMeasurement(entity.measurement.value, entity.measurement.unit)}
+            </span>
+            {entity.measurement.changeRate !== undefined ? (
+              <span
+                className={`font-sans text-sm font-semibold tabular-nums ${
+                  entity.measurement.changeRate > 0
+                    ? "text-up"
+                    : entity.measurement.changeRate < 0
+                      ? "text-down"
+                      : "text-muted"
+                }`}
+              >
+                직전 관측 대비 {formatRate(entity.measurement.changeRate)}
+              </span>
+            ) : null}
+          </p>
+        </div>
+      ) : null}
       <dl className="mt-4 grid grid-cols-3 gap-2 text-sm sm:grid-cols-5 lg:grid-cols-9">
         {TIMEFRAMES.map((option) => {
           const row = metrics[option.id];

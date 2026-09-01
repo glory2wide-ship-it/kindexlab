@@ -38,6 +38,13 @@ function parseNielsen(html: string, tags: string[]): ChartRow[] {
       subtitle: channel,
       metric,
       volume: metric && metric > 50 ? Math.round(metric * 1000) : undefined,
+      // The table's fourth column is the household rating itself. Values above
+      // 50 are not ratings -- that column carries viewer counts on some pages --
+      // so only the plausible range is quotable.
+      measurement:
+        metric && metric > 0 && metric <= 50
+          ? { value: metric, unit: "%", label: "가구 시청률", source: "닐슨코리아" }
+          : undefined,
       tags,
     });
   }

@@ -65,6 +65,7 @@ export async function ingestLivePayload(options?: {
   let items = composed.items;
   let indices = composed.indices;
   let scoreHistory = composed.scoreHistory ?? previous?.scoreHistory ?? {};
+  let measurementHistory = composed.measurementHistory ?? previous?.measurementHistory ?? {};
   let usedPreviousSnapshot = false;
 
   const previousCount = previous?.items.length ?? 0;
@@ -74,6 +75,9 @@ export async function ingestLivePayload(options?: {
     items = previous.items;
     indices = previous.indices;
     scoreHistory = previous.scoreHistory ?? scoreHistory;
+    // Observations are cumulative, so keep the longer of the two rather than
+    // dropping back: a collapsed fetch should never shorten the record.
+    measurementHistory = previous.measurementHistory ?? measurementHistory;
     usedPreviousSnapshot = true;
   }
 
@@ -89,6 +93,7 @@ export async function ingestLivePayload(options?: {
     indices,
     items,
     scoreHistory,
+    measurementHistory,
   };
   rememberSnapshot(snapshot);
 

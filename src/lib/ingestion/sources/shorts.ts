@@ -39,6 +39,8 @@ function walkVideos(node: unknown, found: ChartRow[], seen: Set<string>) {
         subtitle: channelFromRenderer(renderer) || "YouTube",
         metric: views > 0 ? Math.log10(views + 1) : undefined,
         volume: views > 0 ? views : undefined,
+        measurement:
+          views > 0 ? { value: views, unit: "회", label: "조회수", source: "유튜브" } : undefined,
         imageUrl: thumb,
         tags: ["유튜브", "인기", views > 0 ? "조회수" : "트렌딩"],
       });
