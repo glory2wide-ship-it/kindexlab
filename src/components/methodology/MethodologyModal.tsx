@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { INDEX_WEIGHTS, METHODOLOGY } from "@/data/methodology";
+import { INDEX_INPUTS, METHODOLOGY } from "@/data/methodology";
 
 export function MethodologyModal({
   open,
@@ -42,13 +42,11 @@ export function MethodologyModal({
           {METHODOLOGY.formula}
         </p>
         <ul className="mt-5 divide-y divide-line rounded-xl border border-line">
-          {INDEX_WEIGHTS.map((item) => (
-            <li key={item.key} className="flex gap-4 px-4 py-3 text-sm">
-              <span className="w-10 font-mono text-accent">{item.weight}%</span>
-              <span>
-                <span className="font-medium">{item.label}</span>
-                <span className="mt-0.5 block text-xs text-muted">{item.sources}</span>
-              </span>
+          {INDEX_INPUTS.map((item) => (
+            <li key={item.key} className="px-4 py-3 text-sm">
+              <span className="font-medium">{item.label}</span>
+              <span className="mt-1 block text-xs leading-5 text-ink/80">{item.basis}</span>
+              <span className="mt-0.5 block text-xs text-muted">{item.sources}</span>
             </li>
           ))}
         </ul>

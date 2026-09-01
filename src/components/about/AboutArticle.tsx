@@ -1,6 +1,8 @@
+import Link from "next/link";
+
 import type { PostChannel } from "@/lib/posts/types";
 import { CATEGORIES, POLITICS_CATEGORIES } from "@/lib/categories";
-import { INDEX_WEIGHTS, METHODOLOGY } from "@/data/methodology";
+import { INDEX_INPUTS, METHODOLOGY } from "@/data/methodology";
 import { getPostChannel } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 
@@ -54,9 +56,10 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
         <p className="text-sm text-muted">{METHODOLOGY.subtitle}</p>
         <p className="rounded-lg bg-panel px-3 py-2 font-mono text-xs leading-5">{METHODOLOGY.formula}</p>
         <ul className="space-y-2">
-          {INDEX_WEIGHTS.map((item) => (
+          {INDEX_INPUTS.map((item) => (
             <li key={item.key}>
-              <span className="font-mono text-accent">{item.weight}%</span> {item.label} — {item.sources}
+              <span className="font-medium">{item.label}</span> — {item.basis}{" "}
+              <span className="text-muted">({item.sources})</span>
             </li>
           ))}
         </ul>
@@ -72,9 +75,9 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
             {SITE.contactEmail}
           </a>
           또는{" "}
-          <a href="/contact" className="text-accent hover:underline">
+          <Link href="/contact" className="text-accent hover:underline">
             문의하기
-          </a>
+          </Link>
           로 보내 주십시오.
         </p>
       </section>

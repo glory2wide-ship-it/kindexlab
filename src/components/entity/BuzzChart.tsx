@@ -91,6 +91,12 @@ export function BuzzChart({
             ))}
           </dl>
         </div>
+        {/* The series is drawn from the current index and rank, not from stored
+            observations, so it must not read as a measured price history. */}
+        <p className="border-t border-line px-5 py-3 text-[11px] leading-5 text-muted md:px-7">
+          구간 차트는 현재 지수와 순위를 바탕으로 그린 참고용 시각화입니다. 항목별 실측 이력
+          저장은 아직 도입 전이라 과거 시점의 관측값이 아닙니다.
+        </p>
       </div>
 
     </section>

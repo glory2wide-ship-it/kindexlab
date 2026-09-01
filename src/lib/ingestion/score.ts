@@ -1,7 +1,12 @@
+// `size` is the assumed length of the source list, but several feeds return more
+// rows than that, and an unclamped ratio then runs past the bottom of the band:
+// rank 48 against a size of 20 lands at -561, which no reading of a score that
+// starts at 880 can justify. Clamping holds the overflow at the floor; ordering
+// is unchanged because the ratio is monotonic in rank.
 export function scoreFromRank(rank: number, size: number, floor = 880, ceil = 1860): number {
   if (size <= 1) return ceil;
   const t = 1 - (rank - 1) / Math.max(size - 1, 1);
-  return Number((floor + t * (ceil - floor)).toFixed(2));
+  return Number((floor + Math.min(Math.max(t, 0), 1) * (ceil - floor)).toFixed(2));
 }
 
 export function scoreFromMetric(metric: number, scale = 72, floor = 820): number {
