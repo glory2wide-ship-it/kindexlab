@@ -37,15 +37,17 @@ export const metadata: Metadata = {
 const FEATURED_COLUMNS = 7;
 
 export default async function HomePage() {
-  const [unified, columns, market] = await Promise.all([
-    loadUnifiedMarket(),
+  // Awaited first: the unified board now ranks from these rows, so it can no
+  // longer be built in parallel with the fetch that produces them.
+  const market = await getRankings().catch(() => ({
+    updatedAt: new Date().toISOString(),
+    status: "open" as const,
+    indices: [],
+    items: [],
+  }));
+  const [unified, columns] = await Promise.all([
+    loadUnifiedMarket(market),
     loadFeaturedColumns(FEATURED_COLUMNS),
-    getRankings().catch(() => ({
-      updatedAt: new Date().toISOString(),
-      status: "open" as const,
-      indices: [],
-      items: [],
-    })),
   ]);
 
   const jsonLd = {

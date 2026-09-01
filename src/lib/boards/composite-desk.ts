@@ -1,8 +1,8 @@
 import { buildHeatmapItems, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
 import { loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
-import { POST_CHANNELS } from "@/lib/posts/channels";
+import { itemsForChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
-import type { RankingEntity } from "@/lib/types";
+import type { RankingEntity, RankingsPayload } from "@/lib/types";
 
 /** Tiles on the unified landing heatmap. */
 export const UNIFIED_HEATMAP_TILES = 25;
@@ -69,27 +69,37 @@ function tagChannel(items: RankingEntity[], channel: PostChannel): RankingEntity
   return items.map((item) => ({ ...toTileEntity(item), sourceChannel: channel }));
 }
 
+/** Board rows for one channel, used where the live feed has no coverage. */
+async function boardPool(channel: PostChannel): Promise<RankingEntity[]> {
+  let boards: HeatmapBoardPayload[] = [];
+  try {
+    boards = await loadChannelHeatmapPayloads(channel);
+  } catch {
+    /* one desk failing to seed must not blank the whole landing board */
+  }
+  return boards.length ? buildHeatmapItems({ boards, gender: "all", age: "all" }) : [];
+}
+
 /**
  * The landing page's cross-category board.
  *
- * Reads the same per-channel board payloads the desk pages render, rather than
- * the live rankings feed: that feed carries no economy rows at all and the
- * board pages drop politics, so anything derived from it can only ever show two
- * of the four categories.
+ * Prefers the ingest snapshot, which the trends workflow refreshes every five
+ * minutes. The board payloads this used to read exclusively cannot move at all
+ * in production: `src/data/boards/` is gitignored and Supabase is unset, so no
+ * cached board ships with the deploy and every channel falls through to
+ * `buildSampleBoard`, whose rows come from a hardcoded seed list ordered by
+ * index. That renders identically on every request forever.
+ *
+ * 경제 has no ingestion source — no snapshot row carries `economy_board` — so it
+ * still falls back to boards and stays static until one exists. The other three
+ * channels now track the snapshot.
  */
-export async function loadUnifiedMarket(): Promise<UnifiedMarket> {
+export async function loadUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMarket> {
   const loaded = await Promise.all(
     POST_CHANNELS.map(async (meta) => {
-      let boards: HeatmapBoardPayload[] = [];
-      try {
-        boards = await loadChannelHeatmapPayloads(meta.id);
-      } catch {
-        /* one desk failing to seed must not blank the whole landing board */
-      }
-      const composite = boards.length
-        ? buildHeatmapItems({ boards, gender: "all", age: "all" })
-        : [];
-      const ranked = tagChannel([...composite].sort(byHeat), meta.id);
+      const live = market ? itemsForChannel(market.items, meta.id) : [];
+      const pool = live.length ? live : await boardPool(meta.id);
+      const ranked = tagChannel([...pool].sort(byHeat), meta.id);
       return { meta, ranked };
     }),
   );
