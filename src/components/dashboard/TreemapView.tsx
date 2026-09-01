@@ -116,56 +116,35 @@ export function TreemapView({
         score: scoreForTimeframe(entity, timeframe),
       })),
     );
-    const first = visible[0];
-    const rest = visible.slice(1);
-    const rank1Width = Math.max(1, Math.round(width * RANK_1_AREA_RATIO));
-    const restWidth = Math.max(1, width - rank1Width - gap);
-    const firstNode: TreeNode = {
-      name: first.name,
-      rank: 1,
-      sizeRatio: allocation.ratios.get(first.id) ?? RANK_1_AREA_RATIO,
-      entity: first,
-    };
-    const restChildren: TreeNode[] = rest.map((entity, index) => ({
+    // One squarified pass over every tile, rank 1 included. Laying the leader out
+    // separately as a full-height column made its area a function of width alone,
+    // so holding it to 15% would have stretched it into a narrow strip. Letting
+    // squarify place it keeps the 15% share exact and the shape close to square.
+    const children: TreeNode[] = visible.map((entity, index) => ({
       name: entity.name,
-      rank: index + 2,
-      sizeRatio: allocation.ratios.get(entity.id) ?? 0,
+      rank: index + 1,
+      sizeRatio:
+        allocation.ratios.get(entity.id) ?? (index === 0 ? RANK_1_AREA_RATIO : 0),
       entity,
     }));
     if (allocation.leftover > 0.002) {
-      restChildren.push({ name: "__gap__", sizeRatio: allocation.leftover });
+      children.push({ name: "__gap__", sizeRatio: allocation.leftover });
     }
-    const restLeaves =
-      restChildren.length === 0
-        ? []
-        : treemap<TreeNode>()
-            .size([restWidth, height])
-            .tile(treemapSquarify.ratio(1.15))
-            .paddingInner(gap)
-            .paddingOuter(0)
-            .round(true)(
-              hierarchy<TreeNode>({ name: "rest", children: restChildren })
-                .sum((node) => (node.children?.length ? 0 : Math.max(node.sizeRatio ?? 0, 0)))
-                .sort((a, b) => (a.data.rank ?? 999) - (b.data.rank ?? 999)),
-            )
-            .leaves()
-            .filter((leaf) => {
-              const entity = leaf.data.entity;
-              if (!entity) return false;
-              return [leaf.x0, leaf.x1, leaf.y0, leaf.y1].every((value) => Number.isFinite(value));
-            })
-            .map((leaf) => {
-              leaf.x0 += rank1Width + gap;
-              leaf.x1 += rank1Width + gap;
-              return leaf;
-            });
-    const firstLeaf = treemap<TreeNode>()
-      .size([rank1Width, height])
-      .paddingInner(0)
+    return treemap<TreeNode>()
+      .size([width, height])
+      .tile(treemapSquarify.ratio(1.15))
+      .paddingInner(gap)
       .paddingOuter(0)
-      .round(true)(hierarchy<TreeNode>(firstNode).sum((node) => Math.max(node.sizeRatio ?? 1, 0.25)))
-      .leaves()[0];
-    return firstLeaf ? [firstLeaf, ...restLeaves] : restLeaves;
+      .round(true)(
+        hierarchy<TreeNode>({ name: "root", children })
+          .sum((node) => (node.children?.length ? 0 : Math.max(node.sizeRatio ?? 0, 0)))
+          .sort((a, b) => (a.data.rank ?? 999) - (b.data.rank ?? 999)),
+      )
+      .leaves()
+      .filter((leaf) => {
+        if (!leaf.data.entity) return false;
+        return [leaf.x0, leaf.x1, leaf.y0, leaf.y1].every((value) => Number.isFinite(value));
+      });
     } catch {
       return [];
     }

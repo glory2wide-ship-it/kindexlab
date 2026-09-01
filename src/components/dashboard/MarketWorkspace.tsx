@@ -57,6 +57,7 @@ export function MarketWorkspace({
   hideTimeframes = false,
   boardSlug,
   showRegion = false,
+  maxItems = TREEMAP_MAX_ITEMS,
 }: {
   items: RankingEntity[];
   initialCategory?: CategoryId;
@@ -76,6 +77,8 @@ export function MarketWorkspace({
   hideTimeframes?: boolean;
   boardSlug?: string;
   showRegion?: boolean;
+  /** Tile cap for this desk. Defaults to the shared ceiling. */
+  maxItems?: number;
 }) {
   const [view, setView] = useState<ViewMode>(initialView);
   const [category, setCategory] = useState<CategoryId>(initialCategory);
@@ -98,9 +101,10 @@ export function MarketWorkspace({
   );
   /** Single source of truth: treemap + list both render this exact array. */
   const sortedItems = useMemo(() => {
+    const cap = Math.max(1, Math.min(maxItems, TREEMAP_MAX_ITEMS));
     try {
       if (isHeadlineFeed(filtered)) {
-        return rankHeadlineFeed(filtered, { timeframe, gender, age }).slice(0, TREEMAP_MAX_ITEMS);
+        return rankHeadlineFeed(filtered, { timeframe, gender, age }).slice(0, cap);
       }
       const byTime = rankItemsForTimeframe(filtered, timeframe);
       const ordered = skipDemographicSkew ? byTime : applyDemographicSkew(byTime, gender, age);
@@ -108,7 +112,7 @@ export function MarketWorkspace({
         showRegion && region !== "all"
           ? ordered.filter((item) => entityMatchesRegion(item, region))
           : ordered;
-      const sliced = regionLocked.slice(0, TREEMAP_MAX_ITEMS).map((item, index) => ({ ...item, rank: index + 1 }));
+      const sliced = regionLocked.slice(0, cap).map((item, index) => ({ ...item, rank: index + 1 }));
       if (sliced.length) return sliced;
     } catch {
       /* keep tiles from the region-locked payload so a bad combo never mixes 시/도 */
@@ -117,8 +121,8 @@ export function MarketWorkspace({
       showRegion && region !== "all"
         ? filtered.filter((item) => entityMatchesRegion(item, region))
         : filtered;
-    return fallback.slice(0, TREEMAP_MAX_ITEMS).map((item, index) => ({ ...item, rank: index + 1 }));
-  }, [filtered, timeframe, gender, age, region, showRegion, skipDemographicSkew]);
+    return fallback.slice(0, cap).map((item, index) => ({ ...item, rank: index + 1 }));
+  }, [filtered, timeframe, gender, age, region, showRegion, skipDemographicSkew, maxItems]);
   const demoKey = filterKey(gender, age, region);
   const demoActive = gender !== "all" || age !== "all" || region !== "all";
 

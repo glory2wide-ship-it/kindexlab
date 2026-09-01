@@ -46,6 +46,15 @@ export interface ChannelLiveMarket {
   indices: MarketIndex[];
 }
 
+/**
+ * Per-desk tile caps. 엔터테인먼트 and 정치 draw from far deeper pools than the
+ * map can label legibly, so they stop at 25; the rest keep the shared ceiling.
+ */
+const CHANNEL_HEATMAP_MAX_ITEMS: Partial<Record<PostChannel, number>> = {
+  entertainment: 25,
+  politics: 25,
+};
+
 export function ChannelMarketDesk({
   channel,
   boards,
@@ -278,6 +287,7 @@ export function ChannelMarketDesk({
           onRegion={setRegion}
           showRegion={showRegion}
           boardSlug={selectedSlug || undefined}
+          maxItems={CHANNEL_HEATMAP_MAX_ITEMS[channel]}
           title={selectedBoard ? selectedBoard.title : title}
           subtitle={
             selectedBoard

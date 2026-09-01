@@ -12,10 +12,17 @@ export interface TreemapBox {
   y1: number;
 }
 
-export const RANK_1_AREA_RATIO = 0.25;
-export const REMAINING_AREA_RATIO = 0.75;
-/** Rank 2+ must stay strictly below the rank-1 25% share. */
-export const RANK_BELOW_CAP = 0.249;
+/** Rank 1 always occupies this share of the map's area. */
+export const RANK_1_AREA_RATIO = 0.15;
+export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
+/**
+ * Rank 2+ must stay strictly below the rank-1 share, otherwise the leader stops
+ * reading as the leader. Derived rather than written out so the two cannot drift
+ * apart when the share is retuned.
+ */
+export const RANK_BELOW_CAP = RANK_1_AREA_RATIO - 0.001;
+/** Fewest tiles for which the fixed rank-1 share still exceeds an equal split. */
+const MIN_ITEMS_FOR_FIXED_LEAD = Math.ceil(1 / RANK_1_AREA_RATIO);
 
 export interface HeatmapSizeInput {
   id: string;
@@ -35,8 +42,14 @@ function safeScore(value: number): number {
 }
 
 /** Rank Zipf × normalized score. Rank 2 leads; a higher index still enlarges a tile. */
-function rankScoreWeight(rank: number, score: number, peakScore: number, exponent: number): number {
-  const place = Math.max(Math.round(rank), 2);
+function rankScoreWeight(
+  rank: number,
+  score: number,
+  peakScore: number,
+  exponent: number,
+  floorPlace = 2,
+): number {
+  const place = Math.max(Math.round(rank), floorPlace);
   const rankPart = 1 / place ** exponent;
   const peak = Math.max(peakScore, 1);
   const scoreNorm = Math.min(1, safeScore(score) / peak);
@@ -101,11 +114,30 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
     return { ratios, leftover: 0 };
   }
 
+  // Below this count an equal split would already hand every tile more than the
+  // leader's fixed share, so pinning rank 1 to it would shrink the leader below
+  // its followers and force the rest into a wall of identical capped tiles.
+  // Small maps fall back to a straight weighted split, where rank 1 leads on its
+  // own merits.
+  if (items.length < MIN_ITEMS_FOR_FIXED_LEAD) {
+    const peak = Math.max(...items.map((item) => safeScore(item.score)), 1);
+    const weights = items.map((item, index) =>
+      rankScoreWeight(item.rank ?? index + 1, item.score, peak, 1.28, 1),
+    );
+    const total = weights.reduce((sum, value) => sum + value, 0) || 1;
+    items.forEach((item, index) => ratios.set(item.id, weights[index] / total));
+    return { ratios, leftover: 0 };
+  }
+
   ratios.set(items[0].id, RANK_1_AREA_RATIO);
   const rest = items.slice(1);
   const packed = items.length >= 20;
   const exponent = packed ? 0.88 : 1.28;
-  const cap = packed ? 0.11 : RANK_BELOW_CAP;
+  // Held clearly under the leader rather than just below it. At the bare cap the
+  // runner-up lands within a tenth of a point of rank 1 and the two read as the
+  // same size, which defeats the fixed share. A packed map is squeezed further
+  // still so the tail keeps usable area.
+  const cap = packed ? Math.min(0.11, RANK_BELOW_CAP) : RANK_1_AREA_RATIO * 0.8;
   const peak = Math.max(...rest.map((item) => safeScore(item.score)), 1);
   const weights = rest.map((item, index) =>
     rankScoreWeight(item.rank ?? index + 2, item.score, peak, exponent),
