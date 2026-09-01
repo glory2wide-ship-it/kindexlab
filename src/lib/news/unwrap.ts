@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fetchText } from "@/lib/ingestion/http";
+import { activeMarket } from "@/lib/market/config";
 
 /**
  * Resolves Google News RSS links to the publisher's own article URL.
@@ -81,19 +82,25 @@ export async function flushUnwrapCache(): Promise<boolean> {
  * it in the trailing bytes of a ~590KB document, so there is nothing to gain
  * from streaming and stopping early.
  */
-async function readSignature(url: string): Promise<{ ts: number; sig: string } | null> {
-  const html = await fetchText(url, { headers: { Accept: "text/html,application/xhtml+xml" } });
+async function readSignature(url: string): Promise<{ ts: number; sig: string; html: string } | null> {
+  const html = await fetchText(url, {
+    headers: {
+      Accept: "text/html,application/xhtml+xml",
+      Referer: "https://news.google.com/",
+    },
+  });
   const sig = html.match(/data-n-a-sg="([^"]+)"/)?.[1];
   const ts = html.match(/data-n-a-ts="(\d+)"/)?.[1];
-  if (!sig || !ts) return null;
-  return { ts: Number(ts), sig };
+  if (!sig || !ts) return { ts: 0, sig: "", html };
+  return { ts: Number(ts), sig, html };
 }
 
 function rpcPayload(id: string, ts: number, sig: string): string {
+  const ceid = activeMarket().googleNews.ceid;
   const inner = JSON.stringify([
     "garturlreq",
     [
-      ["X", "X", ["X", "X"], null, null, 1, 1, "US:en", null, 1, null, null, null, null, null, 0, 1],
+      ["X", "X", ["X", "X"], null, null, 1, 1, ceid, null, 1, null, null, null, null, null, 0, 1],
       "X",
       "X",
       1,
@@ -111,6 +118,21 @@ function rpcPayload(id: string, ts: number, sig: string): string {
     sig,
   ]);
   return JSON.stringify([[[RPC_ID, inner, null, "generic"]]]);
+}
+
+/** Non-Google publisher URL sometimes appears in the interstitial HTML. */
+function extractAlternateUrl(html: string): string | null {
+  const patterns = [
+    /property="og:url"\s+content="(https?:\/\/[^"]+)"/i,
+    /<link[^>]+rel="canonical"[^>]+href="(https?:\/\/[^"]+)"/i,
+    /data-url="(https?:\/\/[^"]+)"/i,
+  ];
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    const url = match?.[1];
+    if (url && !isGoogleNewsUrl(url) && !url.includes("google.com/")) return url;
+  }
+  return null;
 }
 
 /**
@@ -137,16 +159,31 @@ async function resolveOne(url: string): Promise<string | null> {
   const id = articleId(url);
   if (!id) return null;
 
-  const signature = await readSignature(url);
-  if (!signature) return null;
+  const page = await readSignature(url);
+  if (!page) return null;
+
+  if (!page.sig || !page.ts) {
+    return extractAlternateUrl(page.html);
+  }
 
   const body = await fetchText(RPC_ENDPOINT, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-    body: new URLSearchParams({ "f.req": rpcPayload(id, signature.ts, signature.sig) }).toString(),
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: "https://news.google.com/",
+    },
+    body: new URLSearchParams({ "f.req": rpcPayload(id, page.ts, page.sig) }).toString(),
   });
 
-  return parseRpcResponse(body);
+  return parseRpcResponse(body) ?? extractAlternateUrl(page.html);
+}
+
+/**
+ * Resolves a feed link to a citable publisher URL. Safe to call on any href.
+ */
+export async function resolvePublisherUrl(url: string): Promise<string | null> {
+  if (!isGoogleNewsUrl(url)) return url;
+  return unwrapNewsUrl(url);
 }
 
 /**

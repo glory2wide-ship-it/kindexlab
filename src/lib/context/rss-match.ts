@@ -1,6 +1,8 @@
+import { publisherLinksFromDescription } from "@/lib/context/crawl-news-rss";
 import { fetchText } from "@/lib/ingestion/http";
 import { namesOverlap } from "@/lib/ingestion/names";
 import { parseRssItems } from "@/lib/ingestion/parse";
+import { isGoogleNewsUrl, publisherFromUrl, resolvePublisherUrl } from "@/lib/news/unwrap";
 import type { ContextSource } from "@/lib/context/types";
 
 const FEEDS = [
@@ -69,18 +71,21 @@ export async function matchKeywordInRss(keyword: string, limit = 5): Promise<Con
     if (result.status !== "fulfilled") continue;
     for (const item of result.value.items) {
       if (!namesOverlap(keyword, item.title)) continue;
-      const url = item.link;
-      if (!usableUrl(url) || seen.has(url)) continue;
-      seen.add(url);
-      hits.push({
-        title: item.title,
-        url,
-        publisher: result.value.feed.label,
-        publishedAt: formatDate(item.pubDate),
-        snippet: item.description?.slice(0, 220),
-        tier: "news",
-      });
-      if (hits.length >= limit) return hits;
+      const candidates = [item.link, ...publisherLinksFromDescription(item.description)].filter(usableUrl);
+      for (const raw of candidates) {
+        const url = await resolvePublisherUrl(raw);
+        if (!url || isGoogleNewsUrl(url) || seen.has(url)) continue;
+        seen.add(url);
+        hits.push({
+          title: item.title,
+          url,
+          publisher: result.value.feed.label || publisherFromUrl(url),
+          publishedAt: formatDate(item.pubDate),
+          snippet: item.description?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 220),
+          tier: "news",
+        });
+        if (hits.length >= limit) return hits;
+      }
     }
   }
 

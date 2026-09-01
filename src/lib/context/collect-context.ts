@@ -1,3 +1,4 @@
+import { crawlKeywordNewsRss, publisherLinksFromDescription } from "@/lib/context/crawl-news-rss";
 import { fetchSerperVideos, fetchSerperWeb } from "@/lib/context/fallback-serper";
 import { buildIntentHints } from "@/lib/context/intent-outline";
 import {
@@ -7,7 +8,7 @@ import {
 import { buildSignalBrief } from "@/lib/context/signal-brief";
 import type { CollectedContext, ContextSource } from "@/lib/context/types";
 import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
-import { publisherFromUrl, unwrapNewsUrls } from "@/lib/news/unwrap";
+import { isGoogleNewsUrl, publisherFromUrl, unwrapNewsUrls } from "@/lib/news/unwrap";
 import type { RankingEntity } from "@/lib/types";
 
 const DEFAULT_LIMIT = 8;
@@ -41,6 +42,31 @@ function mergeSources(existing: ContextSource[], incoming: ContextSource[]): Con
   return out;
 }
 
+async function materializeSources(
+  docs: { title: string; link?: string; publisher?: string; publishedAt?: string; snippet?: string }[],
+): Promise<{ sources: ContextSource[]; unwrapped: { resolved: number; failed: number } }> {
+  const links = docs.map((doc) => doc.link).filter(usableUrl);
+  const { resolved, stats } = await unwrapNewsUrls(links);
+  const seen = new Set<string>();
+  const sources: ContextSource[] = [];
+
+  for (const doc of docs) {
+    if (!usableUrl(doc.link)) continue;
+    const target = resolved.get(doc.link);
+    if (!target || isGoogleNewsUrl(target) || seen.has(target)) continue;
+    seen.add(target);
+    sources.push({
+      title: doc.title,
+      url: target,
+      publisher: doc.publisher || publisherFromUrl(target),
+      publishedAt: formatDate(doc.publishedAt),
+      snippet: doc.snippet?.slice(0, 220),
+      tier: "news",
+    });
+  }
+  return { sources, unwrapped: { resolved: stats.resolved, failed: stats.failed } };
+}
+
 async function newsSourcesFromRetrieval(
   keyword: string,
   options: { limit?: number; lookbackHours?: number },
@@ -59,30 +85,25 @@ async function newsSourcesFromRetrieval(
   let lookbackHours = ladder[0] ?? 96;
 
   for (const hours of ladder) {
-    const retrieval = await retrieveNewsForKeyword(keyword, { limit, lookbackHours: hours });
+    const retrieval = await retrieveNewsForKeyword(keyword, {
+      limit,
+      lookbackHours: hours,
+      // Boards already ingest with trustedOnly:false; matching that here keeps
+      // articles that Google labels without a recognised outlet string.
+      trustedOnly: false,
+    });
     providers = retrieval.providers;
     lookbackHours = hours;
 
-    const links = retrieval.docs.map((doc) => doc.link).filter(usableUrl);
-    const { resolved, stats } = await unwrapNewsUrls(links);
-    unwrapped = { resolved: stats.resolved, failed: stats.failed };
+    const materialized = await materializeSources(retrieval.docs);
+    unwrapped = materialized.unwrapped;
 
     const seen = new Set<string>();
     sources = [];
-    for (const doc of retrieval.docs) {
-      if (!usableUrl(doc.link)) continue;
-      const target = resolved.get(doc.link);
-      if (!target) continue;
-      if (seen.has(target)) continue;
-      seen.add(target);
-      sources.push({
-        title: doc.title,
-        url: target,
-        publisher: doc.publisher || publisherFromUrl(target),
-        publishedAt: formatDate(doc.publishedAt),
-        snippet: doc.snippet?.slice(0, 220),
-        tier: "news",
-      });
+    for (const source of materialized.sources) {
+      if (seen.has(source.url)) continue;
+      seen.add(source.url);
+      sources.push(source);
     }
 
     if (sources.length > NEWS_FALLBACK_THRESHOLD) break;
@@ -152,8 +173,13 @@ export async function collectArticleContext(
 
   const signal = await buildSignalBrief({ keyword, entity, related });
 
-  const news = await newsSourcesFromRetrieval(keyword, options);
-  let sources = mergeSources(news.sources, signal.rssSources);
+  const [crawled, news] = await Promise.all([
+    crawlKeywordNewsRss(keyword, DEFAULT_LIMIT),
+    newsSourcesFromRetrieval(keyword, options),
+  ]);
+
+  let sources = mergeSources(crawled, news.sources);
+  sources = mergeSources(sources, signal.rssSources);
 
   if (sources.length <= NEWS_FALLBACK_THRESHOLD) {
     const web = await fetchSerperWeb(keyword, 5);
