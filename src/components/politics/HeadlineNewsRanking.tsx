@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
 import { headlinesToEntities } from "@/lib/news/headline-entities";
-import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import type { HeadlineRankingSnapshot, HeadlineChannel } from "@/lib/politics/headlines";
 import type { PostChannel } from "@/lib/posts/types";
 import type { RankingEntity } from "@/lib/types";
@@ -90,15 +89,12 @@ export function HeadlineNewsRanking({
 
   return (
     <section className="space-y-3">
-      <div className="flex flex-wrap items-end justify-between gap-2 px-1">
-        <div>
-          <DeskEyebrow variant="xs">
-            HEADLINE RANKING · TOP {topic === "economy" || topic === "culture" ? 25 : 20}
-          </DeskEyebrow>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight">{copy.title}</h2>
+      {onItems ? null : (
+        <div className="flex flex-wrap items-end justify-between gap-2 px-1">
+          <h2 className="text-lg font-semibold tracking-tight">{copy.title}</h2>
+          <p className="text-[12px] text-muted">{copy.source}</p>
         </div>
-        <p className="text-[12px] text-muted">{copy.source}</p>
-      </div>
+      )}
       {error ? (
         <p className="rounded-xl border border-line bg-panel px-4 py-6 text-sm text-muted">{error}</p>
       ) : null}

@@ -261,11 +261,10 @@ export function selectHeatmapRows(
   const ranking = board.ranking ?? [];
   const demographics = board.demographics ?? NO_DEMOGRAPHICS;
   if (board.slug === HOUSING_BOARD_SLUG) {
-    const tiles = 25;
     if (region !== "all") {
-      return padRegionOnly(filterRowsByRegion(ranking, region), region, tiles, board.slug);
+      return padRegionOnly(filterRowsByRegion(ranking, region), region, cap, board.slug);
     }
-    return ensureHousingApartmentRanking(ranking, tiles);
+    return ensureHousingApartmentRanking(ranking, cap);
   }
   if (region !== "all") {
     try {
@@ -305,6 +304,25 @@ export function selectHeatmapRows(
     /* fall through to seed-safe list */
   }
   return padRankEntries(ranking.filter(Boolean), ranking, cap);
+}
+
+/** Round-robin merge so 종합 heatmaps don't let one board crowd out the menu. */
+function interleaveHeatmapPools(pools: RankingEntity[][], limit: number): RankingEntity[] {
+  const merged: RankingEntity[] = [];
+  const cursors = new Array(pools.length).fill(0);
+  while (merged.length < limit) {
+    let advanced = false;
+    for (let i = 0; i < pools.length && merged.length < limit; i += 1) {
+      const pool = pools[i];
+      const cursor = cursors[i] as number;
+      if (!pool || cursor >= pool.length) continue;
+      merged.push(pool[cursor]!);
+      cursors[i] = cursor + 1;
+      advanced = true;
+    }
+    if (!advanced) break;
+  }
+  return merged;
 }
 
 /**
@@ -354,8 +372,8 @@ export function buildHeatmapItems({
   if (boards.length) {
     const channel = boards[0]?.channel ?? "entertainment";
     const perBoard = compositePerBoard(channel);
-    const merged = boards.flatMap((item) => {
-      const rows = selectHeatmapRows(item, gender, age, perBoard);
+    const pools = boards.map((item) => {
+      const rows = selectHeatmapRows(item, gender, age, perBoard, region);
       return rankRowsToEntities(rows, item).map((entity, index) => ({
         ...entity,
         rank: index + 1,
@@ -364,13 +382,14 @@ export function buildHeatmapItems({
       }));
     });
     if (channel === "economy" || channel === "culture" || channel === "travel") {
-      return merged.slice(0, rankLimitForChannel(channel)).map((entity, index) => ({
+      const limit = rankLimitForChannel(channel);
+      return interleaveHeatmapPools(pools, limit).map((entity, index) => ({
         ...entity,
         rank: index + 1,
         previousRank: index + 1,
       }));
     }
-    return merged;
+    return pools.flat();
   }
 
   return liveItems ?? [];

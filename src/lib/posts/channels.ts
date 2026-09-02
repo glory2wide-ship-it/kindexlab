@@ -37,7 +37,8 @@ export const POST_CHANNELS: {
     label: "엔터테인먼트",
     eyebrow: "K ENTERTAINMENT DESK",
     indexTitle: "엔터테인먼트 지수",
-    description: "아이돌·방송·셀럽 이슈 키워드로 독립 매거진 칼럼을 발행합니다.",
+    description:
+      "음원·시청률·웹툰·게임·숏폼·인플루언서 공개 순위를 실시간 지수와 브리핑·칼럼으로 읽습니다.",
   },
   {
     id: "politics",
@@ -45,7 +46,8 @@ export const POST_CHANNELS: {
     label: "정치",
     eyebrow: "POLITICS ISSUE INDEX DESK",
     indexTitle: "정치 이슈 지수",
-    description: "정당·정치인·지원금 이슈를 지수(INDEX) 키워드에서 골라 독립 칼럼으로 풉니다.",
+    description:
+      "정당·정치인 지지도, 헤드라인, 평론가·시사 유튜브, 지자체 정책·지원금을 지수로 읽습니다.",
   },
   {
     id: "economy",
@@ -53,7 +55,8 @@ export const POST_CHANNELS: {
     label: "경제",
     eyebrow: "ECONOMY ISSUE INDEX DESK",
     indexTitle: "경제 이슈 지수",
-    description: "환율·생활 화제 키워드를 지수(INDEX)에서 고른 뒤 독립 칼럼으로 하루 세 번 풉니다.",
+    description:
+      "금리·증시·환율·물가·부동산·정부 지원금·창업·경제 헤드라인을 랭킹 보드로 읽습니다.",
   },
   {
     id: "culture",
@@ -61,7 +64,8 @@ export const POST_CHANNELS: {
     label: "문화/생활",
     eyebrow: "CULTURE & LIVING ISSUE INDEX DESK",
     indexTitle: "문화/생활 이슈 지수",
-    description: "공연·전시·웹툰·생활 이슈 키워드를 같은 매거진 규격으로 다룹니다.",
+    description:
+      "공연·전시·웹툰·문화 지원·맛집·생활 트렌드와 문화 헤드라인을 한 데스크에서 읽습니다.",
   },
   {
     id: "travel",
@@ -69,7 +73,8 @@ export const POST_CHANNELS: {
     label: "여행/맛집",
     eyebrow: "TRAVEL & FOOD ISSUE INDEX DESK",
     indexTitle: "여행/맛집 이슈 지수",
-    description: "국내·해외 여행과 나들이·맛집 이슈 키워드를 같은 매거진 규격으로 다룹니다.",
+    description:
+      "국내 여행·나들이·지역 맛집·숙박·레저 화제를 랭킹 보드와 헤드라인으로 읽습니다.",
   },
 ];
 

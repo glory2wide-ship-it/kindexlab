@@ -1,8 +1,8 @@
-import { AGE_SEGMENTS } from "@/lib/boards/demographics";
+import { VISIBLE_AGE_SEGMENTS, normalizeVisibleAge } from "@/lib/boards/demographics";
 import type { AgeSegment } from "@/lib/boards/types";
 
 const IDOL_AGES: AgeSegment[] = ["10s", "20s", "30s"];
-const TROT_AGES: AgeSegment[] = ["40s", "50s", "60s", "70s"];
+const TROT_AGES: AgeSegment[] = ["40s", "50s", "60s"];
 
 /** Age tabs shown for a ranking board. Undefined means every cohort. */
 export function ageTabsForBoard(slug?: string): AgeSegment[] | undefined {
@@ -23,9 +23,10 @@ export function clampAgeForBoard(
   slug: string | undefined,
   age: "all" | AgeSegment,
 ): "all" | AgeSegment {
-  return isAgeAllowedForBoard(slug, age) ? age : "all";
+  const normalized = normalizeVisibleAge(age);
+  return isAgeAllowedForBoard(slug, normalized) ? normalized : "all";
 }
 
 export function visibleAgeSegments(slug?: string): AgeSegment[] {
-  return ageTabsForBoard(slug) ?? AGE_SEGMENTS;
+  return ageTabsForBoard(slug) ?? VISIBLE_AGE_SEGMENTS;
 }

@@ -27,6 +27,27 @@ export async function clearPersistedEditions(): Promise<number> {
   }
 }
 
+export async function removePersistedEdition(editionDate: string): Promise<number> {
+  const file = path.join(process.cwd(), extraRel);
+  try {
+    let existing: BriefingArticle[] = [];
+    try {
+      const raw = await readFile(file, "utf8");
+      existing = (JSON.parse(raw) as { articles?: BriefingArticle[] }).articles ?? [];
+    } catch {
+      return 0;
+    }
+    const kept = existing.filter((item) => item.editionDate !== editionDate);
+    const removed = existing.length - kept.length;
+    if (removed === 0) return 0;
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, `${JSON.stringify({ articles: kept }, null, 2)}\n`, "utf8");
+    return removed;
+  } catch {
+    return 0;
+  }
+}
+
 export async function persistEdition(articles: BriefingArticle[]): Promise<{ wrote: boolean; path: string }> {
   const file = path.join(process.cwd(), extraRel);
   try {

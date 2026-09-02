@@ -1,3 +1,4 @@
+import { normalizeVisibleAge } from "@/lib/boards/demographics";
 import type { AgeSegment, GenderSegment } from "@/lib/boards/types";
 import type { RankingEntity } from "@/lib/types";
 
@@ -40,11 +41,12 @@ export function applyDemographicSkew(
   gender: "all" | GenderSegment,
   age: "all" | AgeSegment,
 ): RankingEntity[] {
-  if (gender === "all" && age === "all") return items;
+  const cohortAge = normalizeVisibleAge(age);
+  if (gender === "all" && cohortAge === "all") return items;
 
   return [...items]
     .map((item) => {
-      const factor = demographicFactor(item.id, gender, age);
+      const factor = demographicFactor(item.id, gender, cohortAge);
       return {
         ...item,
         buzzScore: Number((item.buzzScore * factor).toFixed(2)),

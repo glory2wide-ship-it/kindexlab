@@ -4,7 +4,7 @@ import { runDailyBriefingJob } from "@/lib/briefing/job";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+export const maxDuration = 900;
 
 async function handle(request: Request) {
   if (!cronAuthorized(request)) {
@@ -21,7 +21,9 @@ async function handle(request: Request) {
     skipped: result.skipped,
     reason: result.reason ?? null,
     editionDate: result.editionDate,
+    removed: result.removed,
     persisted: result.persisted,
+    total: result.articles.length,
     slugs: result.articles.map((item) => item.slug),
     wordCounts: result.articles.map((item) => item.wordCount),
   });

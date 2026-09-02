@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { formatRate } from "@/lib/format";
 import { entityHref } from "@/lib/slugs";
+import { rankForTicker, tickerBuzzScore, tickerChangeRate } from "@/lib/ticker/rank";
 import type { RankingEntity } from "@/lib/types";
 
 export function TickerTape({ items }: { items: RankingEntity[] }) {
-  const safe = (items ?? []).filter((item) => item?.id && item?.name);
-  if (!safe.length) return null;
-  const loop = [...safe, ...safe];
-  const durationSec = Math.max(120, Math.round(Math.max(safe.length, 1) * 2.4));
+  const ranked = rankForTicker(items);
+  if (!ranked.length) return null;
+  const loop = [...ranked, ...ranked];
+  const durationSec = Math.max(120, Math.round(Math.max(ranked.length, 1) * 2.4));
 
   return (
     <div className="relative overflow-hidden border-b border-line bg-panel">
@@ -16,8 +17,9 @@ export function TickerTape({ items }: { items: RankingEntity[] }) {
         style={{ ["--ticker-duration" as string]: `${durationSec}s` }}
       >
         {loop.map((item, index) => {
-          const up = item.fluctuationRate > 0;
-          const down = item.fluctuationRate < 0;
+          const change = tickerChangeRate(item);
+          const up = change > 0;
+          const down = change < 0;
           const tone = up ? "text-up" : down ? "text-down" : "text-muted";
           return (
             <Link
@@ -29,9 +31,9 @@ export function TickerTape({ items }: { items: RankingEntity[] }) {
               <span className="text-muted">{String(item.rank).padStart(2, "0")}</span>
               <span className="text-ink">{item.name}</span>
               <span className={tone}>
-                {up ? "▲" : down ? "▼" : "–"} {formatRate(item.fluctuationRate)}
+                {up ? "▲" : down ? "▼" : "–"} {formatRate(change)}
               </span>
-              <span className="text-muted">{Number(item.buzzScore ?? 0).toFixed(1)}</span>
+              <span className="text-muted">{tickerBuzzScore(item).toFixed(1)}</span>
             </Link>
           );
         })}

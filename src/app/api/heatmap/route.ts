@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   const regionRaw = params.get("region") ?? "all";
   const board = params.get("board")?.trim() || undefined;
   const parsedAge = ageRaw === "all" || isAgeSegment(ageRaw) ? ageRaw : "all";
-  const age = clampAgeForBoard(board, parsedAge);
+  const age = clampAgeForBoard(board, parsedAge === "all" ? "all" : parsedAge);
   const gender = genderRaw === "all" || isGenderSegment(genderRaw) ? genderRaw : "all";
   const region = parseRegionQuery(regionRaw);
 

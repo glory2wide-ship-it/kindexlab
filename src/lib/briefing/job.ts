@@ -1,63 +1,92 @@
-import { composeArticle, composeEdition, ensureBriefingLength } from "@/lib/briefing/compose";
+import { enrichBriefingWithAi, enrichChannelEditionWithAi } from "@/lib/briefing/ai-main";
 import { hasEdition, listSeeded } from "@/lib/briefing/catalog";
+import { composeArticle, composeChannelEdition } from "@/lib/briefing/compose";
 import { editionDateTime, kstDateString } from "@/lib/briefing/dates";
-import { applyAiDraft, generateWithAi } from "@/lib/briefing/ai";
-import { snapshotFromPayload } from "@/lib/briefing/metrics";
-import { persistEdition } from "@/lib/briefing/persist";
+import { channelUsesBoardBriefing, composeBoardChannelEdition } from "@/lib/briefing/from-boards";
+import { persistEdition, removePersistedEdition } from "@/lib/briefing/persist";
+import { POST_CHANNELS } from "@/lib/posts/channels";
 import { getRankings } from "@/lib/providers/trends";
-import type { BriefingArticle, RankingsPayload } from "@/lib/types";
+import type { BriefingArticle } from "@/lib/types";
+import type { PostChannel } from "@/lib/posts/types";
 
-async function currentPayload(): Promise<RankingsPayload> {
-  return getRankings();
+async function composeChannelDraft(
+  channel: PostChannel,
+  editionDate: string,
+  publishedAt: string,
+): Promise<BriefingArticle[]> {
+  if (channelUsesBoardBriefing(channel)) {
+    return composeBoardChannelEdition(channel, editionDate, publishedAt);
+  }
+  const payload = await getRankings();
+  return composeChannelEdition(payload, channel, editionDate, publishedAt);
 }
 
-async function maybeAi(article: BriefingArticle, payload: RankingsPayload): Promise<BriefingArticle> {
-  const draft = await generateWithAi({
-    editionDate: article.editionDate,
-    kind: article.kind,
-    category: article.category,
-    focus: article.focusKeyword ?? "",
-    supportKw: article.supportKeyword ?? "",
-  });
-  if (!draft) return ensureBriefingLength(article, snapshotFromPayload(payload));
-  const next = applyAiDraft(article, draft);
-  const filled = ensureBriefingLength(next, snapshotFromPayload(payload));
-  return filled;
+/** Composes and OpenAI-enriches every briefing for one channel (main + deep-dives). */
+export async function composeChannelEditionWithAi(
+  channel: PostChannel,
+  editionDate: string,
+  publishedAt?: string,
+): Promise<BriefingArticle[]> {
+  const at = publishedAt ?? editionDateTime(editionDate);
+  const draft = await composeChannelDraft(channel, editionDate, at);
+  return enrichChannelEditionWithAi(draft);
 }
 
+/**
+ * Generates the full daily edition across all five channels (46 articles on
+ * current desk counts) using the premium OpenAI pipeline.
+ */
 export async function generateEdition(
-  payload: RankingsPayload,
   editionDate = kstDateString(),
   persist = false,
+  options?: {
+    onChannel?: (channel: PostChannel, count: number) => void;
+    channels?: PostChannel[];
+  },
 ): Promise<BriefingArticle[]> {
   const publishedAt = editionDateTime(editionDate);
-  const composed = composeEdition(payload, editionDate, publishedAt);
-  const articles = await Promise.all(composed.map((article) => maybeAi(article, payload)));
+  const articles: BriefingArticle[] = [];
+  const targets = options?.channels?.length
+    ? POST_CHANNELS.filter(({ id }) => options.channels!.includes(id))
+    : POST_CHANNELS;
+
+  for (const { id: channel } of targets) {
+    const enriched = await composeChannelEditionWithAi(channel, editionDate, publishedAt);
+    articles.push(...enriched);
+    options?.onChannel?.(channel, enriched.length);
+  }
 
   if (persist) await persistEdition(articles);
   return articles;
 }
 
 export async function generateSingle(
-  payload: RankingsPayload,
   editionDate: string,
   kind: BriefingArticle["kind"],
   category: BriefingArticle["category"],
+  channel: PostChannel = "entertainment",
 ): Promise<BriefingArticle> {
   const publishedAt = editionDateTime(editionDate, 7, kind === "main" ? 5 : 20);
-  const base = composeArticle(payload, { editionDate, kind, category, publishedAt });
-  return maybeAi(base, payload);
+  const payload = await getRankings();
+  const base = composeArticle(payload, { editionDate, kind, category, publishedAt, channel });
+  return enrichBriefingWithAi(base, {
+    leadKeyword: base.focusKeyword,
+    categoryHint: channel,
+  });
 }
 
 export async function runDailyBriefingJob(options?: {
   persist?: boolean;
   force?: boolean;
   editionDate?: string;
+  channels?: PostChannel[];
+  onChannel?: (channel: PostChannel, count: number) => void;
 }): Promise<{
   skipped: boolean;
   reason?: string;
   editionDate: string;
   persisted: boolean;
+  removed: number;
   articles: BriefingArticle[];
 }> {
   const editionDate = options?.editionDate ?? kstDateString();
@@ -67,16 +96,23 @@ export async function runDailyBriefingJob(options?: {
       reason: "edition already published",
       editionDate,
       persisted: false,
+      removed: 0,
       articles: listSeeded().filter((item) => item.editionDate === editionDate),
     };
   }
 
+  const removed =
+    options?.force && !options.channels?.length ? await removePersistedEdition(editionDate) : 0;
   const persist = options?.persist ?? true;
-  const articles = await generateEdition(await currentPayload(), editionDate, persist);
+  const articles = await generateEdition(editionDate, persist, {
+    onChannel: options?.onChannel,
+    channels: options?.channels,
+  });
   return {
     skipped: false,
     editionDate,
     persisted: persist,
+    removed,
     articles,
   };
 }

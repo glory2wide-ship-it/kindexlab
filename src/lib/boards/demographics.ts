@@ -23,6 +23,9 @@ export const GENDER_SEGMENTS: GenderSegment[] = ["male", "female"];
 
 export const AGE_SEGMENTS: AgeSegment[] = ["10s", "20s", "30s", "40s", "50s", "60s", "70s"];
 
+/** Tabs shown in 연령 보기. Legacy `70s` data is folded into `60s`. */
+export const VISIBLE_AGE_SEGMENTS: AgeSegment[] = ["10s", "20s", "30s", "40s", "50s", "60s"];
+
 export const GENDER_LABEL: Record<GenderSegment, string> = {
   male: "남성",
   female: "여성",
@@ -34,8 +37,8 @@ export const AGE_LABEL: Record<AgeSegment, string> = {
   "30s": "30대",
   "40s": "40대",
   "50s": "50대",
-  "60s": "60대",
-  "70s": "70대 이상",
+  "60s": "60대 이상",
+  "70s": "60대 이상",
 };
 
 export function segmentLabel(key: SegmentKey): string {
@@ -50,6 +53,15 @@ export function isGenderSegment(key: string): key is GenderSegment {
 
 export function isAgeSegment(key: string): key is AgeSegment {
   return (AGE_SEGMENTS as string[]).includes(key);
+}
+
+/** Maps hidden legacy cohorts onto the visible tab (70s → 60대 이상). */
+export function normalizeVisibleAge(age: "all" | AgeSegment): "all" | AgeSegment {
+  return age === "70s" ? "60s" : age;
+}
+
+export function isVisibleAgeSegment(key: string): key is AgeSegment {
+  return (VISIBLE_AGE_SEGMENTS as string[]).includes(key);
 }
 
 export function filterLabel(
@@ -127,6 +139,36 @@ function sliceOrHead(
   return source.slice(0, Math.max(1, limit));
 }
 
+function mergeAgeCohortRows(
+  primary: BoardRankEntry[],
+  secondary: BoardRankEntry[],
+  limit: number,
+): BoardRankEntry[] {
+  const byName = new Map<string, BoardRankEntry>();
+  for (const row of [...primary, ...secondary]) {
+    const key = normalizeName(row.name);
+    const hit = byName.get(key);
+    if (!hit || row.score > hit.score) byName.set(key, row);
+  }
+  return [...byName.values()]
+    .sort((left, right) => right.score - left.score || left.rank - right.rank)
+    .slice(0, Math.max(1, limit))
+    .map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
+function rowsForAgeSegment(
+  demographics: DemographicRanking,
+  age: AgeSegment,
+  total: BoardRankEntry[],
+  limit: number,
+): BoardRankEntry[] {
+  if (age === "60s") {
+    const merged = mergeAgeCohortRows(demographics.age["60s"] ?? [], demographics.age["70s"] ?? [], limit);
+    return sliceOrHead(merged.length ? merged : undefined, total, limit);
+  }
+  return sliceOrHead(demographics.age[age], total, limit);
+}
+
 export function selectRanking(
   demographics: DemographicRanking,
   total: BoardRankEntry[],
@@ -144,14 +186,14 @@ export function selectRanking(
     gender !== "all" && age !== "all"
       ? blendRankings(
           drop(sliceOrHead(demographics.gender[gender], total, limit)),
-          drop(sliceOrHead(demographics.age[age], total, limit)),
+          drop(rowsForAgeSegment(demographics, age, total, limit)),
           limit,
           dropNames,
         )
       : gender !== "all"
         ? drop(sliceOrHead(demographics.gender[gender], total, limit))
         : age !== "all"
-          ? drop(sliceOrHead(demographics.age[age], total, limit))
+          ? drop(rowsForAgeSegment(demographics, age, total, limit))
           : drop(total);
 
   if (region === "all") {

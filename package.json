@@ -12,7 +12,7 @@
         "lint": "eslint",
         "landing:check": "node scripts/check-landing-desk.mjs",
         "briefing:check": "node scripts/check-briefing-routing.mjs",
-        "briefing:generate": "tsx scripts/generate-briefings.ts",
+        "briefing:generate": "tsx --env-file=.env.local scripts/generate-briefings.ts",
         "ingest:trends": "tsx scripts/ingest-trends.ts",
         "posts:generate": "tsx scripts/generate-posts.ts",
         "analysis:check": "tsx scripts/check-analysis-override.ts",

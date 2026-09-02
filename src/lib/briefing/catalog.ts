@@ -1,32 +1,39 @@
 import extraFile from "@/data/briefings/extra.json";
 import { publishedBriefings } from "@/data/briefings/published";
 import { compareDatesDesc, isLiveEdition } from "@/lib/briefing/dates";
-import { channelUsesBoardBriefing } from "@/lib/briefing/from-boards";
 import { withBriefingCover } from "@/lib/briefing/cover";
+import type { PostChannel } from "@/lib/posts/types";
 import type { BriefingArticle } from "@/lib/types";
 
 function extras(): BriefingArticle[] {
   return (extraFile as { articles?: BriefingArticle[] }).articles ?? [];
 }
 
-/** Archived seeds only — live board-channel dailies are composed from ranking boards. */
-export function listSeeded(): BriefingArticle[] {
+/** Every persisted briefing row (extra.json + published seeds). */
+export function listPersisted(): BriefingArticle[] {
   const map = new Map<string, BriefingArticle>();
   for (const item of [...publishedBriefings(), ...extras()]) {
-    if (
-      item.channel &&
-      channelUsesBoardBriefing(item.channel) &&
-      isLiveEdition(item.editionDate)
-    ) {
-      continue;
-    }
     map.set(item.slug, withBriefingCover(item));
   }
   return [...map.values()].sort(compareArticles);
 }
 
+export function persistedChannelEdition(
+  channel: PostChannel,
+  editionDate: string,
+): BriefingArticle[] {
+  return listPersisted()
+    .filter((item) => item.channel === channel && item.editionDate === editionDate)
+    .sort(compareArticles);
+}
+
+/** Archived seeds only — today's live edition is served from persisted or template compose. */
+export function listSeeded(): BriefingArticle[] {
+  return listPersisted().filter((item) => !isLiveEdition(item.editionDate));
+}
+
 export function hasEdition(editionDate: string): boolean {
-  return listSeeded().some((item) => item.editionDate === editionDate);
+  return listPersisted().some((item) => item.editionDate === editionDate);
 }
 
 export function compareArticles(a: BriefingArticle, b: BriefingArticle): number {

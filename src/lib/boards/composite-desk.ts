@@ -2,7 +2,8 @@ import { buildHeatmapItems, type HeatmapBoardPayload } from "@/lib/boards/heatma
 import { loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
 import { itemsForChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
-import { attachTimeframeMetrics, changeForEntity } from "@/lib/timeframes";
+import { attachTimeframeMetrics } from "@/lib/timeframes";
+import { tickerChangeRate } from "@/lib/ticker/rank";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
 
 /** Tiles on the unified landing heatmap. */
@@ -102,10 +103,10 @@ async function channelDeskPool(
   return live;
 }
 
-/** Uses the same 5m change field the channel heatmap paints. */
+/** Uses the same 5m change field as the ticker and channel heatmap. */
 function deskTopItem(item: RankingEntity): RankingEntity {
   const enriched = attachTimeframeMetrics(item);
-  return { ...enriched, fluctuationRate: changeForEntity(enriched, "5m") };
+  return { ...enriched, fluctuationRate: tickerChangeRate(enriched) };
 }
 
 /**
