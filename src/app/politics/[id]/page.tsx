@@ -16,7 +16,7 @@ import { SITE } from "@/lib/site";
 import { decodeRouteSlug, politicsDetailPath, rankingPath } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 export const dynamicParams = true;
 
 const RESERVED = new Set(["briefing", "archive", "posts", "about"]);

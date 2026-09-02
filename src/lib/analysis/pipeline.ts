@@ -311,8 +311,28 @@ export async function getOrCreateAnalysis(options: {
     return { entry: cached, cache: "stale" };
   }
 
-  const entry = await generateOnce({ ...options, editionDate });
-  return { entry, cache: "miss" };
+  // Never block navigation on a cold slug — warm the chain in the background and
+  // let the page render from measured data until a grounded column is cached.
+  void generateOnce({ ...options, editionDate }).catch(() => undefined);
+  const article = buildTemplate({
+    entity: options.entity,
+    market: options.market,
+    related: options.related,
+    editionDate,
+  });
+  const generatedAt = new Date();
+  return {
+    entry: {
+      slug: options.entity.slug,
+      keyword: options.entity.name,
+      editionDate,
+      generatedAt: generatedAt.toISOString(),
+      expiresAt: generatedAt.toISOString(),
+      article,
+      provenance: { kind: "template", newsDocs: 0, publishers: [], facts: [], buildMs: 0 },
+    },
+    cache: "miss",
+  };
 }
 
 /** Cron entry point: always rebuilds and waits for the result. */

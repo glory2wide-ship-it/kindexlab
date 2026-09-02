@@ -224,7 +224,10 @@ export function TreemapView({
               className="cursor-pointer"
               aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name} ${rate} ${scoreLabel}`}
               data-heatmap-rank={rank}
-              onMouseEnter={(event) => moveHover(event, entity, series, change)}
+              onMouseEnter={(event) => {
+                router.prefetch(href);
+                moveHover(event, entity, series, change);
+              }}
               onMouseMove={(event) => moveHover(event, entity, series, change)}
               onClick={(event) => {
                 if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {

@@ -1,11 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { DailyBriefing } from "@/components/briefing/DailyBriefing";
-import { getBriefingBySlug, getEntitiesBySlugs } from "@/lib/api";
+import { getEntitiesBySlugs } from "@/lib/api";
+import { loadBriefingBySlug } from "@/lib/briefing/store";
 import { briefingMatchesChannel, channelSectionHref, getPostChannel } from "@/lib/posts/channels";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
+
+const loadBriefingPage = cache(async (slug: string) => {
+  const briefing = await loadBriefingBySlug(slug);
+  if (!briefing) return null;
+  const related = briefing.relatedEntitySlugs.length
+    ? await getEntitiesBySlugs(briefing.relatedEntitySlugs)
+    : [];
+  return { briefing, related };
+});
 
 export async function generateMetadata({
   params,
@@ -13,8 +24,9 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const briefing = await getBriefingBySlug(slug);
-  if (!briefing) return { title: "브리핑을 찾을 수 없습니다" };
+  const detail = await loadBriefingPage(slug);
+  if (!detail) return { title: "브리핑을 찾을 수 없습니다" };
+  const { briefing } = detail;
   return {
     title: briefing.title,
     description: briefing.excerpt,
@@ -28,9 +40,10 @@ export default async function PoliticsBriefingArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const briefing = await getBriefingBySlug(slug);
-  if (!briefing || !briefingMatchesChannel(briefing, "politics")) notFound();
-  const related = await getEntitiesBySlugs(briefing.relatedEntitySlugs);
+  const detail = await loadBriefingPage(slug);
+  if (!detail) notFound();
+  const { briefing, related } = detail;
+  if (!briefingMatchesChannel(briefing, "politics")) notFound();
   const meta = getPostChannel("politics");
 
   return (

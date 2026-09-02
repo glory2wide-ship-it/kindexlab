@@ -17,7 +17,7 @@ import { rankingPath, rankingUrl } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
 import type { EntityType } from "@/lib/types";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 export const dynamicParams = true;
 
 export async function generateStaticParams() {

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { marketIndices, rankings, rankingsUpdatedAt } from "@/data/rankings";
 import { snapshotToPayload, buildIndices } from "@/lib/ingestion/compose";
 import {
@@ -116,13 +117,21 @@ async function loadLiveRankings(options?: { refresh?: boolean }): Promise<Rankin
   }
   const maxAgeMs = trendsRevalidateSec() * 1000;
   const stale = !snapshot?.items.length || snapshotAgeMs(snapshot.updatedAt) >= maxAgeMs;
-  if (!options?.refresh && snapshot?.items.length && !stale) {
+  if (options?.refresh) {
+    return ingestFreshRankings();
+  }
+  if (snapshot?.items.length) {
+    if (stale) {
+      void ingestFreshRankings().catch((error) => {
+        console.error("[kindexlab:ingest] background refresh failed", error);
+      });
+    }
     return snapshotToPayload(snapshot);
   }
   return ingestFreshRankings();
 }
 
-export async function getRankings(options?: { refresh?: boolean }): Promise<RankingsPayload> {
+const getRankingsCached = cache(async (options?: { refresh?: boolean }): Promise<RankingsPayload> => {
   const payload = getTrendsSource() === "live" ? await loadLiveRankings(options) : loadMockRankings();
   const items = payload.items.map(attachTimeframeMetrics);
   const cultureItems = items.filter((item) => !isPoliticsEntityType(item.type));
@@ -146,6 +155,10 @@ export async function getRankings(options?: { refresh?: boolean }): Promise<Rank
     items,
     indices: [composite, ...cultureIndices, ...politicsIndices],
   };
+});
+
+export async function getRankings(options?: { refresh?: boolean }): Promise<RankingsPayload> {
+  return getRankingsCached(options);
 }
 
 export function toTrendEntity(entity: RankingEntity, timeframe: Timeframe = "1d"): TrendEntity {

@@ -3,7 +3,6 @@ import { boardPath, menuBoardsForChannel } from "@/lib/boards/registry";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
 import type { CachedBoard } from "@/lib/boards/types";
 import { formatKoreanDate } from "@/lib/briefing/dates";
-import { enrichMainBriefingWithAi } from "@/lib/briefing/ai-main";
 import { withBriefingCover } from "@/lib/briefing/cover";
 import { getPostChannel } from "@/lib/posts/channels";
 import type { BriefingArticle, BriefingSection, CategoryId } from "@/lib/types";
@@ -194,45 +193,29 @@ export async function composeBoardChannelEdition(
   publishedAt: string,
 ): Promise<BriefingArticle[]> {
   const defs = menuBoardsForChannel(channel);
-  const loaded: {
-    defTitle: string;
-    shortTitle: string;
-    focus: string;
-    support: string;
-    cached: CachedBoard;
-  }[] = [];
-
-  for (const def of defs) {
-    if (def.deskKind) continue;
-    try {
-      const cached = await seedBoardIfMissing(def);
-      loaded.push({
-        defTitle: def.title,
-        shortTitle: def.shortTitle,
-        focus: def.focusKeyword,
-        support: def.supportKeyword,
-        cached,
-      });
-    } catch {
-      /* skip */
-    }
-  }
+  const loaded = (
+    await Promise.all(
+      defs.map(async (def) => {
+        if (def.deskKind) return null;
+        try {
+          const cached = await seedBoardIfMissing(def);
+          return {
+            defTitle: def.title,
+            shortTitle: def.shortTitle,
+            focus: def.focusKeyword,
+            support: def.supportKeyword,
+            cached,
+          };
+        } catch {
+          return null;
+        }
+      }),
+    )
+  ).filter((item): item is NonNullable<typeof item> => Boolean(item));
 
   if (!loaded.length) return [];
 
-  const templateMain = mainFromBoards(channel, loaded, editionDate, publishedAt);
-  const leadName = loaded
-    .map((item) => item.cached.ranking[0]?.name)
-    .filter(Boolean)[0] as string | undefined;
-  const relatedKeywords = loaded
-    .map((item) => item.cached.ranking[0]?.name)
-    .filter((name): name is string => Boolean(name))
-    .slice(0, 4);
-
-  const main = await enrichMainBriefingWithAi(templateMain, {
-    leadKeyword: leadName ?? templateMain.focusKeyword ?? getPostChannel(channel).label,
-    relatedKeywords,
-  });
+  const main = mainFromBoards(channel, loaded, editionDate, publishedAt);
   const dives = loaded.map((item, index) =>
     briefingFromBoard(item.cached, {
       kind: "deep-dive",

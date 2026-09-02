@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { cache } from "react";
 import { compareArticles, listSeeded } from "@/lib/briefing/catalog";
 import { composeChannelEdition } from "@/lib/briefing/compose";
 import { withBriefingCover } from "@/lib/briefing/cover";
@@ -82,10 +83,18 @@ export async function getBriefingBySlug(slug: string): Promise<BriefingArticle |
     if (hit) return withBriefingCover(hit);
   }
   if (seeded) return withBriefingCover(seeded);
-  const articles = await listAllBriefings();
-  const article = articles.find((item) => item.slug === slug);
-  return article ? withBriefingCover(article) : undefined;
+
+  const channel = parseChannelFromSlug(slug);
+  if (channel && isLiveEdition(slug.slice(0, 10))) {
+    const edition = await getChannelBriefingEdition(channel);
+    const hit = edition.find((item) => item.slug === slug);
+    if (hit) return withBriefingCover(hit);
+  }
+  return undefined;
 }
+
+/** Dedupes metadata + page fetches within one navigation request. */
+export const loadBriefingBySlug = cache(getBriefingBySlug);
 
 export async function getTodaysMainBriefing(): Promise<BriefingArticle> {
   const entertainment = await getChannelBriefingEdition("entertainment");
