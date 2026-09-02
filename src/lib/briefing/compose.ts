@@ -107,7 +107,6 @@ function articleToDoc(article: BriefingArticle): EditorialDoc {
     faq: article.faq,
     internalLink: article.internalLink ?? null,
     externalLink: article.externalLink ?? null,
-    coverSrc: article.coverImage?.src,
   };
 }
 
@@ -380,7 +379,6 @@ export function composeArticle(payload: RankingsPayload, options: ComposeOptions
   });
   return withBriefingCover(article, {
     keyword: items[0]?.name,
-    imageUrl: items[0]?.imageUrl,
   });
 }
 

@@ -30,7 +30,6 @@ export async function generateMetadata({
       type: "article",
       publishedTime: briefing.publishedAt,
       modifiedTime: briefing.updatedAt,
-      images: briefing.coverImage?.src ? [{ url: briefing.coverImage.src, alt: briefing.coverImage.alt }] : undefined,
     },
   };
 }
@@ -56,7 +55,6 @@ export default async function BriefingArticlePage({
     author: { "@type": "Organization", name: SITE.name },
     publisher: { "@type": "Organization", name: SITE.name },
     wordCount: briefing.wordCount,
-    image: briefing.coverImage?.src,
     mainEntityOfPage: `${SITE.url}/briefing/${briefing.slug}`,
   };
 

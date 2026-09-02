@@ -40,7 +40,6 @@ export default async function BriefingHubPage() {
       url: `${SITE.url}${channelSectionHref(item.channel ?? "entertainment", "briefing")}/${item.slug}`,
       datePublished: item.publishedAt,
       wordCount: item.wordCount,
-      image: item.coverImage?.src,
     })),
   };
 

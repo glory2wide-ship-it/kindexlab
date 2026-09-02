@@ -493,7 +493,6 @@ export function evaluateEditorial(doc: EditorialDoc): EditorialReport {
   if (MARKET_TAPE.test(text)) failures.push("marketTape");
   const extendHits = EXTEND.filter((clause) => countKeyword(text, clause) > 2);
   if (extendHits.length) failures.push(`extendRepeat:${extendHits[0]}`);
-  if (!doc.coverSrc) failures.push("image");
   const sentenceIssues = countSentenceIssues(doc);
   if (sentenceIssues.count > 0) failures.push(`sentences:${sentenceIssues.count}:${sentenceIssues.sample}`);
   return { ok: failures.length === 0, tapeRatio: ratio, wordCount: words, failures };

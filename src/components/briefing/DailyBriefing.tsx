@@ -1,8 +1,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import { BriefingCover } from "@/components/briefing/BriefingCover";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
-import { withBriefingCover } from "@/lib/briefing/cover";
 import { isLiveEdition } from "@/lib/briefing/dates";
 import { categoryLabel, heatmapHref } from "@/lib/briefing/metrics";
 import { rankingPath } from "@/lib/slugs";
@@ -32,10 +30,6 @@ export function DailyBriefing({
 }) {
   const live = isLiveEdition(briefing.editionDate);
   const categoryHref = heatmapHref(briefing.category);
-  const cover = withBriefingCover(briefing, {
-    keyword: related[0]?.name,
-    imageUrl: related[0]?.imageUrl,
-  }).coverImage;
   const tapeSections = briefing.sections.filter((section) => section.kind === "tape");
   const restSections = briefing.sections.filter(
     (section) => section.kind !== "tape" && section.heading !== "교차 확인 자료",
@@ -69,12 +63,6 @@ export function DailyBriefing({
         {briefing.editionDate} · {categoryLabel(briefing.category)} · {briefing.readingMinutes ?? 1}분
         읽기 · 약 {formatCount(briefing.wordCount)}단어 · 애드센스 고품질 본문 기준 충족
       </p>
-
-      {cover ? (
-        <div className="mt-6 max-w-3xl">
-          <BriefingCover image={cover} />
-        </div>
-      ) : null}
 
       <nav className="mt-6 flex flex-wrap gap-2 text-sm" aria-label="관련 보드">
         <Link
