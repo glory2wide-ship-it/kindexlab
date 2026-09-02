@@ -42,6 +42,7 @@ import {
   type EditorialDoc,
 } from "@/lib/editorial/rules";
 import { channelFromEntityType, POST_CHANNELS } from "@/lib/posts/channels";
+import { channelUsesBoardBriefing } from "@/lib/briefing/from-boards";
 import { rankingPath } from "@/lib/slugs";
 import type {
   BriefingArticle,
@@ -417,13 +418,14 @@ export function composeChannelEdition(
 }
 
 export function composeEdition(payload: RankingsPayload, editionDate: string, publishedAt: string) {
-  return POST_CHANNELS.flatMap((channel, index) =>
-    composeChannelEdition(
-      payload,
-      channel.id,
-      editionDate,
-      editionDateTime(editionDate, 7, index * 3),
-    ),
+  return POST_CHANNELS.filter((channel) => !channelUsesBoardBriefing(channel.id)).flatMap(
+    (channel, index) =>
+      composeChannelEdition(
+        payload,
+        channel.id,
+        editionDate,
+        editionDateTime(editionDate, 7, index * 3),
+      ),
   );
 }
 

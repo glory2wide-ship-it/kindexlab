@@ -1,6 +1,7 @@
 import extraFile from "@/data/briefings/extra.json";
 import { publishedBriefings } from "@/data/briefings/published";
-import { compareDatesDesc } from "@/lib/briefing/dates";
+import { compareDatesDesc, isLiveEdition } from "@/lib/briefing/dates";
+import { channelUsesBoardBriefing } from "@/lib/briefing/from-boards";
 import { withBriefingCover } from "@/lib/briefing/cover";
 import type { BriefingArticle } from "@/lib/types";
 
@@ -8,9 +9,17 @@ function extras(): BriefingArticle[] {
   return (extraFile as { articles?: BriefingArticle[] }).articles ?? [];
 }
 
+/** Archived seeds only — live board-channel dailies are composed from ranking boards. */
 export function listSeeded(): BriefingArticle[] {
   const map = new Map<string, BriefingArticle>();
   for (const item of [...publishedBriefings(), ...extras()]) {
+    if (
+      item.channel &&
+      channelUsesBoardBriefing(item.channel) &&
+      isLiveEdition(item.editionDate)
+    ) {
+      continue;
+    }
     map.set(item.slug, withBriefingCover(item));
   }
   return [...map.values()].sort(compareArticles);

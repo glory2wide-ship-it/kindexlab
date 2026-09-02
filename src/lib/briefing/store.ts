@@ -5,7 +5,7 @@ import { withBriefingCover } from "@/lib/briefing/cover";
 import { compareDatesDesc, editionDateTime, isLiveEdition, kstDateString } from "@/lib/briefing/dates";
 import { channelUsesBoardBriefing, composeBoardChannelEdition } from "@/lib/briefing/from-boards";
 import { ALL_CATEGORIES } from "@/lib/categories";
-import { POST_CHANNELS } from "@/lib/posts/channels";
+import { isPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import { getRankings } from "@/lib/providers/trends";
 import type { PostChannel } from "@/lib/posts/types";
 import type { BriefingArticle, CategoryId } from "@/lib/types";
@@ -18,13 +18,23 @@ const composeLiveChannelEdition = unstable_cache(
     const payload = await getRankings();
     return composeChannelEdition(payload, channel, editionDate, editionDateTime(editionDate));
   },
-  ["briefing-channel-edition-v12-boards"],
+  ["briefing-channel-edition-v13-ai-main"],
   { revalidate: 3600 },
 );
 
-function parseChannelFromSlug(slug: string): PostChannel | undefined {
-  const match = slug.match(/^\d{4}-\d{2}-\d{2}-(entertainment|economy|politics|culture)-/);
-  return match?.[1] as PostChannel | undefined;
+export function parseChannelFromSlug(slug: string): PostChannel | undefined {
+  const match = slug.match(/^\d{4}-\d{2}-\d{2}-([a-z]+)-/);
+  const candidate = match?.[1];
+  return isPostChannel(candidate) ? candidate : undefined;
+}
+
+async function liveBriefingBySlug(slug: string): Promise<BriefingArticle | undefined> {
+  const channel = parseChannelFromSlug(slug);
+  if (!channel) return undefined;
+  const editionDate = slug.slice(0, 10);
+  if (!isLiveEdition(editionDate)) return undefined;
+  const edition = await getChannelBriefingEdition(channel);
+  return edition.find((item) => item.slug === slug);
 }
 
 export async function getChannelBriefingEdition(channel: PostChannel): Promise<BriefingArticle[]> {
@@ -58,16 +68,19 @@ export async function getTodaysBriefings(): Promise<BriefingArticle[]> {
 }
 
 export async function getBriefingBySlug(slug: string): Promise<BriefingArticle | undefined> {
-  const channel = parseChannelFromSlug(slug);
-  if (channel) {
-    const editionDate = slug.slice(0, 10);
-    if (isLiveEdition(editionDate)) {
-      const edition = await getChannelBriefingEdition(channel);
-      const hit = edition.find((item) => item.slug === slug);
-      if (hit) return withBriefingCover(hit);
-    }
-  }
+  const live = await liveBriefingBySlug(slug);
+  if (live) return withBriefingCover(live);
+
   const seeded = listSeeded().find((item) => item.slug === slug);
+  if (
+    seeded?.channel &&
+    channelUsesBoardBriefing(seeded.channel) &&
+    isLiveEdition(seeded.editionDate)
+  ) {
+    const edition = await getChannelBriefingEdition(seeded.channel);
+    const hit = edition.find((item) => item.slug === slug);
+    if (hit) return withBriefingCover(hit);
+  }
   if (seeded) return withBriefingCover(seeded);
   const articles = await listAllBriefings();
   const article = articles.find((item) => item.slug === slug);

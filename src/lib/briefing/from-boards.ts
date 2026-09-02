@@ -3,6 +3,7 @@ import { boardPath, menuBoardsForChannel } from "@/lib/boards/registry";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
 import type { CachedBoard } from "@/lib/boards/types";
 import { formatKoreanDate } from "@/lib/briefing/dates";
+import { enrichMainBriefingWithAi } from "@/lib/briefing/ai-main";
 import { withBriefingCover } from "@/lib/briefing/cover";
 import { getPostChannel } from "@/lib/posts/channels";
 import type { BriefingArticle, BriefingSection, CategoryId } from "@/lib/types";
@@ -219,7 +220,19 @@ export async function composeBoardChannelEdition(
 
   if (!loaded.length) return [];
 
-  const main = mainFromBoards(channel, loaded, editionDate, publishedAt);
+  const templateMain = mainFromBoards(channel, loaded, editionDate, publishedAt);
+  const leadName = loaded
+    .map((item) => item.cached.ranking[0]?.name)
+    .filter(Boolean)[0] as string | undefined;
+  const relatedKeywords = loaded
+    .map((item) => item.cached.ranking[0]?.name)
+    .filter((name): name is string => Boolean(name))
+    .slice(0, 4);
+
+  const main = await enrichMainBriefingWithAi(templateMain, {
+    leadKeyword: leadName ?? templateMain.focusKeyword ?? getPostChannel(channel).label,
+    relatedKeywords,
+  });
   const dives = loaded.map((item, index) =>
     briefingFromBoard(item.cached, {
       kind: "deep-dive",

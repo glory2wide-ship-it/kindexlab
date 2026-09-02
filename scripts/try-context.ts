@@ -9,9 +9,11 @@ async function main() {
     score: ctx.score,
     canGenerate: canGenerateContext(ctx),
     signalFacts: ctx.signalFacts.length,
+    newsCount: ctx.sources.filter((s) => s.tier === "news").length,
     sources: ctx.sources.length,
     tiers: ctx.sources.map((s) => s.tier),
-    intentHints: ctx.intentHints.slice(0, 3),
+    providers: ctx.providers,
+    intentHints: ctx.intentHints.slice(0, 4),
   });
 }
 

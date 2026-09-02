@@ -10,17 +10,36 @@ export function scoreSignalFacts(facts: SignalFact[]): number {
   return facts.length * 2;
 }
 
-export function scoreSource(source: ContextSource): number {
+export function countNewsSources(sources: ContextSource[]): number {
+  return sources.filter((source) => source.tier === "news").length;
+}
+
+export function scoreSource(source: ContextSource, newsThin = false): number {
   if (source.tier === "news") return 3;
-  if (source.tier === "web") return 1;
-  if (source.tier === "youtube") return 1;
+  if (source.tier === "web") return newsThin ? 2 : 1;
+  if (source.tier === "youtube") return newsThin ? 2 : 1;
   return 0;
 }
 
 export function computeContextScore(signalFacts: SignalFact[], sources: ContextSource[]): number {
-  return scoreSignalFacts(signalFacts) + sources.reduce((sum, source) => sum + scoreSource(source), 0);
+  const newsThin = countNewsSources(sources) <= NEWS_FALLBACK_THRESHOLD;
+  return (
+    scoreSignalFacts(signalFacts) +
+    sources.reduce((sum, source) => sum + scoreSource(source, newsThin), 0)
+  );
 }
 
-export function canGenerateContext(ctx: { score: number; sources: { url: string }[] }): boolean {
-  return ctx.score >= MIN_CONTEXT_SCORE && ctx.sources.length >= 1;
+export function canGenerateContext(ctx: {
+  score: number;
+  sources: { url: string; tier?: ContextSource["tier"] }[];
+}): boolean {
+  if (!ctx.sources.length) return false;
+  if (ctx.score >= MIN_CONTEXT_SCORE) return true;
+  const newsCount = ctx.sources.filter((source) => source.tier === "news").length;
+  const citable = ctx.sources.filter((source) => source.url);
+  // News-less keywords may still clear the bar with web/blog/youtube fallbacks.
+  if (newsCount <= NEWS_FALLBACK_THRESHOLD && citable.length >= 2 && ctx.score >= 4) {
+    return true;
+  }
+  return false;
 }

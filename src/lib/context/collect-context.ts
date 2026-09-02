@@ -1,8 +1,11 @@
 import { crawlKeywordNewsRss, publisherLinksFromDescription } from "@/lib/context/crawl-news-rss";
-import { fetchSerperVideos, fetchSerperWeb } from "@/lib/context/fallback-serper";
-import { buildIntentHints } from "@/lib/context/intent-outline";
+import { fetchNaverWebFallback } from "@/lib/context/fallback-naver";
+import { fetchSerperWeb } from "@/lib/context/fallback-serper";
+import { fetchYoutubeFallback } from "@/lib/context/fallback-youtube";
+import { buildIntentHints, buildSparseIntentHints } from "@/lib/context/intent-outline";
 import {
   computeContextScore,
+  countNewsSources,
   NEWS_FALLBACK_THRESHOLD,
 } from "@/lib/context/score";
 import { buildSignalBrief } from "@/lib/context/signal-brief";
@@ -181,23 +184,43 @@ export async function collectArticleContext(
   let sources = mergeSources(crawled, news.sources);
   sources = mergeSources(sources, signal.rssSources);
 
-  if (sources.length <= NEWS_FALLBACK_THRESHOLD) {
-    const web = await fetchSerperWeb(keyword, 5);
-    sources = mergeSources(sources, web);
+  let newsCount = countNewsSources(sources);
+  const providers = [...news.providers];
+
+  if (newsCount <= NEWS_FALLBACK_THRESHOLD) {
+    const [naverWeb, serperWeb] = await Promise.all([
+      fetchNaverWebFallback(keyword, 5),
+      fetchSerperWeb(keyword, 5),
+    ]);
+    if (naverWeb.length) providers.push("naver-web");
+    if (serperWeb.length) providers.push("serper-web");
+    sources = mergeSources(sources, mergeSources(naverWeb, serperWeb));
+    newsCount = countNewsSources(sources);
   }
 
-  if (sources.length <= NEWS_FALLBACK_THRESHOLD) {
-    const videos = await fetchSerperVideos(keyword, 3);
+  const webCount = sources.filter((source) => source.tier === "web").length;
+  if (newsCount <= NEWS_FALLBACK_THRESHOLD && webCount <= 2) {
+    const videos = await fetchYoutubeFallback(keyword, 3);
+    if (videos.length) providers.push("youtube-fallback");
     sources = mergeSources(sources, videos);
   }
 
-  const intentHints = buildIntentHints({
-    keyword,
-    entityType: entity?.type,
-    related: relatedKeywords.length
-      ? relatedKeywords
-      : related.map((item) => item.name).slice(0, 4),
-  });
+  const sparse = newsCount <= NEWS_FALLBACK_THRESHOLD || sources.length <= 3;
+  const intentHints = sparse
+    ? buildSparseIntentHints({
+        keyword,
+        entityType: entity?.type,
+        related: relatedKeywords.length
+          ? relatedKeywords
+          : related.map((item) => item.name).slice(0, 4),
+      })
+    : buildIntentHints({
+        keyword,
+        entityType: entity?.type,
+        related: relatedKeywords.length
+          ? relatedKeywords
+          : related.map((item) => item.name).slice(0, 4),
+      });
 
   const score = computeContextScore(signal.facts, sources);
 
@@ -205,7 +228,7 @@ export async function collectArticleContext(
     keyword,
     sources,
     signalFacts: signal.facts,
-    providers: news.providers,
+    providers,
     block: "",
     unwrapped: news.unwrapped,
     lookbackHours: news.lookbackHours,

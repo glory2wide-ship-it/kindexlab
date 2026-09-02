@@ -78,3 +78,29 @@ export function buildIntentHints(input: {
 
   return [...new Set(hints)].slice(0, 6);
 }
+
+/**
+ * Tier 3b — expanded outline for thin-source keywords.
+ * Facts must still come from Tier 0–2 URLs; this only shapes section/FAQ arcs.
+ */
+export function buildSparseIntentHints(input: {
+  keyword: string;
+  entityType?: EntityType;
+  related?: string[];
+}): string[] {
+  const base = buildIntentHints(input);
+  const { keyword } = input;
+  const expanded = [
+    `${keyword} 개요와 한 줄 정의`,
+    `${keyword}가 최근 주목받게 된 배경`,
+    `${keyword}를 처음 접하는 사람이 먼저 확인할 체크리스트`,
+    `${keyword} 관련 가장 많이 묻는 질문 3가지`,
+    `${keyword} 신청·이용·일정 FAQ`,
+    `${keyword}와 연관된 정책·제도·생활 팁`,
+    ...base,
+  ];
+  for (const peer of input.related ?? []) {
+    expanded.push(`${keyword}와 ${peer} 차이·연결점`);
+  }
+  return [...new Set(expanded)].slice(0, 10);
+}

@@ -3,6 +3,7 @@ import type { AnalysisLogger } from "@/lib/analysis/log";
 import {
   canGenerateContext,
   collectPremiumContext,
+  buildSparseEnrichmentPrompt,
   isRetrievedUrl,
   type PremiumContext,
   type PremiumSource,
@@ -303,6 +304,7 @@ async function planOutline(input: {
     user: [
       input.context.block,
       "",
+      buildSparseEnrichmentPrompt(input.context),
       input.category ? `[분류] ${input.category}` : "",
       input.related.length ? `[연관 키워드] ${input.related.join(", ")}` : "",
       input.context.intentHints.length
@@ -402,6 +404,8 @@ async function writeSection(input: {
     system: PREMIUM_SYSTEM_PROMPT,
     user: [
       input.context.block,
+      "",
+      buildSparseEnrichmentPrompt(input.context),
       "",
       `당신은 칼럼의 ${input.index + 1}번째 섹션만 씁니다.`,
       `이 섹션의 소제목: ${plan.heading}`,
