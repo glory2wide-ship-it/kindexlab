@@ -117,6 +117,7 @@ export function HeadlineNewsRanking({
             hideCategoryTabs
             skipDemographicSkew
             boardSlug={copy.boardSlug}
+            channel={channel}
             title="헤드라인 뉴스랭킹"
             subtitle="분봉은 급상승 속도, 성별·연령은 관심 키워드 가중치. 유사 이슈는 상위 10칸에서 1건만 남깁니다."
           />

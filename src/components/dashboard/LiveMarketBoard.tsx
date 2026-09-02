@@ -116,6 +116,7 @@ export function LiveMarketBoard({
         flashNonce={flashNonce}
         initialView="treemap"
         categories={politicsBoard ? POLITICS_CATEGORIES : undefined}
+        channel={channel}
         title={politicsBoard ? `정치 ${LIVE_INDEX_LABEL}` : LIVE_INDEX_LABEL}
         subtitle={
           politicsBoard

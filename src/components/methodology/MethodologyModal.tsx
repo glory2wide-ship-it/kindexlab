@@ -2,13 +2,18 @@
 
 import { useEffect } from "react";
 import { INDEX_INPUTS, METHODOLOGY } from "@/data/methodology";
+import { getChannelAbout } from "@/lib/about/channel-copy";
+import type { PostChannel } from "@/lib/posts/types";
 
 export function MethodologyModal({
   open,
   onClose,
+  channel,
 }: {
   open: boolean;
   onClose: () => void;
+  /** When set, show that desk's methodology instead of the landing (all-desk) copy. */
+  channel?: PostChannel;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -20,6 +25,10 @@ export function MethodologyModal({
   }, [open, onClose]);
 
   if (!open) return null;
+
+  const channelMethod = channel ? getChannelAbout(channel).methodology : undefined;
+  const methodology = channelMethod ?? METHODOLOGY;
+  const inputs = channelMethod?.inputs ?? INDEX_INPUTS;
 
   return (
     <div
@@ -35,15 +44,15 @@ export function MethodologyModal({
       >
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent">Methodology</p>
         <h2 id="methodology-title" className="mt-2 text-2xl font-semibold">
-          {METHODOLOGY.title}
+          {methodology.title}
         </h2>
-        <p className="mt-2 text-sm text-muted">{METHODOLOGY.subtitle}</p>
+        <p className="mt-2 text-sm text-muted">{methodology.subtitle}</p>
         <p className="mt-4 rounded-lg bg-board px-3 py-2 font-mono text-xs leading-5">
-          {METHODOLOGY.formula}
+          {methodology.formula}
         </p>
         <ul className="mt-5 divide-y divide-line rounded-xl border border-line">
-          {INDEX_INPUTS.map((item) => (
-            <li key={item.key} className="px-4 py-3 text-sm">
+          {inputs.map((item) => (
+            <li key={item.label} className="px-4 py-3 text-sm">
               <span className="font-medium">{item.label}</span>
               <span className="mt-1 block text-xs leading-5 text-ink/80">{item.basis}</span>
               <span className="mt-0.5 block text-xs text-muted">{item.sources}</span>
@@ -51,7 +60,7 @@ export function MethodologyModal({
           ))}
         </ul>
         <div className="mt-5 space-y-3 text-sm leading-7 text-ink/90">
-          {METHODOLOGY.paragraphs.map((paragraph) => (
+          {methodology.paragraphs.map((paragraph) => (
             <p key={paragraph.slice(0, 24)}>{paragraph}</p>
           ))}
         </div>

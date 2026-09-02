@@ -296,6 +296,7 @@ export function ChannelMarketDesk({
           onRegion={setRegion}
           showRegion={showRegion}
           boardSlug={selectedSlug || undefined}
+          channel={channel}
           maxItems={heatmapMaxItems(channel, selectedSlug, region)}
           remainingSec={remainingSec}
           refreshing={refreshing}

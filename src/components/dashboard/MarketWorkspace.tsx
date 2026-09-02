@@ -31,6 +31,7 @@ import { CATEGORIES, TIMEFRAMES } from "@/lib/categories";
 import type { AgeSegment, GenderSegment, RegionSegment } from "@/lib/boards/types";
 import { isHeadlineFeed, rankHeadlineFeed } from "@/lib/news/headline-rank";
 import { LIVE_INDEX_LABEL } from "@/lib/posts/channels";
+import type { PostChannel } from "@/lib/posts/types";
 import { entityMatchesRegion } from "@/lib/boards/regions";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import { rankItemsForTimeframe } from "@/lib/timeframes";
@@ -58,6 +59,7 @@ export function MarketWorkspace({
   maxItems = TREEMAP_MAX_ITEMS,
   remainingSec = DEFAULT_TRENDS_REVALIDATE_SEC,
   refreshing = false,
+  channel,
 }: {
   items: RankingEntity[];
   initialCategory?: CategoryId;
@@ -77,6 +79,8 @@ export function MarketWorkspace({
   hideTimeframes?: boolean;
   boardSlug?: string;
   showRegion?: boolean;
+  /** When set, methodology modal uses that desk's copy. */
+  channel?: PostChannel;
   /** Tile cap for this desk. Defaults to the shared ceiling. */
   maxItems?: number;
   remainingSec?: number;
@@ -274,7 +278,7 @@ export function MarketWorkspace({
         )}
       </div>
 
-      <MethodologyModal open={methodOpen} onClose={() => setMethodOpen(false)} />
+      <MethodologyModal open={methodOpen} onClose={() => setMethodOpen(false)} channel={channel} />
     </section>
   );
 }
