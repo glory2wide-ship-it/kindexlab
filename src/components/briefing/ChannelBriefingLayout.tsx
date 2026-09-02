@@ -2,7 +2,6 @@ import { BriefingCard } from "@/components/briefing/BriefingCard";
 import { FeaturedBriefingCard } from "@/components/briefing/FeaturedBriefingCard";
 import { channelMainLabel, desksForChannel } from "@/lib/briefing/desks";
 import { channelSectionHref, getPostChannel } from "@/lib/posts/channels";
-import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import type { PostChannel } from "@/lib/posts/types";
 import type { BriefingArticle } from "@/lib/types";
 
@@ -29,7 +28,6 @@ export function ChannelBriefingLayout({
   return (
     <div className="space-y-8">
       <header className="space-y-2">
-        <DeskEyebrow variant="xs">BRIEFING DESK</DeskEyebrow>
         <TitleTag className="text-2xl font-semibold tracking-tight md:text-3xl">
           {heading ?? `${meta.label} 일일브리핑`}
         </TitleTag>

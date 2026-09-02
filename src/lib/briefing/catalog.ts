@@ -2,6 +2,7 @@ import extraFile from "@/data/briefings/extra.json";
 import { publishedBriefings } from "@/data/briefings/published";
 import { compareDatesDesc, isLiveEdition } from "@/lib/briefing/dates";
 import { withBriefingCover } from "@/lib/briefing/cover";
+import { isPersistableBriefing } from "@/lib/briefing/quality";
 import type { PostChannel } from "@/lib/posts/types";
 import type { BriefingArticle } from "@/lib/types";
 
@@ -33,7 +34,9 @@ export function listSeeded(): BriefingArticle[] {
 }
 
 export function hasEdition(editionDate: string): boolean {
-  return listPersisted().some((item) => item.editionDate === editionDate);
+  const forDate = listPersisted().filter((item) => item.editionDate === editionDate);
+  if (!forDate.length) return false;
+  return forDate.some(isPersistableBriefing);
 }
 
 export function compareArticles(a: BriefingArticle, b: BriefingArticle): number {

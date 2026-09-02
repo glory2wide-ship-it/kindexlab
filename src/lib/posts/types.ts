@@ -31,6 +31,7 @@ export interface PostTable {
   headers: string[];
   rows: string[][];
   markdown?: string;
+  html?: string;
 }
 
 export interface PostFaq {

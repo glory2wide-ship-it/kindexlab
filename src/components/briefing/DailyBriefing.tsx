@@ -1,25 +1,14 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
+import { FactTable } from "@/components/article/FactTable";
+import { SectionHeading } from "@/components/article/SectionHeading";
 import { isLiveEdition } from "@/lib/briefing/dates";
 import { categoryLabel, heatmapHref } from "@/lib/briefing/metrics";
 import { rankingPath } from "@/lib/slugs";
 import { SITE } from "@/lib/site";
 import { formatCount } from "@/lib/format";
 import type { BriefingArticle, RankingEntity } from "@/lib/types";
-
-function SectionHeading({
-  heading,
-  level,
-}: {
-  heading: string;
-  level: 2 | 3;
-}) {
-  if (level === 3) {
-    return <h3 className="mb-3 text-base font-semibold tracking-tight">{heading}</h3>;
-  }
-  return <h2 className="mb-3 text-lg font-semibold">{heading}</h2>;
-}
 
 export function DailyBriefing({
   briefing,
@@ -87,10 +76,14 @@ export function DailyBriefing({
 
       <div className="prose-board mt-8 max-w-3xl space-y-8">
         {(tapeSections.length ? tapeSections : briefing.sections.slice(0, 1)).map((section, index) => {
-          const level = section.headingLevel === 3 ? 3 : 2;
+          const minor = section.headingLevel === 3;
           return (
             <section key={`${section.heading ?? "tape"}-${index}`}>
-              {section.heading ? <SectionHeading heading={section.heading} level={level} /> : null}
+              {section.heading ? (
+                <SectionHeading as={minor ? "h3" : "h2"} tone={minor ? "minor" : "major"}>
+                  {section.heading}
+                </SectionHeading>
+              ) : null}
               {section.paragraphs.map((paragraph, paragraphIndex) => (
                 <p
                   key={`tape-${index}-${paragraphIndex}`}
@@ -104,41 +97,21 @@ export function DailyBriefing({
         })}
 
         {briefing.table?.rows?.length ? (
-          <section>
-            <h2 className="mb-3 text-lg font-semibold">{briefing.table.caption}</h2>
-            <div className="overflow-x-auto rounded-xl border border-line">
-              <table className="w-full min-w-[32rem] border-collapse text-sm">
-                <thead className="bg-panel">
-                  <tr>
-                    {briefing.table.headers.map((header) => (
-                      <th key={header} className="border-b border-line px-3 py-2 text-left font-semibold">
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {briefing.table.rows.map((row, rowIndex) => (
-                    <tr key={`${row[0]}-${rowIndex}`} className="odd:bg-transparent even:bg-panel/40">
-                      {row.map((cell, cellIndex) => (
-                        <td key={`${rowIndex}-${cellIndex}`} className="border-b border-line px-3 py-2">
-                          {cell}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <section aria-labelledby="briefing-fact-table">
+            <FactTable table={briefing.table} eyebrow="팩트 체크" />
           </section>
         ) : null}
 
         {(tapeSections.length ? restSections : briefing.sections.slice(1).filter((section) => section.heading !== "교차 확인 자료")).map((section, index) => {
-          const level = section.headingLevel === 3 ? 3 : 2;
+          const minor = section.headingLevel === 3;
           return (
             <Fragment key={`${section.heading ?? "p"}-${index}`}>
               <section>
-                {section.heading ? <SectionHeading heading={section.heading} level={level} /> : null}
+                {section.heading ? (
+                  <SectionHeading as={minor ? "h3" : "h2"} tone={minor ? "minor" : "major"}>
+                    {section.heading}
+                  </SectionHeading>
+                ) : null}
                 {section.paragraphs.map((paragraph, paragraphIndex) => (
                   <p
                     key={`${index}-${paragraphIndex}`}
@@ -154,44 +127,47 @@ export function DailyBriefing({
         })}
 
         {briefing.externalLink || briefing.internalLink ? (
-          <section>
-            <h2 className="mb-3 text-lg font-semibold">교차 확인 자료</h2>
-            <div className="space-y-2 text-sm leading-7">
+          <section aria-labelledby="briefing-cross-links">
+            <SectionHeading as="h2">교차 확인 자료</SectionHeading>
+            <ul className="space-y-3 text-sm leading-7">
               {briefing.externalLink ? (
-                <p>
-                  외부 자료:{" "}
+                <li>
                   <a
                     href={briefing.externalLink.href}
                     target="_blank"
                     rel={briefing.externalLink.rel ?? "noopener noreferrer"}
-                    className="underline hover:text-accent"
+                    className="font-medium text-accent underline underline-offset-2 hover:text-ink"
                   >
                     {briefing.externalLink.label}
                   </a>
-                </p>
+                  <span className="ml-2 text-muted">(외부 원문)</span>
+                </li>
               ) : null}
               {briefing.internalLink ? (
-                <p>
-                  내부 링크 추천:{" "}
-                  <Link href={briefing.internalLink.href} className="underline hover:text-accent">
-                    [{briefing.internalLink.label}]
+                <li>
+                  <Link
+                    href={briefing.internalLink.href}
+                    className="font-medium text-accent underline underline-offset-2 hover:text-ink"
+                  >
+                    {briefing.internalLink.label}
                   </Link>
-                </p>
+                  <span className="ml-2 text-muted">(사이트 내부)</span>
+                </li>
               ) : null}
-            </div>
+            </ul>
           </section>
         ) : null}
 
         {briefing.faq?.length ? (
-          <section>
-            <h2 className="mb-3 text-lg font-semibold">FAQ</h2>
-            <div className="space-y-4 text-sm leading-7">
+          <section aria-labelledby="briefing-faq">
+            <SectionHeading as="h2">자주 묻는 질문</SectionHeading>
+            <div className="space-y-6">
               {briefing.faq.map((item) => (
                 <div key={item.question}>
-                  <p>
-                    <strong>Q. {item.question}</strong>
-                  </p>
-                  <p className="mt-1 whitespace-pre-line text-ink">A. {item.answer}</p>
+                  <SectionHeading as="h3" tone="minor">
+                    {item.question}
+                  </SectionHeading>
+                  <p className="whitespace-pre-line text-[15px] leading-8 text-ink/90">{item.answer}</p>
                 </div>
               ))}
             </div>

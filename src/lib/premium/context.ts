@@ -57,8 +57,20 @@ export function isSparseContext(ctx: Pick<PremiumContext, "sources" | "newsThin"
  * Extra user-message guidance when Tier 1 news is thin.
  * Structure-only hints — facts must still come from collected URLs and signal facts.
  */
-export function buildSparseEnrichmentPrompt(ctx: PremiumContext): string {
+export function buildSparseEnrichmentPrompt(ctx: PremiumContext, options?: { briefing?: boolean }): string {
   if (!isSparseContext(ctx)) return "";
+  if (options?.briefing) {
+    return [
+      "[데이터 부족 모드 — 브리핑]",
+      "수집 뉴스가 적습니다. 억지 분량·체크리스트·일반론 대신 '왜 지금 검색·랭킹에 올랐는지' 현상 분석만 쓰세요.",
+      "확인되지 않은 사실은 단정하지 마세요. 짧고 밀도 있게 쓰는 것이 낫습니다.",
+      ctx.intentHints.length
+        ? `[참고 의도 — 사실 근거 아님]\n${ctx.intentHints.map((hint, index) => `${index + 1}. ${hint}`).join("\n")}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
   return [
     "[데이터 부족 모드 — 연관검색어·의도 기반 확장]",
     "수집된 뉴스 기사가 적습니다. 아래 연관검색 의도를 바탕으로 다음 구조로 공백 제외 2,000자 이상 작성하세요.",

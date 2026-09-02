@@ -1,3 +1,7 @@
+import {
+  analysisPromptChannel,
+  usesBriefingAnalysisPrompt,
+} from "@/lib/analysis/briefing-boards";
 import { draftColumn } from "@/lib/analysis/chain/draft";
 import { summarizeFacts } from "@/lib/analysis/chain/facts";
 import { reviewColumn } from "@/lib/analysis/chain/editor";
@@ -176,6 +180,8 @@ async function generate(options: {
           (related ?? []).map((item) => ({ name: item.name, slug: item.slug })),
         );
         const { focus, supportKw } = pickIssueKeywords(issueKeyword);
+        const useBriefingPrompt = usesBriefingAnalysisPrompt(entity.slug);
+        const promptChannel = analysisPromptChannel(entity.slug);
 
         const draft = await draftColumn({
           keyword,
@@ -185,6 +191,8 @@ async function generate(options: {
           brief,
           logger,
           timeoutMs: remaining(),
+          channel: promptChannel,
+          useBriefingPrompt,
         });
 
         if (draft) {

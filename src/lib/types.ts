@@ -207,6 +207,7 @@ export interface BriefingTable {
   headers: string[];
   rows: string[][];
   markdown?: string;
+  html?: string;
 }
 
 export interface BriefingFaq {
@@ -234,6 +235,9 @@ export interface BriefingArticle extends DailyBriefing {
   faq?: BriefingFaq[];
   externalLink?: BriefingLink;
   internalLink?: BriefingLink;
+  /** SEO/AdSense optimized HTML body (H2/H3, table, semantic links). */
+  bodyHtml?: string;
+  bodyMarkdown?: string;
 }
 
 export interface BriefingSection {

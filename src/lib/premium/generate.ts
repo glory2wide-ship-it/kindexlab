@@ -1,4 +1,4 @@
-import { chatJson, editorModel, llmConfigured } from "@/lib/analysis/chain/llm";
+import { BRIEFING_LLM, chatJson, openaiConfigured } from "@/lib/analysis/chain/llm";
 import type { AnalysisLogger } from "@/lib/analysis/log";
 import {
   canGenerateContext,
@@ -15,14 +15,52 @@ import {
   PREMIUM_MIN_CHARS,
   PREMIUM_SYSTEM_PROMPT,
   bannedPhraseReminder,
+  briefingWritingRules,
+  buildBriefingSystemPrompt,
   countOccurrences,
   findBannedPhrases,
+  llmOutputFormatRules,
   premiumCharCount,
 } from "@/lib/premium/prompt";
+import { editorialGroundingRules } from "@/lib/editorial/tense-rules";
 import { describePlacements, injectMonetization, type PremiumPlacement } from "@/lib/premium/widgets";
-import { dropRepeatedSentences } from "@/lib/editorial/rules";
+import {
+  dropRepeatedSentences,
+  duplicateClaimCount,
+  findBriefingBoilerplate,
+  hasBriefingBoilerplate,
+  hasGenericPadding,
+  hasLeakedMetadata,
+  hasRepetitiveDeclarativeEndings,
+  hasTemplateConnectiveSpam,
+} from "@/lib/editorial/rules";
+import {
+  assessBriefingGenerationMode,
+  briefingMinChars,
+  briefingSectionTarget,
+  buildBriefingSparsePrompt,
+  buildShortsModePrompt,
+  filterBriefingRelatedKeywords,
+  relatedKeywordsPromptBlock,
+  type BriefingGenerationMode,
+} from "@/lib/premium/briefing-editorial";
+import { cleanLlmField } from "@/lib/premium/clean";
+import {
+  applySeoHeadingStructure,
+  articleWordCount,
+  polishArticleSections,
+  polishFaq,
+  polishProseText,
+  renderFactTableHtml,
+  renderSeoHtml,
+  renderSeoMarkdown,
+  seoExpansionPrompt,
+  seoStructureRules,
+  SEO_MIN_WORDS,
+} from "@/lib/premium/seo-format";
 import { SITE } from "@/lib/site";
 import type { PostFaq, PostLink, PostTable } from "@/lib/posts/types";
+import type { PostChannel } from "@/lib/posts/types";
 import type { RankingEntity } from "@/lib/types";
 
 /**
@@ -56,6 +94,8 @@ export interface PremiumArticle {
   takeaways: string[];
   /** Body with AdSense containers and the affiliate shelf already placed. */
   bodyMarkdown: string;
+  /** SEO-optimized HTML body (H2/H3, table, semantic links). */
+  bodyHtml: string;
   /** Schema.org Article + FAQPage, ready to inline in the page head or body. */
   jsonLd: string;
   characterCount: number;
@@ -92,7 +132,7 @@ interface RawDraft {
 }
 
 function text(value: unknown): string {
-  return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+  return typeof value === "string" ? cleanLlmField(value.replace(/\s+/g, " ").trim()) : "";
 }
 
 function stringList(value: unknown): string[] {
@@ -229,6 +269,12 @@ function buildJsonLd(input: {
 
 const FAQ_HEADING = "## 자주 묻는 질문";
 
+function briefingSectionTimeoutMs(mode?: BriefingGenerationMode): number {
+  // Sections run in parallel, so wall-clock ≈ one section's budget.
+  if (mode === "shorts") return 75_000;
+  return 90_000;
+}
+
 function renderMarkdown(input: {
   keyword: string;
   title: string;
@@ -240,39 +286,29 @@ function renderMarkdown(input: {
   externalLink: PostLink;
   internalLink: PostLink;
   jsonLd: string;
-}): string {
-  const blocks: string[] = [`# ${input.title}`, "", input.excerpt, ""];
+}): { markdown: string; html: string } {
+  const seoMarkdown = renderSeoMarkdown({
+    title: input.title,
+    excerpt: input.excerpt,
+    sections: input.sections,
+    table: input.table,
+    faq: input.faq,
+    externalLink: input.externalLink,
+    internalLink: input.internalLink,
+  });
 
-  for (const section of input.sections) {
-    blocks.push(`${section.headingLevel === 3 ? "###" : "##"} ${section.heading}`, "");
-    blocks.push(...section.paragraphs.flatMap((paragraph) => [paragraph, ""]));
-  }
+  const markdown = injectMonetization(seoMarkdown, input.keyword, { faqAnchor: input.jsonLd });
 
-  const table = tableMarkdown(input.table);
-  if (table) {
-    blocks.push(`## ${input.table.caption}`, "", table, "");
-  }
+  const htmlBody = renderSeoHtml({
+    excerpt: input.excerpt,
+    sections: input.sections,
+    table: input.table,
+    faq: input.faq,
+    externalLink: input.externalLink,
+    internalLink: input.internalLink,
+  });
 
-  if (input.takeaways.length) {
-    blocks.push("### 실행 체크리스트", "");
-    blocks.push(...input.takeaways.map((item) => `- ${item}`), "");
-  }
-
-  blocks.push(
-    `참고 기사: [${input.externalLink.label}](${input.externalLink.href})`,
-    "",
-    `[${input.internalLink.label}](${input.internalLink.href})`,
-    "",
-  );
-
-  blocks.push(FAQ_HEADING, "");
-  for (const item of input.faq) {
-    blocks.push(`**Q. ${item.question}**`, "", `A. ${item.answer}`, "");
-  }
-
-  blocks.push(input.jsonLd, "");
-
-  return injectMonetization(blocks.join("\n"), input.keyword, { faqAnchor: input.jsonLd });
+  return { markdown, html: htmlBody };
 }
 
 interface PremiumOutline {
@@ -295,18 +331,37 @@ async function planOutline(input: {
   context: PremiumContext;
   keyword: string;
   category?: string;
+  channel?: PostChannel;
   related: string[];
+  briefing?: boolean;
+  mode?: BriefingGenerationMode;
+  sectionTarget: number;
   logger: AnalysisLogger;
   timeoutMs?: number;
 }): Promise<PremiumOutline | null> {
+  const related = input.briefing
+    ? filterBriefingRelatedKeywords(input.keyword, input.related, input.category)
+    : input.related;
+
+  const briefingModeBlock =
+    input.briefing && input.mode === "shorts"
+      ? buildShortsModePrompt()
+      : input.briefing && input.mode !== "full"
+        ? buildBriefingSparsePrompt()
+        : buildSparseEnrichmentPrompt(input.context, { briefing: input.briefing });
+
   const raw = await chatJson<RawDraft & { sections?: unknown }>({
-    system: PREMIUM_SYSTEM_PROMPT,
+    system: input.briefing ? buildBriefingSystemPrompt(input.channel) : PREMIUM_SYSTEM_PROMPT,
     user: [
       input.context.block,
       "",
-      buildSparseEnrichmentPrompt(input.context),
+      briefingModeBlock,
       input.category ? `[분류] ${input.category}` : "",
-      input.related.length ? `[연관 키워드] ${input.related.join(", ")}` : "",
+      input.briefing ? relatedKeywordsPromptBlock(related) : related.length ? `[연관 키워드] ${related.join(", ")}` : "",
+      input.briefing ? briefingWritingRules(input.channel) : "",
+      (input.briefing ? input.mode !== "shorts" : true) ? seoStructureRules() : "",
+      llmOutputFormatRules(),
+      editorialGroundingRules(),
       input.context.intentHints.length
         ? `[FAQ·소제목 참고(사실 근거 아님)]\n${input.context.intentHints.map((hint, index) => `${index + 1}. ${hint}`).join("\n")}`
         : "",
@@ -315,7 +370,7 @@ async function planOutline(input: {
       "{",
       '  "title": string,        // H1. 포커스 키워드를 그대로 포함',
       '  "excerpt": string,      // 2~3문장 리드',
-      `  "sections": [{ "heading": string, "covers": string }],  // 정확히 ${SECTION_TARGET}개`,
+      `  "sections": [{ "heading": string, "covers": string }],  // 정확히 ${input.sectionTarget}개`,
       '  "table": { "caption": string, "headers": [string], "rows": [[string]] },',
       '  "faq": [{ "question": string, "answer": string }],',
       '  "externalLink": { "href": string, "label": string },',
@@ -333,14 +388,20 @@ async function planOutline(input: {
       "- heading에는 이 사안에서만 나올 수 있는 고유명사나 구체적 사실을 넣으세요. 키워드만 바꾸면 다른 칼럼에도 그대로 들어맞는 소제목은 실패로 처리됩니다.",
       "  (실패 예: '향후 전망과 실행 팁', '전문가 시각의 장단점', '이해관계와 사회적 파급', '사회적 파급 효과', '미래 전망')",
       "- '파급', '전망', '의미', '배경'처럼 추상적인 말로 끝나는 소제목은 최대 1개까지만 허용합니다.",
-      "- table.headers는 3개 이상, table.rows는 2~4행입니다.",
+      input.briefing && input.mode === "shorts"
+        ? "- [단신 모드] table.headers는 2개 이상, table.rows는 2행이면 충분합니다."
+        : "- table.headers는 3개 이상, table.rows는 2~4행입니다.",
       "- 표의 모든 값은 위 [최신 뉴스 데이터]에서 확인되는 사실이어야 합니다. 확인할 수 없는 수치·날짜·명칭은 쓰지 마세요.",
       "- '미공개 신작1', '미정', '추정치'처럼 자리를 채우려고 지어낸 값을 넣느니 행을 줄이세요.",
-      "- faq는 2개 이상이며 답변은 각각 2문장 이상입니다.",
+      input.briefing && input.mode === "shorts"
+        ? "- [단신 모드] faq는 1~2개, 각 답변은 1~2문장의 팩트만."
+        : "- faq는 2개 이상이며 답변은 각각 2문장 이상입니다.",
       "- faq 각 답변은 위 뉴스의 서로 다른 고유명사·날짜·사건을 인용하세요. '반응이 갈렸다', '관심을 끌었다' 같은 감정 평가는 쓰지 마세요.",
       "- externalLink.href는 위 [최신 뉴스 데이터] 목록의 URL을 그대로 복사한 값이어야 합니다. 다른 주소를 쓰면 실패로 처리됩니다.",
       "- internalLink.href는 반드시 /search?q= 로 시작합니다.",
-      "- takeaways는 구체적 실행 팁 2~4개입니다.",
+      input.briefing
+        ? "- takeaways는 빈 배열 [] 로 두세요. 실행 체크리스트·독자 팁 금지."
+        : "- takeaways는 구체적 실행 팁 2~4개입니다.",
       "",
       bannedPhraseReminder(),
     ]
@@ -350,7 +411,8 @@ async function planOutline(input: {
     timeoutMs: input.timeoutMs,
     logger: input.logger,
     step: "premium-outline",
-    model: editorModel(),
+    provider: BRIEFING_LLM.provider,
+    model: BRIEFING_LLM.editorModel(),
   });
 
   if (!raw) return null;
@@ -361,10 +423,11 @@ async function planOutline(input: {
       const heading = text(row.heading).replace(/^[❶❷❸❹❺\d.\s]+/, "").trim();
       return heading ? [{ heading, covers: text(row.covers) }] : [];
     })
-    .slice(0, SECTION_TARGET);
+    .slice(0, input.sectionTarget);
 
   const title = text(raw.title);
-  if (!title || plan.length < 3) return null;
+  const minPlan = input.briefing && input.mode === "shorts" ? 2 : 3;
+  if (!title || plan.length < minPlan) return null;
 
   return {
     title,
@@ -374,7 +437,7 @@ async function planOutline(input: {
     faq: parseFaq(raw.faq),
     externalLink: parseLink(raw.externalLink),
     internalLink: parseLink(raw.internalLink),
-    takeaways: stringList(raw.takeaways).slice(0, 4),
+    takeaways: input.briefing ? [] : stringList(raw.takeaways).slice(0, 4),
   };
 }
 
@@ -389,6 +452,9 @@ async function writeSection(input: {
   outline: PremiumOutline;
   keyword: string;
   context: PremiumContext;
+  channel?: PostChannel;
+  briefing?: boolean;
+  mode?: BriefingGenerationMode;
   logger: AnalysisLogger;
   timeoutMs?: number;
 }): Promise<PremiumSection | null> {
@@ -400,22 +466,42 @@ async function writeSection(input: {
     .map((item) => item.heading)
     .join(" / ");
 
+  const shorts = input.briefing && input.mode === "shorts";
+  const sparse = input.briefing && input.mode !== "full";
+  const sectionMinChars = shorts ? 200 : sparse ? 280 : input.briefing ? 300 : SECTION_MIN_CHARS;
+  const paragraphCount = shorts ? "2" : sparse || input.briefing ? "2~3" : `정확히 ${PARAGRAPHS_PER_SECTION}`;
+  const sentenceCount = shorts ? "2~3" : sparse || input.briefing ? "3~4" : String(SENTENCES_PER_PARAGRAPH);
+
+  const briefingModeBlock = shorts
+    ? buildShortsModePrompt()
+    : sparse
+      ? buildBriefingSparsePrompt()
+      : buildSparseEnrichmentPrompt(input.context, { briefing: input.briefing });
+
   const result = await chatJson<{ paragraphs?: unknown }>({
-    system: PREMIUM_SYSTEM_PROMPT,
+    system: input.briefing ? buildBriefingSystemPrompt(input.channel) : PREMIUM_SYSTEM_PROMPT,
     user: [
       input.context.block,
       "",
-      buildSparseEnrichmentPrompt(input.context),
+      briefingModeBlock,
       "",
       `당신은 칼럼의 ${input.index + 1}번째 섹션만 씁니다.`,
       `이 섹션의 소제목: ${plan.heading}`,
       plan.covers ? `이 섹션이 다룰 내용: ${plan.covers}` : "",
       others ? `다른 섹션이 맡은 주제(중복 금지): ${others}` : "",
       "이미 다른 섹션이 쓴 사건·인용·반응을 다시 쓰지 마세요. 이 섹션의 covers에 해당하는 새 사실만 쓰세요.",
+      input.briefing ? briefingWritingRules(input.channel) : "",
+      input.briefing && input.mode !== "shorts" ? seoStructureRules() : "",
+      input.briefing
+        ? "같은 평서 종결을 연속 3회 이상 쓰지 마세요. 의문형·명사형·짧은 단문을 섞으세요. 체크리스트·일반론 패딩 금지."
+        : "",
+      llmOutputFormatRules(),
+      editorialGroundingRules(),
       "",
       'JSON으로만 출력하세요: { "paragraphs": [string, ...] }',
-      `문단은 정확히 ${PARAGRAPHS_PER_SECTION}개이고, 각 문단은 ${SENTENCES_PER_PARAGRAPH}문장입니다.`,
-      `한 문장은 공백 제외 30~45자입니다. 이 섹션은 공백 제외 ${SECTION_MIN_CHARS}자 이상이어야 합니다.`,
+      `문단은 ${paragraphCount}개이고, 각 문단은 ${sentenceCount}문장입니다.`,
+      `한 문장은 공백 제외 30~45자입니다. 이 섹션은 공백 제외 ${sectionMinChars}자 이상이어야 합니다.`,
+      "모든 문장은 마침표(.)·물음표(?)·느낌표(!) 중 하나로 끝내세요. 종결 부호 없이 줄바꿈하거나 다음 문장과 이어 붙이지 마세요.",
       // The body budget is 5~7 across five sections, so exactly one per section
       // lands in range without any section needing to know the others' counts.
       // The mention is anchored to a specific sentence because "use it once"
@@ -437,7 +523,8 @@ async function writeSection(input: {
     timeoutMs: input.timeoutMs,
     logger: input.logger,
     step: `premium-sec${input.index + 1}`,
-    model: editorModel(),
+    provider: BRIEFING_LLM.provider,
+    model: BRIEFING_LLM.editorModel(),
   });
 
   const paragraphs = stringList(result?.paragraphs);
@@ -479,7 +566,8 @@ async function repairBannedCopy(input: {
     timeoutMs: input.timeoutMs,
     logger: input.logger,
     step: "premium-decliche",
-    model: editorModel(),
+    provider: BRIEFING_LLM.provider,
+    model: BRIEFING_LLM.editorModel(),
   });
 
   const rewritten = stringList(result?.rewritten);
@@ -522,11 +610,70 @@ async function repairKeywordDensity(input: {
     timeoutMs: input.timeoutMs,
     logger: input.logger,
     step: "premium-density",
-    model: editorModel(),
+    provider: BRIEFING_LLM.provider,
+    model: BRIEFING_LLM.editorModel(),
   });
 
   const rewritten = stringList(result?.rewritten);
   return rewritten.length === input.targets.length ? rewritten : null;
+}
+
+/**
+ * Expands thin briefings toward SEO_MIN_WORDS with general search/portal analysis
+ * without inventing keyword-specific facts.
+ */
+async function expandArticleForSeo(input: {
+  keyword: string;
+  channel?: PostChannel;
+  excerpt: string;
+  sections: PremiumSection[];
+  context: PremiumContext;
+  logger: AnalysisLogger;
+  timeoutMs?: number;
+}): Promise<PremiumSection[] | null> {
+  const result = await chatJson<{ sections?: unknown }>({
+    system: buildBriefingSystemPrompt(input.channel),
+    user: [
+      input.context.block,
+      "",
+      seoExpansionPrompt(input.keyword),
+      seoStructureRules(),
+      llmOutputFormatRules(),
+      "",
+      `현재 리드: ${input.excerpt}`,
+      "현재 섹션:",
+      JSON.stringify(
+        input.sections.map((section) => ({
+          heading: section.heading,
+          headingLevel: section.headingLevel,
+          paragraphs: section.paragraphs,
+        })),
+      ),
+      "",
+      "위 섹션의 팩트는 유지하고, 각 섹션에 1~2문단씩 검색·포털·트렌드 맥락 분석을 보태거나 '검색·포털 노출 맥락' H3 하위 섹션 1개를 추가하세요.",
+      'JSON으로만 출력: { "sections": [{ "heading": string, "headingLevel": 2 | 3, "paragraphs": [string] }] }',
+      `목표: 전체 ${SEO_MIN_WORDS}단어 이상. 문장 끝 마침표 필수.`,
+      bannedPhraseReminder(),
+    ].join("\n"),
+    temperature: 0.55,
+    timeoutMs: input.timeoutMs,
+    logger: input.logger,
+    step: "premium-seo-expand",
+    provider: BRIEFING_LLM.provider,
+    model: BRIEFING_LLM.editorModel(),
+  });
+
+  if (!result?.sections || !Array.isArray(result.sections)) return null;
+
+  const expanded = result.sections.flatMap((item) => {
+    const row = item as { heading?: unknown; headingLevel?: unknown; paragraphs?: unknown };
+    const heading = text(row.heading);
+    const paragraphs = stringList(row.paragraphs);
+    const level = row.headingLevel === 3 ? 3 : 2;
+    return heading && paragraphs.length ? [{ heading, headingLevel: level as 2 | 3, paragraphs }] : [];
+  });
+
+  return expanded.length >= input.sections.length ? expanded : null;
 }
 
 /**
@@ -539,19 +686,21 @@ export async function generatePremiumArticle(input: {
   keyword: string;
   slug: string;
   category?: string;
+  channel?: PostChannel;
   related?: string[];
   entity?: RankingEntity;
   relatedEntities?: RankingEntity[];
   logger: AnalysisLogger;
   timeoutMs?: number;
   publishedAt?: string;
+  briefing?: boolean;
 }): Promise<PremiumResult> {
   const { keyword, slug, logger } = input;
   // Budget covers retrieval, the draft and up to two repair rounds.
   const deadline = Date.now() + (input.timeoutMs ?? 150_000);
   const remaining = () => Math.max(0, deadline - Date.now());
 
-  if (!llmConfigured()) return { ok: false, reason: "llm-not-configured" };
+  if (!openaiConfigured()) return { ok: false, reason: "llm-not-configured" };
 
   const context = await collectPremiumContext(keyword, {
     entity: input.entity,
@@ -583,11 +732,35 @@ export async function generatePremiumArticle(input: {
     };
   }
 
+  const relatedRaw = input.related ?? [];
+  const filteredRelated = input.briefing
+    ? filterBriefingRelatedKeywords(keyword, relatedRaw, input.category)
+    : relatedRaw;
+
+  const mode: BriefingGenerationMode | undefined = input.briefing
+    ? assessBriefingGenerationMode({
+        context,
+        relatedRaw,
+        relatedFiltered: filteredRelated,
+      })
+    : undefined;
+
+  if (input.briefing) {
+    logger.step("briefing-mode", { mode, relatedRaw: relatedRaw.length, relatedFiltered: filteredRelated.length });
+  }
+
+  const sectionTarget = input.briefing && mode ? briefingSectionTarget(mode) : SECTION_TARGET;
+  const minChars = input.briefing && mode ? briefingMinChars(mode) : PREMIUM_MIN_CHARS;
+
   const outline = await planOutline({
     context,
     keyword,
     category: input.category,
-    related: input.related ?? [],
+    channel: input.channel,
+    related: filteredRelated,
+    briefing: input.briefing,
+    mode,
+    sectionTarget,
     logger,
     timeoutMs: remaining(),
   });
@@ -595,7 +768,8 @@ export async function generatePremiumArticle(input: {
   if (!outline) return { ok: false, reason: "llm-empty" };
 
   const { title, excerpt, table, faq, takeaways } = outline;
-  if (faq.length < 2 || !table.headers.length) {
+  const minFaq = input.briefing && mode === "shorts" ? 1 : 2;
+  if (faq.length < minFaq || !table.headers.length) {
     return {
       ok: false,
       reason: "malformed",
@@ -603,20 +777,52 @@ export async function generatePremiumArticle(input: {
     };
   }
 
-  // Sections run concurrently: they are independent given the shared outline,
-  // and the cost of the split is tokens rather than wall clock.
-  const written = await Promise.all(
+  // Sections run in parallel — wall-clock ≈ one section, not N × timeout.
+  const sectionTimeout = input.briefing
+    ? Math.min(briefingSectionTimeoutMs(mode), Math.max(60_000, remaining()))
+    : Math.max(60_000, Math.floor(remaining() / 2));
+
+  let written = await Promise.all(
     outline.plan.map((_, index) =>
       writeSection({
         index,
         outline,
         keyword,
         context,
+        channel: input.channel,
+        briefing: input.briefing,
+        mode,
         logger,
-        timeoutMs: remaining(),
+        timeoutMs: sectionTimeout,
       }).catch(() => null),
     ),
   );
+
+  // Retry only failed slots once (avoids rewriting the whole article).
+  const failedIndexes = written
+    .map((section, index) => (section ? -1 : index))
+    .filter((index) => index >= 0);
+  if (failedIndexes.length && remaining() > 40_000) {
+    logger.warn("premium-sec-retry", { failed: failedIndexes.length });
+    const retries = await Promise.all(
+      failedIndexes.map((index) =>
+        writeSection({
+          index,
+          outline,
+          keyword,
+          context,
+          channel: input.channel,
+          briefing: input.briefing,
+          mode,
+          logger,
+          timeoutMs: Math.min(sectionTimeout, remaining()),
+        }).catch(() => null),
+      ),
+    );
+    failedIndexes.forEach((index, retryIndex) => {
+      written[index] = retries[retryIndex] ?? null;
+    });
+  }
 
   let sections = written
     .filter((section): section is PremiumSection => Boolean(section))
@@ -630,18 +836,74 @@ export async function generatePremiumArticle(input: {
   }
   sections = sections.filter((section) => section.paragraphs.length > 0);
 
-  if (sections.length < 3) {
+  const minSections = input.briefing && mode === "shorts" ? 2 : 3;
+  if (sections.length < minSections) {
     return { ok: false, reason: "malformed", detail: `sections=${sections.length}` };
   }
 
-  let excerptText = excerpt;
-  const chars = premiumCharCount(
-    articlePlainText({ title, excerpt: excerptText, sections, faq, takeaways, table }),
-  );
-  logger.step("premium-body", { sections: sections.length, chars });
+  sections = polishArticleSections(sections) as PremiumSection[];
+  let faqText = polishFaq(faq);
+  let excerptText = polishProseText(excerpt);
 
-  if (chars < PREMIUM_MIN_CHARS) {
-    return { ok: false, reason: "too-short", detail: `${chars}자` };
+  const shouldExpand = mode !== "shorts";
+  if (shouldExpand) {
+    let words = articleWordCount({ title, excerpt: excerptText, sections, faq: faqText, table });
+    let draftChars = premiumCharCount(
+      articlePlainText({ title, excerpt: excerptText, sections, faq: faqText, takeaways, table }),
+    );
+    if ((words < SEO_MIN_WORDS || draftChars < minChars) && remaining() > 20_000) {
+      logger.step("premium-seo-expand", { words, chars: draftChars, target: SEO_MIN_WORDS });
+      const expanded = await expandArticleForSeo({
+        keyword,
+        channel: input.channel,
+        excerpt: excerptText,
+        sections,
+        context,
+        logger,
+        timeoutMs: Math.min(120_000, remaining()),
+      }).catch(() => null);
+      if (expanded) {
+        sections = polishArticleSections(expanded) as PremiumSection[];
+        words = articleWordCount({ title, excerpt: excerptText, sections, faq: faqText, table });
+        logger.step("premium-seo-expanded", { words });
+      }
+    }
+  }
+
+  sections = applySeoHeadingStructure(sections) as PremiumSection[];
+
+  const chars = premiumCharCount(
+    articlePlainText({ title, excerpt: excerptText, sections, faq: faqText, takeaways, table }),
+  );
+  logger.step("premium-body", { sections: sections.length, chars, words: articleWordCount({ title, excerpt: excerptText, sections, faq: faqText, table }) });
+
+  if (chars < minChars) {
+    return { ok: false, reason: "too-short", detail: `${chars}자 (min ${minChars})` };
+  }
+
+  const bodyPlain = articlePlainText({ title, excerpt: excerptText, sections, faq: faqText, takeaways, table });
+  if (input.briefing && hasTemplateConnectiveSpam(bodyPlain, 1)) {
+    return { ok: false, reason: "banned-copy", detail: "template-connectives" };
+  }
+  if (input.briefing && hasBriefingBoilerplate(bodyPlain)) {
+    return {
+      ok: false,
+      reason: "banned-copy",
+      detail: `briefing-boilerplate:${findBriefingBoilerplate(bodyPlain).join(",")}`,
+    };
+  }
+  if (input.briefing && hasRepetitiveDeclarativeEndings(bodyPlain)) {
+    return { ok: false, reason: "banned-copy", detail: "repetitive-endings" };
+  }
+  if (input.briefing && hasGenericPadding(bodyPlain)) {
+    return { ok: false, reason: "banned-copy", detail: "generic-padding" };
+  }
+  if (input.briefing && hasLeakedMetadata(bodyPlain)) {
+    return { ok: false, reason: "banned-copy", detail: "metadata-leak" };
+  }
+  const duplicateClaims = duplicateClaimCount(bodyPlain);
+  if (input.briefing && duplicateClaims > 2) {
+    return { ok: false, reason: "banned-copy", detail: `duplicate-claims:${duplicateClaims}` };
   }
 
   // Locate the offending strings so the repair can target them. Paragraphs and
@@ -681,7 +943,7 @@ export async function generatePremiumArticle(input: {
   const internal =
     parsedInternal && parsedInternal.href.startsWith("/search?q=")
       ? parsedInternal
-      : internalSearchLink(input.related?.[0] ?? keyword, parsedInternal?.label ?? "");
+      : internalSearchLink(filteredRelated[0] ?? keyword, parsedInternal?.label ?? "");
 
   // Target one mention in each section's first keyword-bearing paragraph, which
   // lands the body at five — inside the 5~7 band — and reads as deliberate
@@ -738,15 +1000,31 @@ export async function generatePremiumArticle(input: {
 
   // Final audits run after every repair: a rewrite pass can reintroduce what an
   // earlier pass removed, so the published text is what gets checked.
-  const plain = articlePlainText({ title, excerpt: excerptText, sections, faq, takeaways, table });
+  const plain = articlePlainText({ title, excerpt: excerptText, sections, faq: faqText, takeaways, table });
   const banned = findBannedPhrases(plain);
   if (banned.length) {
     return { ok: false, reason: "banned-copy", detail: banned.join(",") };
   }
+  if (input.briefing && hasBriefingBoilerplate(plain)) {
+    return {
+      ok: false,
+      reason: "banned-copy",
+      detail: `briefing-boilerplate:${findBriefingBoilerplate(plain).join(",")}`,
+    };
+  }
+  if (input.briefing && hasRepetitiveDeclarativeEndings(plain)) {
+    return { ok: false, reason: "banned-copy", detail: "repetitive-endings" };
+  }
+  if (input.briefing && hasGenericPadding(plain)) {
+    return { ok: false, reason: "banned-copy", detail: "generic-padding" };
+  }
+  if (input.briefing && hasLeakedMetadata(plain)) {
+    return { ok: false, reason: "banned-copy", detail: "metadata-leak" };
+  }
 
   const finalChars = premiumCharCount(plain);
-  if (finalChars < PREMIUM_MIN_CHARS) {
-    return { ok: false, reason: "too-short", detail: `${finalChars}자` };
+  if (finalChars < minChars) {
+    return { ok: false, reason: "too-short", detail: `${finalChars}자 (min ${minChars})` };
   }
 
   const publishedAt = input.publishedAt ?? new Date().toISOString();
@@ -754,30 +1032,34 @@ export async function generatePremiumArticle(input: {
     title,
     excerpt: excerptText,
     url: `${SITE.url}/ranking/${slug}`,
-    faq,
+    faq: faqText,
     keyword,
     publishedAt,
   });
 
-  const bodyMarkdown = renderMarkdown({
+  const rendered = renderMarkdown({
     keyword,
     title,
     excerpt: excerptText,
     sections,
-    table: { ...table, markdown: tableMarkdown(table) },
-    faq,
+    table: { ...table, markdown: tableMarkdown(table), html: renderFactTableHtml(table) },
+    faq: faqText,
     takeaways,
     externalLink: { ...external, rel: "noopener noreferrer" },
     internalLink: internal,
     jsonLd,
   });
 
+  const bodyMarkdown = rendered.markdown;
+  const bodyHtml = rendered.html;
+
   logger.step("premium-ok", {
     keyword,
     chars: finalChars,
     keywordCount,
     sections: sections.length,
-    faq: faq.length,
+    faq: faqText.length,
+    words: articleWordCount({ title, excerpt: excerptText, sections, faq: faqText, table }),
     sources: context.sources.length,
   });
 
@@ -789,18 +1071,19 @@ export async function generatePremiumArticle(input: {
       title,
       excerpt: excerptText,
       sections,
-      table: { ...table, markdown: tableMarkdown(table) },
-      faq,
+      table: { ...table, markdown: tableMarkdown(table), html: renderFactTableHtml(table) },
+      faq: faqText,
       externalLink: { ...external, rel: "noopener noreferrer" },
       internalLink: internal,
       takeaways,
       bodyMarkdown,
+      bodyHtml,
       jsonLd,
       characterCount: finalChars,
       keywordCount,
       sources: context.sources,
       placements: describePlacements(bodyMarkdown),
-      model: editorModel(),
+      model: BRIEFING_LLM.editorModel(),
     },
   };
 }

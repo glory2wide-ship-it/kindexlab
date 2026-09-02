@@ -1,7 +1,17 @@
 import { analysisLogger } from "@/lib/analysis/log";
-import { llmConfigured } from "@/lib/analysis/chain/llm";
+import { openaiConfigured } from "@/lib/analysis/chain/llm";
+import { briefingRelatedKeywords } from "@/lib/premium/briefing-editorial";
 import { generatePremiumArticle, type PremiumArticle } from "@/lib/premium/generate";
+import { articleWordCount } from "@/lib/premium/seo-format";
 import { delay } from "@/lib/premium/batch";
+import {
+  dropRepeatedSentences,
+  hasBriefingBoilerplate,
+  hasGenericPadding,
+  hasLeakedMetadata,
+  hasRepetitiveDeclarativeEndings,
+  hasTemplateConnectiveSpam,
+} from "@/lib/editorial/rules";
 import type { BriefingArticle, BriefingSection } from "@/lib/types";
 
 function mapSections(
@@ -15,28 +25,37 @@ function mapSections(
   }));
 }
 
+function cleanPremiumSections(sections: PremiumArticle["sections"]): PremiumArticle["sections"] {
+  const seen = new Set<string>();
+  return sections.map((section) => ({
+    ...section,
+    paragraphs: section.paragraphs
+      .map((paragraph) => dropRepeatedSentences(paragraph, seen))
+      .filter(Boolean),
+  }));
+}
+
 function mergePremiumDraft(draft: BriefingArticle, article: PremiumArticle, keyword: string): BriefingArticle {
-  const sections = mapSections(article.sections);
-  const wordCount = Math.max(
-    draft.wordCount ?? 0,
-    article.characterCount,
-    sections
-      .flatMap((section) => [section.heading ?? "", ...section.paragraphs])
-      .join(" ")
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean).length,
-  );
+  const sections = mapSections(cleanPremiumSections(article.sections));
+  const wordCount = articleWordCount({
+    title: article.title.trim() || draft.title,
+    excerpt: article.excerpt || draft.excerpt,
+    sections,
+    faq: article.faq ?? [],
+    table: article.table,
+  });
 
   return {
     ...draft,
-    title: article.title.includes(keyword) ? article.title : draft.title,
+    title: article.title.trim() || draft.title,
     excerpt: article.excerpt || draft.excerpt,
     sections: sections.length ? sections : draft.sections,
     table: article.table,
     faq: article.faq,
     externalLink: article.externalLink,
     internalLink: article.internalLink ?? draft.internalLink,
+    bodyHtml: article.bodyHtml,
+    bodyMarkdown: article.bodyMarkdown,
     focusKeyword: keyword,
     supportKeyword: draft.supportKeyword,
     wordCount,
@@ -50,24 +69,21 @@ function enrichmentLeadKeyword(article: BriefingArticle): string {
 }
 
 function enrichmentRelatedKeywords(article: BriefingArticle, edition: BriefingArticle[]): string[] {
-  const peers = edition.filter((item) => item.slug !== article.slug);
-  if (article.kind === "main") {
-    return peers
-      .map((item) => item.focusKeyword)
-      .filter((keyword): keyword is string => Boolean(keyword?.trim()))
-      .slice(0, 5);
-  }
-  const sameChannel = peers.filter((item) => item.channel === article.channel);
-  const boardPeers = sameChannel
-    .filter((item) => item.kind === "deep-dive")
-    .map((item) => item.focusKeyword)
-    .filter((keyword): keyword is string => Boolean(keyword?.trim()));
-  return [...new Set(boardPeers)].filter((keyword) => keyword !== article.focusKeyword).slice(0, 4);
+  return briefingRelatedKeywords(article, edition);
 }
 
 function enrichmentCategoryHint(article: BriefingArticle): string {
   if (article.kind === "main") return article.channel ?? "entertainment";
-  return article.deskLabel ?? article.focusKeyword ?? article.channel ?? "entertainment";
+  return article.category ?? article.deskLabel ?? article.channel ?? "entertainment";
+}
+
+function passesBriefingQualityGate(plain: string): boolean {
+  if (hasTemplateConnectiveSpam(plain, 1)) return false;
+  if (hasBriefingBoilerplate(plain)) return false;
+  if (hasRepetitiveDeclarativeEndings(plain)) return false;
+  if (hasGenericPadding(plain)) return false;
+  if (hasLeakedMetadata(plain)) return false;
+  return true;
 }
 
 /**
@@ -82,7 +98,7 @@ export async function enrichBriefingWithAi(
     categoryHint?: string;
   },
 ): Promise<BriefingArticle> {
-  if (!llmConfigured()) return draft;
+  if (!openaiConfigured()) return draft;
 
   const keyword = options?.leadKeyword?.trim() || enrichmentLeadKeyword(draft);
   const logger = analysisLogger(`briefing:${draft.slug}`);
@@ -90,20 +106,41 @@ export async function enrichBriefingWithAi(
     generatePremiumArticle({
       keyword,
       slug: draft.slug,
+      channel: draft.channel,
       category: options?.categoryHint ?? enrichmentCategoryHint(draft),
       related: options?.relatedKeywords,
       logger,
-      timeoutMs: 180_000,
+      timeoutMs: 360_000,
       publishedAt: draft.publishedAt,
+      briefing: true,
     });
 
   let result = await request();
   if (!result.ok) {
-    await delay(90_000);
-    result = await request();
+    logger.warn("briefing-enrich-fail", { reason: result.reason, detail: result.detail });
+    const retryable =
+      result.reason === "llm-empty" ||
+      result.reason === "malformed" ||
+      result.reason === "too-short" ||
+      result.reason === "banned-copy" ||
+      result.reason === "keyword-stuffing";
+    if (retryable) {
+      await delay(8_000);
+      result = await request();
+      if (!result.ok) {
+        logger.warn("briefing-enrich-retry-fail", { reason: result.reason, detail: result.detail });
+      }
+    }
   }
 
-  if (!result.ok) return draft;
+  if (!result.ok || result.article.characterCount < 700) return draft;
+  const plain = [
+    result.article.title,
+    result.article.excerpt,
+    ...result.article.sections.flatMap((section) => [section.heading, ...section.paragraphs]),
+    ...(result.article.faq?.flatMap((item) => [item.question, item.answer]) ?? []),
+  ].join(" ");
+  if (!passesBriefingQualityGate(plain)) return draft;
   return mergePremiumDraft(draft, result.article, keyword);
 }
 
@@ -129,7 +166,7 @@ const BRIEFING_AI_BATCH_DELAY_MS = 3_000;
 
 /** Enriches every article in a channel edition (main + deep-dives) via OpenAI. */
 export async function enrichChannelEditionWithAi(articles: BriefingArticle[]): Promise<BriefingArticle[]> {
-  if (!llmConfigured() || !articles.length) return articles;
+  if (!openaiConfigured() || !articles.length) return articles;
 
   const enriched: BriefingArticle[] = [];
 

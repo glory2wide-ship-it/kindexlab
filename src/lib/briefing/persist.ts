@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { isPersistableBriefing } from "@/lib/briefing/quality";
 import type { BriefingArticle } from "@/lib/types";
 
 const extraRel = path.join("src", "data", "briefings", "extra.json");
@@ -48,8 +49,15 @@ export async function removePersistedEdition(editionDate: string): Promise<numbe
   }
 }
 
-export async function persistEdition(articles: BriefingArticle[]): Promise<{ wrote: boolean; path: string }> {
+export async function persistEdition(articles: BriefingArticle[]): Promise<{
+  wrote: boolean;
+  path: string;
+  kept: number;
+  skipped: number;
+}> {
   const file = path.join(process.cwd(), extraRel);
+  const persistable = articles.filter(isPersistableBriefing);
+  const skipped = articles.length - persistable.length;
   try {
     await mkdir(path.dirname(file), { recursive: true });
     let existing: BriefingArticle[] = [];
@@ -59,13 +67,13 @@ export async function persistEdition(articles: BriefingArticle[]): Promise<{ wro
     } catch {
       existing = [];
     }
-    const slugs = new Set(articles.map((item) => item.slug));
-    const merged = [...existing.filter((item) => !slugs.has(item.slug)), ...articles].sort((a, b) =>
+    const slugs = new Set(persistable.map((item) => item.slug));
+    const merged = [...existing.filter((item) => !slugs.has(item.slug)), ...persistable].sort((a, b) =>
       `${b.editionDate}${b.slug}`.localeCompare(`${a.editionDate}${a.slug}`),
     );
     await writeFile(file, `${JSON.stringify({ articles: merged }, null, 2)}\n`, "utf8");
-    return { wrote: true, path: extraRel };
+    return { wrote: true, path: extraRel, kept: persistable.length, skipped };
   } catch {
-    return { wrote: false, path: extraRel };
+    return { wrote: false, path: extraRel, kept: 0, skipped };
   }
 }

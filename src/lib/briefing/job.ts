@@ -56,7 +56,14 @@ export async function generateEdition(
     options?.onChannel?.(channel, enriched.length);
   }
 
-  if (persist) await persistEdition(articles);
+  if (persist) {
+    const result = await persistEdition(articles);
+    if (result.skipped > 0) {
+      console.warn(
+        `[briefing] skipped ${result.skipped} template/failed articles; persisted ${result.kept}`,
+      );
+    }
+  }
   return articles;
 }
 

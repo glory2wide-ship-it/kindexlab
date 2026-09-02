@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { channelHref, channelSectionHref, getPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
+import { BriefingCard } from "@/components/briefing/BriefingCard";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
+import { getChannelBriefingEdition } from "@/lib/api";
+import { formatCount } from "@/lib/format";
+import {
+  channelHref,
+  channelSectionHref,
+  getPostChannel,
+  POST_CHANNELS,
+} from "@/lib/posts/channels";
 import { listPosts, listPostsByChannel } from "@/lib/posts/store";
 import type { GeneratedPost, PostChannel } from "@/lib/posts/types";
-import { formatCount } from "@/lib/format";
-import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 function PostCard({ post, href }: { post: GeneratedPost; href: string }) {
   return (
@@ -28,15 +35,27 @@ export function channelHubMetadata(channel: PostChannel): Metadata {
   };
 }
 
+/**
+ * Issue-column hub: today's channel briefings (daily + deep-dives) plus any
+ * magazine posts. Politics previously 404'd on /politics/posts because
+ * politics/[id] reserved the segment without a dedicated posts page; travel had
+ * no generated posts — briefings fill that gap.
+ */
 export async function ChannelHubPage({ channel }: { channel: PostChannel }) {
   const meta = getPostChannel(channel);
-  const posts = await listPostsByChannel(channel);
+  const [posts, briefings] = await Promise.all([
+    listPostsByChannel(channel),
+    getChannelBriefingEdition(channel),
+  ]);
+
   return (
     <div className="space-y-8">
       <header className="space-y-3">
-        <DeskEyebrow variant="xs">{meta.eyebrow}</DeskEyebrow>
         <h1 className="text-3xl font-semibold tracking-tight">{meta.label} 이슈 칼럼</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted">{meta.description}</p>
+        <p className="max-w-2xl text-sm leading-6 text-muted">
+          오늘의 일일·심층 브리핑과 키워드 매거진 칼럼을 모았습니다. 지수(INDEX)는 키워드를 고르는
+          트리거이고, 본문은 그 키워드만으로 쓴 독립 칼럼입니다.
+        </p>
         <p className="text-sm text-muted">
           <Link href="/posts" className="underline hover:text-ink">
             전체 칼럼
@@ -51,20 +70,60 @@ export async function ChannelHubPage({ channel }: { channel: PostChannel }) {
           ))}
         </p>
       </header>
+
+      {briefings.length ? (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <h2 className="text-lg font-semibold tracking-tight">오늘의 이슈 브리핑</h2>
+            <Link
+              href={channelSectionHref(channel, "briefing")}
+              className="text-sm font-medium text-accent hover:underline"
+            >
+              일일브리핑 전체 →
+            </Link>
+          </div>
+          <ul className="grid gap-4 md:grid-cols-2">
+            {briefings.map((article) => (
+              <li key={article.slug}>
+                <BriefingCard
+                  article={article}
+                  href={`${channelSectionHref(channel, "briefing")}/${article.slug}`}
+                  kicker={
+                    article.kind === "main"
+                      ? `${meta.label} 종합`
+                      : article.deskLabel || "심층 분석"
+                  }
+                  lead={article.kind === "main"}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {posts.length ? (
-        <ul className="grid gap-4 md:grid-cols-2">
-          {posts.map((post) => (
-            <li key={post.slug}>
-              <PostCard post={post} href={channelHref(channel, post.slug)} />
-            </li>
-          ))}
-        </ul>
-      ) : (
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight">매거진 칼럼</h2>
+          <ul className="grid gap-4 md:grid-cols-2">
+            {posts.map((post) => (
+              <li key={post.slug}>
+                <PostCard
+                  post={post}
+                  href={
+                    channel === "politics" ? `/posts/${post.slug}` : channelHref(channel, post.slug)
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {!briefings.length && !posts.length ? (
         <p className="rounded-2xl border border-dashed border-line bg-panel p-6 text-sm leading-6 text-muted">
-          이 카테고리 칼럼은 지수(INDEX)에서 고른 키워드만으로 쓰는 매거진 생성기(대비표, 내·외부 링크, FAQ)로
-          발행됩니다. 다음 크론부터 이 허브에 쌓입니다.
+          아직 이 카테고리의 이슈 글이 없습니다. 일일 브리핑이 발행되면 이 허브에 함께 노출됩니다.
         </p>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -74,11 +133,10 @@ export async function PostsIndexWithChannels() {
   return (
     <div className="space-y-8">
       <header className="space-y-3">
-        <DeskEyebrow variant="xs">FX · LIVING DESK</DeskEyebrow>
         <h1 className="text-3xl font-semibold tracking-tight">이슈 칼럼</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          지수(INDEX)는 오늘의 키워드를 고르는 트리거입니다. 본문은 그 키워드만으로 쓴 700~900어절 매거진 칼럼이며
-          하루 세 번 발행합니다. 투자 권유가 아닙니다.
+          지수(INDEX)는 오늘의 키워드를 고르는 트리거입니다. 본문은 그 키워드만으로 쓴 매거진 칼럼과
+          일일 브리핑입니다. 투자 권유가 아닙니다.
         </p>
       </header>
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -98,7 +156,12 @@ export async function PostsIndexWithChannels() {
       <ul className="grid gap-4 md:grid-cols-2">
         {posts.map((post) => (
           <li key={post.slug}>
-            <PostCard post={post} href={channelHref(post.channel, post.slug)} />
+            <PostCard
+              post={post}
+              href={
+                post.channel === "politics" ? `/posts/${post.slug}` : channelHref(post.channel, post.slug)
+              }
+            />
           </li>
         ))}
       </ul>

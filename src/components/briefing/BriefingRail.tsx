@@ -2,7 +2,6 @@ import Link from "next/link";
 import { BriefingCard } from "@/components/briefing/BriefingCard";
 import { getPostChannel, isPostChannel } from "@/lib/posts/channels";
 import type { BriefingArticle } from "@/lib/types";
-import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 function channelKicker(article: BriefingArticle): string | undefined {
   if (article.deskLabel) return article.deskLabel;
@@ -25,14 +24,9 @@ export function BriefingRail({ articles }: { articles: BriefingArticle[] }) {
   return (
     <section aria-labelledby="trend-briefing-heading" className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <DeskEyebrow variant="sans">
-            Today&apos;s Desk
-          </DeskEyebrow>
-          <h2 id="trend-briefing-heading" className="mt-1 text-xl font-semibold tracking-tight">
-            오늘의 트렌드 브리핑
-          </h2>
-        </div>
+        <h2 id="trend-briefing-heading" className="text-xl font-semibold tracking-tight">
+          오늘의 트렌드 브리핑
+        </h2>
         <div className="flex gap-3 text-sm">
           <Link href="/briefing" className="font-medium text-accent hover:underline">
             브리핑 허브

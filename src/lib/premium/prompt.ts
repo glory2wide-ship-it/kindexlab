@@ -1,3 +1,6 @@
+import { resolveChannelEditorPersona } from "@/lib/premium/briefing-editorial";
+import { editorialGroundingRules } from "@/lib/editorial/tense-rules";
+
 /**
  * System prompt for the premium SEO rebuild. Held verbatim in one place so a
  * wording change is a single reviewable diff and every generator provably sends
@@ -30,7 +33,24 @@ export const PREMIUM_SYSTEM_PROMPT = `당신은 대한민국 최고 수준의 �
 - 사용 절대 금지어: "결론적으로", "주목받고 있다", "귀추가 주목된다", "다양한 관점이 존재한다", "상황을 지켜볼 필요가 있다", "알아보았습니다", "살펴보겠습니다", "긍정적인 반응을 보였다", "생일을 축하하며", "이 소식에 긍정적인 반응", "긍정과 부정을 나란히 읽으면"
 - 같은 사건·반응·문장을 본문이나 FAQ에서 반복하지 마세요. 각 문단은 새로운 팩트만 보탭니다.
 - FAQ 답변은 뉴스에 나온 고유명사·날짜·사건을 인용하세요. 감정 평가나 상투적 반응 문장은 쓰지 마세요.
-- 어조: 단호하고 명확하며, 팩트를 기반으로 날카롭게 단락을 짚어주는 인텔리전스 칼럼니스트의 문체를 유지하세요.`;
+- 어조: 단호하고 명확하며, 팩트를 기반으로 날카롭게 단락을 짚어주는 인텔리전스 칼럼니스트의 문체를 유지하세요.
+
+[시제 및 시간 정합성 엄격 준수]
+1. 기준 시점 인식: 본문 작성 시 수집된 뉴스 데이터의 개별 발행일(년·월·일)을 최우선 근거로 삼으세요.
+2. 시제 일치(과거형 서술): 이미 지난 과거 날짜(예: 2020년, 지난 4월)의 사건이나 종결된 이슈는 반드시 명확한 과거형(~했다, ~전해진 바 있다, ~보도했다)으로 서술하세요. 현재 시점과 혼동해 최근 일처럼 쓰지 마세요.
+3. 타임라인 정렬: 서로 다른 시점의 사건(예: 2020년 비교 기사와 2026년 서비스 축소)이 함께 있으면 시간순 흐름에 맞게 배치해 독자가 발생 시기를 오인하지 않게 하세요.
+4. 날짜가 확인되지 않으면 '최근'·'곧' 등으로 단정하지 말고, 확인된 시점만 밝히거나 시점을 생략하세요.
+
+[형태소/접두어 오인(노이즈) 방지]
+1. 키워드 매칭 오류 차단: 'Counter-', '몰아보기' 등 단순 문자열·접두어 일치만으로 완전히 다른 분야(예: 게임 이슈와 대북 전술핵 뉴스)의 무관한 기사를 억지로 엮거나 한 묶음으로 다루지 마세요.
+2. 팩트 기반 격리: 수집 데이터 사이에 실질적 인과관계·직접적 맥락 연결고리가 확인되지 않으면 억지로 엮지 마세요. 각각 독립 단락으로 분리하거나, 현상 분석만 짧게 다루세요.
+3. 포커스 키워드의 실제 의미·분야와 맞지 않는 기사는 본문·표·FAQ에 인용하지 마세요.
+
+[문장 끝 마침표 필수 적용]
+1. 온전한 종결: 모든 문장의 끝(서술어·명사형 종결 포함)에는 예외 없이 마침표(.)를 온전하게 찍으세요. 줄바꿈으로 문장이 끝나도 마지막에는 반드시 마침표를 포함하세요.
+2. 띄어쓰기 및 문장 부호 정돈: 문장이 급하게 끊기거나 마침표가 누락된 채 다음 문장과 이어지지 않도록 문맥과 문장 부호를 엄격히 교정해 출력하세요.
+3. 의문문은 물음표(?), 감탄은 느낌표(!)로 닫되, 일반 서술·명사형 종결은 마침표(.)만 사용하세요. 종결 부호 없는 문장은 실패로 간주합니다.
+4. 실패 예(금지): '화두로 떠올랐다 이슈의 중심에는' → '화두로 떠올랐다. 이슈의 중심에는'처럼 문장마다 마침표를 찍으세요.`;
 
 /** The Anti-AI clause is enforced after generation, not just requested. */
 export const PREMIUM_BANNED_PHRASES = [
@@ -45,6 +65,15 @@ export const PREMIUM_BANNED_PHRASES = [
   "생일을 축하하며",
   "이 소식에 긍정적인 반응",
   "긍정과 부정을 나란히 읽으면",
+  "새로운 패러다임",
+  "혁신을 선보",
+  "심층 분석",
+  "주목할 만한",
+  "화제가 되고",
+  "관심이 집중",
+  "파급 효과를",
+  "중요한 역할을 하",
+  "촉진하는 데 기여",
 ] as const;
 
 /**
@@ -65,6 +94,15 @@ const BANNED_PATTERNS: { label: (typeof PREMIUM_BANNED_PHRASES)[number]; test: R
   { label: "생일을 축하하며", test: /생일을\s*축하하며/ },
   { label: "이 소식에 긍정적인 반응", test: /이\s*소식에\s*긍정/ },
   { label: "긍정과 부정을 나란히 읽으면", test: /긍정과\s*부정을\s*나란히/ },
+  { label: "새로운 패러다임", test: /새로운\s*패러다임/ },
+  { label: "혁신을 선보", test: /혁신을\s*선보/ },
+  { label: "심층 분석", test: /심층\s*분석/ },
+  { label: "주목할 만한", test: /주목할\s*만한/ },
+  { label: "화제가 되고", test: /화제가\s*되(고|는)/ },
+  { label: "관심이 집중", test: /관심이\s*집중/ },
+  { label: "파급 효과를", test: /파급\s*효과를/ },
+  { label: "중요한 역할을 하", test: /중요한\s*역할을\s*하/ },
+  { label: "촉진하는 데 기여", test: /촉진하는\s*데\s*기여/ },
 ];
 
 /** Internal market vocabulary the column must not borrow (지침 1). */
@@ -116,7 +154,54 @@ export function bannedPhraseReminder(): string {
     "- 긍정적인 반응을 보였다 / 이 소식에 긍정적인 반응",
     "- 생일을 축하하며",
     "- 긍정과 부정을 나란히 읽으면",
+    "- 새로운 패러다임 / 혁신을 선보 / 심층 분석 / 주목할 만한 / 화제가 되고 / 관심이 집중",
     "이 표현이 하나라도 들어가면 글 전체가 폐기됩니다. 단정적인 서술로 대체하세요.",
+  ].join("\n");
+}
+
+/** Prepends the channel desk persona to the shared premium system prompt. */
+export function buildBriefingSystemPrompt(channel?: string): string {
+  const persona = resolveChannelEditorPersona(channel);
+  return `${persona}\n\n${PREMIUM_SYSTEM_PROMPT}`;
+}
+
+/** Blocks LLM preambles and metadata from leaking into published body text. */
+export function llmOutputFormatRules(): string {
+  return [
+    "[출력 형식 — 절대 준수]",
+    "- 응답은 요청된 JSON 필드 값 또는 HTML/마크다운 본문만 출력하세요.",
+    "- '네, 기사를 작성해 드리겠습니다', 글자 수, 읽는 시간, SEO, AdSense, 날짜·카테고리 메타(예: '2026-09-02 · 실시간 웹툰 · 11분')를 포함하지 마세요.",
+    "- 코드블록 마커(```)나 설명 문장 없이 본문 데이터만 반환하세요.",
+  ].join("\n");
+}
+
+/** Extra constraints for daily briefing columns (종합·심층). */
+export function briefingWritingRules(channel?: string): string {
+  const persona = resolveChannelEditorPersona(channel);
+  return [
+    "[데일리 브리핑 에디터 페르소나]",
+    persona,
+    "",
+    "[문체 — 엄격 준수]",
+    "- '~다', '~했다', '~밝혔다', '~설명했다', '~덧붙였다' 같은 평서 종결이 연속 3회 이상 나오면 실패입니다.",
+    "- 의문형(~일까?), 청유형(~해보자), 명사형 종결, 짧은 단문을 섞어 리듬을 만드세요.",
+    "- 장문과 단문을 교차하고, 문단 첫 문장은 이전 문단과 자연스럽게 이어지게 하세요.",
+    "- 모든 문장 끝에는 마침표(.)를 온전하게 찍으세요. 종결 부호 누락·문장 급절단 금지.",
+    "",
+    "[내용 — 할루시네이션·패딩 방지]",
+    "- 수집 데이터에 없는 줄거리·사건·인물 관계를 지어내지 마세요.",
+    "- 정보가 부족하면 현상 분석(왜 검색·랭킹에 올랐는지)만 짧게 쓰세요. 분량 채우기용 일반론·훈수·체크리스트는 금지입니다.",
+    "- '독자가 확인해야 할', '체크리스트', '실행 팁', '꼼꼼히 점검' 같은 패딩 섹션·소제목을 쓰지 마세요.",
+    "- 메인 키워드와 연관 검색어가 다른 분야(예: 웹툰+아이돌)면 억지로 한 이야기로 엮지 마세요.",
+    "- 단순 문자열·접두어 일치만으로 무관한 기사(예: 게임 Counter-와 대북 전술핵)를 한 묶음으로 서술하지 마세요.",
+    "",
+    "[금지 문형]",
+    "- '~을 보면', '~하면', '같이 읽으면' 접속구로 문장을 이어 붙이지 마세요.",
+    "- '산업 흐름', '유행 한 줄', '맥락 메모', '테마로 읽', '관심을 먼저 키운' 등 템플릿 문형 금지.",
+    "- 본문에 글자 수, 읽는 시간, SEO, AdSense, 날짜·카테고리 메타(예: '2026-09-02 · 실시간 웹툰 · 11분')를 출력하지 마세요.",
+    "- 뉴스에 나온 고유명사·날짜·URL 근거만 쓰세요.",
+    "",
+    editorialGroundingRules(),
   ].join("\n");
 }
 

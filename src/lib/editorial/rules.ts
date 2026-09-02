@@ -1,5 +1,6 @@
 import type { PostFaq, PostLink, PostTable } from "@/lib/posts/types";
 import type { EntityType } from "@/lib/types";
+import { editorialGroundingRules } from "@/lib/editorial/tense-rules";
 
 export const MIN_WORDS = 700;
 export const MAX_WORDS = 900;
@@ -91,6 +92,121 @@ const POLL_EXTEND = [
 const EXTEND_REPEAT_LIMIT = 2;
 const passUsed = new Map<string, number>();
 
+const ALL_CONNECTIVE_PREFIXES = [...EXTEND, ...TAPE_EXTEND, ...POLL_EXTEND];
+
+/** Counts template-style connective openers that read as auto-padded filler. */
+export function countTemplateConnectives(text: string): number {
+  let total = 0;
+  for (const clause of ALL_CONNECTIVE_PREFIXES) {
+    if (!clause || !text.includes(clause)) continue;
+    total += text.split(clause).length - 1;
+  }
+  return total;
+}
+
+export function hasTemplateConnectiveSpam(text: string, max = 1): boolean {
+  return countTemplateConnectives(text) > max;
+}
+
+/**
+ * Mad-lib skeletons from `editorial/copy.ts` briefing templates. Any match means
+ * the text is auto-padded filler, not an OpenAI column.
+ */
+export const BRIEFING_BOILERPLATE_PATTERNS: { label: string; test: RegExp }[] = [
+  { label: "이슈가 지금 화제인 배경", test: /이슈가\s*지금\s*화제인\s*배경/ },
+  { label: "화제인 배경은 산업 흐름", test: /화제인\s*배경은\s*산업\s*흐름/ },
+  { label: "자주 오른다", test: /에서\s*자주\s*오른다/ },
+  { label: "관심을 먼저 키운", test: /관심을\s*먼저\s*키운/ },
+  { label: "유행 한 줄", test: /유행\s*한\s*줄/ },
+  { label: "생활 이야기로 번지는 자리", test: /생활\s*이야기로\s*번지는\s*자리/ },
+  { label: "설명하는 입문이 필요", test: /설명하는\s*입문이\s*필요/ },
+  { label: "화제인 이유는 유행 한 줄", test: /화제인\s*이유는\s*유행\s*한\s*줄/ },
+  { label: "주제가 테마로", test: /주제가\s*테마로\s*(읽|묶)/ },
+  { label: "관심이 구체적인 자리", test: /관심이\s*구체적인\s*자리/ },
+  { label: "생활 관심으로 샨", test: /생활\s*관심으로\s*샨/ },
+  { label: "이슈가 밖으로 샨", test: /이슈가\s*밖으로\s*샨/ },
+  { label: "호기심과 결이 다르", test: /호기심과\s*결이\s*다르/ },
+  { label: "생활 대화로 번지는지", test: /생활\s*대화로\s*번지는지/ },
+  { label: "입소문이 겹치면", test: /입소문이\s*겹치면/ },
+  { label: "연 뒤 맥락만 먼저 정리", test: /연\s*뒤\s*맥락만\s*먼저\s*정리/ },
+  { label: "맥락 메모", test: /맥락\s*메모/ },
+  { label: "붙어야 관심이", test: /붙어야\s*관심이/ },
+  { label: "습관이 남아야", test: /습관이\s*남아야/ },
+  { label: "대화가 멈추면 관심", test: /대화가\s*멈추면\s*관심/ },
+  { label: "파급이 밖으로 샨", test: /파급이\s*밖으로\s*샨/ },
+  { label: "테마로 번진", test: /테마(로|가)\s*(번|묶)/ },
+  { label: "입문은 배경부터", test: /입문은\s*.+\s*배경부터/ },
+  { label: "가 지금 화제인 이유", test: /가\s*지금\s*화제인\s*이유/ },
+  { label: "이름 나열", test: /이름\s*나열/ },
+  { label: "습관 단위", test: /습관\s*단위/ },
+  { label: "짧은 유행", test: /짧은\s*유행/ },
+  { label: "정보 질문이 섞이면 체류", test: /정보\s*질문이\s*섞이면\s*체류/ },
+  { label: "커뮤니티 이틀 연속", test: /커뮤니티.*이틀\s*연속/ },
+  { label: "현장을 같이 읽", test: /현장을\s*같이\s*읽/ },
+  { label: "배경을 같이 읽", test: /배경을\s*같이\s*읽/ },
+  { label: "투자 조언이 아니라 문화 입문", test: /투자\s*조언이\s*아니라\s*문화\s*입문/ },
+  { label: "유행과 이해를 갈라", test: /유행과\s*이해를\s*갈라/ },
+];
+
+export function findBriefingBoilerplate(text: string): string[] {
+  return BRIEFING_BOILERPLATE_PATTERNS.filter((entry) => entry.test.test(text)).map(
+    (entry) => entry.label,
+  );
+}
+
+export function hasBriefingBoilerplate(text: string): boolean {
+  return findBriefingBoilerplate(text).length > 0;
+}
+
+const REPORTING_ENDING = /(?:밝혔다|설명했다|덧붙였다|전했다|말했다|밝혔습니다|설명했습니다|덧붙였습니다)\.?$/;
+
+const PADDING_PATTERNS = [
+  /체크리스트/,
+  /실행\s*체크리스트/,
+  /독자가\s*(먼저|반드시)\s*확인/,
+  /확인해야\s*할\s*(N|몇|\d)/i,
+  /꼼꼼히\s*점검/,
+];
+
+const METADATA_LEAK =
+  /분\s*읽기|SEO\s*기준|글자\s*수|AdSense|메타데이터|\d{4}-\d{2}-\d{2}\s*·|읽는\s*시간/;
+
+/** True when reporting-verb endings repeat in a row (기계적 보도체). */
+export function hasRepetitiveDeclarativeEndings(text: string, maxStreak = 2): boolean {
+  const sentences = extractSentences(text);
+  let streak = 0;
+  for (const sentence of sentences) {
+    if (REPORTING_ENDING.test(sentence.trim())) {
+      streak += 1;
+      if (streak > maxStreak) return true;
+    } else {
+      streak = 0;
+    }
+  }
+  return false;
+}
+
+export function hasGenericPadding(text: string): boolean {
+  return PADDING_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+export function hasLeakedMetadata(text: string): boolean {
+  return METADATA_LEAK.test(text);
+}
+
+/** Returns how many sentences repeat the same claim fingerprint. */
+export function duplicateClaimCount(text: string): number {
+  const seen = new Set<string>();
+  let duplicates = 0;
+  for (const sentence of extractSentences(text)) {
+    const key = claimFingerprint(sentence);
+    if (!key) continue;
+    if (seen.has(key)) duplicates += 1;
+    else seen.add(key);
+  }
+  return duplicates;
+}
+
 export function resetEditorialPass(): void {
   passUsed.clear();
 }
@@ -111,6 +227,7 @@ export function editorialSystemPrompt(focus: string, supportKw: string): string 
     "Voice: a domain expert briefing a curious newcomer. Declarative, concrete, never promotional.",
     "Length: 700-900 Korean space-separated words.",
     "Each sentence 20-40 Korean characters excluding spaces. One idea per sentence. Group 3-4 sentences into one paragraph and break lines between paragraphs.",
+    "Every sentence must end with a period (.). Do not omit terminal punctuation even when a sentence ends at a line break.",
     "The first 10% states why this keyword is topical now, through background and ripple only.",
     "The comparison table is keyword / background / topicality / ripple. Never prices.",
     "Never mention shopping malls, Coupang, or Toss Shopping in the body.",
@@ -121,7 +238,9 @@ export function editorialSystemPrompt(focus: string, supportKw: string): string 
     "Include one markdown comparison table. Include one official external URL and 내부 링크 추천: [title].",
     "FAQ: exactly 3 items. Each answer must cite a distinct concrete detail (who, what, when) and must not reuse a sentence from the body or from another answer.",
     "Not investment advice.",
-  ].join(" ");
+    "",
+    editorialGroundingRules(),
+  ].join("\n");
 }
 
 export function stripFiller(value: string): string {

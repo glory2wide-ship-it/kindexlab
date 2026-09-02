@@ -3,6 +3,8 @@ import { composeChannelEdition } from "../src/lib/briefing/compose";
 import { editionDateTime } from "../src/lib/briefing/dates";
 import { channelUsesBoardBriefing, composeBoardChannelEdition } from "../src/lib/briefing/from-boards";
 import { persistEdition } from "../src/lib/briefing/persist";
+import { isPersistableBriefing } from "../src/lib/briefing/quality";
+import { briefingRelatedKeywords } from "../src/lib/premium/briefing-editorial";
 import { parseChannelFromSlug } from "../src/lib/briefing/store";
 import { delay } from "../src/lib/premium/batch";
 import { getRankings } from "../src/lib/providers/trends";
@@ -29,23 +31,12 @@ async function composeChannelDraft(
 }
 
 function enrichmentRelatedKeywords(article: BriefingArticle, edition: BriefingArticle[]): string[] {
-  const peers = edition.filter((item) => item.slug !== article.slug);
-  if (article.kind === "main") {
-    return peers
-      .map((item) => item.focusKeyword)
-      .filter((keyword): keyword is string => Boolean(keyword?.trim()))
-      .slice(0, 5);
-  }
-  const boardPeers = peers
-    .filter((item) => item.kind === "deep-dive" && item.channel === article.channel)
-    .map((item) => item.focusKeyword)
-    .filter((keyword): keyword is string => Boolean(keyword?.trim()));
-  return [...new Set(boardPeers)].filter((keyword) => keyword !== article.focusKeyword).slice(0, 4);
+  return briefingRelatedKeywords(article, edition);
 }
 
 function categoryHint(article: BriefingArticle): string {
   if (article.kind === "main") return article.channel ?? "entertainment";
-  return article.deskLabel ?? article.focusKeyword ?? article.channel ?? "entertainment";
+  return article.category ?? article.deskLabel ?? article.channel ?? "entertainment";
 }
 
 async function main() {
@@ -59,7 +50,9 @@ async function main() {
     draftsByChannel.set(channel, await composeChannelDraft(channel, editionDate));
   }
 
-  const enriched: BriefingArticle[] = [];
+  const saved: { slug: string; title: string; wordCount?: number }[] = [];
+  let skippedQuality = 0;
+
   for (const slug of targets) {
     const channel = parseChannelFromSlug(slug);
     if (!channel) {
@@ -79,24 +72,39 @@ async function main() {
       relatedKeywords: enrichmentRelatedKeywords(draft, edition),
       categoryHint: categoryHint(draft),
     });
-    enriched.push(article);
-    console.log(`  → wordCount=${article.wordCount ?? 0}`);
-    await delay(15_000);
+    const persistable = isPersistableBriefing(article);
+    console.log(`  → wordCount=${article.wordCount ?? 0} persistable=${persistable}`);
+
+    if (!persistable) {
+      skippedQuality += 1;
+      console.warn(`  ! quality gate failed — article will not be saved`);
+    } else {
+      // Persist each article immediately so a reboot does not lose progress.
+      const result = await persistEdition([article]);
+      console.log(`  → persisted kept=${result.kept}`);
+      saved.push({
+        slug: article.slug,
+        title: article.title,
+        wordCount: article.wordCount,
+      });
+    }
+
+    await delay(5_000);
   }
 
-  if (!enriched.length) {
-    console.error("No articles regenerated.");
+  if (!saved.length) {
+    console.error("No articles passed quality gate.");
     process.exit(1);
   }
 
-  await persistEdition(enriched);
-  const low = enriched.filter((item) => (item.wordCount ?? 0) < 500);
   console.log(
     JSON.stringify(
       {
-        regenerated: enriched.length,
-        templateFallback: low.length,
-        slugs: enriched.map((item) => ({ slug: item.slug, wordCount: item.wordCount })),
+        regenerated: saved.length,
+        skippedQuality,
+        persisted: saved.length,
+        templateFallback: saved.filter((item) => (item.wordCount ?? 0) < 500).length,
+        slugs: saved,
       },
       null,
       2,
