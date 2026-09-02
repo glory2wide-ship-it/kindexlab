@@ -4,10 +4,10 @@ import { CategoryDeskGrid } from "@/components/dashboard/CategoryDeskGrid";
 import { UnifiedMarketBoard } from "@/components/dashboard/UnifiedMarketBoard";
 import { LandingDeskHeader } from "@/components/layout/LandingDeskHeader";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
-import { PremiumColumnRail } from "@/components/posts/PremiumColumnRail";
+import { BriefingRail } from "@/components/briefing/BriefingRail";
 import { getRankings } from "@/lib/api";
+import { loadFeaturedBriefings } from "@/lib/briefing/featured";
 import { loadUnifiedMarket } from "@/lib/boards/composite-desk";
-import { loadFeaturedColumns } from "@/lib/posts/featured";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import { SITE, SITE_INDEX_HEADLINE, SITE_LANDING_HEADLINE } from "@/lib/site";
 import { rankingUrl } from "@/lib/slugs";
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   twitter: { title: TITLE, description: DESCRIPTION },
 };
 
-const FEATURED_COLUMNS = 7;
+const FEATURED_BRIEFINGS = 7;
 
 export default async function HomePage() {
   // Awaited first: the unified board now ranks from these rows, so it can no
@@ -46,9 +46,9 @@ export default async function HomePage() {
     indices: [],
     items: [],
   }));
-  const [unified, columns] = await Promise.all([
+  const [unified, briefings] = await Promise.all([
     loadUnifiedMarket(market),
-    loadFeaturedColumns(FEATURED_COLUMNS),
+    loadFeaturedBriefings(FEATURED_BRIEFINGS),
   ]);
 
   const jsonLd = {
@@ -91,7 +91,8 @@ export default async function HomePage() {
 
       <ContentSlot placement="mid" label="종합 지수" />
 
-      <PremiumColumnRail columns={columns} />
+      {/* TODAY'S DESK: live KST briefings only — see landing:check */}
+      <BriefingRail articles={briefings} />
 
       <ContentSlot placement="footer" label="종합 지수" adFormat="auto" />
     </div>

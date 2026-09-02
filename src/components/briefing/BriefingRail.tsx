@@ -1,23 +1,37 @@
 import Link from "next/link";
 import { BriefingCard } from "@/components/briefing/BriefingCard";
+import { getPostChannel, isPostChannel } from "@/lib/posts/channels";
 import type { BriefingArticle } from "@/lib/types";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
-export function BriefingRail({
-  main,
-  dives,
-}: {
-  main: BriefingArticle;
-  dives: BriefingArticle[];
-}) {
+function channelKicker(article: BriefingArticle): string | undefined {
+  if (article.deskLabel) return article.deskLabel;
+  if (article.channel && isPostChannel(article.channel)) {
+    return getPostChannel(article.channel).label;
+  }
+  return undefined;
+}
+
+/**
+ * Landing rail for "오늘의 트렌드 브리핑".
+ *
+ * Must be fed by `loadFeaturedBriefings` — never premium columns from
+ * generated.json, which can show a stale editionDate after midnight KST.
+ */
+export function BriefingRail({ articles }: { articles: BriefingArticle[] }) {
+  if (!articles.length) return null;
+  const [lead, ...rest] = articles;
+
   return (
-    <section className="space-y-4">
+    <section aria-labelledby="trend-briefing-heading" className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <DeskEyebrow variant="sans">
             Today&apos;s Desk
           </DeskEyebrow>
-          <h2 className="mt-1 text-xl font-semibold tracking-tight">오늘의 트렌드 브리핑</h2>
+          <h2 id="trend-briefing-heading" className="mt-1 text-xl font-semibold tracking-tight">
+            오늘의 트렌드 브리핑
+          </h2>
         </div>
         <div className="flex gap-3 text-sm">
           <Link href="/briefing" className="font-medium text-accent hover:underline">
@@ -29,12 +43,18 @@ export function BriefingRail({
         </div>
       </div>
       <div className="space-y-4">
-        <BriefingCard article={main} />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {dives.map((article) => (
-            <BriefingCard key={article.slug} article={article} />
-          ))}
-        </div>
+        <BriefingCard article={lead} kicker={channelKicker(lead)} lead />
+        {rest.length ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {rest.map((article) => (
+              <BriefingCard
+                key={article.slug}
+                article={article}
+                kicker={channelKicker(article)}
+              />
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );

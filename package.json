@@ -10,6 +10,7 @@
         "build": "next build",
         "start": "next start",
         "lint": "eslint",
+        "landing:check": "node scripts/check-landing-desk.mjs",
         "briefing:generate": "tsx scripts/generate-briefings.ts",
         "ingest:trends": "tsx scripts/ingest-trends.ts",
         "posts:generate": "tsx scripts/generate-posts.ts",

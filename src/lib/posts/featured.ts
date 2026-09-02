@@ -27,6 +27,10 @@ function byImportance(a: GeneratedPost, b: GeneratedPost): number {
  * Generation runs channel by channel, so a straight recency sort hands the
  * whole rail to whichever desk was rebuilt last. Alternating desks keeps the
  * landing rail as cross-category as the board above it.
+ *
+ * Do **not** use this for the landing "오늘의 트렌드 브리핑" section — those
+ * posts come from generated.json and can carry yesterday's editionDate. Use
+ * `loadFeaturedBriefings` from `@/lib/briefing/featured` instead.
  */
 export async function loadFeaturedColumns(limit: number): Promise<FeaturedColumn[]> {
   let posts: GeneratedPost[] = [];
