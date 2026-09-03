@@ -20,6 +20,10 @@ on:
         required: false
         default: ""
 
+concurrency:
+  group: daily-briefings
+  cancel-in-progress: false
+
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -28,6 +32,9 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Need full history for rebase against concurrent ingest commits.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -69,7 +76,8 @@ jobs:
           GEMINI_MAX_CONCURRENCY: "4"
           TRENDS_DATA_SOURCE: live
 
-      - uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: publish KST daily briefings"
-          file_pattern: src/data/briefings/extra.json
+      # ingest-trends pushes every few minutes; plain auto-commit push races and drops the edition.
+      - name: Commit and push briefings
+        run: |
+          chmod +x scripts/ci-commit-push.sh
+          scripts/ci-commit-push.sh "chore: publish KST daily briefings" src/data/briefings/extra.json

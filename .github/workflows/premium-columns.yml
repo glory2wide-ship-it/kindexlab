@@ -36,6 +36,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -59,7 +61,7 @@ jobs:
           GEMINI_BATCH_CONCURRENCY: "4"
           GEMINI_MAX_CONCURRENCY: "4"
           TRENDS_DATA_SOURCE: live
-      - uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: regenerate premium columns"
-          file_pattern: src/data/posts/generated.json
+      - name: Commit and push columns
+        run: |
+          chmod +x scripts/ci-commit-push.sh
+          scripts/ci-commit-push.sh "chore: regenerate premium columns" src/data/posts/generated.json
