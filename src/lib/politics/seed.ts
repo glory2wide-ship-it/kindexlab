@@ -53,7 +53,7 @@ export function seedPoliticsRankings(): RankingEntity[] {
         sparkline,
         history: history(sparkline),
         tags: entry.tags,
-        summary: `${entry.name}은(는) ${label} 5분봉 기준 ${rank}위입니다. 등락 ${fluctuationRate.toFixed(2)}%입니다.`,
+        summary: `${entry.name}은(는) ${label} 3분봉 기준 ${rank}위입니다. 등락 ${fluctuationRate.toFixed(2)}%입니다.`,
         analysis: `${entry.name} 수급은 정치 뉴스 RSS·검색 언급·공개 시사 키워드를 합산한 정치 전용 스냅샷입니다. 공식 여론조사 수치가 아니라 화제성 대용치이며, 상세 해석은 일일 브리핑에서 이어집니다.`,
         products: politicsProducts(entry),
       });

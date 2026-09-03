@@ -1,8 +1,10 @@
 import type { RankingEntity, SeriesPoint, Timeframe, TimeframeMetrics } from "@/lib/types";
-import { TIMEFRAMES } from "@/lib/categories";
+import { ALL_TIMEFRAMES, TIMEFRAMES } from "@/lib/categories";
+import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 
 const COUNTS: Record<Timeframe, number> = {
   "1m": 60,
+  "3m": 54,
   "5m": 48,
   "10m": 36,
   "30m": 24,
@@ -15,6 +17,7 @@ const COUNTS: Record<Timeframe, number> = {
 
 const CHANGE_SCALE: Record<Timeframe, number> = {
   "1m": 0.42,
+  "3m": 0.5,
   "5m": 0.58,
   "10m": 0.74,
   "30m": 0.92,
@@ -27,6 +30,7 @@ const CHANGE_SCALE: Record<Timeframe, number> = {
 
 const JITTER: Record<Timeframe, number> = {
   "1m": 7.4,
+  "3m": 6.6,
   "5m": 5.8,
   "10m": 4.6,
   "30m": 3.4,
@@ -39,6 +43,7 @@ const JITTER: Record<Timeframe, number> = {
 
 const PHASE: Record<Timeframe, number> = {
   "1m": 0.2,
+  "3m": 0.65,
   "5m": 1.1,
   "10m": 2.0,
   "30m": 2.9,
@@ -51,6 +56,7 @@ const PHASE: Record<Timeframe, number> = {
 
 const VOLUME_SCALE: Record<Timeframe, number> = {
   "1m": 0.03,
+  "3m": 0.045,
   "5m": 0.06,
   "10m": 0.1,
   "30m": 0.22,
@@ -63,6 +69,7 @@ const VOLUME_SCALE: Record<Timeframe, number> = {
 
 const MINUTE_STEP: Partial<Record<Timeframe, number>> = {
   "1m": 1,
+  "3m": 3,
   "5m": 5,
   "10m": 10,
   "30m": 30,
@@ -120,10 +127,13 @@ function horizonChange(entity: RankingEntity, timeframe: Timeframe): number {
   const spark = sparklineChange(entity);
   const rawBase = stored !== 0 ? stored : spark;
   const base = Math.max(-28, Math.min(28, rawBase));
-  const rand = mulberry(hash(`${entity.id}:${entity.slug}:${timeframe}`));
+  // Rotate synthetic noise every board refresh window so seed-only desks
+  // (economy/travel) do not paint the same ±% forever between deploys.
+  const refreshBucket = Math.floor(Date.now() / (DEFAULT_TRENDS_REVALIDATE_SEC * 1000));
+  const rand = mulberry(hash(`${entity.id}:${entity.slug}:${timeframe}:${refreshBucket}`));
   const scale = CHANGE_SCALE[timeframe];
   const jitter = (rand() - 0.5) * JITTER[timeframe];
-  const phase = PHASE[timeframe] + (hash(entity.id) % 360) * (Math.PI / 180);
+  const phase = PHASE[timeframe] + (hash(`${entity.id}:${refreshBucket}`) % 360) * (Math.PI / 180);
   const wave = Math.sin(entity.rank * 0.41 + phase + rand() * 0.15);
   const floor = Math.max(Math.abs(base), 3.2);
   const value = base * scale * 0.4 + floor * scale * wave + jitter;
@@ -132,12 +142,12 @@ function horizonChange(entity: RankingEntity, timeframe: Timeframe): number {
 
 function metricsCoverAllWindows(metrics?: TimeframeMetrics): boolean {
   if (!metrics) return false;
-  return TIMEFRAMES.every((option) => Number.isFinite(metrics[option.id]?.changeRate));
+  return ALL_TIMEFRAMES.every((option) => Number.isFinite(metrics[option.id]?.changeRate));
 }
 
 function metricsAreDistinct(metrics?: TimeframeMetrics): boolean {
   if (!metricsCoverAllWindows(metrics)) return false;
-  const rates = TIMEFRAMES.map((option) => metrics?.[option.id]?.changeRate);
+  const rates = ALL_TIMEFRAMES.map((option) => metrics?.[option.id]?.changeRate);
   const first = rates[0];
   return rates.some((rate) => rate !== first);
 }
@@ -229,12 +239,16 @@ export function changeForEntity(entity: RankingEntity, timeframe: Timeframe): nu
 }
 
 export function timeframeLabel(id: Timeframe): string {
-  return TIMEFRAMES.find((item) => item.id === id)?.label ?? id;
+  return (
+    TIMEFRAMES.find((item) => item.id === id)?.label ??
+    ALL_TIMEFRAMES.find((item) => item.id === id)?.label ??
+    id
+  );
 }
 
 export function buildTimeframeMetrics(entity: RankingEntity): TimeframeMetrics {
   const metrics = {} as TimeframeMetrics;
-  for (const option of TIMEFRAMES) {
+  for (const option of ALL_TIMEFRAMES) {
     const changeRate = horizonChange(entity, option.id);
     metrics[option.id] = {
       buzzScore: Number((entity.buzzScore * (1 + changeRate / 400)).toFixed(2)),
@@ -285,5 +299,6 @@ export function parseTimeframeParam(raw?: string | string[]): Timeframe | undefi
   if (!value) return undefined;
   if (value === "monthly") return "1mo";
   if (value === "2h") return "120m";
-  return TIMEFRAMES.some((item) => item.id === value) ? (value as Timeframe) : undefined;
+  // Legacy ?tf=1m still resolves; UI minimum candle is 3m.
+  return ALL_TIMEFRAMES.some((item) => item.id === value) ? (value as Timeframe) : undefined;
 }

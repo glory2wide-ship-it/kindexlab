@@ -112,6 +112,7 @@ export async function collectPremiumContext(
     entity?: RankingEntity;
     related?: RankingEntity[];
     relatedKeywords?: string[];
+    asOfDate?: string;
   } = {},
 ): Promise<PremiumContext> {
   const ctx = await collectArticleContext(keyword, options);

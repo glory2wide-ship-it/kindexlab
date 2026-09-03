@@ -15,7 +15,7 @@ async function composeChannelDraft(
   editionDate: string,
   publishedAt: string,
 ): Promise<BriefingArticle[]> {
-  // Topics always come from the live heatmap at 5m · 전체 · 전체 — never random seeds.
+  // Topics always come from the live heatmap at 3m · 전체 · 전체 — never random seeds.
   const topicPool = await collectHeatmapTopics(channel);
   console.log(
     `[briefing] ${channel} heatmap topics: composite=${topicPool.composite.length} desks=${Object.keys(topicPool.byDesk).length} lead=${topicPool.composite[0]?.name ?? "—"}`,

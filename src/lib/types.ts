@@ -29,7 +29,7 @@ export type CategoryId = "all" | EntityType;
 
 export type ViewMode = "treemap" | "list";
 
-export type Timeframe = "1m" | "5m" | "10m" | "30m" | "60m" | "120m" | "1d" | "1w" | "1mo";
+export type Timeframe = "1m" | "3m" | "5m" | "10m" | "30m" | "60m" | "120m" | "1d" | "1w" | "1mo";
 
 export type MarketStatus = "open" | "closed";
 

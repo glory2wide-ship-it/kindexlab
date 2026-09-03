@@ -8,8 +8,8 @@ import { seedMissingBoards } from "@/lib/boards/seed";
 import { getPostChannel, isPostChannel, LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import type { RankingsPayload } from "@/lib/types";
 
-/** ISR: see the landing page for why 60s matches the board refresh cadence. */
-export const revalidate = 60;
+/** ISR: matches the 3-minute live board refresh cadence. */
+export const revalidate = 180;
 
 export async function generateMetadata({
   params,

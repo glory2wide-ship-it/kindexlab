@@ -4,7 +4,7 @@ import { formatEntityName } from "@/lib/boards/game-platforms";
 import { buildTimeframeMetrics, scoreForTimeframe, timeframeLabel, volumeForTimeframe } from "@/lib/timeframes";
 import type { RankingEntity, SeriesPoint, Timeframe } from "@/lib/types";
 
-const PREVIEW_FRAMES: Timeframe[] = ["5m", "1d", "1w"];
+const PREVIEW_FRAMES: Timeframe[] = ["3m", "1d", "1w"];
 
 export function HoverCard({
   entity,

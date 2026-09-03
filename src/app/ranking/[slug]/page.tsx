@@ -99,7 +99,7 @@ export default async function RankingDetailPage({
   const detail = await loadDetail(slug, typeof query.name === "string" ? query.name : undefined);
   if (!detail) notFound();
   const { entity, related, market, article: analysisArticle } = detail;
-  const initialTimeframe = parseTimeframeParam(query.tf) ?? "5m";
+  const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
 
   const jsonLd = {
     "@context": "https://schema.org",

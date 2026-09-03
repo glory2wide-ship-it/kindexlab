@@ -2,7 +2,7 @@ import type { AgeSegment, GenderSegment } from "@/lib/boards/types";
 import { attachTimeframeMetrics } from "@/lib/timeframes";
 import type { RankingEntity, Timeframe } from "@/lib/types";
 
-const SHORT_WINDOWS: Timeframe[] = ["1m", "5m", "10m", "30m"];
+const SHORT_WINDOWS: Timeframe[] = ["1m", "3m", "5m", "10m", "30m"];
 
 const BREAKING =
   /속보|긴급|단독|반발|논란|충격|터졌|급등|파문|전격|돌발|충돌|폭로|체포|구속|폭발/;
@@ -129,6 +129,7 @@ function burstPhase(id: string): number {
 function windowFit(timeframe: Timeframe, phase: number): number {
   const center: Partial<Record<Timeframe, number>> = {
     "1m": 0.9,
+    "3m": 0.81,
     "5m": 0.72,
     "10m": 0.52,
     "30m": 0.34,
@@ -140,6 +141,7 @@ function windowFit(timeframe: Timeframe, phase: number): number {
   };
   const width: Partial<Record<Timeframe, number>> = {
     "1m": 0.16,
+    "3m": 0.18,
     "5m": 0.2,
     "10m": 0.22,
     "30m": 0.24,

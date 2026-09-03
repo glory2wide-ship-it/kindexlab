@@ -85,7 +85,7 @@ export default async function PoliticsSupportDetailPage({
     redirect(rankingPath(entity.slug) + (query.name ? `?name=${encodeURIComponent(String(query.name))}` : ""));
   }
 
-  const initialTimeframe = parseTimeframeParam(query.tf) ?? "5m";
+  const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
   const kind = entity.type === "party_support" ? "party" : "politician";
 
   return (

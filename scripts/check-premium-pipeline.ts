@@ -60,6 +60,7 @@ async function main() {
     focusKeyword: "근로자 휴가지원사업",
     relatedKeywords: ["관광두레"],
     newsContext: "[샘플] 뉴스 컨텍스트",
+    editionDate: "2026-09-04",
   });
   console.log(`user prompt sample: ${sampleUser.length}자 (변수만)`);
 

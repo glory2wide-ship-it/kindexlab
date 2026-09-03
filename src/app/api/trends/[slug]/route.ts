@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getTrendBySlug, getTrendsSource } from "@/lib/providers/trends";
+import { trendsRevalidateSec } from "@/lib/refresh";
 import { parseTimeframeParam } from "@/lib/timeframes";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -11,6 +12,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
+  const maxAge = trendsRevalidateSec();
   return Response.json(
     {
       source: getTrendsSource(),
@@ -19,7 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        "Cache-Control": `public, s-maxage=${maxAge}, stale-while-revalidate=${maxAge * 2}`,
       },
     },
   );

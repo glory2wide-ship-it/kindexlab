@@ -1,5 +1,9 @@
 import { resolveChannelEditorPersona } from "@/lib/premium/briefing-editorial";
-import { editorialGroundingRules, tenseConsistencyRules } from "@/lib/editorial/tense-rules";
+import {
+  editionFreshnessRules,
+  editorialGroundingRules,
+  tenseConsistencyRules,
+} from "@/lib/editorial/tense-rules";
 
 /**
  * 100% prompt-cache hit: every fixed rule lives here.
@@ -12,8 +16,9 @@ export const STATIC_SYSTEM_PROMPT = [
 주어진 [포커스 키워드]와 [최신 뉴스 데이터(실제 URL·발행일 포함)]만을 근거로 쓰세요. 기존 KINDEXLAB 시세·지수 점수는 언급하지 마세요.
 단순 팩트 나열만 하면 Thin/Low-value content로 탈락하기 쉽습니다. 팩트 수집 뒤 반드시 아래 4방향 해석을 분량(1,400~1,800자)에 맞게 채워 체류 시간과 E-E-A-T를 높이세요.`,
   tenseConsistencyRules(),
+  editionFreshnessRules(),
   `[콘텐츠 밀도 확장 — 팩트 보도 이후 필수 (Low-value 방지)]
-1. Why(배경·원인): "무엇이 일어났는가"에서 멈추지 말고, 왜 지금 대중이·검색·랭킹이 반응하는지 시장·플랫폼·팬덤·일정 맥락을 전문가 시각으로 풀어내세요. RAG에 근거가 있을 때만 인과를 단정합니다.
+1. Why(배경·원인): "무엇이 일어났는가"에서 멈추지 말고, 에디션 날짜 기준으로 왜 지금 대중이·검색·랭킹이 반응하는지 시장·플랫폼·팬덤·일정 맥락을 전문가 시각으로 풀어내세요. RAG에 근거가 있을 때만 인과를 단정합니다. 수개월 전 종결 이벤트만으로 '지금'을 채우지 마세요.
 2. How(실용 인사이트): 독자의 일상·소비·시청·구독·지갑에 미치는 영향과, 확인·비교·행동에 쓸 구체 요령을 본문 서술로 녹이세요. '독자 체크리스트'·'확인해야 할 N가지' 같은 목록형 패딩 섹션은 금지입니다.
 3. 데이터 비교 표: 핵심 지표·일정·장단·수치·비교 대상을 table(헤더 3열+, 행 2~4)로 시각화하세요. caption은 '팩트 체크' 또는 '핵심 팩트 요약'.
 4. 전망·파급: RAG·공개 일정에 비춰 앞으로의 전개와 업계·소비자가 볼 포인트를 짧게 제시하세요. 확인되지 않은 수치·확정 발표를 지어내지 마세요.
@@ -55,6 +60,8 @@ export interface BriefingInputParams {
   focusKeyword: string;
   relatedKeywords: string[];
   newsContext: string;
+  /** KST calendar date for this edition (YYYY-MM-DD). Anchors tense and freshness. */
+  editionDate?: string;
 }
 
 /**
@@ -69,6 +76,7 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
     focusKeyword,
     relatedKeywords,
     newsContext,
+    editionDate,
   } = params;
 
   const related =
@@ -85,6 +93,7 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
   const sectionCount = "정확히 4 (Structured Outputs minItems=4)";
   const paraPerSection = "정확히 4 (스키마 minItems=4)";
   const sentences = "3~4";
+  const editionLine = editionDate?.trim() || "미지정 — 수집 기사 발행일만으로 시제를 맞추세요.";
 
   return [
     "[분류 정보]",
@@ -92,6 +101,7 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
     `- 상세 카테고리: ${categoryHint}`,
     `- 포커스 키워드: ${focusKeyword}`,
     `- 연관 키워드: ${related}`,
+    `- 에디션 날짜(KST): ${editionLine}`,
     `- 글 유형: ${briefing ? "일일브리핑/심층분석" : "프리미엄 SEO 칼럼"}`,
     `- 브리핑 모드: ${mode.toUpperCase()} — ${modeGuide}`,
     "",
@@ -99,10 +109,12 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
     newsContext?.trim() ||
       "수집된 뉴스 데이터가 없습니다. 포커스 키워드의 랭킹·검색 유입 현상만 밀도 있게 작성하세요.",
     "",
-    "[시제 및 시간 정합성 — 본 호출 필수]",
-    "- 위 뉴스 각 항목의 발행일(년, 월, 일)을 최우선 근거로 시제를 맞추세요.",
-    "- 과거 날짜·종결 이슈는 ~했다 / ~개막한 바 있다 등 과거형만. 최근 일처럼 쓰지 마세요.",
-    "- 시점이 다른 사건은 시간순으로 배치하세요.",
+    "[시제·시의성 — 본 호출 필수]",
+    `- 본문의 '오늘'은 에디션 날짜 ${editionLine}입니다.`,
+    "- 각 자료의 발행일·시의성 라벨(최신/최근/배경/오래된 배경)을 보고 앵글을 고르세요.",
+    "- title·excerpt·❶은 최신·최근(약 14일 이내) 보도·사건을 우선. 오래된 배경만으로 오늘의 심층을 쓰지 마세요.",
+    "- 에디션보다 이전인 일정은 과거형만. '예정'·'개최된다' 금지. 에디션 이후 일정만 미래형.",
+    "- 연관 키워드가 다른 작품·도서·전시·지원금이면 인과로 묶지 마세요.",
     "",
     "[작성 지시 — 단일 패스·Low-value 방지]",
     `위 RAG 팩트를 뼈대로 [포커스 키워드] "${focusKeyword}"를 excerpt 상위 10%에 1회, 본문에 합계 5회 이상 넣어 완전한 JSON을 한 번에 작성하세요.`,
@@ -229,7 +241,7 @@ export function premiumPromptCacheKey(opts: {
   const kind = opts.briefing ? "briefing" : "premium";
   const mode = (opts.mode || "full").toLowerCase();
   // Channel omitted from cache key prefix so the static system prefix shares one machine.
-  return `kindexlab:${kind}:single:${mode}:v10`;
+  return `kindexlab:${kind}:single:${mode}:v11`;
 }
 
 export function wordpressAdsenseGuidelines(includeFullSeo: boolean): string {

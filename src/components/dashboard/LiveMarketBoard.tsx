@@ -120,7 +120,7 @@ export function LiveMarketBoard({
         title={politicsBoard ? `정치 ${LIVE_INDEX_LABEL}` : LIVE_INDEX_LABEL}
         subtitle={
           politicsBoard
-            ? "9대 정치 지표를 히트맵과 리스트로 읽습니다. 기본 시계열은 5분봉입니다."
+            ? "9대 정치 지표를 히트맵과 리스트로 읽습니다. 기본 시계열은 3분봉입니다."
             : "등락률·버즈·거래량을 히트맵과 리스트로 읽습니다."
         }
         remainingSec={remainingSec}

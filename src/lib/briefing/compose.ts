@@ -388,7 +388,7 @@ type ComposeOptions = {
   channel?: PostChannel;
   deskId?: string;
   deskLabel?: string;
-  /** Live heatmap topics (5m · 전체 · 전체). Required for production daily jobs. */
+  /** Live heatmap topics (3m · 전체 · 전체). Required for production daily jobs. */
   topicPool?: HeatmapTopicPool;
 };
 

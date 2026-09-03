@@ -88,7 +88,7 @@ export const CHANNEL_SECTIONS: {
     id: "board",
     path: "",
     label: LIVE_INDEX_LABEL,
-    description: "실시간 수치와 5분봉 히트맵. 글 생성에는 이름만 넘깁니다.",
+    description: "실시간 수치와 3분봉 히트맵. 글 생성에는 이름만 넘깁니다.",
   },
   {
     id: "briefing",

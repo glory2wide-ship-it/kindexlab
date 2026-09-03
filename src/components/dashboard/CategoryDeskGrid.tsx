@@ -1,9 +1,13 @@
-﻿import Link from "next/link";
+﻿"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatRate } from "@/lib/format";
 import { stripRowQualifier } from "@/lib/boards/heatmap";
+import type { ChannelDesk } from "@/lib/boards/composite-desk";
 import { entityHref } from "@/lib/slugs";
 import { changeForEntity } from "@/lib/timeframes";
-import type { ChannelDesk } from "@/lib/boards/composite-desk";
+import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 
 function rateClass(rate: number): string {
   if (rate > 0.25) return "text-up";
@@ -12,9 +16,50 @@ function rateClass(rate: number): string {
 }
 
 /**
- * Channel desk cards under the unified heatmap — five categories in one row on the landing page.
+ * Channel desk cards under the unified heatmap — five categories in one row.
+ * Polls `/api/unified-desks` on the same 3-minute cadence as the heatmap countdown.
  */
-export function CategoryDeskGrid({ desks }: { desks: ChannelDesk[] }) {
+export function CategoryDeskGrid({
+  desks: initialDesks,
+  refreshIntervalSec = DEFAULT_TRENDS_REVALIDATE_SEC,
+}: {
+  desks: ChannelDesk[];
+  refreshIntervalSec?: number;
+}) {
+  const [desks, setDesks] = useState(initialDesks);
+  const inFlightRef = useRef(false);
+  const intervalMs = Math.max(1, refreshIntervalSec) * 1000;
+
+  const refresh = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    try {
+      const response = await fetch(`/api/unified-desks?t=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const payload = (await response.json()) as { desks?: ChannelDesk[] };
+      if (Array.isArray(payload.desks) && payload.desks.length) {
+        setDesks(payload.desks);
+      }
+    } catch {
+      /* keep last good desks */
+    } finally {
+      inFlightRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    setDesks(initialDesks);
+  }, [initialDesks]);
+
+  useEffect(() => {
+    const tick = window.setInterval(() => {
+      void refresh();
+    }, intervalMs);
+    return () => window.clearInterval(tick);
+  }, [intervalMs, refresh]);
+
   if (!desks.length) return null;
 
   return (
@@ -39,7 +84,7 @@ export function CategoryDeskGrid({ desks }: { desks: ChannelDesk[] }) {
               <ol className="mt-3 flex-1 space-y-2">
                 {desk.top.length ? (
                   desk.top.map((item, index) => {
-                    const rate = changeForEntity(item, "5m");
+                    const rate = changeForEntity(item, "3m");
                     return (
                       <li key={item.id}>
                         <Link

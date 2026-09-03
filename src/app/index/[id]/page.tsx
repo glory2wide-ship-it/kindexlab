@@ -60,7 +60,7 @@ export default async function IndexDetailPage({
   const entity = entityFromIndex(index, market.items);
   const related = constituentsForIndex(index.id, market.items).slice(0, 8);
   const pollLead = related[0] ?? entity;
-  const initialTimeframe = parseTimeframeParam(query.tf) ?? "5m";
+  const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
   const analysis = await getOrCreateAnalysis({ entity, market, related });
 
   return (

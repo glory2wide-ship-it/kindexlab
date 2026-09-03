@@ -1,6 +1,6 @@
 /**
  * Daily briefing topic selection from the live heatmap — same filters the
- * channel dashboard defaults to: 5m timeframe, gender 전체, age 전체.
+ * channel dashboard defaults to: 3m timeframe, gender 전체, age 전체.
  */
 
 import {
@@ -97,7 +97,7 @@ async function loadLiveItems(channel: PostChannel): Promise<RankingEntity[]> {
 
 /**
  * Collects the exact topic universe the dashboard would show for
- * 종합 / each board at 5m · 전체 · 전체.
+ * 종합 / each board at 3m · 전체 · 전체.
  */
 export async function collectHeatmapTopics(channel: PostChannel): Promise<HeatmapTopicPool> {
   const boards = await loadChannelHeatmapPayloads(channel);

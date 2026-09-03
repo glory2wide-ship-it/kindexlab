@@ -380,6 +380,8 @@ export async function generatePremiumArticle(input: {
   logger: AnalysisLogger;
   timeoutMs?: number;
   publishedAt?: string;
+  /** KST edition date YYYY-MM-DD — anchors tense/freshness in the prompt. */
+  editionDate?: string;
   briefing?: boolean;
 }): Promise<PremiumResult> {
   const { keyword, slug, logger } = input;
@@ -388,13 +390,19 @@ export async function generatePremiumArticle(input: {
 
   if (!briefingLlmConfigured()) return { ok: false, reason: "llm-not-configured" };
 
+  const editionDate =
+    input.editionDate?.trim() ||
+    (slug.match(/^(\d{4}-\d{2}-\d{2})/)?.[1] ?? undefined);
+
   const context = await collectPremiumContext(keyword, {
     entity: input.entity,
     related: input.relatedEntities,
     relatedKeywords: input.related,
+    asOfDate: editionDate,
   });
   logger.step("premium-rag", {
     keyword,
+    editionDate: editionDate ?? null,
     sources: context.sources.length,
     signalFacts: context.signalFacts.length,
     score: context.score,
@@ -469,6 +477,7 @@ export async function generatePremiumArticle(input: {
     focusKeyword: keyword,
     relatedKeywords: filteredRelated,
     newsContext: context.block,
+    editionDate,
   });
 
   logger.step("premium-single-pass", { model, mode, systemChars: system.length });
@@ -489,6 +498,7 @@ export async function generatePremiumArticle(input: {
       system,
       user: userMessage,
       temperature: 0.55,
+      maxTokens: 16_384,
       timeoutMs: remaining(),
       logger,
       step,
@@ -499,6 +509,14 @@ export async function generatePremiumArticle(input: {
     });
 
   let raw = await requestArticle(user, "premium-article");
+
+  if (!raw || !hasRequiredKeys(raw, ["title", "excerpt", "sections", "table", "faq"])) {
+    logger.warn("premium-article-retry", { reason: "llm-empty" });
+    raw = await requestArticle(
+      `${user}\n\n[재시도] 응답은 완전 JSON 하나만. sections 4개·FAQ 3개·표 1개를 짧게 닫아 토큰 한도 전에 완성하세요.`,
+      "premium-article-retry",
+    );
+  }
 
   if (!raw || !hasRequiredKeys(raw, ["title", "excerpt", "sections", "table", "faq"])) {
     return { ok: false, reason: "llm-empty" };

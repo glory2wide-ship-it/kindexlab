@@ -17,8 +17,12 @@ export const CATEGORIES: { id: CategoryId; label: string }[] = [
   { id: "console_game", label: "콘솔 게임" },
 ];
 
+/**
+ * Candle buttons on the live-index / heatmap toolbar.
+ * 3분 is the minimum UI unit (1분 is data-only / legacy).
+ */
 export const TIMEFRAMES: TimeframeOption[] = [
-  { id: "1m", label: "1분", group: "분봉" },
+  { id: "3m", label: "3분", group: "분봉" },
   { id: "5m", label: "5분", group: "분봉" },
   { id: "10m", label: "10분", group: "분봉" },
   { id: "30m", label: "30분", group: "분봉" },
@@ -27,6 +31,12 @@ export const TIMEFRAMES: TimeframeOption[] = [
   { id: "1d", label: "일봉", group: "일봉" },
   { id: "1w", label: "주봉", group: "주봉" },
   { id: "1mo", label: "월봉", group: "월봉" },
+];
+
+/** Full metric windows including legacy 1m (data only — not shown in the toolbar). */
+export const ALL_TIMEFRAMES: TimeframeOption[] = [
+  { id: "1m", label: "1분", group: "분봉" },
+  ...TIMEFRAMES,
 ];
 
 export { POLITICS_CATEGORIES, POLITICS_TYPE_ORDER };

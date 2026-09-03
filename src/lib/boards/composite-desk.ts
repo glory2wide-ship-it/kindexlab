@@ -26,14 +26,12 @@ export interface UnifiedMarket {
 }
 
 /**
- * Ordering within one channel.
- *
- * Board scores saturate — every leading row in every channel currently sits at
- * 999 — so a plain score sort collapses into the order the boards happened to
- * be registered in. Rate of change is the only field that still separates the
- * leaders, so it breaks the tie and the original board rank settles the rest.
+ * Ordering within one channel desk / heatmap pool.
+ * Prefer absolute 3m move so politics·economy cards show movers, not score ties at 999.
  */
 function byHeat(a: RankingEntity, b: RankingEntity): number {
+  const move = Math.abs(tickerChangeRate(b)) - Math.abs(tickerChangeRate(a));
+  if (move !== 0) return move;
   if (b.buzzScore !== a.buzzScore) return b.buzzScore - a.buzzScore;
   if (b.fluctuationRate !== a.fluctuationRate) return b.fluctuationRate - a.fluctuationRate;
   return a.rank - b.rank;
@@ -92,18 +90,17 @@ async function channelHeatmapPool(
   return boardPool(channel);
 }
 
-/** Desk summary cards — mirror each channel board so change rates stay in sync. */
+/** Desk summary cards — prefer live ingest (same as heatmap) so rates move every refresh. */
 async function channelDeskPool(
   channel: PostChannel,
   market?: RankingsPayload,
 ): Promise<RankingEntity[]> {
-  const boardItems = await boardPool(channel);
-  if (boardItems.length) return boardItems;
   const live = market ? itemsForChannel(market.items, channel) : [];
-  return live;
+  if (live.length) return live;
+  return boardPool(channel);
 }
 
-/** Uses the same 5m change field as the ticker and channel heatmap. */
+/** Uses the same 3m change field as the ticker and channel heatmap. */
 function deskTopItem(item: RankingEntity): RankingEntity {
   const enriched = attachTimeframeMetrics(item);
   return { ...enriched, fluctuationRate: tickerChangeRate(enriched) };
@@ -112,16 +109,15 @@ function deskTopItem(item: RankingEntity): RankingEntity {
 /**
  * The landing page's cross-category board.
  *
- * Prefers the ingest snapshot, which the trends workflow refreshes every five
+ * Prefers the ingest snapshot, which the trends workflow refreshes every three
  * minutes. The board payloads this used to read exclusively cannot move at all
  * in production: `src/data/boards/` is gitignored and Supabase is unset, so no
  * cached board ships with the deploy and every channel falls through to
  * `buildSampleBoard`, whose rows come from a hardcoded seed list ordered by
  * index. That renders identically on every request forever.
  *
- * 경제 has no ingestion source — no snapshot row carries `economy_board` — so it
- * still falls back to boards and stays static until one exists. The other three
- * channels now track the snapshot.
+ * 경제·여행 still fall back to boards when the snapshot has no channel rows;
+ * synthetic 3m rates rotate each refresh window so desk cards are not frozen.
  */
 export async function loadUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMarket> {
   const loaded = await Promise.all(

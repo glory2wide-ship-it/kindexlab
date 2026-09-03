@@ -34,6 +34,26 @@ function formatDate(raw?: string): string | undefined {
   return new Date(time).toISOString().slice(0, 10);
 }
 
+/** Days from publishedAt (YYYY-MM-DD) to editionDate (KST calendar). */
+export function daysBeforeEdition(publishedAt: string | undefined, editionDate: string): number | null {
+  if (!publishedAt || !/^\d{4}-\d{2}-\d{2}/.test(editionDate)) return null;
+  const pubDay = publishedAt.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}/.test(pubDay)) return null;
+  const pub = Date.parse(`${pubDay}T00:00:00+09:00`);
+  const ed = Date.parse(`${editionDate}T00:00:00+09:00`);
+  if (!Number.isFinite(pub) || !Number.isFinite(ed)) return null;
+  return Math.round((ed - pub) / 86_400_000);
+}
+
+export function freshnessLabel(days: number | null): string {
+  if (days === null) return "발행일 미확인";
+  if (days < 0) return `에디션 ${Math.abs(days)}일 후 발행`;
+  if (days <= 3) return `최신(에디션 ${days}일 전)`;
+  if (days <= 14) return `최근(에디션 ${days}일 전)`;
+  if (days <= 45) return `배경(에디션 ${days}일 전)`;
+  return `오래된 배경(에디션 ${days}일 전) — 메인 앵글 금지`;
+}
+
 function mergeSources(existing: ContextSource[], incoming: ContextSource[]): ContextSource[] {
   const seen = new Set(existing.map((source) => source.url));
   const out = [...existing];
@@ -115,8 +135,20 @@ async function newsSourcesFromRetrieval(
   return { sources, providers, unwrapped, lookbackHours };
 }
 
-export function renderContextBlock(ctx: CollectedContext): string {
+export function renderContextBlock(
+  ctx: CollectedContext,
+  options?: { asOfDate?: string },
+): string {
+  const asOf = options?.asOfDate?.trim();
   const lines: string[] = [`[포커스 키워드] ${ctx.keyword}`, ""];
+
+  if (asOf) {
+    lines.push(`[에디션 기준일(KST)] ${asOf}`);
+    lines.push(
+      "시의성: 최신(≤3일)·최근(≤14일)을 title·❶ 앵글로. 배경·오래된 배경은 과거형 배경만. 오래된 배경으로 오늘의 심층을 쓰지 마세요.",
+    );
+    lines.push("");
+  }
 
   if (ctx.signalFacts.length) {
     lines.push("[실시간 신호 — URL 없음, 배경·맥락 근거로만 사용]");
@@ -127,9 +159,17 @@ export function renderContextBlock(ctx: CollectedContext): string {
   }
 
   if (ctx.sources.length) {
-    lines.push("[수집 자료 (실제 URL 포함)]");
-    ctx.sources.forEach((source, index) => {
-      const meta = [source.publisher, source.publishedAt, source.tier].filter(Boolean).join(" · ");
+    const ranked = [...ctx.sources].sort((a, b) => {
+      const da = daysBeforeEdition(a.publishedAt, asOf ?? "") ?? 9_999;
+      const db = daysBeforeEdition(b.publishedAt, asOf ?? "") ?? 9_999;
+      return da - db;
+    });
+    lines.push("[수집 자료 (실제 URL 포함 · 최신순)]");
+    ranked.forEach((source, index) => {
+      const age = asOf ? freshnessLabel(daysBeforeEdition(source.publishedAt, asOf)) : undefined;
+      const meta = [source.publisher, source.publishedAt, age, source.tier]
+        .filter(Boolean)
+        .join(" · ");
       lines.push(`${index + 1}. ${source.title}`);
       lines.push(`   출처: ${meta}`);
       lines.push(`   URL: ${source.url}`);
@@ -158,6 +198,8 @@ export interface CollectContextOptions {
   entity?: RankingEntity;
   related?: RankingEntity[];
   relatedKeywords?: string[];
+  /** KST edition date — used to label RAG freshness in the prompt block. */
+  asOfDate?: string;
 }
 
 /**
@@ -235,6 +277,6 @@ export async function collectArticleContext(
     score,
     intentHints,
   };
-  ctx.block = renderContextBlock(ctx);
+  ctx.block = renderContextBlock(ctx, { asOfDate: options.asOfDate });
   return ctx;
 }

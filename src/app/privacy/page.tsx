@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/legal/LegalPage";
+import { POST_CHANNELS } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
+
+const CATEGORY_LIST = POST_CHANNELS.map((item) => item.label).join(", ");
 
 export const metadata: Metadata = {
   title: "개인정보처리방침",
@@ -11,13 +14,18 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage eyebrow="PRIVACY POLICY" title="개인정보처리방침" updated="2026-08-25">
+    <LegalPage eyebrow="PRIVACY POLICY" title="개인정보처리방침" updated="2026-09-03">
       <LegalSection title="1. 목적">
         <p>
           {SITE.company}(이하 “회사”)는 {SITE.name}({SITE.nameKo}, 이하 “서비스”)를 운영하면서
           「개인정보 보호법」, 「정보통신망 이용촉진 및 정보보호 등에 관한 법률」 및 관련 법령을
           준수합니다. 이 방침은 이용자가 서비스를 이용할 때 어떤 정보가 어떤 목적으로 처리되는지,
           누구에게 제공·이전되는지, 얼마나 보관되는지를 알리기 위해 공개합니다.
+        </p>
+        <p>
+          서비스는 {CATEGORY_LIST} 카테고리의 실시간 지수(INDEX), 랭킹 보드, 데일리 브리핑·심층
+          분석, 이슈 칼럼을 제공합니다. 본 방침은 위 카테고리 페이지를 포함한 서비스 전반에
+          동일하게 적용됩니다.
         </p>
       </LegalSection>
       <LegalSection title="2. 수집하는 정보">
@@ -32,7 +40,8 @@ export default function PrivacyPage() {
           </li>
           <li>
             서비스 이용 과정에서 자동 수집되는 접속 기록, 브라우저 종류, 기기 정보, 쿠키, 참조
-            URL, IP 주소(로그). 통계·보안·장애 대응에 사용합니다.
+            URL, IP 주소(로그). 통계·보안·장애 대응에 사용합니다. 여기에는 {CATEGORY_LIST} 등
+            카테고리·보드 페이지 열람 기록이 포함될 수 있습니다.
           </li>
           <li>
             광고 네트워크(Google AdSense 등)가 이용자 기기에서 수집할 수 있는 쿠키, 광고
@@ -44,7 +53,10 @@ export default function PrivacyPage() {
       <LegalSection title="3. 이용 목적">
         <p>수집된 정보는 다음 목적에 한해 이용합니다.</p>
         <ul className="list-disc space-y-2 pl-5">
-          <li>서비스 제공, 콘텐츠 표시, 장애 대응 및 부정 이용 방지.</li>
+          <li>
+            {CATEGORY_LIST} 카테고리의 지수·랭킹·브리핑·칼럼 등 서비스 제공, 콘텐츠 표시, 장애
+            대응 및 부정 이용 방지.
+          </li>
           <li>문의 응대, 권리 침해 신고 처리 및 법령상 의무 이행.</li>
           <li>방문 통계 분석과 서비스 개선.</li>
           <li>이용자가 동의한 범위의 맞춤형 또는 일반 광고 표시(광고 사업자가 처리).</li>

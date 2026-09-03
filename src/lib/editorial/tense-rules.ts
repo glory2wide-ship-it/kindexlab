@@ -11,6 +11,22 @@ export function tenseConsistencyRules(): string {
 }
 
 /**
+ * Prevents stale retrospective pieces from reading like today's breaking coverage.
+ * Pair with an explicit editionDate in the user prompt.
+ */
+export function editionFreshnessRules(): string {
+  return [
+    "[에디션 시의성 — 위반 시 유효성 검증 실패]",
+    "1. 앵커 날짜: 사용자 메시지의 [에디션 날짜(KST)]가 본문·표·FAQ의 '오늘' 기준입니다. 이 날짜보다 이전인 일정·공연·행사는 절대 '예정', '개최된다', '열린다', '진행 중'으로 쓰지 마세요.",
+    "2. 최신 앵글 우선: title·excerpt·❶ 팩트 H2는 RAG에서 에디션 기준 약 14일 이내(표시: 최신/최근)인 사건·보도를 중심으로 잡으세요. 수개월 전 투어 성료·개막만으로 '오늘의 심층'을 쓰지 마세요.",
+    "3. 오래된 팩트는 배경만: 에디션보다 45일 이상 지난 일정(표시: 오래된 배경)은 타임라인 배경 1~2문장으로만 쓰고, Why(❷)는 '왜 오늘 검색·랭킹에 다시 올랐는지' 현재 신호로 설명하세요.",
+    "4. 미래/과거 혼동 금지: 에디션 날짜 이후의 일정만 '예정'·미래형. 에디션 이전에 끝난 갈라·폐막·성료는 과거형만.",
+    "5. 무관 연관어 금지: 연관 키워드·다른 작품·도서·전시·지원금이 같은 인과가 아니면 억지로 끼워 넣지 마세요. 병렬 언급이 필요하면 '같은 시간대 별개 이슈'로만.",
+    "6. 실패 예: 에디션 2026-09-03인데 2025~2026년 초 내한 투어를 현재 화제처럼 쓰고, 이미 지난 8월 갈라를 '개최 예정'으로 표기. 성공 예: 최근 14일 보도·랭킹 신호를 ❶에 두고, 과거 투어는 과거형 배경으로만.",
+  ].join("\n");
+}
+
+/**
  * Blocks forced narratives that stitch unrelated stories via string/prefix match
  * or ambiguous everyday tokens (e.g. FLOAT, Counter-).
  */
@@ -38,6 +54,8 @@ export function sentencePeriodRules(): string {
 export function editorialGroundingRules(): string {
   return [
     tenseConsistencyRules(),
+    "",
+    editionFreshnessRules(),
     "",
     prefixNoisePreventionRules(),
     "",

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/legal/LegalPage";
+import { POST_CHANNELS } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
+
+const CATEGORY_LIST = POST_CHANNELS.map((item) => item.label).join(", ");
 
 export const metadata: Metadata = {
   title: "면책조항",
@@ -11,20 +14,20 @@ export const metadata: Metadata = {
 
 export default function DisclaimerPage() {
   return (
-    <LegalPage eyebrow="DISCLAIMER" title="면책조항 / 투자 정보 고지" updated="2026-08-25">
+    <LegalPage eyebrow="DISCLAIMER" title="면책조항 / 투자 정보 고지" updated="2026-09-03">
       <LegalSection title="1. 정보 제공 목적">
         <p>
           {SITE.name}({SITE.nameKo})가 표시하는 순위, 등락률, 거래량, 지수, 차트, 데일리 브리핑,
-          카테고리 심층 분석은 모두 엔터테인먼트·미디어 화제성을 관측하기 위한 정보입니다.
-          금융투자상품의 시세, 기업 가치, 신용 평가, 매수·매도 추천이 아닙니다.
+          카테고리 심층 분석은 모두 {CATEGORY_LIST} 카테고리의 이슈·화제성을 관측하기 위한
+          정보입니다. 금융투자상품의 시세, 기업 가치, 신용 평가, 매수·매도 추천이 아닙니다.
         </p>
       </LegalSection>
       <LegalSection title="2. 투자 자문이 아닙니다">
         <p>
           회사({SITE.companyShort})는 자본시장과 금융투자업에 관한 법률상 투자자문업·투자일임업을
-          영위하지 않습니다. 본문의 “급등”, “조정”, “수급”, “지수(INDEX)” 등의 표현은 버즈 데이터를
-          주식 차트 문법으로 설명하기 위한 비유이며, 실제 증권·파생상품·가상자산 거래와 무관합니다.
-          어떠한 콘텐츠도 개별 투자자의 상황에 맞춘 자문으로 해석되어서는 안 됩니다.
+          영위하지 않습니다. 본문의 “급등”, “조정”, “수급”, “지수(INDEX)” 등의 표현은 버즈·이슈
+          데이터를 주식 차트 문법으로 설명하기 위한 비유이며, 실제 증권·파생상품·가상자산 거래와
+          무관합니다. 어떠한 콘텐츠도 개별 투자자의 상황에 맞춘 자문으로 해석되어서는 안 됩니다.
         </p>
       </LegalSection>
       <LegalSection title="3. 데이터의 한계">
@@ -37,9 +40,10 @@ export default function DisclaimerPage() {
       </LegalSection>
       <LegalSection title="4. 브리핑 본문">
         <p>
-          데일리 브리핑과 카테고리 심층은 당일 스냅샷을 해석한 편집 콘텐츠입니다. 가설이 다음날
-          지수(INDEX)에서 뒤집힐 수 있으며, 회사는 예측 적중을 약속하지 않습니다. 인물·작품·방송에
-          대한 평가는 화제성 관측일 뿐 명예·실적·계약에 대한 단정이 아닙니다.
+          데일리 브리핑과 {CATEGORY_LIST} 카테고리 심층 분석은 당일 스냅샷을 해석한 편집
+          콘텐츠입니다. 가설이 다음날 지수(INDEX)에서 뒤집힐 수 있으며, 회사는 예측 적중을
+          약속하지 않습니다. 인물·작품·방송·정책·상품에 대한 평가는 화제성 관측일 뿐
+          명예·실적·계약에 대한 단정이 아닙니다.
         </p>
       </LegalSection>
       <LegalSection title="5. 외부 링크와 광고">

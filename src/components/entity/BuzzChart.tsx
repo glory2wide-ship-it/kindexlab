@@ -16,7 +16,7 @@ import type { RankingEntity, Timeframe } from "@/lib/types";
 
 export function BuzzChart({
   entity,
-  initialTimeframe = "5m",
+  initialTimeframe = "3m",
 }: {
   entity: RankingEntity;
   initialTimeframe?: Timeframe;

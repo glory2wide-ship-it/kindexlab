@@ -92,11 +92,13 @@ export async function runPremiumRebuild(
               keyword: target.keyword,
               slug: target.slug,
               category: target.category,
+              channel: target.channel,
               related: target.related,
               entity,
               relatedEntities,
               logger,
               timeoutMs: options.timeoutMs,
+              editionDate: options.editionDate,
             });
 
             if (!result.ok) {

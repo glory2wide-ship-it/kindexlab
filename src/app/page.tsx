@@ -13,15 +13,14 @@ import { SITE, SITE_INDEX_HEADLINE, SITE_LANDING_HEADLINE } from "@/lib/site";
 import { rankingUrl } from "@/lib/slugs";
 
 /**
- * Served from the ISR cache, rebuilt once a minute.
+ * Served from the ISR cache, rebuilt every 3 minutes.
  *
  * Assembling this page costs a live rankings fetch plus four channels of board
  * seeding; paying that per visitor put TTFB in the hundreds of milliseconds for
- * data that only turns over on the minute anyway. The board refresh interval is
- * the same 60s, so a visitor never sees numbers older than one tick of the
- * countdown they are already watching.
+ * data that only turns over on the 3-minute board tick. The client refresh
+ * interval matches, so a visitor never sees numbers older than one countdown.
  */
-export const revalidate = 60;
+export const revalidate = 180;
 
 const TITLE = SITE_INDEX_HEADLINE;
 const DESCRIPTION = SITE_LANDING_HEADLINE;
@@ -87,7 +86,10 @@ export default async function HomePage() {
         />
       </div>
 
-      <CategoryDeskGrid desks={unified.desks} />
+      <CategoryDeskGrid
+        desks={unified.desks}
+        refreshIntervalSec={DEFAULT_TRENDS_REVALIDATE_SEC}
+      />
 
       <ContentSlot placement="mid" label="종합 지수" />
 

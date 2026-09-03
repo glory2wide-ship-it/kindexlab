@@ -88,7 +88,7 @@ export function MarketWorkspace({
 }) {
   const [view, setView] = useState<ViewMode>(initialView);
   const [category, setCategory] = useState<CategoryId>(initialCategory);
-  const [timeframe, setTimeframe] = useState<Timeframe>("5m");
+  const [timeframe, setTimeframe] = useState<Timeframe>("3m");
   const [genderInternal, setGenderInternal] = useState<"all" | GenderSegment>("all");
   const [ageInternal, setAgeInternal] = useState<"all" | AgeSegment>("all");
   const [regionInternal, setRegionInternal] = useState<"all" | RegionSegment>("all");

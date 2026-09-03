@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/legal/LegalPage";
+import { POST_CHANNELS } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
+
+const CATEGORY_LIST = POST_CHANNELS.map((item) => item.label).join(", ");
 
 export const metadata: Metadata = {
   title: "이용약관",
@@ -11,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalPage eyebrow="TERMS OF SERVICE" title="이용약관" updated="2026-08-25">
+    <LegalPage eyebrow="TERMS OF SERVICE" title="이용약관" updated="2026-09-03">
       <LegalSection title="1. 약관의 적용">
         <p>
           이 약관은 {SITE.company}(이하 “회사”)가 운영하는 {SITE.name}({SITE.nameKo}) 웹사이트 및
@@ -21,10 +24,10 @@ export default function TermsPage() {
       </LegalSection>
       <LegalSection title="2. 서비스의 내용">
         <p>
-          서비스는 K-컬처·엔터테인먼트·인플루언서 화제성을 지수(INDEX)·랭킹·데일리 브리핑 형태로
-          제공합니다. 순위, 등락률, 거래량, 지수는 공개된 검색·차트·뉴스 신호와 회사의 가중치
-          모델을 결합한 관측값이며, 금융상품의 시세나 투자 권유가 아닙니다. 데이터 원천과 갱신
-          주기는 운영 상황에 따라 달라질 수 있습니다.
+          서비스는 {CATEGORY_LIST} 카테고리의 이슈·화제성을 지수(INDEX)·랭킹 보드·데일리
+          브리핑·심층 분석·이슈 칼럼 형태로 제공합니다. 순위, 등락률, 거래량, 지수는 공개된
+          검색·차트·뉴스 신호와 회사의 가중치 모델을 결합한 관측값이며, 금융상품의 시세나 투자
+          권유가 아닙니다. 데이터 원천과 갱신 주기는 운영 상황에 따라 달라질 수 있습니다.
         </p>
       </LegalSection>
       <LegalSection title="3. 이용자의 의무">
@@ -39,8 +42,8 @@ export default function TermsPage() {
         <p>
           서비스의 상표, 레이아웃, 소프트웨어, 브리핑 본문, 시각화 구성은 회사 또는 정당한
           권리자에게 귀속됩니다. 이용자는 개인적 열람 외에 복제, 배포, 공중송신, 2차적 저작물
-          작성을 해서는 안 됩니다. 제3자 콘텐츠(음원 차트명, 프로그램명, 인물명 등)의 권리는
-          해당 권리자에게 있습니다.
+          작성을 해서는 안 됩니다. 제3자 콘텐츠(음원 차트명, 프로그램명, 인물명, 정책·상품명
+          등)의 권리는 해당 권리자에게 있습니다.
         </p>
       </LegalSection>
       <LegalSection title="5. 게시와 변경">

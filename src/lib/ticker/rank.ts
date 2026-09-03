@@ -3,7 +3,7 @@ import { changeForEntity, rankItemsForTimeframe, scoreForTimeframe } from "@/lib
 import type { RankingEntity, Timeframe } from "@/lib/types";
 
 /** Matches the heatmap default in MarketWorkspace. */
-export const TICKER_TIMEFRAME: Timeframe = "5m";
+export const TICKER_TIMEFRAME: Timeframe = "3m";
 
 export function rankForTicker(items: RankingEntity[]): RankingEntity[] {
   const safe = (items ?? []).filter((item) => item?.id && item?.name);

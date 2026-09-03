@@ -123,6 +123,7 @@ export async function enrichBriefingWithAi(
       logger,
       timeoutMs: 360_000,
       publishedAt: draft.publishedAt,
+      editionDate: draft.editionDate,
       briefing: true,
     });
 

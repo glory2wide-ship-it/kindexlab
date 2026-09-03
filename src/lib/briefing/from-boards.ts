@@ -50,7 +50,7 @@ function briefingFromBoard(
     deskLabel: string;
     focusKeyword: string;
     supportKeyword: string;
-    /** Heatmap tops for this board (5m · 전체 · 전체). */
+    /** Heatmap tops for this board (3m · 전체 · 전체). */
     heatmapLead?: RankingEntity[];
   },
 ): BriefingArticle {
@@ -75,7 +75,7 @@ function briefingFromBoard(
             headingLevel: 2 as const,
             kind: "tape" as const,
             paragraphs: [
-              `${options.deskLabel} 히트맵(5분봉·전체)에서 ${lead?.name ?? focusName}이(가) 1위입니다.`,
+              `${options.deskLabel} 히트맵(3분봉·전체)에서 ${lead?.name ?? focusName}이(가) 1위입니다.`,
               names.length
                 ? `상위권은 ${names.join(" · ")} 순입니다. 지수는 공개 보도와 검색 신호를 묶은 편집 추정치입니다.`
                 : `${getPostChannel(board.channel).label} 보드 집계가 비어 있으면 다음 재생성 주기에 채워집니다.`,
@@ -168,7 +168,7 @@ function mainFromBoards(
     deskLabel: `${meta.label} 종합 브리핑`,
     editionDate,
     title: `${leadName}이 ${meta.label} 지수를 끌어올리는 이유, ${dateLabel}`,
-    excerpt: `${meta.label} 히트맵(5분봉·전체) 상위는 ${composite
+    excerpt: `${meta.label} 히트맵(3분봉·전체) 상위는 ${composite
       .map((item) => item.name)
       .filter(Boolean)
       .slice(0, 3)
@@ -190,7 +190,7 @@ function mainFromBoards(
         headingLevel: 2,
         kind: "tape",
         paragraphs: [
-          `${dateLabel} ${meta.label} 일일브리핑 주제는 대시보드 히트맵(5분봉·연령 전체·성별 전체) 상위 종목에서만 고릅니다.`,
+          `${dateLabel} ${meta.label} 일일브리핑 주제는 대시보드 히트맵(3분봉·연령 전체·성별 전체) 상위 종목에서만 고릅니다.`,
           ...lines.slice(0, 4),
         ],
       },
