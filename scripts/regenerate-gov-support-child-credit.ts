@@ -7,7 +7,7 @@ import { refreshAnalysis } from "../src/lib/analysis/pipeline";
 import { deleteAnalysis, readAnalysis } from "../src/lib/analysis/store";
 import { usesBriefingAnalysisPrompt } from "../src/lib/analysis/briefing-boards";
 import { getRankings } from "../src/lib/api";
-import { boardRowSlug, rankRowsToEntities } from "../src/lib/boards/heatmap";
+import { boardRowSlug, rankRowsToEntities, toHeatmapPayload } from "../src/lib/boards/heatmap";
 import { getBoard } from "../src/lib/boards/registry";
 import { readBoard } from "../src/lib/boards/store";
 
@@ -19,18 +19,12 @@ async function main() {
   if (!def) throw new Error(`board missing: ${BOARD_SLUG}`);
 
   const cached = await readBoard(BOARD_SLUG);
-  const ranking = cached?.ranking ?? [];
+  if (!cached) throw new Error(`cached board missing: ${BOARD_SLUG}`);
+  const ranking = cached.ranking ?? [];
   const row = ranking.find((item) => item.name.includes(NAME_NEEDLE));
   if (!row) throw new Error(`${NAME_NEEDLE} not on ${BOARD_SLUG} ranking (${ranking.length} rows)`);
 
-  const boardPayload = {
-    slug: def.slug,
-    channel: def.channel,
-    title: def.title,
-    shortTitle: def.shortTitle,
-    unitLabel: def.unitLabel,
-    ranking,
-  };
+  const boardPayload = toHeatmapPayload(def, cached);
   const entity = rankRowsToEntities([row], boardPayload)[0];
   if (!entity) throw new Error("failed to build entity");
 

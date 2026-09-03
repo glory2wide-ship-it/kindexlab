@@ -278,7 +278,7 @@ export function seoStructureRules(): string {
     "- 주요 섹션 heading은 H2(headingLevel: 2)이며 ❶❷❸❹❺ 기호로 번호를 매깁니다. H2 3~5개.",
     "- FAQ 질문·세부 팩트 항목은 H3(headingLevel: 3)로 구분합니다. FAQ Q&A 3개 이상.",
     "- table.caption은 '팩트 체크' 또는 '핵심 팩트 요약' 형태로 작성합니다. Table 최소 1개.",
-    "- externalLink·internalLink는 클릭 가능한 href·label 쌍입니다. internal label은 관련 글 제목 형태.",
+    "- externalLink·internalLink는 클릭 가능한 href·label 쌍입니다. internal은 실제 보드·브리핑·랭킹 경로만(/search 금지).",
     `- non-shorts 모드: 공백 제외 본문 ${SEO_MIN_CHARS}자(약 ${SEO_MIN_WORDS}단어) 이상을 목표로 합니다.`,
     "- 포커스 키워드를 도입부(상위 10%)와 본문에 합쳐 5회 이상 배치하세요.",
     "- 문단당 3~4문장, 모든 문장 끝 마침표(.) 필수. 줄바꿈으로 끝나도 마침표를 빠뜨리지 마세요.",

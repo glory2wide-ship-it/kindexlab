@@ -80,13 +80,13 @@ export function autoCorrectArticleFields(input: {
   sections: SeoSection[];
   faq: PostFaq[];
 } {
-  const title = scrubBoilerplatePhrases(normalizeWhitespace(input.title));
+  const title = scrubBannedPhraseStems(scrubBoilerplatePhrases(normalizeWhitespace(input.title)));
   const excerpt = autoCorrectProse(input.excerpt);
   const sections = polishArticleSections(
     input.sections.map((section) => ({
       ...section,
       heading: section.heading
-        ? scrubBoilerplatePhrases(normalizeWhitespace(section.heading))
+        ? scrubBannedPhraseStems(scrubBoilerplatePhrases(normalizeWhitespace(section.heading)))
         : section.heading,
       paragraphs: section.paragraphs.map((paragraph) =>
         scrubBannedPhraseStems(scrubBoilerplatePhrases(paragraph)),

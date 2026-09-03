@@ -38,10 +38,14 @@ import {
   filterBriefingRelatedKeywords,
   type BriefingGenerationMode,
 } from "@/lib/premium/briefing-editorial";
+import {
+  deskIdFromBriefingSlug,
+  resolveInternalLink,
+} from "@/lib/premium/internal-link";
 import { describeSmartRoute, resolveBriefingModel } from "@/lib/premium/smart-routing";
 import { cleanLlmField } from "@/lib/premium/clean";
 import { expandBriefingLength, patchDraftViolations, type QualityViolation } from "@/lib/premium/error-patch";
-import { autoCorrectArticleFields } from "@/lib/premium/postprocess";
+import { autoCorrectArticleFields, scrubBannedPhraseStems } from "@/lib/premium/postprocess";
 import { ARTICLE_JSON_SCHEMA, REWRITE_LIST_JSON_SCHEMA, hasRequiredKeys } from "@/lib/premium/schemas";
 import {
   applySeoHeadingStructure,
@@ -203,11 +207,33 @@ function articlePlainText(draft: {
   ].join(" ");
 }
 
-function internalSearchLink(keyword: string, fallbackLabel: string): PostLink {
-  return {
-    href: `/search?q=${encodeURIComponent(keyword)}`,
-    label: fallbackLabel || `${keyword} 관련 이슈 키워드 더 보기`,
-  };
+/** Matches `briefingPlainText` / persist gate — table cells do not count toward length. */
+function briefingPersistPlain(draft: {
+  title: string;
+  excerpt: string;
+  sections: PremiumSection[];
+  faq: PostFaq[];
+}): string {
+  return [
+    draft.title,
+    draft.excerpt,
+    ...draft.sections.flatMap((section) => [section.heading, ...section.paragraphs]),
+    ...draft.faq.flatMap((item) => [item.question, item.answer]),
+  ].join(" ");
+}
+
+function lengthPlain(
+  briefing: boolean | undefined,
+  draft: {
+    title: string;
+    excerpt: string;
+    sections: PremiumSection[];
+    faq: PostFaq[];
+    takeaways: string[];
+    table: PostTable;
+  },
+): string {
+  return briefing ? briefingPersistPlain(draft) : articlePlainText(draft);
 }
 
 function buildJsonLd(input: {
@@ -345,9 +371,12 @@ export async function generatePremiumArticle(input: {
   slug: string;
   category?: string;
   channel?: PostChannel;
+  deskId?: string;
   related?: string[];
   entity?: RankingEntity;
   relatedEntities?: RankingEntity[];
+  /** Prefer a known live route (board / briefing / ranking). Never /search?q=. */
+  preferredInternalLink?: PostLink | null;
   logger: AnalysisLogger;
   timeoutMs?: number;
   publishedAt?: string;
@@ -527,6 +556,13 @@ export async function generatePremiumArticle(input: {
   excerptText = corrected.excerpt;
   sections = corrected.sections as PremiumSection[];
   faqText = corrected.faq;
+  table = {
+    ...table,
+    caption: scrubBannedPhraseStems(table.caption ?? ""),
+    headers: table.headers.map((header) => scrubBannedPhraseStems(header)),
+    rows: table.rows.map((row) => row.map((cell) => scrubBannedPhraseStems(cell))),
+  };
+  takeaways = takeaways.map((item) => scrubBannedPhraseStems(item));
   if (input.briefing && hasBriefingBoilerplate(title)) {
     title = `${keyword} 핵심 이슈 브리핑`;
   }
@@ -534,7 +570,7 @@ export async function generatePremiumArticle(input: {
   sections = applySeoHeadingStructure(sections) as PremiumSection[];
 
   const chars = premiumCharCount(
-    articlePlainText({ title, excerpt: excerptText, sections, faq: faqText, takeaways, table }),
+    lengthPlain(input.briefing, { title, excerpt: excerptText, sections, faq: faqText, takeaways, table }),
   );
   logger.step("premium-body", {
     sections: sections.length,
@@ -562,7 +598,14 @@ export async function generatePremiumArticle(input: {
       faqText = expanded.faq;
       sections = applySeoHeadingStructure(sections) as PremiumSection[];
       const expandedChars = premiumCharCount(
-        articlePlainText({ title, excerpt: excerptText, sections, faq: faqText, takeaways, table }),
+        lengthPlain(input.briefing, {
+          title,
+          excerpt: excerptText,
+          sections,
+          faq: faqText,
+          takeaways,
+          table,
+        }),
       );
       logger.step("premium-body-after-length-patch", {
         sections: sections.length,
@@ -572,7 +615,7 @@ export async function generatePremiumArticle(input: {
   }
 
   const charsAfterLength = premiumCharCount(
-    articlePlainText({ title, excerpt: excerptText, sections, faq: faqText, takeaways, table }),
+    lengthPlain(input.briefing, { title, excerpt: excerptText, sections, faq: faqText, takeaways, table }),
   );
   if (charsAfterLength < minChars) {
     return {
@@ -679,10 +722,20 @@ export async function generatePremiumArticle(input: {
     return { ok: false, reason: "fabricated-url", detail: external?.href ?? "missing" };
   }
 
-  const internal =
-    parsedInternal && parsedInternal.href.startsWith("/search?q=")
-      ? parsedInternal
-      : internalSearchLink(filteredRelated[0] ?? keyword, parsedInternal?.label ?? "");
+  const relatedEntity = input.relatedEntities?.[0] ?? null;
+  const deskId =
+    input.deskId?.trim() ||
+    deskIdFromBriefingSlug(slug, input.channel) ||
+    undefined;
+  const internal = resolveInternalLink({
+    preferred: input.preferredInternalLink,
+    fromModel: parsedInternal,
+    channel: input.channel,
+    deskId,
+    relatedEntitySlug: relatedEntity?.slug,
+    relatedEntityLabel: relatedEntity?.name,
+    labelHint: parsedInternal?.label || input.preferredInternalLink?.label,
+  });
 
   const keywordCount = countOccurrences(bodyPlainText(sections), keyword);
   if (keywordCount > PREMIUM_KEYWORD_HARD_MAX) {
@@ -721,7 +774,9 @@ export async function generatePremiumArticle(input: {
     return { ok: false, reason: "banned-copy", detail: "metadata-leak" };
   }
 
-  const finalChars = premiumCharCount(plain);
+  const finalChars = premiumCharCount(
+    lengthPlain(input.briefing, { title, excerpt: excerptText, sections, faq: faqText, takeaways, table }),
+  );
   if (finalChars < minChars) {
     return { ok: false, reason: "too-short", detail: `${finalChars}자 (min ${minChars})` };
   }

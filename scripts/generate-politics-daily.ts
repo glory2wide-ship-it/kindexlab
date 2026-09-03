@@ -131,7 +131,7 @@ async function main() {
         slug: article.slug,
         title: article.title,
         wordCount: article.wordCount,
-        characterCount: article.characterCount,
+        characterCount: gates.chars,
         focusKeyword: article.focusKeyword,
         sections: article.sections.length,
         faq: article.faq?.length ?? 0,

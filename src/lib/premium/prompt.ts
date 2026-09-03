@@ -33,9 +33,10 @@ export const STATIC_SYSTEM_PROMPT = [
 2. H1은 title 하나. 본문 sections는 스키마상 최소 4개(H2, headingLevel 2). FAQ 질문은 H3 개념.
 3. 포커스 키워드를 excerpt(도입부 상위 10%)에 1회 이상, 본문 합계 5회 이상 자연 배치(목표 5~7회, 과도한 반복 금지).
 4. Markdown/JSON Table 1개 필수(caption은 '팩트 체크' 또는 '핵심 팩트 요약'). FAQ 3개 이상(Shorts는 1~2개).
-5. externalLink.href는 제공된 뉴스 URL을 그대로 복사. 가상 URL 금지. internalLink.href는 /search?q= 로 시작, label은 구체 관련 글 제목.
-6. JSON-LD Schema.org는 파이프라인이 조립하므로 script 태그를 본문에 넣지 마세요.
-7. takeaways는 브리핑이면 빈 배열 []. 프리미엄 칼럼이면 How에 해당하는 실행 팁 2~4개(목록 패딩이 아닌 구체 행동).`,
+5. externalLink.href는 제공된 뉴스 URL을 그대로 복사. 가상 URL 금지. internalLink.href는 사이트에 실제 존재하는 경로만 (/board/…, /economy/briefing, /ranking/… 등). /search?q= 금지.
+6. 표·FAQ는 사실 기반. 체크리스트성 How 나열 금지.
+7. JSON-LD Schema.org는 파이프라인이 조립하므로 script 태그를 본문에 넣지 마세요.
+8. takeaways는 브리핑이면 빈 배열 []. 프리미엄 칼럼이면 How에 해당하는 실행 팁 2~4개(목록 패딩이 아닌 구체 행동).`,
   `[출력 포맷 — 절대 준수]
 - 응답은 오직 지정된 JSON 객체 하나만 반환합니다. 코드블록·설명 문장 금지.
 - 스키마: title, excerpt, sections[{heading, headingLevel, paragraphs[]}], table{caption, headers[], rows[][]}, faq[{question, answer}], externalLink{href, label}, internalLink{href, label}, takeaways[]`,
@@ -111,7 +112,7 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
     "- title+excerpt+sections+faq 합계 공백 제외 1,400~1,800자(목표 1,500~1,700). 단순 사실 나열·패딩으로 채우지 마세요.",
     "- table 1개: 지표·일정·비교·수치(헤더 3열+, 행 2~4). faq는 Full/Sparse 3개+·Shorts 1~2개(답변 각 2~3문장).",
     "- externalLink는 위 뉴스 데이터의 실제 URL만.",
-    '- internalLink.href는 /search?q=... 형식, label은 "관련 글: …" 구체 제목.',
+    '- internalLink.href는 /board/… · /{channel}/briefing · /ranking/… 등 실제 화면 경로만. /search?q= 금지. label은 "관련 글: …" 또는 보드명.',
     briefing ? "- takeaways는 반드시 []." : "- takeaways는 How에 맞는 구체 행동 2~4개.",
     "- 모든 문장 끝 마침표(.) 필수. 동일 평서 종결 연속 3회 금지.",
   ].join("\n");

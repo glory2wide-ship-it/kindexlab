@@ -61,6 +61,7 @@ function mergePremiumDraft(draft: BriefingArticle, article: PremiumArticle, keyw
     table: article.table,
     faq: article.faq,
     externalLink: article.externalLink,
+    // Prefer resolver output; fall back to the draft's live board / briefing path.
     internalLink: article.internalLink ?? draft.internalLink,
     bodyHtml: article.bodyHtml,
     bodyMarkdown: article.bodyMarkdown,
@@ -115,8 +116,10 @@ export async function enrichBriefingWithAi(
       keyword,
       slug: draft.slug,
       channel: draft.channel,
+      deskId: draft.deskId,
       category: options?.categoryHint ?? enrichmentCategoryHint(draft),
       related: options?.relatedKeywords,
+      preferredInternalLink: draft.internalLink,
       logger,
       timeoutMs: 360_000,
       publishedAt: draft.publishedAt,

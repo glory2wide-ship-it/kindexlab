@@ -5,6 +5,11 @@ import { FactTable } from "@/components/article/FactTable";
 import { SectionHeading } from "@/components/article/SectionHeading";
 import { isLiveEdition } from "@/lib/briefing/dates";
 import { categoryLabel, heatmapHref } from "@/lib/briefing/metrics";
+import {
+  deskIdFromBriefingSlug,
+  isStableInternalHref,
+  resolveInternalLink,
+} from "@/lib/premium/internal-link";
 import { rankingPath } from "@/lib/slugs";
 import { SITE } from "@/lib/site";
 import { formatCount } from "@/lib/format";
@@ -19,6 +24,14 @@ export function DailyBriefing({
 }) {
   const live = isLiveEdition(briefing.editionDate);
   const categoryHref = heatmapHref(briefing.category);
+  const internalLink = isStableInternalHref(briefing.internalLink?.href)
+    ? briefing.internalLink!
+    : resolveInternalLink({
+        preferred: briefing.internalLink,
+        channel: briefing.channel,
+        deskId: briefing.deskId || deskIdFromBriefingSlug(briefing.slug, briefing.channel),
+        labelHint: briefing.internalLink?.label || briefing.deskLabel || briefing.focusKeyword,
+      });
   const tapeSections = briefing.sections.filter((section) => section.kind === "tape");
   const restSections = briefing.sections.filter(
     (section) => section.kind !== "tape" && section.heading !== "교차 확인 자료",
@@ -126,7 +139,7 @@ export function DailyBriefing({
           );
         })}
 
-        {briefing.externalLink || briefing.internalLink ? (
+        {briefing.externalLink || internalLink ? (
           <section aria-labelledby="briefing-cross-links">
             <SectionHeading as="h2">교차 확인 자료</SectionHeading>
             <ul className="space-y-3 text-sm leading-7">
@@ -143,13 +156,13 @@ export function DailyBriefing({
                   <span className="ml-2 text-muted">(외부 원문)</span>
                 </li>
               ) : null}
-              {briefing.internalLink ? (
+              {internalLink ? (
                 <li>
                   <Link
-                    href={briefing.internalLink.href}
+                    href={internalLink.href}
                     className="font-medium text-accent underline underline-offset-2 hover:text-ink"
                   >
-                    {briefing.internalLink.label}
+                    {internalLink.label}
                   </Link>
                   <span className="ml-2 text-muted">(사이트 내부)</span>
                 </li>

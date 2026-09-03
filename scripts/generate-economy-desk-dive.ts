@@ -1,20 +1,33 @@
 /**
- * One-off: entertainment deep-dive for 영화 랭킹지수 (boxoffice-expectation)
- * using the single-pass premium briefing pipeline.
+ * One-off: economy board deep-dive (default: 경제 정부지원금).
  *
  * Usage:
- *   npx tsx --env-file=.env.local scripts/generate-ent-movie-dive.ts
- *   npx tsx --env-file=.env.local scripts/generate-ent-movie-dive.ts 2026-09-03
+ *   npx tsx --env-file=.env.local scripts/generate-economy-desk-dive.ts
+ *   npx tsx --env-file=.env.local scripts/generate-economy-desk-dive.ts government-subsidy-search
+ *   npx tsx --env-file=.env.local scripts/generate-economy-desk-dive.ts government-subsidy-search 2026-09-03
  */
 import { analysisLogger } from "../src/lib/analysis/log";
 import { briefingLlmConfigured, briefingProvider } from "../src/lib/analysis/chain/llm";
-import { composeChannelEdition } from "../src/lib/briefing/compose";
+import { entityTypeForBoardSlug } from "../src/lib/boards/entity-type";
 import { editionDateTime, kstDateString } from "../src/lib/briefing/dates";
+import { composeBoardChannelEdition } from "../src/lib/briefing/from-boards";
 import { collectHeatmapTopics } from "../src/lib/briefing/heatmap-topics";
 import { persistEdition } from "../src/lib/briefing/persist";
-import { isPersistableBriefing } from "../src/lib/briefing/quality";
-import { briefingRelatedKeywords } from "../src/lib/premium/briefing-editorial";
+import { isPersistableBriefing, briefingPlainText } from "../src/lib/briefing/quality";
+import {
+  findBriefingBoilerplate,
+  hasBriefingBoilerplate,
+  hasGenericPadding,
+  hasLeakedMetadata,
+  hasRepetitiveDeclarativeEndings,
+  hasTemplateConnectiveSpam,
+} from "../src/lib/editorial/rules";
+import {
+  BRIEFING_SHORTS_MIN_CHARS,
+  briefingRelatedKeywords,
+} from "../src/lib/premium/briefing-editorial";
 import { generatePremiumArticle } from "../src/lib/premium/generate";
+import { premiumCharCount } from "../src/lib/premium/prompt";
 import {
   polishArticleSections,
   polishFaq,
@@ -22,13 +35,22 @@ import {
   renderSeoHtml,
   renderSeoMarkdown,
 } from "../src/lib/premium/seo-format";
-import { getRankings } from "../src/lib/providers/trends";
 import type { BriefingArticle } from "../src/lib/types";
 
-const DESK_ID = "boxoffice-expectation";
+const DESK_ID =
+  process.argv.find((arg) => /^[a-z0-9]+(?:-[a-z0-9]+)+$/i.test(arg) && !/^\d{4}-\d{2}-\d{2}$/.test(arg)) ??
+  "government-subsidy-search";
 const EDITION_DATE = process.argv.find((arg) => /^\d{4}-\d{2}-\d{2}$/.test(arg)) ?? kstDateString();
 
-function polishArticle(article: BriefingArticle): BriefingArticle {
+function fallbackRelated(deskId: string): string[] {
+  const entity = entityTypeForBoardSlug(deskId);
+  if (entity === "subsidy") {
+    return ["근로장려금", "소상공인 대환대출", "청년도약계좌", "에너지바우처"];
+  }
+  return ["금리", "부동산", "물가"];
+}
+
+function polishArticle(article: BriefingArticle, deskLabel: string): BriefingArticle {
   const sections = polishArticleSections(
     article.sections.map((section) => ({
       heading: section.heading,
@@ -41,7 +63,7 @@ function polishArticle(article: BriefingArticle): BriefingArticle {
   const externalLink = article.externalLink ?? { href: "/", label: "외부 원문" };
   const internalLink = article.internalLink ?? {
     href: `/board/${DESK_ID}`,
-    label: "영화 랭킹지수 보드",
+    label: `${deskLabel} 보드`,
   };
   const table = article.table ?? { caption: "팩트 체크", headers: [], rows: [] };
   return {
@@ -74,17 +96,8 @@ async function main() {
   }
 
   const publishedAt = editionDateTime(EDITION_DATE);
-  const [payload, topicPool] = await Promise.all([
-    getRankings(),
-    collectHeatmapTopics("entertainment"),
-  ]);
-  const edition = composeChannelEdition(
-    payload,
-    "entertainment",
-    EDITION_DATE,
-    publishedAt,
-    topicPool,
-  );
+  const topicPool = await collectHeatmapTopics("economy");
+  const edition = await composeBoardChannelEdition("economy", EDITION_DATE, publishedAt, topicPool);
   const draft = edition.find((item) => item.deskId === DESK_ID || item.slug.endsWith(`-${DESK_ID}`));
   if (!draft) {
     console.error(
@@ -94,19 +107,21 @@ async function main() {
     process.exit(1);
   }
 
-  const rawLead = draft.focusKeyword?.trim() || "F1 더 무비";
+  const deskLabel = draft.deskLabel ?? DESK_ID;
+  const rawLead = draft.focusKeyword?.trim() || deskLabel;
   const leadKeyword = rawLead.replace(/\s*이슈\s*$/u, "").trim() || rawLead;
   const related = briefingRelatedKeywords(draft, edition);
-  const relatedFinal = related.length ? related : ["박스오피스", "재개봉", "브래드 피트"];
+  const relatedFinal = related.length ? related : fallbackRelated(DESK_ID);
   console.log(
     JSON.stringify(
       {
         slug: draft.slug,
         deskId: draft.deskId,
-        deskLabel: draft.deskLabel,
+        deskLabel,
         leadKeyword,
         related: relatedFinal,
         pipeline: "single-pass",
+        provider: briefingProvider(),
       },
       null,
       2,
@@ -116,9 +131,9 @@ async function main() {
   const result = await generatePremiumArticle({
     keyword: leadKeyword,
     slug: draft.slug,
-    channel: "entertainment",
-    deskId: draft.deskId,
-    category: "영화 랭킹지수",
+    channel: "economy",
+    deskId: draft.deskId ?? DESK_ID,
+    category: deskLabel,
     related: relatedFinal,
     preferredInternalLink: draft.internalLink,
     logger: analysisLogger(`briefing:${draft.slug}`),
@@ -154,7 +169,7 @@ async function main() {
     updatedAt: new Date().toISOString(),
   };
 
-  article = polishArticle(article);
+  article = polishArticle(article, deskLabel);
   const persistable = isPersistableBriefing(article);
   console.log(
     JSON.stringify(
@@ -176,7 +191,17 @@ async function main() {
   );
 
   if (!persistable) {
-    console.error("quality gate failed — not persisted");
+    const plain = briefingPlainText(article);
+    const prose = briefingPlainText({ ...article, title: "" });
+    console.error("quality gate failed — not persisted", {
+      chars: premiumCharCount(plain),
+      min: BRIEFING_SHORTS_MIN_CHARS,
+      templateConnectives: hasTemplateConnectiveSpam(prose, 1),
+      boilerplate: hasBriefingBoilerplate(prose) ? findBriefingBoilerplate(prose) : [],
+      repetitiveEndings: hasRepetitiveDeclarativeEndings(prose),
+      genericPadding: hasGenericPadding(prose),
+      metadataLeak: hasLeakedMetadata(prose),
+    });
     process.exit(1);
   }
 
