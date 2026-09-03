@@ -21,6 +21,11 @@ fi
 
 git commit -m "$MESSAGE"
 
+# Ingest (and similar jobs) often leave unrelated dirty files (AGENTS.md, caches).
+# Those block `git rebase`; drop them so only the commit we just made is pushed.
+git reset --hard HEAD
+git clean -fd
+
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 REMOTE_REF="origin/${BRANCH}"
 
@@ -35,6 +40,8 @@ for attempt in 1 2 3 4 5 6 7 8 9 10; do
   else
     echo "Rebase failed on attempt ${attempt}; aborting rebase"
     git rebase --abort 2>/dev/null || true
+    git reset --hard HEAD
+    git clean -fd
   fi
   sleep $((attempt * 3))
 done

@@ -35,7 +35,7 @@ export const POST_CHANNELS: {
     id: "entertainment",
     href: "/entertainment",
     label: "엔터테인먼트",
-    eyebrow: "K ENTERTAINMENT DESK",
+    eyebrow: "ENTERTAINMENT DESK",
     indexTitle: "엔터테인먼트 지수",
     description:
       "음원·시청률·웹툰·게임·숏폼·인플루언서 공개 순위를 실시간 지수와 브리핑·칼럼으로 읽습니다.",
