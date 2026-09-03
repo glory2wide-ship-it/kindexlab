@@ -34,6 +34,11 @@ import {
   ensureCultureGrantRanking,
   isCultureGrantBoard,
 } from "@/lib/boards/culture-grants";
+import { entityTypeForBoardSlug } from "@/lib/boards/entity-type";
+import {
+  ensureTravelGrantRanking,
+  isTravelGrantBoard,
+} from "@/lib/boards/travel-grants";
 import { ensureInfluencerBoardRanking } from "@/lib/politics/fail-safe";
 import {
   ensureLocalPolicyRanking,
@@ -45,6 +50,8 @@ import { influencerSeedNames } from "@/lib/politics/youtube-seeds";
 import { namesOverlap } from "@/lib/ingestion/names";
 import { attachTimeframeMetrics } from "@/lib/timeframes";
 import type { EntityType, RankingEntity } from "@/lib/types";
+
+export { entityTypeForBoardSlug } from "@/lib/boards/entity-type";
 
 export interface HeatmapBoardPayload {
   slug: string;
@@ -68,27 +75,6 @@ export type HeatmapGender = "all" | GenderSegment;
 export type HeatmapAge = "all" | AgeSegment;
 export type HeatmapRegion = "all" | RegionSegment;
 
-const BOARD_ENTITY_TYPE: Record<string, EntityType> = {
-  "realtime-music-chart": "music_chart",
-  "kpop-fandom-power": "kpop",
-  "trot-kayo-fandom-power": "kpop",
-  "realtime-tv-ratings": "tv_rating",
-  "variety-hot-minute": "tv_rating",
-  "star-reputation-index": "celebrity",
-  "game-esports-ranking": "pc_game",
-  "boxoffice-expectation": "celebrity",
-  "entertain-youtuber-ranking": "influencer",
-  "political-influencer-power": "political_influencer",
-  "political-pundit-ranking": "political_pundit",
-  "governor-approval-index": "local_policy",
-  "government-support-fund": "subsidy",
-  "culture-leisure-grant-ranking": "subsidy",
-  "party-support-chart": "party_support",
-  "politician-support-chart": "politician_support",
-  "shortform-meme-velocity": "shorts",
-  "realtime-webtoon-rank": "webtoon",
-};
-
 function normalizeBoardRanking(def: BoardDefinition, rows: BoardRankEntry[]): BoardRankEntry[] {
   if (def.slug === "political-influencer-power") return ensureInfluencerBoardRanking(rows);
   if (def.slug === "governor-approval-index") return ensureLocalPolicyRanking(rows);
@@ -96,6 +82,7 @@ function normalizeBoardRanking(def: BoardDefinition, rows: BoardRankEntry[]): Bo
     return ensureSubsidyRanking(rows);
   }
   if (isCultureGrantBoard(def.slug)) return ensureCultureGrantRanking(rows);
+  if (isTravelGrantBoard(def.slug)) return ensureTravelGrantRanking(rows);
   if (def.slug === "political-pundit-ranking") return ensurePunditRanking(rows);
   if (def.slug === HOUSING_BOARD_SLUG) {
     return ensureHousingApartmentRanking(rows, rankLimitForChannel(def.channel));
@@ -114,8 +101,12 @@ export function toHeatmapPayload(def: BoardDefinition, cached: CachedBoard): Hea
   const seedsMissing =
     def.slug === "political-influencer-power" &&
     influencerSeedNames().some((name) => !ranking.some((row) => namesOverlap(row.name, name)));
+  // Culture grants must always re-slice demographics after travel rows are stripped,
+  // otherwise stale demographic tables keep 여행 정부지원금 names on the heatmap.
   const demographics =
-    namesChanged || seedsMissing ? deriveDemographics(ranking, def) : cached.demographics;
+    isCultureGrantBoard(def.slug) || namesChanged || seedsMissing
+      ? deriveDemographics(ranking, def)
+      : cached.demographics;
   const index = computeBoardIndex(ranking, def.slug);
   return {
     slug: cached.slug,
@@ -138,11 +129,16 @@ export function toHeatmapPayload(def: BoardDefinition, cached: CachedBoard): Hea
 }
 
 function entityTypeForBoard(board: HeatmapBoardPayload): EntityType {
-  if (BOARD_ENTITY_TYPE[board.slug]) return BOARD_ENTITY_TYPE[board.slug];
-  if (board.channel === "economy") return "economy_board";
-  if (board.channel === "culture" || board.channel === "travel") return "culture_board";
-  if (board.channel === "politics") return "political_search";
-  return "influencer";
+  return (
+    entityTypeForBoardSlug(board.slug) ??
+    (board.channel === "economy"
+      ? "economy_board"
+      : board.channel === "culture" || board.channel === "travel"
+        ? "culture_board"
+        : board.channel === "politics"
+          ? "political_search"
+          : "influencer")
+  );
 }
 
 export function boardRowSlug(boardSlug: string, name: string): string {

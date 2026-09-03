@@ -19,8 +19,14 @@ jobs:
       - run: npm ci
       - run: npm run briefing:generate
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          # All article generation uses Gemini (live or Batch).
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GEMINI_EDITOR_MODEL: ${{ vars.GEMINI_EDITOR_MODEL }}
+          BRIEFING_LLM_PROVIDER: gemini
+          LLM_PROVIDER: gemini
+          GEMINI_USE_BATCH: "true"
+          GEMINI_BATCH_CONCURRENCY: "4"
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: publish KST daily briefings"

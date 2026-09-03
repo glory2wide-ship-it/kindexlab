@@ -3,6 +3,7 @@ import { hasEdition, listSeeded } from "@/lib/briefing/catalog";
 import { composeArticle, composeChannelEdition } from "@/lib/briefing/compose";
 import { editionDateTime, kstDateString } from "@/lib/briefing/dates";
 import { channelUsesBoardBriefing, composeBoardChannelEdition } from "@/lib/briefing/from-boards";
+import { collectHeatmapTopics } from "@/lib/briefing/heatmap-topics";
 import { persistEdition, removePersistedEdition } from "@/lib/briefing/persist";
 import { POST_CHANNELS } from "@/lib/posts/channels";
 import { getRankings } from "@/lib/providers/trends";
@@ -14,14 +15,19 @@ async function composeChannelDraft(
   editionDate: string,
   publishedAt: string,
 ): Promise<BriefingArticle[]> {
+  // Topics always come from the live heatmap at 5m · 전체 · 전체 — never random seeds.
+  const topicPool = await collectHeatmapTopics(channel);
+  console.log(
+    `[briefing] ${channel} heatmap topics: composite=${topicPool.composite.length} desks=${Object.keys(topicPool.byDesk).length} lead=${topicPool.composite[0]?.name ?? "—"}`,
+  );
   if (channelUsesBoardBriefing(channel)) {
-    return composeBoardChannelEdition(channel, editionDate, publishedAt);
+    return composeBoardChannelEdition(channel, editionDate, publishedAt, topicPool);
   }
   const payload = await getRankings();
-  return composeChannelEdition(payload, channel, editionDate, publishedAt);
+  return composeChannelEdition(payload, channel, editionDate, publishedAt, topicPool);
 }
 
-/** Composes and OpenAI-enriches every briefing for one channel (main + deep-dives). */
+/** Composes and Gemini-enriches every briefing for one channel (main + deep-dives). */
 export async function composeChannelEditionWithAi(
   channel: PostChannel,
   editionDate: string,
@@ -34,7 +40,7 @@ export async function composeChannelEditionWithAi(
 
 /**
  * Generates the full daily edition across all five channels (46 articles on
- * current desk counts) using the premium OpenAI pipeline.
+ * current desk counts) using the premium Gemini pipeline.
  */
 export async function generateEdition(
   editionDate = kstDateString(),
@@ -74,8 +80,16 @@ export async function generateSingle(
   channel: PostChannel = "entertainment",
 ): Promise<BriefingArticle> {
   const publishedAt = editionDateTime(editionDate, 7, kind === "main" ? 5 : 20);
-  const payload = await getRankings();
-  const base = composeArticle(payload, { editionDate, kind, category, publishedAt, channel });
+  const [payload, topicPool] = await Promise.all([getRankings(), collectHeatmapTopics(channel)]);
+  const base = composeArticle(payload, {
+    editionDate,
+    kind,
+    category,
+    publishedAt,
+    channel,
+    topicPool,
+    deskId: kind === "main" ? `${channel}-daily` : undefined,
+  });
   return enrichBriefingWithAi(base, {
     leadKeyword: base.focusKeyword,
     categoryHint: channel,

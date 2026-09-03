@@ -7,7 +7,7 @@ export interface PoliticsYoutubeSeed {
   channelId: string;
   handle?: string;
   aliases: string[];
-  /** Always appear on the 정치 인기 유튜브 랭킹 heatmap, even as news/media. */
+  /** Always appear on the 정치 유튜브 랭킹 heatmap, even as news/media. */
   influencer: boolean;
   types: PoliticsEntityType[];
 }

@@ -1,4 +1,6 @@
 import { kstDateString } from "@/lib/briefing/dates";
+import { analysisLogger } from "@/lib/analysis/log";
+import { BRIEFING_LLM, chatJson, briefingLlmConfigured } from "@/lib/analysis/chain/llm";
 import {
   buildIssueCompareTable,
   buildIssueFaq,
@@ -512,70 +514,43 @@ interface AiDraft {
   faq?: PostFaq[];
 }
 
-async function draftWithOpenAi(input: {
+async function draftWithLlm(input: {
   editionDate: string;
   slot: PostSlot;
   focus: string;
   supportKw: string;
   table: PostTable;
 }): Promise<AiDraft | null> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 90_000);
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        temperature: 0.35,
-        max_tokens: 7000,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content: editorialSystemPrompt(input.focus, input.supportKw),
-          },
-          {
-            role: "user",
-            content: `키워드만 제공됩니다: ${input.focus}. 보조 주제: ${input.supportKw}. 날짜 ${input.editionDate} 시간대 ${input.slot}. 수치 데이터는 일절 제공되지 않습니다. 이 키워드의 산업적·사회적 배경, 화제가 된 이유, 파급력, 초보자 가이드, 향후 전망만 쓰세요. 표 초안 headers=${input.table.headers.join(",")} rows=${JSON.stringify(input.table.rows.slice(0, 5))}`,
-          },
-        ],
+  if (!briefingLlmConfigured()) return null;
+
+  const draft = await chatJson<AiDraft>({
+    system: editorialSystemPrompt(input.focus, input.supportKw),
+    user: `키워드만 제공됩니다: ${input.focus}. 보조 주제: ${input.supportKw}. 날짜 ${input.editionDate} 시간대 ${input.slot}. 수치 데이터는 일절 제공되지 않습니다. 이 키워드의 산업적·사회적 배경, 화제가 된 이유, 파급력, 초보자 가이드, 향후 전망만 쓰세요. 표 초안 headers=${input.table.headers.join(",")} rows=${JSON.stringify(input.table.rows.slice(0, 5))}`,
+    temperature: 0.35,
+    maxTokens: 7_000,
+    timeoutMs: 90_000,
+    provider: BRIEFING_LLM.provider,
+    model: BRIEFING_LLM.draftModel(),
+    logger: analysisLogger("content-generator"),
+    step: "seo-draft",
+  });
+  if (!draft?.title || !Array.isArray(draft.sections) || draft.sections.length < 5) return null;
+  if (hasBannedCopy(`${draft.title}${draft.excerpt}`)) return null;
+  if (!draft.title.includes(input.focus)) return null;
+  draft.sections = draft.sections.map((section) => ({
+    heading: section.heading,
+    headingLevel: section.headingLevel === 3 ? 3 : 2,
+    paragraphs: (section.paragraphs ?? [])
+      .filter((para) => !hasBannedCopy(para))
+      .map((para) => {
+        const bits = splitToSentences(para).flatMap(clipLong).slice(0, 4);
+        if (bits.length <= 2) return bits.join(" ");
+        return bits.join(" ");
       }),
-    });
-    if (!response.ok) return null;
-    const json = (await response.json()) as { choices?: { message?: { content?: string } }[] };
-    const raw = json.choices?.[0]?.message?.content;
-    if (!raw) return null;
-    const draft = JSON.parse(raw) as AiDraft;
-    if (!draft.title || !Array.isArray(draft.sections) || draft.sections.length < 5) return null;
-    if (hasBannedCopy(`${draft.title}${draft.excerpt}`)) return null;
-    if (!draft.title.includes(input.focus)) return null;
-    draft.sections = draft.sections.map((section) => ({
-      heading: section.heading,
-      headingLevel: section.headingLevel === 3 ? 3 : 2,
-      paragraphs: (section.paragraphs ?? [])
-        .filter((para) => !hasBannedCopy(para))
-        .map((para) => {
-          const bits = splitToSentences(para).flatMap(clipLong).slice(0, 4);
-          if (bits.length <= 2) return bits.join(" ");
-          return bits.join(" ");
-        }),
-    }));
-    const first = draft.sections[0]?.paragraphs[0] ?? "";
-    if (!first.includes(input.focus)) return null;
-    return draft;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
+  }));
+  const first = draft.sections[0]?.paragraphs[0] ?? "";
+  if (!first.includes(input.focus)) return null;
+  return draft;
 }
 
 export async function generateSeoPost(options?: {
@@ -593,6 +568,8 @@ export async function generateSeoPost(options?: {
   reason?: string;
   persisted: boolean;
   supabase: boolean;
+  usedLlm: boolean;
+  /** @deprecated Use usedLlm — OpenAI is no longer used for content generation. */
   usedOpenAi: boolean;
   spec: PostSpecReport | null;
   post: GeneratedPost | null;
@@ -611,6 +588,7 @@ export async function generateSeoPost(options?: {
         reason: "slot already published",
         persisted: false,
         supabase: false,
+        usedLlm: false,
         usedOpenAi: false,
         spec: evaluatePostSpec(existing),
         post: existing,
@@ -629,7 +607,7 @@ export async function generateSeoPost(options?: {
     channelOverride: options?.channel,
   });
 
-  const ai = await draftWithOpenAi({
+  const ai = await draftWithLlm({
     editionDate,
     slot,
     focus: base.focusKeyword,
@@ -650,7 +628,7 @@ export async function generateSeoPost(options?: {
     label: TYPE_LABEL[lead.type] || lead.type,
   });
 
-  let usedOpenAi = false;
+  let usedLlm = false;
   let output = base;
   if (ai) {
     const numberedAi = ai.sections.slice(0, 5).map((section, index) => ({
@@ -676,7 +654,7 @@ export async function generateSeoPost(options?: {
     );
     if (evaluatePostSpec(candidate).ok) {
       output = candidate;
-      usedOpenAi = true;
+      usedLlm = true;
     }
   }
 
@@ -691,7 +669,8 @@ export async function generateSeoPost(options?: {
       skipped: false,
       persisted: false,
       supabase: false,
-      usedOpenAi,
+      usedLlm,
+      usedOpenAi: usedLlm,
       spec: finalSpec,
       post: output,
     };
@@ -703,7 +682,8 @@ export async function generateSeoPost(options?: {
       reason: `spec failed: ${finalSpec.failures.join(",")}`,
       persisted: false,
       supabase: false,
-      usedOpenAi,
+      usedLlm,
+      usedOpenAi: usedLlm,
       spec: finalSpec,
       post: output,
     };
@@ -714,7 +694,8 @@ export async function generateSeoPost(options?: {
     skipped: false,
     persisted: saved.file,
     supabase: saved.supabase,
-    usedOpenAi,
+    usedLlm,
+    usedOpenAi: usedLlm,
     spec: finalSpec,
     post: output,
   };

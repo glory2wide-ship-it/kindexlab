@@ -508,7 +508,16 @@ export function dropRepeatedSentences(text: string, seen: Set<string> = new Set(
     seen.add(key);
     kept.push(sentence);
   }
-  return kept.join(" ");
+  // extractSentences often returns clauses without a trailing period; re-seal
+  // before joining so the next extract/audit pass still sees boundaries.
+  return kept
+    .map((sentence) => {
+      const trimmed = sentence.trim();
+      if (!trimmed) return "";
+      return /[.!?…]["'」』)]*$/.test(trimmed) ? trimmed : `${trimmed}.`;
+    })
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function uniqueLines(raw: string[]): string[] {
@@ -686,6 +695,9 @@ export function officialLinkForTopic(
   }
   if (type === "kpop" || type === "music_chart") {
     return { href: "https://www.melon.com/", label: "멜론 공식", rel: "noopener noreferrer" };
+  }
+  if (type === "movie") {
+    return { href: "https://www.kobis.or.kr/", label: "KOBIS 박스오피스 공식", rel: "noopener noreferrer" };
   }
   if (type === "tv_show" || type === "tv_rating" || type === "political_ratings") {
     return { href: "https://www.kbs.co.kr/", label: "KBS 편성·뉴스 공식", rel: "noopener noreferrer" };

@@ -1,13 +1,64 @@
+import { computeBoardIndex } from "@/lib/boards/board-index";
+import { deriveDemographics } from "@/lib/boards/demographics";
+import {
+  entityTypeForBoardSlug,
+  toHeatmapPayload,
+  type HeatmapBoardPayload,
+} from "@/lib/boards/heatmap";
+import { rankLimitForBoard } from "@/lib/boards/limits";
 import { menuBoardsForChannel } from "@/lib/boards/registry";
-import { toHeatmapPayload, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
 import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
+import type { BoardDefinition, BoardRankEntry, CachedBoard } from "@/lib/boards/types";
+import { COMPOSITE_INDEX_ID } from "@/lib/ingestion/composite";
+import { readPersistedSnapshot } from "@/lib/ingestion/job";
 import { itemsForChannel } from "@/lib/posts/channels";
 import { isPoliticsIndex } from "@/lib/politics/types";
-import { COMPOSITE_INDEX_ID } from "@/lib/ingestion/composite";
 import type { ChannelLiveMarket } from "@/components/dashboard/ChannelMarketDesk";
 import type { PostChannel } from "@/lib/posts/types";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
+
+/**
+ * Prefer live ingest chart rows for music / movie boards so heatmaps track crawls.
+ * Server-only — keeps fs-backed snapshot reads out of client bundles.
+ */
+function liveRankingForBoard(def: BoardDefinition): BoardRankEntry[] | undefined {
+  const type = entityTypeForBoardSlug(def.slug);
+  if (type !== "music_chart" && type !== "movie") return undefined;
+  const snapshot = readPersistedSnapshot();
+  if (!snapshot?.items?.length) return undefined;
+  const limit = rankLimitForBoard(def);
+  const rows = snapshot.items
+    .filter((item) => item.type === type)
+    .sort((a, b) => a.rank - b.rank || b.buzzScore - a.buzzScore)
+    .slice(0, limit)
+    .map((item, index) => ({
+      rank: index + 1,
+      name: item.name,
+      score: Number(
+        Math.min(99.5, Math.max(12, item.buzzScore > 120 ? item.buzzScore / 10 : item.buzzScore)).toFixed(
+          2,
+        ),
+      ),
+      changeRate: Number((item.fluctuationRate ?? 0).toFixed(2)),
+      note: item.summary?.slice(0, 80) || `${def.shortTitle} 실시간 ${index + 1}위`,
+    }));
+  return rows.length >= 5 ? rows : undefined;
+}
+
+function withLiveChartOverlay(def: BoardDefinition, cached: CachedBoard): HeatmapBoardPayload {
+  const live = liveRankingForBoard(def);
+  if (!live) return toHeatmapPayload(def, cached);
+  const overlay: CachedBoard = {
+    ...cached,
+    ranking: live,
+    demographics: deriveDemographics(live, def),
+  };
+  const index = computeBoardIndex(live, def.slug);
+  overlay.indexValue = index.value;
+  overlay.indexChangeRate = index.changeRate;
+  return toHeatmapPayload(def, overlay);
+}
 
 export async function loadChannelHeatmapPayloads(
   channel: PostChannel,
@@ -17,7 +68,7 @@ export async function loadChannelHeatmapPayloads(
   for (const def of defs) {
     try {
       const cached = await seedBoardIfMissing(def);
-      payloads.push(toHeatmapPayload(def, cached));
+      payloads.push(withLiveChartOverlay(def, cached));
     } catch {
       /* skip a board that cannot be seeded; the rest still render */
     }

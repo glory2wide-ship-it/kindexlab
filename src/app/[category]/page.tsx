@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ChannelBriefingPage } from "@/components/briefing/ChannelBriefingPage";
-import { ChannelMarketDesk } from "@/components/dashboard/ChannelMarketDesk";
-import { getRankings } from "@/lib/api";
+import { ChannelDeskWithBriefing } from "@/components/dashboard/ChannelDeskWithBriefing";
+import { getChannelBriefingEdition, getRankings, splitChannelEdition } from "@/lib/api";
 import { stripBoardDemographics } from "@/lib/boards/heatmap";
 import { channelLiveMarket, loadChannelHeatmapPayloads } from "@/lib/boards/heatmap-server";
 import { seedMissingBoards } from "@/lib/boards/seed";
@@ -34,7 +33,6 @@ export default async function CategoryBoardPage({
 }) {
   const { category } = await params;
   if (!isPostChannel(category)) notFound();
-  const meta = getPostChannel(category);
   let market: RankingsPayload;
   try {
     market = await getRankings();
@@ -48,16 +46,26 @@ export default async function CategoryBoardPage({
   }
   const boards = await loadChannelHeatmapPayloads(category);
 
+  // Board rail ↔ index cards ↔ 심층 분석 stay 1:1 (travel includes 여행 정부지원금).
+  let main;
+  let dives: Awaited<ReturnType<typeof splitChannelEdition>>["dives"] = [];
+  try {
+    const edition = await getChannelBriefingEdition(category);
+    const split = splitChannelEdition(edition);
+    main = split.main;
+    dives = split.dives;
+  } catch {
+    main = undefined;
+    dives = [];
+  }
   return (
-    <div className="space-y-8">
-      <ChannelMarketDesk
-        channel={category}
-        boards={stripBoardDemographics(boards)}
-        liveMarket={channelLiveMarket(market, category, boards)}
-      />
-      <section className="border-t border-line pt-8">
-        <ChannelBriefingPage channel={category} titleLevel={2} />
-      </section>
-    </div>
+    <ChannelDeskWithBriefing
+      channel={category}
+      boards={stripBoardDemographics(boards)}
+      liveMarket={channelLiveMarket(market, category, boards)}
+      main={main}
+      dives={dives}
+      titleLevel={2}
+    />
   );
 }

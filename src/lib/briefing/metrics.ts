@@ -11,6 +11,7 @@ const INDEX_TO_CATEGORY: Record<string, CategoryId> = {
   influencer: "influencer",
   music: "music_chart",
   ratings: "tv_rating",
+  movie: "movie",
   webtoon: "webtoon",
   shorts: "shorts",
   mobile: "mobile_game",

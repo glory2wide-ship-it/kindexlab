@@ -18,6 +18,7 @@ import {
 import { classifyBuzzType, fetchNaverNewsBoost } from "@/lib/ingestion/sources/buzz";
 import { pickConsoleGames, pickMobileGames, pickPcGames } from "@/lib/ingestion/sources/games";
 import { pickPrimaryMusic } from "@/lib/ingestion/sources/music";
+import { pickPrimaryMovie } from "@/lib/ingestion/sources/movies";
 import { pickPrimaryShorts } from "@/lib/ingestion/sources/shorts";
 import { pickPrimaryWebtoon } from "@/lib/ingestion/sources/webtoon";
 import { attachTimeframeMetrics, changeForEntity, volumeForTimeframe } from "@/lib/timeframes";
@@ -46,8 +47,9 @@ const INDEX_META: { id: string; label: string; type?: EntityType; note: string }
   { id: "broadcast", label: "방송지수", type: "tv_show", note: "편성·화제 합산" },
   { id: "celebrity", label: "셀럽지수", type: "celebrity", note: "검색·뉴스 버즈" },
   { id: "influencer", label: "인플지수", type: "influencer", note: "크리에이터 언급" },
-  { id: "music", label: "음원지수", type: "music_chart", note: "국내 음원 차트" },
+  { id: "music", label: "음원지수", type: "music_chart", note: "멜론·지니·스포티파이·유튜브 뮤직 복합" },
   { id: "ratings", label: "시청률지수", type: "tv_rating", note: "닐슨 가구 시청률" },
+  { id: "movie", label: "영화지수", type: "movie", note: "KOBIS 박스오피스·포털 영화 순위" },
   { id: "webtoon", label: "웹툰지수", type: "webtoon", note: "네이버·카카오 인기" },
   { id: "shorts", label: "숏폼지수", type: "shorts", note: "유튜브·숏폼 조회" },
   { id: "mobile", label: "모바일지수", type: "mobile_game", note: "앱스토어 게임 인기" },
@@ -78,6 +80,8 @@ function defaultProducts(name: string, type: EntityType): AffiliateProduct[] {
   const queries =
     type === "music_chart"
       ? [`${name} 앨범`, "무선 이어폰", "응원봉"]
+      : type === "movie"
+        ? [`${name} 블루레이`, "팝콘", "홈시네마 프로젝터"]
       : type === "tv_show" || type === "tv_rating"
         ? [`${name} 굿즈`, "홈시네마 프로젝터", "팝콘"]
         : type === "webtoon"
@@ -198,6 +202,8 @@ function toEntity(
     lockType ||
     type === "shorts" ||
     type === "webtoon" ||
+    type === "movie" ||
+    type === "music_chart" ||
     type === "mobile_game" ||
     type === "pc_game" ||
     type === "console_game" ||
@@ -211,7 +217,13 @@ function toEntity(
   const score =
     row.metric && type === "tv_rating"
       ? scoreFromMetric(row.metric)
-      : row.metric && (type === "webtoon" || type === "shorts" || type === "mobile_game" || type === "pc_game" || type === "console_game")
+      : row.metric &&
+          (type === "webtoon" ||
+            type === "shorts" ||
+            type === "movie" ||
+            type === "mobile_game" ||
+            type === "pc_game" ||
+            type === "console_game")
         ? scoreFromRank(row.rank, span, 900, 1860) + Math.min(Math.max(row.metric, 0), 12) * 8
         : row.metric && (type === "celebrity" || type === "influencer")
           ? scoreFromRank(row.rank, span, 900, 1700) + Math.min(row.metric, 30) * 6
@@ -236,6 +248,8 @@ function toEntity(
         ? shortsVolume(row.volume, row.rank)
         : knownType === "pc_game"
           ? scaledVolume(row.volume, row.rank, 4, 100_000)
+        : knownType === "movie"
+          ? scaledVolume(row.volume, row.rank, 8, 95_000)
           : knownType === "mobile_game" || knownType === "console_game"
             ? (row.volume ?? volumeFromRank(row.rank, 88_000))
             : (row.volume ??
@@ -335,6 +349,7 @@ const ENTERTAINMENT_FAMILY = new Set<EntityType>([
   "influencer",
   "music_chart",
   "tv_rating",
+  "movie",
   "webtoon",
 ]);
 
@@ -346,7 +361,7 @@ const ENTERTAINMENT_FAMILY = new Set<EntityType>([
  */
 function shouldRetag(fallback: EntityType, smart: SmartClassification): boolean {
   if (smart.category === "politics") {
-    // News/media talk shows still belong on the 정치 인기 유튜브 heatmap.
+    // News/media talk shows still belong on the 정치 유튜브 heatmap.
     if (smart.type === "political_influencer" && fallback !== "political_influencer") {
       return smart.strength === "strong" && smart.source === "text";
     }
@@ -491,6 +506,8 @@ export async function composeLiveSnapshot(
   const musicPrimary = pickPrimaryMusic(sources);
   const musicRows = takeTop(musicPrimary?.items ?? [], 50);
   const artists = artistRows(musicRows);
+  const moviePrimary = pickPrimaryMovie(sources);
+  const movieRows = takeTop(moviePrimary?.items ?? [], 30);
   const webtoonPrimary = pickPrimaryWebtoon(sources);
   const webtoonDaily = takeTop(byId("naver-webtoon-daily")?.items ?? webtoonPrimary?.items ?? [], 40);
   const webtoonWeekly = takeTop(byId("naver-webtoon-weekly")?.items ?? [], 50);
@@ -536,13 +553,22 @@ export async function composeLiveSnapshot(
     ...artists,
     ...ratings,
     ...shows,
+    ...movieRows,
     ...webtoonRows,
     ...shortsRows,
     ...mobileRows,
     ...pcRows,
     ...consoleRows,
   ].map((row) => row.title);
-  const chartTypes = new Set(["music_chart", "webtoon", "shorts", "mobile_game", "pc_game", "console_game"]);
+  const chartTypes = new Set([
+    "music_chart",
+    "movie",
+    "webtoon",
+    "shorts",
+    "mobile_game",
+    "pc_game",
+    "console_game",
+  ]);
   const buzzEntities = boostedNews
     .filter((row) => !usedNames.some((name) => namesOverlap(name, row.title)))
     .map((row) => {
@@ -583,6 +609,7 @@ export async function composeLiveSnapshot(
     ...artists.map((row, _i, all) => toEntity(row, "kpop", previous, ["차트 아티스트"], false, all.length)),
     ...ratings.map((row, _i, all) => toEntity(row, "tv_rating", previous, row.tags ?? [], false, all.length)),
     ...shows.map((row, _i, all) => toEntity(row, "tv_show", previous, row.tags ?? [], false, all.length)),
+    ...movieRows.map((row, _i, all) => toEntity(row, "movie", previous, row.tags ?? [], true, all.length)),
     ...webtoonRows.map((row, _i, all) => toEntity(row, "webtoon", previous, row.tags ?? [], false, all.length)),
     ...trafficRows.map((item, _i, all) =>
       toEntity(item.row, item.type, previous, item.row.tags ?? [], Boolean(item.channel), all.length),

@@ -59,6 +59,7 @@ export function ChannelMarketDesk({
   liveMarket,
   initialBoardSlug = "",
   initialRegion = "all",
+  onBoardChange,
 }: {
   channel: PostChannel;
   boards: HeatmapBoardPayload[];
@@ -67,6 +68,8 @@ export function ChannelMarketDesk({
   initialBoardSlug?: string;
   /** Pre-select a region tab when the board supports it. */
   initialRegion?: HeatmapRegion;
+  /** Fires when the ranking-board rail selection changes (incl. 종합 → ""). */
+  onBoardChange?: (slug: string) => void;
 }) {
   const boardHeatmap = usesBoardHeatmap(channel);
   const [selectedSlug, setSelectedSlug] = useState(initialBoardSlug);
@@ -109,7 +112,8 @@ export function ChannelMarketDesk({
     setSelectedSlug(slug);
     setAge((current) => clampAgeForBoard(slug || undefined, current));
     if (!boardUsesRegionFilter(slug)) setRegion("all");
-  }, []);
+    onBoardChange?.(slug);
+  }, [onBoardChange]);
 
   const selectedDef = selectedSlug ? getBoard(selectedSlug) : undefined;
   const deskKind = selectedDef?.deskKind;

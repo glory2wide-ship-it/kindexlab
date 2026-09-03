@@ -17,7 +17,7 @@ export const SITE = {
   companyShort: "디엘파크",
   tagline: "THINK KOR.",
   description:
-    "K-POP, 셀럽, 방송, 인플루언서, 실시간 음원 차트, 시청률, 웹툰, 숏폼/SNS, 모바일·PC·콘솔 게임을 주식 지수(INDEX)처럼 보여주는 트렌드 랭킹. kindexlab.com · 디엘파크가 운영합니다.",
+    "K-POP, 셀럽, 방송, 인플루언서, 음원 랭킹지수, TV 시청률, 웹툰, 영화, 숏폼/SNS, 모바일·PC·콘솔 게임을 주식 지수(INDEX)처럼 보여주는 트렌드 랭킹. kindexlab.com · 디엘파크가 운영합니다.",
   domain: "kindexlab.com",
   url: publicSiteUrl(),
   locale: "ko_KR",

@@ -344,6 +344,7 @@ const COMBO: Record<string, string> = {
   "board:car-review-ranking": "프리미엄 모빌리티",
   "board:food-restaurant-ranking": "가성비 식료품 · 밀키트",
   "board:culture-leisure-grant-ranking": "국내 숙박 · 나들이",
+  "board:travel-government-grant-ranking": "국내 숙박 · 나들이",
   "board:housing-subscription-hotspot:30s": "입주 프리미엄",
   "board:housing-subscription-hotspot:40s": "입주 프리미엄",
   "economy:40s:male": "프리미엄 모빌리티",

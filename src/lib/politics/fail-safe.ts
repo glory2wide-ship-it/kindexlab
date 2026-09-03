@@ -14,7 +14,7 @@ function matchByName<T extends { name: string }>(rows: T[], name: string): T | u
 }
 
 /**
- * Seed channels stay on the 정치 인기 유튜브 랭킹 board even when the LLM invents
+ * Seed channels stay on the 정치 유튜브 랭킹 board even when the LLM invents
  * placeholders or drops large news/media talk shows.
  */
 export function ensureInfluencerBoardRanking(rows: BoardRankEntry[]): BoardRankEntry[] {

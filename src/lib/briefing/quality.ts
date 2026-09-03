@@ -17,16 +17,17 @@ export function briefingPlainText(article: Pick<BriefingArticle, "title" | "exce
 }
 
 /**
- * Persisted and live briefings must be OpenAI columns, not `editorial/copy.ts`
+ * Persisted and live briefings must be LLM columns, not `editorial/copy.ts`
  * template padding. Template drafts are kept only as generation shells.
  */
 export function isPersistableBriefing(article: BriefingArticle): boolean {
   const plain = briefingPlainText(article);
-  if (hasTemplateConnectiveSpam(plain, 1)) return false;
-  if (hasBriefingBoilerplate(plain)) return false;
-  if (hasRepetitiveDeclarativeEndings(plain)) return false;
-  if (hasGenericPadding(plain)) return false;
-  if (hasLeakedMetadata(plain)) return false;
+  const prose = briefingPlainText({ ...article, title: "" });
+  if (hasTemplateConnectiveSpam(prose, 1)) return false;
+  if (hasBriefingBoilerplate(prose)) return false;
+  if (hasRepetitiveDeclarativeEndings(prose)) return false;
+  if (hasGenericPadding(prose)) return false;
+  if (hasLeakedMetadata(prose)) return false;
   if (premiumCharCount(plain) < BRIEFING_SHORTS_MIN_CHARS) return false;
   return true;
 }

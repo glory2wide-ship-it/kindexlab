@@ -43,6 +43,10 @@ import {
 } from "@/lib/editorial/rules";
 import { channelFromEntityType, POST_CHANNELS } from "@/lib/posts/channels";
 import { channelUsesBoardBriefing } from "@/lib/briefing/from-boards";
+import {
+  type HeatmapTopicPool,
+  topicsForBriefingDesk,
+} from "@/lib/briefing/heatmap-topics";
 import { rankingPath } from "@/lib/slugs";
 import type {
   BriefingArticle,
@@ -218,8 +222,21 @@ export function ensureBriefingLength(
 function deskItems(
   snapshot: MarketSnapshot,
   channel: PostChannel,
-  options: { kind: BriefingKind; category: CategoryId; deskId?: string },
+  options: {
+    kind: BriefingKind;
+    category: CategoryId;
+    deskId?: string;
+    topicPool?: HeatmapTopicPool;
+  },
 ): RankingEntity[] {
+  if (options.topicPool) {
+    const fromHeatmap = topicsForBriefingDesk(options.topicPool, {
+      kind: options.kind === "main" ? "main" : "deep-dive",
+      deskId: options.deskId,
+      category: options.category,
+    });
+    if (fromHeatmap.length) return fromHeatmap;
+  }
   if (options.kind === "main") {
     const types = new Set(channelDeskTypes(channel));
     if (!types.size) return [];
@@ -246,12 +263,18 @@ function composeDraft(
     channel: PostChannel;
     deskId?: string;
     deskLabel?: string;
+    topicPool?: HeatmapTopicPool;
   },
 ): BriefingArticle {
   const channel = options.channel ?? channelForCategory(options.kind === "main" ? "all" : options.category);
   resetEditorialPass();
   const category = options.kind === "main" ? "all" : options.category === "all" ? "kpop" : options.category;
-  const items = deskItems(snapshot, channel, { kind: options.kind, category, deskId: options.deskId });
+  const items = deskItems(snapshot, channel, {
+    kind: options.kind,
+    category,
+    deskId: options.deskId,
+    topicPool: options.topicPool,
+  });
   const deskChromeLabel =
     options.kind === "main" ? channelMainLabel(channel) : (options.deskLabel ?? categoryLabel(category));
   const lead = items[0] ?? fallbackLead(deskChromeLabel);
@@ -365,6 +388,8 @@ type ComposeOptions = {
   channel?: PostChannel;
   deskId?: string;
   deskLabel?: string;
+  /** Live heatmap topics (5m · 전체 · 전체). Required for production daily jobs. */
+  topicPool?: HeatmapTopicPool;
 };
 
 export function composeArticle(payload: RankingsPayload, options: ComposeOptions): BriefingArticle {
@@ -376,6 +401,7 @@ export function composeArticle(payload: RankingsPayload, options: ComposeOptions
     kind: options.kind,
     category: options.category,
     deskId: options.deskId,
+    topicPool: options.topicPool,
   });
   return withBriefingCover(article, {
     keyword: items[0]?.name,
@@ -387,6 +413,7 @@ export function composeChannelEdition(
   channel: PostChannel,
   editionDate: string,
   publishedAt: string,
+  topicPool?: HeatmapTopicPool,
 ): BriefingArticle[] {
   const desks = desksForChannel(channel);
   const main = composeArticle(payload, {
@@ -397,6 +424,7 @@ export function composeChannelEdition(
     channel,
     deskId: `${channel}-daily`,
     deskLabel: channelMainLabel(channel),
+    topicPool,
   });
   const dives = desks.map((desk: ChannelBriefingDesk, index) => {
     const totalMinutes = 15 + index * 5;
@@ -410,6 +438,7 @@ export function composeChannelEdition(
       channel,
       deskId: desk.id,
       deskLabel: desk.label,
+      topicPool,
     });
   });
   return [main, ...dives];

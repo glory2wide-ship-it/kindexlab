@@ -192,3 +192,32 @@ export async function clearAnalysis(): Promise<number> {
 
   return removed;
 }
+
+/** Drops one cached column (disk + Supabase) so the next generate is cold. */
+export async function deleteAnalysis(slug: string): Promise<boolean> {
+  await loadDisk();
+  const hadLocal = memory.delete(slug);
+  if (hadLocal) await writeDisk();
+
+  const config = supabaseConfig();
+  if (config) {
+    try {
+      const response = await fetch(
+        `${config.url}/rest/v1/analysis_cache?slug=eq.${encodeURIComponent(slug)}`,
+        {
+          method: "DELETE",
+          headers: {
+            apikey: config.key,
+            Authorization: `Bearer ${config.key}`,
+            Prefer: "return=minimal",
+          },
+        },
+      );
+      return hadLocal || response.ok;
+    } catch {
+      return hadLocal;
+    }
+  }
+
+  return hadLocal;
+}

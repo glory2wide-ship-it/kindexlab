@@ -5,6 +5,7 @@ import { composeChannelEdition } from "@/lib/briefing/compose";
 import { withBriefingCover } from "@/lib/briefing/cover";
 import { compareDatesDesc, editionDateTime, isLiveEdition, kstDateString } from "@/lib/briefing/dates";
 import { channelUsesBoardBriefing, composeBoardChannelEdition } from "@/lib/briefing/from-boards";
+import { collectHeatmapTopics } from "@/lib/briefing/heatmap-topics";
 import { isPersistableBriefing } from "@/lib/briefing/quality";
 import { ALL_CATEGORIES } from "@/lib/categories";
 import { isPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
@@ -16,17 +17,19 @@ import type { BriefingArticle, CategoryId } from "@/lib/types";
 const composeLiveChannelEdition = unstable_cache(
   async (editionDate: string, channel: PostChannel) => {
     const publishedAt = editionDateTime(editionDate);
+    const topicPool = await collectHeatmapTopics(channel);
     if (channelUsesBoardBriefing(channel)) {
-      return composeBoardChannelEdition(channel, editionDate, publishedAt);
+      return composeBoardChannelEdition(channel, editionDate, publishedAt, topicPool);
     }
     return composeChannelEdition(
       await getRankings(),
       channel,
       editionDate,
       publishedAt,
+      topicPool,
     );
   },
-  ["briefing-channel-edition-v16-persisted-first"],
+  ["briefing-channel-edition-v17-heatmap-topics"],
   { revalidate: 3600 },
 );
 

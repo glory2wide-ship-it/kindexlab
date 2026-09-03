@@ -1,6 +1,10 @@
 import { BriefingCard } from "@/components/briefing/BriefingCard";
 import { FeaturedBriefingCard } from "@/components/briefing/FeaturedBriefingCard";
-import { channelMainLabel, desksForChannel } from "@/lib/briefing/desks";
+import {
+  channelMainLabel,
+  desksForChannel,
+  resolveBriefingDeskId,
+} from "@/lib/briefing/desks";
 import { channelSectionHref, getPostChannel } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 import type { BriefingArticle } from "@/lib/types";
@@ -11,19 +15,27 @@ export function ChannelBriefingLayout({
   dives,
   heading,
   titleLevel = 1,
+  /** When set (board rail selection), show only that desk's deep-dive. Empty = all. */
+  activeDeskId,
 }: {
   channel: PostChannel;
   main?: BriefingArticle;
   dives: BriefingArticle[];
   heading?: string;
   titleLevel?: 1 | 2;
+  activeDeskId?: string;
 }) {
   const meta = getPostChannel(channel);
-  const desks = desksForChannel(channel);
+  const desks = desksForChannel(channel).filter((desk) =>
+    activeDeskId ? desk.id === activeDeskId : true,
+  );
   const hrefFor = (article: BriefingArticle) =>
     `${channelSectionHref(channel, "briefing")}/${article.slug}`;
   const TitleTag = titleLevel === 2 ? "h2" : "h1";
   const SectionTitle = titleLevel === 2 ? "h3" : "h2";
+
+  const findDive = (deskId: string) =>
+    dives.find((item) => resolveBriefingDeskId(item.deskId, channel) === deskId);
 
   return (
     <div className="space-y-8">
@@ -48,12 +60,16 @@ export function ChannelBriefingLayout({
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <SectionTitle className="text-lg font-semibold tracking-tight">하부 메뉴 심층 분석</SectionTitle>
-          <p className="font-mono text-[11px] text-muted">{desks.length}개 데스크</p>
+          <p className="font-mono text-[11px] text-muted">
+            {activeDeskId
+              ? `${desks[0]?.label ?? "선택 메뉴"} · 보드 연동`
+              : `${desksForChannel(channel).length}개 데스크`}
+          </p>
         </div>
         {desks.length ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {desks.map((desk) => {
-              const article = dives.find((item) => item.deskId === desk.id);
+              const article = findDive(desk.id);
               if (article) {
                 return (
                   <BriefingCard

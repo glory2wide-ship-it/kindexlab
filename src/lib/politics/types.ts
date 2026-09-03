@@ -25,7 +25,7 @@ export const POLITICS_TYPE_LABEL: Record<PoliticsEntityType, string> = {
   party_support: "정당 지지도",
   politician_support: "정치인 지지도",
   political_pundit: "정치평론가",
-  political_influencer: "정치 인기 유튜브",
+  political_influencer: "정치 유튜브",
   political_ratings: "정치뉴스 시청률",
   political_search: "실시간 검색어",
   local_policy: "지자체 정책",

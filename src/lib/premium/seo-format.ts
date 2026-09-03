@@ -39,9 +39,9 @@ const DA_TITLE_WORDS = /^(힘들|다른|같은|이런|저런|그런|어떤|모�
  */
 export function insertMissingKoreanPeriods(text: string): string {
   const ending =
-    /((?:았|었|였|했|됐|겠|랐|렀|렸|웠|왔|갔|났|봤|샀|잤|탔)다|(?:습|입|합|됩)니다|(?:한|된|인)다|(?:있|없)다|(?:준|진|온|간|친|닌|룬|른)다|(?:해석|작용|시사|존재)된다|(?:보여|나타)(?:준|낸)다|(?:작용|시사|반영|유도|강조|지적|분석|설명|전달|형성|행사|기록)한다|(?:중요|빈번)해진다|(?:깊|크|작|많|적|길|짧|좋|나쁘)다)\s+(?=[\uAC00-\uD7A3\d"'「『])/g;
+    /((?:았|었|였|했|됐|겠|랐|렀|렸|웠|왔|갔|났|봤|샀|잤|탔)다|(?:습|입|합|됩)니다|(?:한|된|인|는)다|(?:있|없)다|(?:준|진|온|간|친|닌|룬|른|적|쓴|읽|말|풀|갈|남|본)다|(?:해석|작용|시사|존재)된다|(?:보여|나타)(?:준|낸)다|(?:작용|시사|반영|유도|강조|지적|분석|설명|전달|형성|행사|기록)한다|(?:중요|빈번)해진다|(?:깊|크|작|많|적|길|짧|좋|나쁘)다)\s+(?=[\uAC00-\uD7A3\d"'「『])/g;
 
-  return text.replace(ending, (match, end: string, offset: number, source: string) => {
+  const replaceHit = (match: string, end: string, offset: number, source: string) => {
     const before = source.slice(0, offset + end.length);
     const word = before.match(/[\uAC00-\uD7A3]+$/)?.[0] ?? end;
     if (DA_TITLE_WORDS.test(word)) return match;
@@ -49,7 +49,11 @@ export function insertMissingKoreanPeriods(text: string): string {
     const after = source.slice(offset + match.length);
     if (/^(보니|보면|못해|싶다|시피|해도|하여|보니까)/.test(after)) return match;
     return `${end}. `;
-  });
+  };
+
+  // Broad close for any hangul syllable ending in 다 (e.g. 화제다, 적는다).
+  const broad = /([\uAC00-\uD7A3]다)\s+(?=[\uAC00-\uD7A3\d"'「『])/g;
+  return text.replace(ending, replaceHit).replace(broad, replaceHit);
 }
 
 /** Ensures every sentence ends with terminal punctuation. */
@@ -253,13 +257,17 @@ export function renderSeoMarkdown(input: {
 /** Prompt block for SEO expansion without inventing keyword-specific facts. */
 export function seoExpansionPrompt(keyword: string): string {
   return [
-    "[SEO 분량 확장 — Thin Content 방지]",
-    `현재 본문이 ${SEO_MIN_WORDS}단어 미만입니다. 핵심 팩트와 의도는 유지한 채 분량을 확장하세요.`,
-    "- 검색 알고리즘·포털 인덱싱·실시간 랭킹 집계 방식·트렌드 배경에 대한 일반적·깊이 있는 분석을 자연스럽게 보탭세요.",
+    "[SEO 분량 확장 — Thin Content / Low-value 방지]",
+    `현재 본문이 ${SEO_MIN_WORDS}단어 미만입니다. 핵심 팩트는 유지한 채 Why·How·표·전망 밀도로 확장하세요.`,
+    "- Why: 왜 지금 검색·랭킹·대중이 반응하는지 시장·플랫폼 맥락.",
+    "- How: 독자 일상·소비·확인 요령(목록형 체크리스트 섹션 금지).",
+    "- 표: 지표·일정·비교 수치를 보강.",
+    "- 전망: 확인된 일정·신호만으로 파급 포인트.",
     `- "${keyword}"에 대한 확인되지 않은 사실·줄거리·인물 관계는 추가하지 마세요.`,
-    "- 독자 체크리스트·인사말·마무리 요약·실행 팁 같은 패딩은 금지입니다.",
-    "- 문장 끝 마침표(.)를 빠짐없이 넣고, 접속사로 문맥을 매끄럽게 이어 주세요. 줄바꿈으로 끝나도 마침표를 누락하지 마세요.",
-    "- H2 소제목은 ❶❷❸ 기호로, FAQ 질문은 H3로 구분할 수 있게 섹션을 나누세요.",
+    "- 인사말·마무리 요약·'독자 체크리스트' 패딩은 금지입니다.",
+    "- 전문가 시각·구체 예시·수치 근거를 보태되, '좋다/추천한다'만 쓰지 마세요.",
+    "- 문장 끝 마침표(.)를 빠짐없이 넣고, 문단은 3~4문장 단위로 유지하세요.",
+    "- H2 소제목은 ❶❷❸❹ 기호로, FAQ 질문은 H3로 구분할 수 있게 섹션을 나누세요.",
   ].join("\n");
 }
 
@@ -267,11 +275,12 @@ export function seoStructureRules(): string {
   return [
     "[SEO 문서 구조 — H 태그 엄격 적용]",
     "- 페이지 H1은 제목(title) 하나뿐입니다. 본문 JSON에는 H1을 쓰지 마세요.",
-    "- 주요 섹션 heading은 H2(headingLevel: 2)이며 ❶❷❸ 기호로 번호를 매깁니다.",
-    "- FAQ 질문·세부 팩트 항목은 H3(headingLevel: 3)로 구분합니다.",
-    "- table.caption은 '팩트 체크' 또는 '핵심 팩트 요약' 형태로 작성합니다.",
-    "- externalLink·internalLink는 반드시 클릭 가능한 href·label 쌍으로 출력합니다.",
+    "- 주요 섹션 heading은 H2(headingLevel: 2)이며 ❶❷❸❹❺ 기호로 번호를 매깁니다. H2 3~5개.",
+    "- FAQ 질문·세부 팩트 항목은 H3(headingLevel: 3)로 구분합니다. FAQ Q&A 3개 이상.",
+    "- table.caption은 '팩트 체크' 또는 '핵심 팩트 요약' 형태로 작성합니다. Table 최소 1개.",
+    "- externalLink·internalLink는 클릭 가능한 href·label 쌍입니다. internal label은 관련 글 제목 형태.",
     `- non-shorts 모드: 공백 제외 본문 ${SEO_MIN_CHARS}자(약 ${SEO_MIN_WORDS}단어) 이상을 목표로 합니다.`,
-    "- 모든 문장 끝에는 마침표(.)를 필수 적용하세요. 줄바꿈으로 끝나도 마침표를 빠뜨리지 마세요.",
+    "- 포커스 키워드를 도입부(상위 10%)와 본문에 합쳐 5회 이상 배치하세요.",
+    "- 문단당 3~4문장, 모든 문장 끝 마침표(.) 필수. 줄바꿈으로 끝나도 마침표를 빠뜨리지 마세요.",
   ].join("\n");
 }

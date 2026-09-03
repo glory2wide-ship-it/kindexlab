@@ -4,8 +4,14 @@ import { seedBoardIfMissing } from "@/lib/boards/seed";
 import type { CachedBoard } from "@/lib/boards/types";
 import { formatKoreanDate } from "@/lib/briefing/dates";
 import { withBriefingCover } from "@/lib/briefing/cover";
+import {
+  collectHeatmapTopics,
+  focusKeywordFromTopics,
+  topicsForBriefingDesk,
+  type HeatmapTopicPool,
+} from "@/lib/briefing/heatmap-topics";
 import { getPostChannel } from "@/lib/posts/channels";
-import type { BriefingArticle, BriefingSection, CategoryId } from "@/lib/types";
+import type { BriefingArticle, BriefingSection, CategoryId, RankingEntity } from "@/lib/types";
 import type { TodayAnalysisSection } from "@/lib/editorial/today-analysis";
 
 function boardCategory(channel: PostChannel): CategoryId {
@@ -44,11 +50,20 @@ function briefingFromBoard(
     deskLabel: string;
     focusKeyword: string;
     supportKeyword: string;
+    /** Heatmap tops for this board (5m · 전체 · 전체). */
+    heatmapLead?: RankingEntity[];
   },
 ): BriefingArticle {
-  const lead = board.ranking[0];
-  const rest = board.ranking.slice(1, 5);
-  const names = [lead, ...rest].map((row) => row?.name).filter(Boolean);
+  const heatmapNames = (options.heatmapLead ?? []).map((row) => row.name).filter(Boolean);
+  const lead = options.heatmapLead?.[0] ?? {
+    name: board.ranking[0]?.name,
+    score: board.ranking[0]?.score,
+  };
+  const restNames = heatmapNames.length
+    ? heatmapNames.slice(1, 5)
+    : board.ranking.slice(1, 5).map((row) => row?.name).filter(Boolean);
+  const names = [lead?.name, ...restNames].filter(Boolean) as string[];
+  const focusName = focusKeywordFromTopics(options.heatmapLead ?? [], options.focusKeyword);
   const report = board.report;
   const sections = mapSections(report?.sections);
   const filledSections =
@@ -56,11 +71,11 @@ function briefingFromBoard(
       ? sections
       : [
           {
-            heading: `${options.focusKeyword} 오늘 순위`,
+            heading: `${focusName} 오늘 순위`,
             headingLevel: 2 as const,
             kind: "tape" as const,
             paragraphs: [
-              `${options.focusKeyword} 보드에서 ${lead?.name ?? options.focusKeyword}이(가) 1위입니다.`,
+              `${options.deskLabel} 히트맵(5분봉·전체)에서 ${lead?.name ?? focusName}이(가) 1위입니다.`,
               names.length
                 ? `상위권은 ${names.join(" · ")} 순입니다. 지수는 공개 보도와 검색 신호를 묶은 편집 추정치입니다.`
                 : `${getPostChannel(board.channel).label} 보드 집계가 비어 있으면 다음 재생성 주기에 채워집니다.`,
@@ -77,16 +92,21 @@ function briefingFromBoard(
     deskId: board.slug,
     deskLabel: options.deskLabel,
     editionDate: options.editionDate,
-    title: report?.title || `${options.focusKeyword}가 지금 화제인 이유, ${formatKoreanDate(options.editionDate)}`,
+    title: report?.title || `${focusName}가 지금 화제인 이유, ${formatKoreanDate(options.editionDate)}`,
     excerpt:
       report?.excerpt ||
-      `${options.focusKeyword} 상위권은 ${names.slice(0, 3).join(" · ") || options.focusKeyword}입니다.`,
+      `${options.deskLabel} 상위권은 ${names.slice(0, 3).join(" · ") || focusName}입니다.`,
     publishedAt: options.publishedAt,
     updatedAt: board.generatedAt || options.publishedAt,
     readingMinutes: report?.readingMinutes ?? 4,
     wordCount: 0,
-    relatedEntitySlugs: [board.slug],
-    focusKeyword: lead?.name ?? options.focusKeyword,
+    relatedEntitySlugs: [
+      ...(options.heatmapLead ?? []).map((item) => item.slug),
+      board.slug,
+    ]
+      .filter(Boolean)
+      .slice(0, 6),
+    focusKeyword: focusName,
     supportKeyword: options.supportKeyword,
     table: report?.table,
     faq: report?.faq,
@@ -105,31 +125,37 @@ function briefingFromBoard(
       wordCount,
       readingMinutes: Math.max(4, Math.round(wordCount / 180)),
     },
-    { keyword: lead?.name || options.focusKeyword },
+    { keyword: focusName },
   );
 }
 
 function mainFromBoards(
   channel: PostChannel,
-  boards: { defTitle: string; shortTitle: string; focus: string; support: string; cached: CachedBoard }[],
+  boards: { defTitle: string; shortTitle: string; focus: string; support: string; cached: CachedBoard; slug: string }[],
   editionDate: string,
   publishedAt: string,
+  topicPool: HeatmapTopicPool,
 ): BriefingArticle {
   const meta = getPostChannel(channel);
   const dateLabel = formatKoreanDate(editionDate);
-  const ranked = [...boards].sort(
-    (left, right) =>
-      Math.abs(right.cached.indexChangeRate ?? 0) - Math.abs(left.cached.indexChangeRate ?? 0),
-  );
-  const lines = ranked.map((item) => {
-    const lead = item.cached.ranking[0]?.name ?? item.shortTitle;
-    const score = item.cached.ranking[0]?.score;
+  const composite = topicsForBriefingDesk(topicPool, { kind: "main" });
+  const rankedBoards = [...boards].sort((left, right) => {
+    const leftHeat = Math.abs(topicPool.byDesk[left.slug]?.[0]?.fluctuationRate ?? left.cached.indexChangeRate ?? 0);
+    const rightHeat = Math.abs(topicPool.byDesk[right.slug]?.[0]?.fluctuationRate ?? right.cached.indexChangeRate ?? 0);
+    return rightHeat - leftHeat;
+  });
+  const lines = rankedBoards.map((item) => {
+    const lead =
+      topicPool.byDesk[item.slug]?.[0]?.name ??
+      item.cached.ranking[0]?.name ??
+      item.shortTitle;
+    const score = topicPool.byDesk[item.slug]?.[0]?.buzzScore ?? item.cached.ranking[0]?.score;
     const scoreText = Number.isFinite(score) ? ` ${Number(score).toFixed(1)}점` : "";
     return `${item.shortTitle} 1위는 ${lead}${scoreText}입니다.`;
   });
-  const leadName = ranked[0]?.cached.ranking[0]?.name ?? meta.label;
-  const focus = ranked[0]?.focus ?? meta.label;
-  const support = ranked[0]?.support ?? "지수";
+  const leadName = focusKeywordFromTopics(composite, rankedBoards[0]?.cached.ranking[0]?.name ?? meta.label);
+  const focus = rankedBoards[0]?.focus ?? meta.label;
+  const support = rankedBoards[0]?.support ?? "지수";
   const category = boardCategory(channel);
 
   const draft: BriefingArticle = {
@@ -142,16 +168,16 @@ function mainFromBoards(
     deskLabel: `${meta.label} 종합 브리핑`,
     editionDate,
     title: `${leadName}이 ${meta.label} 지수를 끌어올리는 이유, ${dateLabel}`,
-    excerpt: `${meta.label} ${ranked.length}개 보드 1위는 ${ranked
-      .map((item) => item.cached.ranking[0]?.name)
+    excerpt: `${meta.label} 히트맵(5분봉·전체) 상위는 ${composite
+      .map((item) => item.name)
       .filter(Boolean)
       .slice(0, 3)
-      .join(" · ")}입니다.`,
+      .join(" · ") || leadName}입니다.`,
     publishedAt,
     updatedAt: publishedAt,
     readingMinutes: 5,
     wordCount: 0,
-    relatedEntitySlugs: ranked.map((item) => item.cached.slug).slice(0, 7),
+    relatedEntitySlugs: rankedBoards.map((item) => item.cached.slug).slice(0, 7),
     focusKeyword: leadName,
     supportKeyword: focus,
     internalLink: {
@@ -160,11 +186,11 @@ function mainFromBoards(
     },
     sections: [
       {
-        heading: `${meta.label} 랭킹 보드가 가리키는 오늘`,
+        heading: `${meta.label} 히트맵이 가리키는 오늘`,
         headingLevel: 2,
         kind: "tape",
         paragraphs: [
-          `${dateLabel} ${meta.label} 일일브리핑은 엔터테인먼트 시세 종목이 아니라 이 채널의 랭킹 보드만 사용합니다.`,
+          `${dateLabel} ${meta.label} 일일브리핑 주제는 대시보드 히트맵(5분봉·연령 전체·성별 전체) 상위 종목에서만 고릅니다.`,
           ...lines.slice(0, 4),
         ],
       },
@@ -173,7 +199,7 @@ function mainFromBoards(
         headingLevel: 2,
         kind: "briefing",
         paragraphs: [
-          `${leadName}이(가) ${ranked[0]?.shortTitle ?? meta.label} 보드 1위입니다. ${support} 흐름과 검색·보도 신호가 겹친 결과입니다.`,
+          `${leadName}이(가) ${rankedBoards[0]?.shortTitle ?? meta.label} 보드 히트맵 1위입니다. ${support} 흐름과 검색·보도 신호가 겹친 결과입니다.`,
           lines.slice(4).join(" ") || `${meta.label} 나머지 보드는 아래 심층 카드에서 따로 읽습니다.`,
         ],
       },
@@ -191,12 +217,13 @@ export async function composeBoardChannelEdition(
   channel: PostChannel,
   editionDate: string,
   publishedAt: string,
+  topicPool?: HeatmapTopicPool,
 ): Promise<BriefingArticle[]> {
+  const pool = topicPool ?? (await collectHeatmapTopics(channel));
   const defs = menuBoardsForChannel(channel);
   const loaded = (
     await Promise.all(
       defs.map(async (def) => {
-        if (def.deskKind) return null;
         try {
           const cached = await seedBoardIfMissing(def);
           return {
@@ -205,6 +232,7 @@ export async function composeBoardChannelEdition(
             focus: def.focusKeyword,
             support: def.supportKeyword,
             cached,
+            slug: def.slug,
           };
         } catch {
           return null;
@@ -215,7 +243,7 @@ export async function composeBoardChannelEdition(
 
   if (!loaded.length) return [];
 
-  const main = mainFromBoards(channel, loaded, editionDate, publishedAt);
+  const main = mainFromBoards(channel, loaded, editionDate, publishedAt, pool);
   const dives = loaded.map((item, index) =>
     briefingFromBoard(item.cached, {
       kind: "deep-dive",
@@ -224,6 +252,11 @@ export async function composeBoardChannelEdition(
       deskLabel: item.shortTitle,
       focusKeyword: item.focus,
       supportKeyword: item.support,
+      heatmapLead: topicsForBriefingDesk(pool, {
+        kind: "deep-dive",
+        deskId: item.slug,
+        category: boardCategory(channel),
+      }),
     }),
   );
   return [main, ...dives];

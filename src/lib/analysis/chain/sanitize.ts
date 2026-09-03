@@ -4,15 +4,19 @@
  * ("https://kindexlab.com/...") gets severed at its dots and leaves a broken
  * fragment in the body. Links belong to the article's link fields, not the prose.
  */
+import { ensureSentencePunctuation } from "@/lib/premium/seo-format";
+
 export function sanitizeParagraph(raw: string): string {
-  return raw
-    .replace(/!?\[([^\]]*)\]\(([^)]*)\)/g, "$1")
-    .replace(/https?:\/\/\S+/g, "")
-    .replace(/\s*,\s*\./g, ".")
-    .replace(/\s+([.,!?])/g, "$1")
-    .replace(/\.{2,}/g, ".")
-    .replace(/\s{2,}/g, " ")
-    .trim();
+  return ensureSentencePunctuation(
+    raw
+      .replace(/!?\[([^\]]*)\]\(([^)]*)\)/g, "$1")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/\s*,\s*\./g, ".")
+      .replace(/\s+([.,!?])/g, "$1")
+      .replace(/\.{2,}/g, ".")
+      .replace(/\s{2,}/g, " ")
+      .trim(),
+  );
 }
 
 export function sanitizeParagraphs(list: string[]): string[] {

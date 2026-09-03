@@ -1,28 +1,32 @@
 import { isSparseContext, type PremiumContext } from "@/lib/premium/context";
+import { entityTypeForBoardSlug } from "@/lib/boards/entity-type";
 import type { PostChannel } from "@/lib/posts/types";
 import type { BriefingArticle } from "@/lib/types";
 
-/** Briefing columns with thin retrieval can publish shorter than premium SEO posts. */
-export const BRIEFING_SHORTS_MIN_CHARS = 700;
+/** Briefing single-pass targets: dense facts in the 1,400~1,800 band (no padding). */
+export const BRIEFING_SHORTS_MIN_CHARS = 1_400;
 export const BRIEFING_SPARSE_MIN_CHARS = 1_400;
-export const BRIEFING_FULL_MIN_CHARS = 1_800;
-export const BRIEFING_SECTION_TARGET_SHORTS = 2;
-export const BRIEFING_SECTION_TARGET_SPARSE = 3;
-export const BRIEFING_SECTION_TARGET_FULL = 3;
+/** Quality-gate floor for full main/deep-dive — prompt aims ≤1,800 dense chars. */
+export const BRIEFING_FULL_MIN_CHARS = 1_400;
+export const BRIEFING_FULL_TARGET_MAX_CHARS = 1_800;
+export const BRIEFING_SECTION_TARGET_SHORTS = 4;
+export const BRIEFING_SECTION_TARGET_SPARSE = 4;
+/** Structured Outputs forces ≥4 H2 sections. */
+export const BRIEFING_SECTION_TARGET_FULL = 4;
 
 export type BriefingGenerationMode = "full" | "sparse" | "shorts";
 
 const CHANNEL_EDITOR_PERSONA: Record<PostChannel, string> = {
   entertainment:
-    "당신은 트렌드를 예리하게 읽고 자연스러운 문장으로 풀어내는 10년 차 엔터테인먼트 전문 웹진 에디터입니다.",
+    "당신은 구글 애드센스·SEO 수익화 기준을 아는 10년 차 엔터테인먼트 전문 웹진 에디터이자 후배에게 원고를 다듬어 주는 전문가 선배입니다.",
   politics:
-    "당신은 트렌드를 예리하게 분석하고 자연스러운 문장으로 풀어내는 10년 차 정치 전문 웹진 에디터입니다.",
+    "당신은 구글 애드센스·SEO 수익화 기준을 아는 10년 차 정치 전문 웹진 에디터이자 후배에게 원고를 다듬어 주는 전문가 선배입니다.",
   economy:
-    "당신은 트렌드를 예리하게 분석하고 자연스러운 문장으로 풀어내는 10년 차 경제 전문 웹진 에디터입니다.",
+    "당신은 구글 애드센스·SEO 수익화 기준을 아는 10년 차 경제 전문 웹진 에디터이자 후배에게 원고를 다듬어 주는 전문가 선배입니다.",
   culture:
-    "당신은 트렌드를 예리하게 읽고 자연스러운 문장으로 풀어내는 10년 차 문화·생활 전문 웹진 에디터입니다.",
+    "당신은 구글 애드센스·SEO 수익화 기준을 아는 10년 차 문화·생활 전문 웹진 에디터이자 후배에게 원고를 다듬어 주는 전문가 선배입니다.",
   travel:
-    "당신은 트렌드를 예리하게 읽고 자연스러운 문장으로 풀어내는 10년 차 여행·맛집 전문 웹진 에디터입니다.",
+    "당신은 구글 애드센스·SEO 수익화 기준을 아는 10년 차 여행·맛집 전문 웹진 에디터이자 후배에게 원고를 다듬어 주는 전문가 선배입니다.",
 };
 
 const CATEGORY_HINT: Record<string, RegExp> = {
@@ -31,6 +35,7 @@ const CATEGORY_HINT: Record<string, RegExp> = {
   music_chart: /음원|아이돌|KPOP|팬덤|신보|컴백|뮤직|차트/i,
   tv_show: /방송|드라마|예고|본방|시청|출연|편성/i,
   tv_rating: /방송|드라마|예고|본방|시청|시청률/i,
+  movie: /영화|박스오피스|개봉|극장|관객|예매/i,
   mobile_game: /게임|플레이|시즌|패치|모바일/i,
   pc_game: /게임|플레이|시즌|패치|PC|스팀/i,
   console_game: /게임|플레이|시즌|패치|콘솔/i,
@@ -73,6 +78,9 @@ export function briefingRelatedKeywords(
   edition: BriefingArticle[],
 ): string[] {
   const peers = edition.filter((item) => item.slug !== article.slug);
+  const entityType =
+    (article.deskId ? entityTypeForBoardSlug(article.deskId) : undefined) ?? undefined;
+  const categoryHint = entityType ?? article.category;
   if (article.kind === "main") {
     return filterBriefingRelatedKeywords(
       article.focusKeyword ?? "",
@@ -80,21 +88,20 @@ export function briefingRelatedKeywords(
         .filter((item) => item.channel === article.channel)
         .map((item) => item.focusKeyword)
         .filter((keyword): keyword is string => Boolean(keyword?.trim())),
-      article.category,
+      categoryHint,
     );
   }
-  const sameDesk = peers.filter(
-    (item) =>
-      item.kind === "deep-dive" &&
-      item.channel === article.channel &&
-      item.category === article.category,
-  );
+  const sameFamily = peers.filter((item) => {
+    if (item.kind !== "deep-dive" || item.channel !== article.channel) return false;
+    if (!entityType) return item.category === article.category;
+    return entityTypeForBoardSlug(item.deskId ?? "") === entityType;
+  });
   return filterBriefingRelatedKeywords(
     article.focusKeyword ?? "",
-    sameDesk
+    sameFamily
       .map((item) => item.focusKeyword)
       .filter((keyword): keyword is string => Boolean(keyword?.trim())),
-    article.category,
+    categoryHint,
   );
 }
 
@@ -142,17 +149,17 @@ export function briefingMinChars(mode: BriefingGenerationMode): number {
   return BRIEFING_FULL_MIN_CHARS;
 }
 
-/** Shorts mode: fact-only brief when sources are thin or keywords do not cohere. */
+/** Shorts mode: thin sources — still Why/How/table/outlook, no padding. */
 export function buildShortsModePrompt(): string {
   return [
     "[단신(Shorts) 요약 모드]",
     "수집 데이터가 빈약하거나 서로 연관 없는 키워드가 섞여 있습니다.",
-    "- 억지로 길게 쓰지 말고 짧고 팩트 위주로만 작성하세요.",
     "- 확인된 사실만 쓰고, 추측·일반론·체크리스트·인사말·마무리 요약은 금지입니다.",
     "- 연관성이 떨어지는 소재는 억지로 엮지 말고 독립 단락으로 분리하세요.",
-    "- 분량 목표: 공백 제외 700~1,100자. 짧아도 됩니다.",
+    "- 뼈대는 유지: 팩트 → Why(왜 지금) → How(독자 활용) → 전망·파급 + 비교 표.",
+    "- 분량 목표: 공백 제외 1,400~1,800자. 패딩·물타기 금지.",
     "",
-    "[시제·노이즈·마침표] 뉴스 발행일 기준 과거형은 과거형만. 연도가 다르면 시간순. 접두어만으로 무관 기사를 묶지 마세요. 모든 문장 끝에 마침표(.) 필수.",
+    "[시제·노이즈·마침표] 뉴스 발행일 기준 과거형은 과거형만(예: 2016년 전시는 ~개막한 바 있다). 연도가 다르면 시간순. 'FLOAT' 등 다의어로 이종 산업 기사를 한 인과로 묶지 말고 독립 단락만. 모든 문장 끝 마침표(.) 필수.",
   ].join("\n");
 }
 
@@ -162,12 +169,12 @@ export function buildBriefingSparsePrompt(): string {
     "[데이터 부족 모드 — 브리핑 전용]",
     "수집된 기사에 작품 줄거리·사건 내막 같은 구체 정보가 없습니다.",
     "- 억지로 지어내거나 분량을 채우지 마세요.",
-    "- '독자 체크리스트', '확인해야 할 N가지', '실행 팁' 같은 일반론 섹션은 쓰지 마세요.",
-    "- 대신 '왜 지금 검색·랭킹에 올랐는지' 그 현상 자체(포털 알고리즘, 동시간대 검색어 겹침, 카테고리 노출 구조)를 팩트 기반으로 짧고 선명하게 분석하세요.",
-    "- 확인되지 않은 수치·날짜·기관명·인물 연관은 단정하지 말고 '확인되지 않았다'고 적으세요.",
-    "- 분량은 짧아도 됩니다. 밀도 있는 1,400자가 빈 2,000자보다 낫습니다.",
+    "- '독자 체크리스트', '확인해야 할 N가지' 같은 목록형 패딩 섹션은 쓰지 마세요.",
+    "- H2 뼈대: 팩트 → Why(왜 검색·랭킹에 올랐는지) → How(독자가 확인할 포인트) → 전망·파급.",
+    "- 표로 신호·일정·비교를 정리하고, 확인되지 않은 수치·날짜·기관명은 '확인되지 않았다'고 적으세요.",
+    "- 분량은 패딩 없이 밀도 있는 1,400~1,800자. 빈 문장으로 늘리지 마세요.",
     "",
-    "[시제·노이즈·마침표] 뉴스 발행일 기준 과거형은 과거형만. 연도가 다르면 시간순. 접두어만으로 무관 기사를 묶지 마세요. 모든 문장 끝에 마침표(.) 필수.",
+    "[시제·노이즈·마침표] 뉴스 발행일 기준 과거형은 과거형만(예: 2016년 전시는 ~개막한 바 있다). 연도가 다르면 시간순. 'FLOAT' 등 다의어로 이종 산업 기사를 한 인과로 묶지 말고 독립 단락만. 모든 문장 끝 마침표(.) 필수.",
   ].join("\n");
 }
 
@@ -178,6 +185,6 @@ export function relatedKeywordsPromptBlock(related: string[]): string {
   return [
     `[연관 검색어 — 같은 카테고리] ${related.join(", ")}`,
     "위 키워드와 논리적 연관이 없다면 한 문장으로 '같은 시간대 별개 이슈' 정도만 병렬 언급하세요. 인과관계를 만들지 마세요.",
-    "접두어·부분 문자열만 겹치는 키워드(예: Counter-)는 같은 주제로 취급하지 마세요.",
+    "접두어·부분 문자열·다의어(예: Counter-, FLOAT)만 겹치는 키워드는 같은 주제로 취급하지 마세요. 이종 산업 소식은 독립 단락으로만 적으세요.",
   ].join("\n");
 }

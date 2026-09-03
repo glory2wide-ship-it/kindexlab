@@ -145,6 +145,7 @@ export default async function RankingDetailPage({
 function schemaType(type: EntityType): string {
   if (type === "tv_show" || type === "tv_rating") return "TVSeries";
   if (type === "music_chart") return "MusicRecording";
+  if (type === "movie") return "Movie";
   if (type === "webtoon") return "ComicSeries";
   if (type === "shorts") return "VideoObject";
   if (type === "mobile_game" || type === "pc_game" || type === "console_game") return "VideoGame";

@@ -1,9 +1,17 @@
 import { analysisLogger } from "@/lib/analysis/log";
-import { openaiConfigured } from "@/lib/analysis/chain/llm";
-import { briefingRelatedKeywords } from "@/lib/premium/briefing-editorial";
+import {
+  geminiBatchEnabled,
+  briefingLlmConfigured,
+  briefingProvider,
+} from "@/lib/analysis/chain/llm";
+import {
+  BRIEFING_FULL_MIN_CHARS,
+  briefingRelatedKeywords,
+} from "@/lib/premium/briefing-editorial";
 import { generatePremiumArticle, type PremiumArticle } from "@/lib/premium/generate";
 import { articleWordCount } from "@/lib/premium/seo-format";
 import { delay } from "@/lib/premium/batch";
+import { withGeminiBatchChat } from "@/lib/gemini/batch-chat";
 import {
   dropRepeatedSentences,
   hasBriefingBoilerplate,
@@ -87,7 +95,7 @@ function passesBriefingQualityGate(plain: string): boolean {
 }
 
 /**
- * Replaces a template briefing draft with a premium OpenAI column when retrieval
+ * Replaces a template briefing draft with a premium Gemini column when retrieval
  * and the LLM chain succeed. Falls back to the draft on any failure.
  */
 export async function enrichBriefingWithAi(
@@ -98,7 +106,7 @@ export async function enrichBriefingWithAi(
     categoryHint?: string;
   },
 ): Promise<BriefingArticle> {
-  if (!openaiConfigured()) return draft;
+  if (!briefingLlmConfigured()) return draft;
 
   const keyword = options?.leadKeyword?.trim() || enrichmentLeadKeyword(draft);
   const logger = analysisLogger(`briefing:${draft.slug}`);
@@ -118,12 +126,9 @@ export async function enrichBriefingWithAi(
   let result = await request();
   if (!result.ok) {
     logger.warn("briefing-enrich-fail", { reason: result.reason, detail: result.detail });
-    const retryable =
-      result.reason === "llm-empty" ||
-      result.reason === "malformed" ||
-      result.reason === "too-short" ||
-      result.reason === "banned-copy" ||
-      result.reason === "keyword-stuffing";
+    // Full regenerate only for empty/malformed LLM shells — banned-copy is
+    // already error-patched inside generatePremiumArticle.
+    const retryable = result.reason === "llm-empty" || result.reason === "malformed";
     if (retryable) {
       await delay(8_000);
       result = await request();
@@ -133,14 +138,13 @@ export async function enrichBriefingWithAi(
     }
   }
 
-  if (!result.ok || result.article.characterCount < 700) return draft;
-  const plain = [
-    result.article.title,
+  if (!result.ok || result.article.characterCount < BRIEFING_FULL_MIN_CHARS) return draft;
+  const prose = [
     result.article.excerpt,
     ...result.article.sections.flatMap((section) => [section.heading, ...section.paragraphs]),
     ...(result.article.faq?.flatMap((item) => [item.question, item.answer]) ?? []),
   ].join(" ");
-  if (!passesBriefingQualityGate(plain)) return draft;
+  if (!passesBriefingQualityGate(prose)) return draft;
   return mergePremiumDraft(draft, result.article, keyword);
 }
 
@@ -164,28 +168,59 @@ export async function enrichMainBriefingWithAi(
 const BRIEFING_AI_BATCH_SIZE = 1;
 const BRIEFING_AI_BATCH_DELAY_MS = 3_000;
 
-/** Enriches every article in a channel edition (main + deep-dives) via OpenAI. */
+/**
+ * Gemini Batch coalescing for overnight / cron briefing runs when GEMINI_USE_BATCH=1.
+ * Live API stays sequential (or lightly concurrent) otherwise.
+ */
+function briefingUsesGeminiBatch(): boolean {
+  return geminiBatchEnabled() && briefingProvider() === "gemini";
+}
+
+function briefingAiConcurrency(): number {
+  if (!briefingUsesGeminiBatch()) return BRIEFING_AI_BATCH_SIZE;
+  const parsed = Number.parseInt(
+    process.env.GEMINI_BATCH_CONCURRENCY ?? process.env.OPENAI_BATCH_CONCURRENCY ?? "",
+    10,
+  );
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 4;
+}
+
+/** Enriches every article in a channel edition (main + deep-dives) via Gemini. */
 export async function enrichChannelEditionWithAi(articles: BriefingArticle[]): Promise<BriefingArticle[]> {
-  if (!openaiConfigured() || !articles.length) return articles;
+  if (!briefingLlmConfigured() || !articles.length) return articles;
 
-  const enriched: BriefingArticle[] = [];
+  const run = async () => {
+    const enriched: BriefingArticle[] = [];
+    const concurrency = briefingAiConcurrency();
+    const delayMs = briefingUsesGeminiBatch() ? 0 : BRIEFING_AI_BATCH_DELAY_MS;
 
-  for (let index = 0; index < articles.length; index += BRIEFING_AI_BATCH_SIZE) {
-    const batch = articles.slice(index, index + BRIEFING_AI_BATCH_SIZE);
-    const settled = await Promise.all(
-      batch.map((draft) =>
-        enrichBriefingWithAi(draft, {
-          leadKeyword: enrichmentLeadKeyword(draft),
-          relatedKeywords: enrichmentRelatedKeywords(draft, articles),
-          categoryHint: enrichmentCategoryHint(draft),
-        }),
-      ),
-    );
-    enriched.push(...settled);
-    if (index + BRIEFING_AI_BATCH_SIZE < articles.length && BRIEFING_AI_BATCH_DELAY_MS > 0) {
-      await delay(BRIEFING_AI_BATCH_DELAY_MS);
+    for (let index = 0; index < articles.length; index += concurrency) {
+      const batch = articles.slice(index, index + concurrency);
+      const settled = await Promise.all(
+        batch.map((draft) =>
+          enrichBriefingWithAi(draft, {
+            leadKeyword: enrichmentLeadKeyword(draft),
+            relatedKeywords: enrichmentRelatedKeywords(draft, articles),
+            categoryHint: enrichmentCategoryHint(draft),
+          }),
+        ),
+      );
+      enriched.push(...settled);
+      if (index + concurrency < articles.length && delayMs > 0) {
+        await delay(delayMs);
+      }
     }
+
+    return enriched;
+  };
+
+  if (briefingUsesGeminiBatch()) {
+    analysisLogger("briefing:batch").step("gemini-batch-mode", {
+      articles: articles.length,
+      concurrency: briefingAiConcurrency(),
+    });
+    return withGeminiBatchChat(run);
   }
 
-  return enriched;
+  return run();
 }

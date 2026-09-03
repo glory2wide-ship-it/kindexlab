@@ -14,6 +14,7 @@ const CULTURE_INDEX_TYPE: Record<string, EntityType | undefined> = {
   influencer: "influencer",
   music: "music_chart",
   ratings: "tv_rating",
+  movie: "movie",
   webtoon: "webtoon",
   shorts: "shorts",
   mobile: "mobile_game",

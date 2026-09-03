@@ -35,6 +35,7 @@ import { channelFromEntityType, channelSectionHref, getPostChannel } from "@/lib
 import type { PostChannel, PostFaq, PostLink, PostTable } from "@/lib/posts/types";
 import { rankingPath } from "@/lib/slugs";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
+import { ensureSentencePunctuation } from "@/lib/premium/seo-format";
 
 /** Korean 자수: characters with whitespace excluded, the usual editorial unit. */
 export const ANALYSIS_MIN = 800;
@@ -118,7 +119,21 @@ function weaveFocusIntro(paragraphs: string[], focus: string): string[] {
   if (!paragraphs.length) return paragraphs;
   const [first, ...rest] = paragraphs;
   if (first.includes(focus)) return paragraphs;
-  return [`${focus}가 지금 화제인 배경부터 먼저 적는다. ${first}`, ...rest];
+  // Keep the sealed lead inside [SENT_MIN, SENT_MAX] so fitSentenceLength does
+  // not glue an EXTEND connective onto it and blow the 40자 audit.
+  const candidates = [
+    `${focus}가 지금 화제다`,
+    `${focus}가 오늘 다시 화제다`,
+    `${focus} 관심이 다시 모인다`,
+    `지금 화제는 ${focus}다`,
+  ];
+  const leadBody =
+    candidates.find((line) => {
+      const len = charLen(line);
+      return len >= SENT_MIN && len <= SENT_MAX;
+    }) ?? focus;
+  if (charLen(leadBody) > SENT_MAX) return paragraphs;
+  return [`${leadBody}. ${first}`, ...rest];
 }
 
 function countSentenceIssues(article: TodayAnalysisArticle): { count: number; sample: string } {
@@ -181,12 +196,18 @@ function normalizeOverrideSections(sections: TodayAnalysisSection[]): TodayAnaly
 function normalizeArticle(article: TodayAnalysisArticle): void {
   const seen = new Set<string>();
   for (const section of article.sections) {
-    section.paragraphs = toParagraphs(section.paragraphs.flatMap(extractSentences))
+    section.paragraphs = toParagraphs(
+      section.paragraphs
+        .map((paragraph) => ensureSentencePunctuation(paragraph))
+        .flatMap(extractSentences),
+    )
       .map((paragraph) => dropRepeatedSentences(paragraph, seen))
       .filter(Boolean);
   }
   article.faq = article.faq.map((item) => {
-    const shaped = toParagraphs(extractSentences(item.answer)).join("\n");
+    const shaped = toParagraphs(
+      extractSentences(ensureSentencePunctuation(item.answer)),
+    ).join("\n");
     const kept = dropRepeatedSentences(shaped, seen);
     return {
       ...item,
@@ -208,7 +229,7 @@ function ensureKeywords(article: TodayAnalysisArticle): void {
   for (let i = 0; i < missingFocus; i += 1) {
     extra.push(
       i === 0
-        ? `${article.focusKeyword} 이슈는 배경과 습관으로 가른다`
+        ? `${article.focusKeyword}는 배경과 습관으로 가른다`
         : i === 1
           ? `${article.focusKeyword} 관심은 입문 질문에서 갈린다`
           : `${article.focusKeyword} 체류는 다음날 같은 대화에 남는지다`,
@@ -291,17 +312,47 @@ function appendReserve(article: TodayAnalysisArticle, reserve: string[], cursor:
   return true;
 }
 
+function ensureFocusLeadParagraph(article: TodayAnalysisArticle): void {
+  const focus = article.focusKeyword;
+  const section = article.sections[0];
+  if (!section?.paragraphs.length) return;
+  if (section.paragraphs.some((paragraph) => paragraph.includes(focus))) return;
+  const candidates = [
+    `${focus}가 오늘 다시 화제다`,
+    `${focus} 관심이 다시 모인다`,
+    `지금 화제는 ${focus}다`,
+  ];
+  const leadBody = candidates.find((line) => {
+    const len = charLen(line);
+    return len >= SENT_MIN && len <= SENT_MAX;
+  });
+  if (!leadBody) return;
+  // Own paragraph entry so normalize cannot glue the lead onto the next clause
+  // without a sentence boundary.
+  section.paragraphs = [`${leadBody}.`, ...section.paragraphs];
+}
+
 function reviewUntilReady(
   article: TodayAnalysisArticle,
   reserve: string[],
+  options?: { skipWeave?: boolean },
 ): TodayAnalysisArticle {
   const cursor = { i: 0 };
+  const maybeWeave = () => {
+    if (options?.skipWeave) {
+      ensureFocusLeadParagraph(article);
+      return;
+    }
+    article.sections[0] &&
+      (article.sections[0].paragraphs = weaveFocusIntro(
+        article.sections[0].paragraphs,
+        article.focusKeyword,
+      ));
+  };
   normalizeArticle(article);
-  article.sections[0] && (article.sections[0].paragraphs = weaveFocusIntro(
-    article.sections[0].paragraphs,
-    article.focusKeyword,
-  ));
+  maybeWeave();
   ensureKeywords(article);
+  normalizeArticle(article);
 
   let guard = 0;
   while (countAnalysisChars(article) < ANALYSIS_MIN && guard < 14) {
@@ -312,10 +363,8 @@ function reviewUntilReady(
   trimToMax(article);
   ensureKeywords(article);
   normalizeArticle(article);
-  article.sections[0] && (article.sections[0].paragraphs = weaveFocusIntro(
-    article.sections[0].paragraphs,
-    article.focusKeyword,
-  ));
+  maybeWeave();
+  normalizeArticle(article);
 
   let report = evaluateTodayAnalysis(article);
   guard = 0;
@@ -328,6 +377,9 @@ function reviewUntilReady(
     }
     if (report.failures.some((item) => item.startsWith("focusCount") || item.startsWith("supportCount"))) {
       ensureKeywords(article);
+    }
+    if (report.failures.some((item) => item.startsWith("focusInIntro"))) {
+      ensureFocusLeadParagraph(article);
     }
     normalizeArticle(article);
     report = evaluateTodayAnalysis(article);
@@ -461,7 +513,11 @@ export function composeTodayAnalysis(options: {
     }),
   ]);
 
-  return reviewUntilReady(draft, reserve);
+  return reviewUntilReady(draft, reserve, {
+    // Chain drafts already place the focus keyword in the lede; weaving a
+    // second lead sentence is what was gluing EXTEND pads past the 40자 cap.
+    skipWeave: Boolean(override?.sections?.length),
+  });
 }
 
 export function resolveAnalysisEntity(

@@ -10,6 +10,11 @@ import {
   CULTURE_GRANT_SLUG,
   CULTURE_GRANT_TITLE,
 } from "@/lib/boards/culture-grants";
+import {
+  TRAVEL_GRANT_SEEDS,
+  TRAVEL_GRANT_SLUG,
+  TRAVEL_GRANT_TITLE,
+} from "@/lib/boards/travel-grants";
 import { regionalSeeds } from "@/lib/boards/regions";
 import {
   EXHIBITION_BOARD_SLUG,
@@ -391,14 +396,14 @@ export const BOARDS: BoardDefinition[] = [
     title: CULTURE_GRANT_TITLE,
     shortTitle: CULTURE_GRANT_TITLE,
     criteria:
-      "문체부·한국관광공사·문예위 등 문화·여행·레저 분야 정부·공공 지원사업의 검색·신청 관심도",
+      "문체부·문예위·콘진원 등 문화·생활·체육·예술 분야 정부·공공 지원사업의 검색·신청 관심도 (여행·관광 사업 제외)",
     affiliateCategory: "국내 숙박 · 나들이",
-    queries: ["문화누리카드", "근로자 휴가지원", "청춘문화패스", "스포츠강좌이용권", "관광두레"],
-    focusKeyword: "문화 지원금",
-    supportKeyword: "여행 레저 지원",
+    queries: ["문화누리카드", "청춘문화패스", "스포츠강좌이용권", "예술인 생활안정자금", "통합문화이용권"],
+    focusKeyword: "문화/생활 정부 지원금",
+    supportKeyword: "문화 복지 지원",
     seeds: [...CULTURE_GRANT_SEEDS],
     rankGuidance:
-      "이름은 반드시 '[주관 기관] 사업명' 형식이다. 예: [문화체육관광부 / 한국문화예술위원회] 문화누리카드, [한국관광공사] 근로자 휴가지원사업. 기관명만 쓰거나 사업명만 쓰지 마라.",
+      "이름은 반드시 '[주관 기관] 사업명' 형식이다. 예: [문화체육관광부 / 한국문화예술위원회] 문화누리카드. 여행·관광·휴가·숙박 지원사업은 넣지 마라.",
     unitLabel: "지원금",
   },
   {
@@ -488,6 +493,38 @@ export const BOARDS: BoardDefinition[] = [
       "종목명은 반드시 `[지역] 나들이 장소` 형식이다. 지역은 서울·경기·인천·부산·대구·광주·대전·울산·세종·강원·충북·충남·전북·전남·경북·경남·제주 중 하나다.",
     seeds: regionalSeeds("weekend-outing-ranking"),
     unitLabel: "장소",
+  },
+  {
+    id: "trv-grant",
+    slug: TRAVEL_GRANT_SLUG,
+    channel: "travel",
+    title: TRAVEL_GRANT_TITLE,
+    shortTitle: TRAVEL_GRANT_TITLE,
+    criteria: "한국관광공사·문체부·해수부·산림청 등 여행·관광·휴양 공공 지원사업의 검색·신청 관심도",
+    affiliateCategory: "국내 숙박 · 나들이",
+    queries: ["근로자 휴가지원", "관광두레", "야간관광 특화도시", "자연휴양림 이용권", "여행 지원금"],
+    focusKeyword: "여행 정부지원금",
+    supportKeyword: "관광 지원",
+    seeds: [...TRAVEL_GRANT_SEEDS],
+    rankGuidance:
+      "이름은 반드시 '[주관 기관] 사업명' 형식이다. 예: [한국관광공사] 근로자 휴가지원사업. 문화누리카드·예술인 지원 등 순수 문화/생활 복지 사업은 넣지 마라.",
+    unitLabel: "지원금",
+  },
+  {
+    id: "cul-food",
+    slug: "food-restaurant-ranking",
+    channel: "travel",
+    title: TRAVEL_REGION_BOARD_NAV.food.title,
+    shortTitle: TRAVEL_REGION_BOARD_NAV.food.shortTitle,
+    criteria: "지역별 맛집·대표 음식 검색량과 미식 콘텐츠 화제성",
+    affiliateCategory: "가성비 식료품 · 밀키트",
+    queries: ["서울 맛집", "부산 밀면", "전주 비빔밥", "제주 흑돼지"],
+    focusKeyword: "음식 맛집",
+    supportKeyword: "지역 맛집",
+    rankGuidance:
+      "종목명은 반드시 `[지역] 상호/음식` 형식이다. 지역은 서울·경기·인천·부산·대구·광주·대전·울산·세종·강원·충북·충남·전북·전남·경북·경남·제주 중 하나다.",
+    seeds: regionalSeeds("food-restaurant-ranking"),
+    unitLabel: "맛집",
   },
   {
     id: "cul-ex",
@@ -664,22 +701,6 @@ export const BOARDS: BoardDefinition[] = [
       "XM3",
     ],
     unitLabel: "차종",
-  },
-  {
-    id: "cul-food",
-    slug: "food-restaurant-ranking",
-    channel: "travel",
-    title: TRAVEL_REGION_BOARD_NAV.food.title,
-    shortTitle: TRAVEL_REGION_BOARD_NAV.food.shortTitle,
-    criteria: "지역별 맛집·대표 음식 검색량과 미식 콘텐츠 화제성",
-    affiliateCategory: "가성비 식료품 · 밀키트",
-    queries: ["서울 맛집", "부산 밀면", "전주 비빔밥", "제주 흑돼지"],
-    focusKeyword: "음식 맛집",
-    supportKeyword: "지역 맛집",
-    rankGuidance:
-      "종목명은 반드시 `[지역] 상호/음식` 형식이다. 지역은 서울·경기·인천·부산·대구·광주·대전·울산·세종·강원·충북·충남·전북·전남·경북·경남·제주 중 하나다.",
-    seeds: regionalSeeds("food-restaurant-ranking"),
-    unitLabel: "맛집",
   },
   {
     id: "cul-issue",
@@ -904,12 +925,12 @@ export const BOARDS: BoardDefinition[] = [
     id: "pol-4",
     slug: "political-influencer-power",
     channel: "politics",
-    title: "정치 인기 유튜브 랭킹",
-    shortTitle: "정치 인기 유튜브 랭킹",
+    title: "정치 유튜브 랭킹",
+    shortTitle: "정치 유튜브 랭킹",
     criteria: "정치·시사 유튜브 채널의 조회·라이브·뉴스 인용",
     affiliateCategory: "블루투스 이어폰",
     queries: ["정치 유튜버", "시사 유튜브 채널", "정치 방송 화제"],
-    focusKeyword: "정치 인기 유튜브",
+    focusKeyword: "정치 유튜브",
     supportKeyword: "유튜브 랭킹",
     seeds: [
       "김어준의 겸손은 힘들다 뉴스공장",
@@ -938,7 +959,7 @@ export const BOARDS: BoardDefinition[] = [
     supportKeyword: "평론 랭킹",
     seeds: [...PUNDIT_SEEDS],
     rankGuidance:
-      "이름은 반드시 '인물명 (활동 매체/직함)' 형식이다. 예: 유시민 (알릴레오), 진중권 (시사평론가), 김종배 (시사자키). 유튜브 채널명은 정치 인기 유튜브 랭킹 보드에만 둔다.",
+      "이름은 반드시 '인물명 (활동 매체/직함)' 형식이다. 예: 유시민 (알릴레오), 진중권 (시사평론가), 김종배 (시사자키). 유튜브 채널명은 정치 유튜브 랭킹 보드에만 둔다.",
     unitLabel: "평론가",
   },
   {
@@ -1036,12 +1057,12 @@ export const BOARDS: BoardDefinition[] = [
     id: "ent-2",
     slug: "realtime-music-chart",
     channel: "entertainment",
-    title: "실시간 음원 차트",
-    shortTitle: "실시간 음원 차트",
-    criteria: "멜론·지니·벅스·스포티파이 코리아 실시간 차트 진입과 검색·숏폼 사운드 확산",
+    title: "음원 랭킹지수",
+    shortTitle: "음원 랭킹지수",
+    criteria: "멜론·지니·유튜브 뮤직·스포티파이 등 주요 음원 공급사 차트를 복합 가중해 산출한 랭킹지수",
     affiliateCategory: "무선 이어폰 · 헤드폰",
-    queries: ["멜론 실시간 차트", "스포티파이 코리아 차트", "음원 차트 1위", "아이돌 신곡 음원"],
-    focusKeyword: "실시간 음원 차트",
+    queries: ["멜론 실시간 차트", "지니 차트", "스포티파이 코리아 차트", "유튜브 뮤직 차트", "음원 차트 1위"],
+    focusKeyword: "음원 랭킹지수",
     supportKeyword: "음원 순위",
     seeds: [
       "APT. 로제",
@@ -1226,12 +1247,12 @@ export const BOARDS: BoardDefinition[] = [
     id: "ent-3",
     slug: "realtime-tv-ratings",
     channel: "entertainment",
-    title: "실시간 시청률 순위",
-    shortTitle: "실시간 시청률 순위",
-    criteria: "지상파·종편·케이블 실시간 시청률과 동시간대 화제성",
+    title: "TV 시청률 순위",
+    shortTitle: "TV 시청률 순위",
+    criteria: "지상파·종편·케이블 TV 시청률과 동시간대 화제성",
     affiliateCategory: "태블릿PC · 거치대",
-    queries: ["실시간 시청률", "드라마 시청률", "예능 시청률", "뉴스 시청률", "닐슨 시청률"],
-    focusKeyword: "실시간 시청률",
+    queries: ["TV 시청률", "드라마 시청률", "예능 시청률", "뉴스 시청률", "닐슨 시청률"],
+    focusKeyword: "TV 시청률",
     supportKeyword: "시청률 순위",
     seeds: [
       "KBS 뉴스9",
@@ -1282,12 +1303,12 @@ export const BOARDS: BoardDefinition[] = [
     id: "ent-4",
     slug: "star-reputation-index",
     channel: "entertainment",
-    title: "스타/배우 브랜드 평판 지수",
-    shortTitle: "스타 브랜드 평판",
+    title: "스타 지수 랭킹",
+    shortTitle: "스타 지수 랭킹",
     criteria: "광고 모델 기용 및 인터뷰/화보 검색량 순위",
     affiliateCategory: "패션 악세사리 · 향수",
-    queries: ["배우 광고 모델", "스타 브랜드 평판", "연예인 화보", "아이돌 화보 평판"],
-    focusKeyword: "스타 브랜드 평판",
+    queries: ["배우 광고 모델", "스타 지수 랭킹", "연예인 화보", "아이돌 화보 평판"],
+    focusKeyword: "스타 지수 랭킹",
     supportKeyword: "배우 평판",
     seeds: [
       "장원영",
@@ -1403,19 +1424,19 @@ export const BOARDS: BoardDefinition[] = [
     id: "ent-6",
     slug: "boxoffice-expectation",
     channel: "entertainment",
-    title: "영화 선호 지수",
-    shortTitle: "영화 선호 지수",
-    criteria: "개봉작·개봉 예정작의 예매율, 포털 검색, 평점. 반드시 실제 영화 제목",
+    title: "영화 랭킹지수",
+    shortTitle: "영화 랭킹지수",
+    criteria: "현재 상영작 박스오피스(KOBIS)·포털 영화 순위와 검색·예매 화제성을 합산. 반드시 실제 영화 제목",
     affiliateCategory: "빔프로젝터 · 홈시네마",
     queries: [
-      "박스오피스 예매율",
+      "박스오피스 순위",
       "CGV 예매 순위",
       "개봉 영화 관객수",
       "롯데시네마 차트",
-      "개봉 예정 영화",
+      "영화 랭킹",
     ],
-    focusKeyword: "박스오피스",
-    supportKeyword: "영화 선호 지수",
+    focusKeyword: "영화 랭킹지수",
+    supportKeyword: "박스오피스",
     seeds: [
       "파묘",
       "범죄도시4",
@@ -1463,18 +1484,18 @@ export const BOARDS: BoardDefinition[] = [
     id: "ent-10",
     slug: "entertain-youtuber-ranking",
     channel: "entertainment",
-    title: "엔터 유튜버 랭킹",
-    shortTitle: "엔터 유튜버 랭킹",
+    title: "유튜버 랭킹",
+    shortTitle: "유튜버 랭킹",
     criteria: "연예 이슈·방송 하이라이트·아이돌/배우 전문 유튜브 채널의 조회·구독·화제성",
     affiliateCategory: "유튜브 장비",
     queries: [
       "연예 유튜버",
       "아이돌 유튜브 채널",
       "방송 하이라이트 유튜브",
-      "엔터 유튜브 구독자",
+      "유튜버 랭킹",
       "문명특급",
     ],
-    focusKeyword: "엔터 유튜버",
+    focusKeyword: "유튜버 랭킹",
     supportKeyword: "유튜브 랭킹",
     seeds: [
       "문명특급",
@@ -1525,6 +1546,8 @@ export const BOARDS: BoardDefinition[] = [
     id: "ent-7",
     slug: "shortform-meme-velocity",
     channel: "entertainment",
+    /** Retired from ranking rail + deep-dive desks (2026-09 UX sync). */
+    railHidden: true,
     title: "숏폼 밈 확산 속도 지수",
     shortTitle: "숏폼 밈",
     criteria: "틱톡, 릴스, 쇼츠 인기 사운드 및 챌린지 순위. 연령대별로 다른 밈 키워드",
@@ -1581,12 +1604,12 @@ export const BOARDS: BoardDefinition[] = [
     id: "ent-8",
     slug: "realtime-webtoon-rank",
     channel: "entertainment",
-    title: "실시간 웹툰 순위",
-    shortTitle: "실시간 웹툰 순위",
+    title: "웹툰 랭킹",
+    shortTitle: "웹툰 랭킹",
     criteria: "네이버·카카오 웹툰 실시간 랭킹, 조회·댓글·원작 화제성",
     affiliateCategory: "이북리더기 · 독서대",
     queries: ["네이버웹툰 실시간 랭킹", "카카오웹툰 인기", "웹툰 원작 드라마", "웹툰 순위"],
-    focusKeyword: "실시간 웹툰",
+    focusKeyword: "웹툰 랭킹",
     supportKeyword: "웹툰 순위",
     seeds: [
       "나 혼자만 레벨업",
@@ -1658,6 +1681,53 @@ export function getBoard(slug: string): BoardDefinition | undefined {
   return BY_SLUG.get(resolveBoardSlug(slug));
 }
 
+/** Travel/food rail — keep 여행 정부지원금 between outing and food. */
+const TRAVEL_MENU_ORDER = [
+  "domestic-travel-ranking",
+  "overseas-travel-ranking",
+  "weekend-outing-ranking",
+  TRAVEL_GRANT_SLUG,
+  "food-restaurant-ranking",
+] as const;
+
+function sortTravelMenus(boards: BoardDefinition[]): BoardDefinition[] {
+  const rank = new Map(TRAVEL_MENU_ORDER.map((slug, index) => [slug, index]));
+  return [...boards].sort((a, b) => {
+    const left = rank.get(a.slug as (typeof TRAVEL_MENU_ORDER)[number]);
+    const right = rank.get(b.slug as (typeof TRAVEL_MENU_ORDER)[number]);
+    if (left == null && right == null) return a.slug.localeCompare(b.slug);
+    if (left == null) return 1;
+    if (right == null) return -1;
+    return left - right;
+  });
+}
+
+/** Entertainment rail order: 음원 sits right of 시청률; 게임 e스포츠 sits right of 웹툰. */
+const ENTERTAINMENT_MENU_ORDER = [
+  "ent-headline-news-ranking",
+  "kpop-fandom-power",
+  "trot-kayo-fandom-power",
+  "realtime-tv-ratings",
+  "realtime-music-chart",
+  "star-reputation-index",
+  "boxoffice-expectation",
+  "entertain-youtuber-ranking",
+  "realtime-webtoon-rank",
+  "game-esports-ranking",
+] as const;
+
+function sortEntertainmentMenus(boards: BoardDefinition[]): BoardDefinition[] {
+  const rank = new Map(ENTERTAINMENT_MENU_ORDER.map((slug, index) => [slug, index]));
+  return [...boards].sort((a, b) => {
+    const left = rank.get(a.slug as (typeof ENTERTAINMENT_MENU_ORDER)[number]);
+    const right = rank.get(b.slug as (typeof ENTERTAINMENT_MENU_ORDER)[number]);
+    if (left == null && right == null) return a.slug.localeCompare(b.slug);
+    if (left == null) return 1;
+    if (right == null) return -1;
+    return left - right;
+  });
+}
+
 export function boardsForChannel(channel: PostChannel): BoardDefinition[] {
   return BOARDS.filter((board) => board.channel === channel);
 }
@@ -1672,7 +1742,12 @@ export function isRailBoard(board: Pick<BoardDefinition, "railHidden">): boolean
 
 /** Category rail, 종합 heatmap, and sibling links — hides retired politics tabs. */
 export function menuBoardsForChannel(channel: PostChannel): BoardDefinition[] {
-  return boardsForChannel(channel).filter(isRailBoard).filter((board) => !isRetiredPoliticsBoard(board.slug));
+  const boards = boardsForChannel(channel)
+    .filter(isRailBoard)
+    .filter((board) => !isRetiredPoliticsBoard(board.slug));
+  if (channel === "entertainment") return sortEntertainmentMenus(boards);
+  if (channel === "travel") return sortTravelMenus(boards);
+  return boards;
 }
 
 export function rankingBoardsForChannel(channel: PostChannel): BoardDefinition[] {

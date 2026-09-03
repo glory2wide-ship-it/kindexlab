@@ -75,6 +75,14 @@ function topicLens(type: EntityType): {
         noise: "이름만의 조회",
         ripple: "생활 소비 관심",
       };
+    case "movie":
+      return {
+        scene: "극장과 박스오피스",
+        spark: "개봉과 예매율",
+        habit: "관람 취향",
+        noise: "예고편 조회만의 소음",
+        ripple: "굿즈·홈시네마 관심",
+      };
     case "tv_show":
     case "tv_rating":
       return {

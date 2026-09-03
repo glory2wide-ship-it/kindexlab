@@ -7,6 +7,7 @@ export type EntityType =
   | "influencer"
   | "music_chart"
   | "tv_rating"
+  | "movie"
   | "webtoon"
   | "shorts"
   | "mobile_game"

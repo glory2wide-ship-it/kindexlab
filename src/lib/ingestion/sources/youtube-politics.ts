@@ -59,7 +59,7 @@ export function politicsYoutubeSeedRows(): ChartRow[] {
     subtitle: seed.nameEn,
     metric: baselineMetric(seed, index),
     volume: Math.round(2_400_000 / (index + 1)),
-    tags: ["유튜브", "시사", "정치 인기 유튜브", "seed", ...seed.types],
+    tags: ["유튜브", "시사", "정치 유튜브", "seed", ...seed.types],
   }));
 }
 
@@ -147,7 +147,7 @@ export async function fetchPoliticsYoutubeSources(): Promise<SourceResult[]> {
         tags: [
           "유튜브",
           "시사",
-          "정치 인기 유튜브",
+          "정치 유튜브",
           concurrent > 0 ? "라이브" : "VOD",
           ...(seed?.types ?? ["political_influencer"]),
         ],

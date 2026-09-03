@@ -13,7 +13,8 @@ import { collectPremiumTargets } from "../src/lib/premium/keywords";
 import {
   PREMIUM_BANNED_PHRASES,
   PREMIUM_MIN_CHARS,
-  PREMIUM_SYSTEM_PROMPT,
+  STATIC_SYSTEM_PROMPT,
+  buildSinglePassUserPrompt,
   findBannedPhrases,
   premiumCharCount,
 } from "../src/lib/premium/prompt";
@@ -44,13 +45,23 @@ const SAMPLE = [
 async function main() {
   const keyword = process.argv[2];
 
-  console.log("── 프롬프트 ─────────────────────────────");
-  console.log(`system prompt: ${PREMIUM_SYSTEM_PROMPT.length}자`);
+  console.log("── 프롬프트 (single-pass) ────────────────");
+  console.log(`STATIC_SYSTEM_PROMPT: ${STATIC_SYSTEM_PROMPT.length}자`);
   console.log(`금지어 ${PREMIUM_BANNED_PHRASES.length}개 · 최소 분량 ${PREMIUM_MIN_CHARS}자`);
   console.log(
     `금지어 감지 테스트: ${findBannedPhrases("결론적으로 귀추가 주목된다").join(", ") || "(없음)"}`,
   );
   console.log(`자수 계산 테스트("가 나 다") = ${premiumCharCount("가 나 다")}`);
+  const sampleUser = buildSinglePassUserPrompt({
+    briefing: true,
+    mode: "full",
+    channel: "travel",
+    categoryHint: "여행 정부지원금",
+    focusKeyword: "근로자 휴가지원사업",
+    relatedKeywords: ["관광두레"],
+    newsContext: "[샘플] 뉴스 컨텍스트",
+  });
+  console.log(`user prompt sample: ${sampleUser.length}자 (변수만)`);
 
   console.log("\n── 위젯 배치 ────────────────────────────");
   const injected = injectMonetization(SAMPLE, "테스트키워드", {

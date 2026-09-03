@@ -158,6 +158,7 @@ export function classifyBuzzType(name: string, tags: string[]): EntityType {
   if (/PS5|플레이스테이션|닌텐도|Xbox|콘솔 게임/.test(blob)) return "console_game";
   if (/유튜버|인플루언서|스트리머|BJ|크리에이터/.test(blob)) return "influencer";
   if (/예능|드라마|방송|뉴스/.test(blob)) return "tv_show";
+  if (/영화|박스오피스|개봉작|극장/.test(blob)) return "movie";
   if (/아이돌|K-?POP|걸그룹|보이그룹/.test(blob)) return "kpop";
   return "celebrity";
 }

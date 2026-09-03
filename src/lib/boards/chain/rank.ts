@@ -15,6 +15,10 @@ import {
   ensureCultureGrantRanking,
   isCultureGrantBoard,
 } from "@/lib/boards/culture-grants";
+import {
+  ensureTravelGrantRanking,
+  isTravelGrantBoard,
+} from "@/lib/boards/travel-grants";
 import { boardUsesRegionFilter, ensureFoodRestaurantRanking, ensureHousingApartmentRanking, HOUSING_BOARD_SLUG } from "@/lib/boards/regions";
 import type {
   AgeSegment,
@@ -157,6 +161,7 @@ function ensureSpecialRanking(board: BoardDefinition, rows: BoardRankEntry[]): B
     return ensureSubsidyRanking(rows);
   }
   if (isCultureGrantBoard(board.slug)) return ensureCultureGrantRanking(rows);
+  if (isTravelGrantBoard(board.slug)) return ensureTravelGrantRanking(rows);
   if (board.slug === "political-pundit-ranking") return ensurePunditRanking(rows);
   if (board.slug === HOUSING_BOARD_SLUG) {
     return ensureHousingApartmentRanking(rows, rankLimitForBoard(board));

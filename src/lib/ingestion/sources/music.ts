@@ -1,5 +1,6 @@
 import { kstDateString } from "@/lib/briefing/dates";
 import { fetchFormJson, fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
+import { normalizeName } from "@/lib/ingestion/names";
 import { parseNumber, stripTags } from "@/lib/ingestion/parse";
 import type { ChartRow, SourceResult } from "@/lib/ingestion/types";
 
@@ -229,18 +230,168 @@ export async function fetchGenieChart(): Promise<SourceResult> {
   }
 }
 
+/** Spotify Korea daily chart via kworb (stable HTML mirror of Spotify Charts). */
+export async function fetchSpotifyKr(): Promise<SourceResult> {
+  try {
+    const html = await fetchText("https://kworb.net/spotify/country/kr_daily.html");
+    const items: ChartRow[] = [];
+    const rows = [...html.matchAll(/<tr>([\s\S]*?)<\/tr>/gi)];
+    for (const row of rows) {
+      const chunk = row[1] ?? "";
+      const cells = [...chunk.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => stripTags(m[1] ?? ""));
+      if (cells.length < 3) continue;
+      const rank = parseNumber(cells[0]);
+      const artist = cells[1]?.trim();
+      const title = cells[2]?.trim();
+      if (!rank || !title || rank > 50) continue;
+      items.push({
+        rank,
+        title,
+        subtitle: artist,
+        tags: ["Spotify KR"],
+        metric: Math.max(1, 51 - rank),
+      });
+    }
+    return result("spotify-kr", "Spotify 한국 차트", items.slice(0, 50));
+  } catch (error) {
+    return result("spotify-kr", "Spotify 한국 차트", [], error instanceof Error ? error.message : "failed");
+  }
+}
+
+/** YouTube Music / YouTube Korea daily chart (kworb insights). */
+export async function fetchYoutubeMusicKr(): Promise<SourceResult> {
+  try {
+    const html = await fetchText("https://kworb.net/youtube/insights/kr_daily.html");
+    const items: ChartRow[] = [];
+    const rows = [...html.matchAll(/<tr>([\s\S]*?)<\/tr>/gi)];
+    for (const row of rows) {
+      const chunk = row[1] ?? "";
+      const cells = [...chunk.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => stripTags(m[1] ?? ""));
+      if (cells.length < 2) continue;
+      const rank = parseNumber(cells[0]);
+      // Layout varies: often rank | video title | artist | views
+      const title = (cells[1] ?? "").trim();
+      const artist = (cells[2] ?? "").trim();
+      if (!rank || !title || rank > 50 || /^(pos|rank|#)$/i.test(title)) continue;
+      items.push({
+        rank,
+        title,
+        subtitle: artist && !/^\d/.test(artist) ? artist : undefined,
+        tags: ["YouTube Music KR"],
+        metric: Math.max(1, 51 - rank),
+      });
+    }
+    return result("youtube-music", "유튜브 뮤직 한국 차트", items.slice(0, 50));
+  } catch (error) {
+    return result(
+      "youtube-music",
+      "유튜브 뮤직 한국 차트",
+      [],
+      error instanceof Error ? error.message : "failed",
+    );
+  }
+}
+
 export async function fetchMusicSources(): Promise<SourceResult[]> {
   return Promise.all([
     fetchMelonChart(),
-    fetchBugsRealtime(),
     fetchGenieChart(),
+    fetchBugsRealtime(),
+    fetchSpotifyKr(),
+    fetchYoutubeMusicKr(),
     fetchAppleMusicKr(),
     fetchItunesKr(),
     fetchCircleDigital(),
   ]);
 }
 
+const MUSIC_SOURCE_WEIGHT: Record<string, number> = {
+  melon: 3,
+  genie: 3,
+  bugs: 2,
+  "spotify-kr": 2.5,
+  "youtube-music": 2.5,
+  "apple-music": 1.5,
+  circle: 2,
+  itunes: 1,
+};
+
+function musicKey(row: ChartRow): string {
+  return normalizeName(`${row.title}|${row.subtitle ?? ""}`) || normalizeName(row.title);
+}
+
+/**
+ * Composite 음원 랭킹지수: Melon / Genie / Bugs / Spotify / YouTube Music / …
+ * Weighted Borda count across successful chart pulls.
+ */
+export function composeMusicChart(sources: SourceResult[]): ChartRow[] {
+  const charts = sources.filter((item) => item.ok && MUSIC_SOURCE_WEIGHT[item.id]);
+  if (!charts.length) return [];
+
+  type Acc = {
+    title: string;
+    subtitle?: string;
+    tags: string[];
+    points: number;
+    bestRank: number;
+    sources: number;
+  };
+  const map = new Map<string, Acc>();
+
+  for (const chart of charts) {
+    const weight = MUSIC_SOURCE_WEIGHT[chart.id] ?? 1;
+    for (const row of chart.items.slice(0, 50)) {
+      const key = musicKey(row);
+      if (!key) continue;
+      const points = weight * Math.max(1, 51 - row.rank);
+      const current = map.get(key);
+      if (!current) {
+        map.set(key, {
+          title: row.title,
+          subtitle: row.subtitle,
+          tags: [...(row.tags ?? [])],
+          points,
+          bestRank: row.rank,
+          sources: 1,
+        });
+      } else {
+        current.points += points;
+        current.bestRank = Math.min(current.bestRank, row.rank);
+        current.sources += 1;
+        current.tags = [...new Set([...current.tags, ...(row.tags ?? [])])];
+        if (!current.subtitle && row.subtitle) current.subtitle = row.subtitle;
+        // Prefer Melon/Genie title when available.
+        if (chart.id === "melon" || chart.id === "genie") {
+          current.title = row.title;
+          if (row.subtitle) current.subtitle = row.subtitle;
+        }
+      }
+    }
+  }
+
+  return [...map.values()]
+    .sort((a, b) => b.points - a.points || a.bestRank - b.bestRank || b.sources - a.sources)
+    .slice(0, 50)
+    .map((row, index) => ({
+      rank: index + 1,
+      title: row.title,
+      subtitle: row.subtitle,
+      metric: Math.round(row.points * 10),
+      tags: [...new Set([...row.tags, "음원 랭킹지수", `소스${row.sources}`])],
+    }));
+}
 export function pickPrimaryMusic(sources: SourceResult[]): SourceResult | undefined {
-  const order = ["melon", "bugs", "genie", "apple-music", "circle", "itunes"];
+  const composed = composeMusicChart(sources);
+  if (composed.length) {
+    return {
+      id: "music-composite",
+      label: "음원 랭킹지수(복합)",
+      ok: true,
+      count: composed.length,
+      fetchedAt: nowIso(),
+      items: composed,
+    };
+  }
+  const order = ["melon", "genie", "bugs", "spotify-kr", "youtube-music", "apple-music", "circle", "itunes"];
   return order.map((id) => sources.find((item) => item.id === id && item.ok)).find(Boolean);
 }

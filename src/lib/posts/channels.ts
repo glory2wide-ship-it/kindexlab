@@ -138,7 +138,7 @@ export function channelSectionHref(channel: PostChannel, section: ChannelSection
 }
 
 export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
-  entertainment: ["kpop", "celebrity", "tv_show", "influencer", "music_chart", "tv_rating"],
+  entertainment: ["kpop", "celebrity", "tv_show", "influencer", "music_chart", "tv_rating", "movie"],
   culture: ["culture_board", "webtoon", "shorts", "mobile_game", "pc_game", "console_game"],
   /** Travel desks are board-seeded; no dedicated ingest entity type yet. */
   travel: [],

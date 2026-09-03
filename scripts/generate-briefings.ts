@@ -1,5 +1,5 @@
 /**
- * Daily briefing job — all five channels, main + deep-dives, OpenAI premium path.
+ * Daily briefing job — all five channels, main + deep-dives, Gemini premium path.
  *
  * Usage:
  *   npm run briefing:generate
@@ -7,7 +7,7 @@
  *
  * Production trigger: GET/POST /api/cron/briefings (CRON_SECRET) at 07:00 KST.
  */
-import { llmConfigured } from "../src/lib/analysis/chain/llm";
+import { briefingLlmConfigured, briefingProvider } from "../src/lib/analysis/chain/llm";
 import { kstDateString } from "../src/lib/briefing/dates";
 import { runDailyBriefingJob } from "../src/lib/briefing/job";
 
@@ -15,11 +15,15 @@ async function main() {
   const force = process.argv.includes("--force");
   const editionDate = process.argv.find((arg) => /^\d{4}-\d{2}-\d{2}$/.test(arg)) ?? kstDateString();
 
-  if (!llmConfigured()) {
-    console.error("OPENAI_API_KEY is not set — briefings will fall back to templates.");
+  if (!briefingLlmConfigured()) {
+    console.error(
+      `Briefing LLM is not configured (provider=${briefingProvider()}). Set GEMINI_API_KEY — briefings will fall back to templates.`,
+    );
   }
 
-  console.log(`Generating ${editionDate} briefings (force=${force}, ai=${llmConfigured()})…`);
+  console.log(
+    `Generating ${editionDate} briefings (force=${force}, provider=${briefingProvider()}, ai=${briefingLlmConfigured()})…`,
+  );
 
   const result = await runDailyBriefingJob({
     persist: true,

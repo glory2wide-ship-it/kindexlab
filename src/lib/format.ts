@@ -77,6 +77,7 @@ export const TYPE_LABEL: Record<string, string> = {
   influencer: "인플루언서",
   music_chart: "음원",
   tv_rating: "시청률",
+  movie: "영화",
   webtoon: "웹툰",
   shorts: "숏폼",
   mobile_game: "모바일",
@@ -98,6 +99,7 @@ export const TYPE_LABEL: Record<string, string> = {
 export function scoreLabel(type: string): string {
   if (type === "music_chart") return "차트 지수";
   if (type === "tv_rating") return "시청률 지수";
+  if (type === "movie") return "영화 랭킹지수";
   if (type === "webtoon") return "인기 지수";
   if (type === "shorts") return "조회 지수";
   if (type === "mobile_game") return "인기 지수";
@@ -123,6 +125,7 @@ export function metricLabel(type: string): string {
   if (type === "console_game") return "트렌드";
   if (type === "tv_rating") return "시청";
   if (type === "music_chart") return "스트리밍";
+  if (type === "movie") return "관객";
   if (type === "headline_news" || type === "political_search") return "언급";
   if (type === "party_support" || type === "politician_support") return "지지도";
   if (type === "subsidy" || type === "local_policy") return "관심";

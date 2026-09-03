@@ -5,21 +5,22 @@ import type { EntityType } from "@/lib/types";
 const MENU_BY_TYPE: Partial<Record<EntityType, string>> = {
   subsidy: "정부 지원금",
   local_policy: "지자체 정책지수",
-  political_influencer: "정치 인기 유튜브",
+  political_influencer: "정치 유튜브",
   political_pundit: "정치평론가",
   headline_news: "헤드라인 뉴스랭킹",
   party_support: "정당 지지도 랭킹",
   politician_support: "정치인 지지도 랭킹",
   political_search: "이슈 키워드",
   political_ratings: "정치뉴스 시청률",
-  music_chart: "실시간 음원 차트",
+  music_chart: "음원 랭킹지수",
   kpop: "아이돌 팬덤 화력",
-  tv_rating: "실시간 시청률 순위",
-  celebrity: "스타 브랜드 평판",
+  tv_rating: "TV 시청률 순위",
+  celebrity: "스타 지수 랭킹",
   pc_game: "게임 e스포츠",
-  influencer: "엔터 유튜버 랭킹",
+  influencer: "유튜버 랭킹",
   shorts: "숏폼 밈",
-  webtoon: "실시간 웹툰 순위",
+  webtoon: "웹툰 랭킹",
+  movie: "영화 랭킹지수",
 };
 
 /** Keyword-first headline for treemap tiles (about two Korean lines). */

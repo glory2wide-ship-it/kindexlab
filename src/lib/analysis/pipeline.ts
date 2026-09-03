@@ -157,7 +157,7 @@ async function generate(options: {
     provenance = { ...provenance, newsDocs: retrievalDocs.length };
 
     if (!llmConfigured()) {
-      logger.step("chain", { skipped: "OPENAI_API_KEY missing" });
+      logger.step("chain", { skipped: "GEMINI_API_KEY missing" });
     } else if (!canGenerateContext(articleContext)) {
       logger.step("chain", {
         skipped: "thin context",
@@ -312,6 +312,12 @@ export async function getOrCreateAnalysis(options: {
 
   if (cached && cached.editionDate === editionDate && !isExpired(cached)) {
     return { entry: cached, cache: "hit" };
+  }
+
+  // Manual / Gemini imports keep a long TTL and must not be overwritten by the
+  // on-demand OpenAI chain when a visitor opens the detail page.
+  if (cached?.provenance.model?.startsWith("import:")) {
+    return { entry: cached, cache: isExpired(cached) ? "stale" : "hit" };
   }
 
   if (cached) {
