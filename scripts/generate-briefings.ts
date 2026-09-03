@@ -2,10 +2,11 @@
  * Daily briefing job — all five channels, main + deep-dives, Gemini premium path.
  *
  * Usage:
- *   npm run briefing:generate
+ *   npm run briefing:generate:local   # loads .env.local
  *   npm run briefing:generate -- --force 2026-09-02
  *
- * Production trigger: GET/POST /api/cron/briefings (CRON_SECRET) at 07:00 KST.
+ * Production: GitHub Actions `.github/workflows/daily-briefings.yml`
+ * (04:00 KST schedule → commit extra.json → Vercel deploy by ~07:00 KST).
  */
 import { briefingLlmConfigured, briefingProvider } from "../src/lib/analysis/chain/llm";
 import { kstDateString } from "../src/lib/briefing/dates";

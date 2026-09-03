@@ -1,13 +1,29 @@
 name: Daily briefings
 
+# Publishes the KST calendar day's full edition (channel mains + desk deep-dives)
+# into src/data/briefings/extra.json, then commits so Vercel can deploy.
+#
+# Cron is 04:00 KST so Gemini Batch + auto-commit + Vercel build can finish
+# before readers hit the site around 07:00 KST.
 on:
   schedule:
-    - cron: "0 22 * * *"
+    - cron: "0 19 * * *"
   workflow_dispatch:
+    inputs:
+      force:
+        description: "같은 날짜 에디션이 있어도 재생성"
+        type: boolean
+        required: false
+        default: false
+      edition_date:
+        description: "에디션 날짜 YYYY-MM-DD (비우면 오늘 KST)"
+        required: false
+        default: ""
 
 jobs:
   generate:
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     permissions:
       contents: write
     steps:
@@ -17,9 +33,32 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run briefing:generate
+
+      - name: Require Gemini API key
         env:
-          # All article generation uses Gemini (live or Batch).
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "${GEMINI_API_KEY}" ]; then
+            echo "::error::GEMINI_API_KEY GitHub secret is missing. Add it under Settings → Secrets."
+            exit 1
+          fi
+
+      - name: Generate KST daily briefings
+        # Do not use `npm run briefing:generate` — that script loads --env-file=.env.local,
+        # which does not exist on Actions runners and exits before generation starts.
+        run: |
+          set -euo pipefail
+          EDITION="${{ inputs.edition_date }}"
+          if [ -z "$EDITION" ]; then
+            EDITION="$(TZ=Asia/Seoul date +%F)"
+          fi
+          ARGS="$EDITION"
+          if [ "${{ inputs.force }}" = "true" ]; then
+            ARGS="--force $ARGS"
+          fi
+          echo "edition=$EDITION force=${{ inputs.force }}"
+          npx tsx scripts/generate-briefings.ts $ARGS
+        env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           GEMINI_EDITOR_MODEL: ${{ vars.GEMINI_EDITOR_MODEL }}
@@ -27,6 +66,9 @@ jobs:
           LLM_PROVIDER: gemini
           GEMINI_USE_BATCH: "true"
           GEMINI_BATCH_CONCURRENCY: "4"
+          GEMINI_MAX_CONCURRENCY: "4"
+          TRENDS_DATA_SOURCE: live
+
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: publish KST daily briefings"
