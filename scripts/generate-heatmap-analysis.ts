@@ -16,6 +16,8 @@ import {
 } from "../src/lib/analysis/overnight-batch";
 import { kstDateString } from "../src/lib/briefing/dates";
 import { getRankings } from "../src/lib/api";
+import { deliverGenerationReport } from "../src/lib/ops/generation-report";
+import { formatKrw, resetGeminiUsage, snapshotGeminiUsage } from "../src/lib/ops/gemini-usage";
 import { POST_CHANNELS } from "../src/lib/posts/channels";
 import type { PostChannel } from "../src/lib/posts/types";
 
@@ -43,6 +45,7 @@ async function main() {
   const force = process.argv.includes("--force");
   const dryRun = process.argv.includes("--dry");
   const batchSize = num("batch", ANALYSIS_OVERNIGHT_BATCH_SIZE) || ANALYSIS_OVERNIGHT_BATCH_SIZE;
+  resetGeminiUsage(process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash");
 
   const all = await listHeatmapAnalysisTargets({ channel });
   const limit = num("limit", all.length);
@@ -79,6 +82,43 @@ async function main() {
   console.log(
     `[done] generated=${run.generated} skipped=${run.skipped} failed=${run.failed} batches=${run.batches} geminiBatch=${run.geminiBatch} ${seconds}s`,
   );
+
+  const delivery = await deliverGenerationReport(
+    {
+      subject: `[KindexLab] 오늘의 분석 생성 보고 · ${editionDate}`,
+      editionDate,
+      pipeline: "heatmap-analysis",
+      generatedAt: new Date().toISOString(),
+      cost: snapshotGeminiUsage(),
+      sections: [
+        {
+          title: "오늘의 분석",
+          rows: run.items.map((item) => ({
+            name: item.keyword,
+            status: item.skipped ? ("skip" as const) : item.ok ? ("ok" as const) : ("fail" as const),
+            meta: `${item.channel}/${item.boardSlug}`,
+            reason: item.skipped
+              ? "ttl-hit"
+              : item.ok
+                ? item.chars
+                  ? `${item.chars}자`
+                  : undefined
+                : item.reason,
+          })),
+        },
+      ],
+      notes: [
+        `generated=${run.generated}`,
+        `skipped=${run.skipped}`,
+        `failed=${run.failed}`,
+        `geminiBatch=${run.geminiBatch}`,
+        `${seconds}s`,
+        `API 추정 ${formatKrw(snapshotGeminiUsage().estimatedKrw)}`,
+      ],
+    },
+    `heatmap-analysis-${editionDate}`,
+  );
+  console.log(`[report] ${delivery.detail}`);
 
   if (run.failed > 0) {
     process.exitCode = 1;

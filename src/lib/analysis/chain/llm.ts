@@ -1,4 +1,5 @@
 import type { AnalysisLogger } from "@/lib/analysis/log";
+import { recordGeminiUsage } from "@/lib/ops/gemini-usage";
 
 export type LlmProvider = "openai" | "anthropic" | "gemini";
 
@@ -483,6 +484,13 @@ async function chatJsonGemini<T>(options: ChatOptions): Promise<T | null> {
       promptTokens: json.usageMetadata?.promptTokenCount,
       completionTokens: json.usageMetadata?.candidatesTokenCount,
       finishReason: json.candidates?.[0]?.finishReason,
+    });
+    recordGeminiUsage({
+      mode: "live",
+      model,
+      promptTokens: json.usageMetadata?.promptTokenCount,
+      completionTokens: json.usageMetadata?.candidatesTokenCount,
+      totalTokens: json.usageMetadata?.totalTokenCount,
     });
     return parsed;
   } catch (error) {

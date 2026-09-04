@@ -31,6 +31,7 @@ jobs:
     timeout-minutes: 180
     permissions:
       contents: write
+      issues: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,12 +55,14 @@ jobs:
       - name: Generate KST daily briefings + deep-dives (Gemini Batch)
         # Do not use `npm run briefing:generate` — that script loads --env-file=.env.local,
         # which does not exist on Actions runners and exits before generation starts.
+        id: generate
         run: |
           set -euo pipefail
           EDITION="${{ inputs.edition_date }}"
           if [ -z "$EDITION" ]; then
             EDITION="$(TZ=Asia/Seoul date +%F)"
           fi
+          echo "edition=$EDITION" >> "$GITHUB_OUTPUT"
           ARGS="--batch $EDITION"
           if [ "${{ inputs.force }}" = "true" ]; then
             ARGS="--force $ARGS"
@@ -77,6 +80,26 @@ jobs:
           BRIEFING_OVERNIGHT_BATCH_SIZE: "12"
           GEMINI_MAX_CONCURRENCY: "4"
           TRENDS_DATA_SOURCE: live
+          REPORT_EMAIL_TO: glory2wide@gmail.com
+
+      - name: Email briefing generation report
+        if: always() && steps.generate.outcome != 'skipped'
+        continue-on-error: true
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          REPORT_EMAIL_TO: glory2wide@gmail.com
+          REPORT_EMAIL_FROM: ${{ secrets.REPORT_EMAIL_FROM }}
+        run: |
+          chmod +x scripts/ci-email-report.sh
+          EDITION="${{ steps.generate.outputs.edition }}"
+          if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
+          scripts/ci-email-report.sh \
+            "artifacts/generation-reports/briefings-${EDITION}.html" \
+            "[KindexLab] 브리핑·심층분석 생성 보고 · ${EDITION}"
 
       # ingest-trends pushes every few minutes; plain auto-commit push races and drops the edition.
       - name: Commit and push briefings

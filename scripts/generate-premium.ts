@@ -23,6 +23,8 @@ import {
 } from "../src/lib/premium/batch";
 import { collectPremiumTargets } from "../src/lib/premium/keywords";
 import { purgeContentStores } from "../src/lib/premium/purge";
+import { deliverGenerationReport } from "../src/lib/ops/generation-report";
+import { formatKrw, resetGeminiUsage, snapshotGeminiUsage } from "../src/lib/ops/gemini-usage";
 import { POST_CHANNELS } from "../src/lib/posts/channels";
 import type { PostChannel } from "../src/lib/posts/types";
 
@@ -51,6 +53,7 @@ async function main() {
   const delayMs = num("delay", PREMIUM_BATCH_DELAY_MS);
   const shouldPurge = process.argv.includes("--purge");
   const dryRun = process.argv.includes("--dry");
+  resetGeminiUsage(process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash");
 
   const all = await collectPremiumTargets({ channel });
   const limit = num("limit", all.length);
@@ -114,6 +117,40 @@ async function main() {
     const mean = Math.round(chars.reduce((sum, value) => sum + value, 0) / chars.length);
     console.log(`평균 글자수(공백 제외): ${mean}자 · 최소 ${Math.min(...chars)} · 최대 ${Math.max(...chars)}`);
   }
+
+  const delivery = await deliverGenerationReport(
+    {
+      subject: `[KindexLab] 이슈칼럼 생성 보고 · ${editionDate}`,
+      editionDate,
+      pipeline: "premium-columns",
+      generatedAt: new Date().toISOString(),
+      cost: snapshotGeminiUsage(),
+      sections: [
+        {
+          title: "이슈칼럼",
+          rows: run.items.map((item) => ({
+            name: item.keyword,
+            status: item.ok ? ("ok" as const) : ("fail" as const),
+            meta: item.channel,
+            reason: item.ok
+              ? item.chars
+                ? `${item.chars}자`
+                : undefined
+              : [item.reason, item.detail].filter(Boolean).join(": "),
+          })),
+        },
+      ],
+      notes: [
+        `generated=${run.generated}`,
+        `failed=${run.failed}`,
+        `batches=${run.batches}`,
+        `${seconds}s`,
+        `API 추정 ${formatKrw(snapshotGeminiUsage().estimatedKrw)}`,
+      ],
+    },
+    `premium-${editionDate}`,
+  );
+  console.log(`[report] ${delivery.detail}`);
 
   // A run that produced nothing is a failure worth surfacing to CI, but the
   // exit code is set rather than forced: `process.exit` can cut off the store

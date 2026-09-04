@@ -34,6 +34,7 @@ jobs:
     timeout-minutes: 180
     permissions:
       contents: write
+      issues: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,8 +45,11 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Generate columns
+        id: generate
         run: |
-          ARGS="--date=$(TZ=Asia/Seoul date +%F)"
+          EDITION="$(TZ=Asia/Seoul date +%F)"
+          echo "edition=$EDITION" >> "$GITHUB_OUTPUT"
+          ARGS="--date=$EDITION"
           if [ -n "${{ inputs.limit }}" ]; then ARGS="$ARGS --limit=${{ inputs.limit }}"; fi
           if [ -n "${{ inputs.channel }}" ]; then ARGS="$ARGS --channel=${{ inputs.channel }}"; fi
           if [ "${{ inputs.purge }}" = "true" ]; then ARGS="$ARGS --purge"; fi
@@ -61,6 +65,27 @@ jobs:
           GEMINI_BATCH_CONCURRENCY: "4"
           GEMINI_MAX_CONCURRENCY: "4"
           TRENDS_DATA_SOURCE: live
+          REPORT_EMAIL_TO: glory2wide@gmail.com
+
+      - name: Email premium column report
+        if: always() && steps.generate.outcome != 'skipped'
+        continue-on-error: true
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          REPORT_EMAIL_TO: glory2wide@gmail.com
+          REPORT_EMAIL_FROM: ${{ secrets.REPORT_EMAIL_FROM }}
+        run: |
+          chmod +x scripts/ci-email-report.sh
+          EDITION="${{ steps.generate.outputs.edition }}"
+          if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
+          scripts/ci-email-report.sh \
+            "artifacts/generation-reports/premium-${EDITION}.html" \
+            "[KindexLab] 이슈칼럼 생성 보고 · ${EDITION}"
+
       - name: Commit and push columns
         run: |
           chmod +x scripts/ci-commit-push.sh

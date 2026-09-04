@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# overnight generation email artifacts
+/artifacts/
+
 # vercel
 .vercel
 

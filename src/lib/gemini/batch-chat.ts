@@ -13,6 +13,7 @@ import {
   type ChatOptions,
 } from "@/lib/analysis/chain/llm";
 import { runGenerateContentBatch, type BatchChatRequest } from "@/lib/gemini/batch-api";
+import { recordGeminiUsage } from "@/lib/ops/gemini-usage";
 
 type Pending = {
   options: ChatOptions;
@@ -114,11 +115,20 @@ export class DebouncedGeminiBatchChat {
         }
         try {
           const parsed = JSON.parse(extractJsonPayload(result.content)) as unknown;
+          recordGeminiUsage({
+            mode: "batch",
+            model: item.options.model,
+            promptTokens: result.usage?.prompt_tokens,
+            completionTokens: result.usage?.completion_tokens,
+            totalTokens: result.usage?.total_tokens,
+          });
           item.options.logger.step(item.options.step, {
             ok: true,
             provider: "gemini-batch",
             model: item.options.model,
             tokens: result.usage?.total_tokens,
+            promptTokens: result.usage?.prompt_tokens,
+            completionTokens: result.usage?.completion_tokens,
           });
           item.resolve(parsed);
         } catch (error) {

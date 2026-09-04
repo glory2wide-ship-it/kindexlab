@@ -13,10 +13,40 @@ import { getRankings } from "@/lib/providers/trends";
 import type { BriefingArticle } from "@/lib/types";
 import type { PostChannel } from "@/lib/posts/types";
 
+export interface BriefingGenerationOutcome {
+  name: string;
+  title: string;
+  kind: "main" | "deep-dive";
+  channel: string;
+  deskLabel?: string;
+  slug: string;
+  status: "ok" | "fail";
+  reason?: string;
+}
+
 function withoutHeadlineDeepDives(articles: BriefingArticle[]): BriefingArticle[] {
   return articles.filter(
     (article) => article.kind === "main" || !isHeadlineBriefingDesk(article.deskId),
   );
+}
+
+function briefingFailReason(article: BriefingArticle): string {
+  if (!article.bodyHtml?.trim() && !article.bodyMarkdown?.trim()) return "not-gemini";
+  return "quality-gate";
+}
+
+function outcomeFromArticle(article: BriefingArticle): BriefingGenerationOutcome {
+  const ok = isPersistableBriefing(article);
+  return {
+    name: article.focusKeyword?.trim() || article.title,
+    title: article.title,
+    kind: article.kind === "main" ? "main" : "deep-dive",
+    channel: article.channel ?? "",
+    deskLabel: article.deskLabel,
+    slug: article.slug,
+    status: ok ? "ok" : "fail",
+    reason: ok ? undefined : briefingFailReason(article),
+  };
 }
 
 async function composeChannelDraft(
@@ -74,7 +104,7 @@ export async function generateEdition(
     /** Overnight Batch for mains + submenu deep-dives (−50%). */
     useGeminiBatch?: boolean;
   },
-): Promise<BriefingArticle[]> {
+): Promise<{ articles: BriefingArticle[]; outcomes: BriefingGenerationOutcome[] }> {
   const publishedAt = editionDateTime(editionDate);
   const targets = options?.channels?.length
     ? POST_CHANNELS.filter(({ id }) => options.channels!.includes(id))
@@ -92,11 +122,12 @@ export async function generateEdition(
   const articles = await enrichChannelEditionWithAi(drafts, {
     forceGeminiBatch: options?.useGeminiBatch,
   });
+  const outcomes = articles.map(outcomeFromArticle);
 
   for (const { id: channel } of targets) {
     options?.onChannel?.(
       channel,
-      articles.filter((item) => item.channel === channel).length,
+      articles.filter((item) => item.channel === channel && isPersistableBriefing(item)).length,
     );
   }
 
@@ -109,7 +140,10 @@ export async function generateEdition(
     }
   }
   // Never hand template shells to display callers — Gemini columns only.
-  return articles.filter(isPersistableBriefing);
+  return {
+    articles: articles.filter(isPersistableBriefing),
+    outcomes,
+  };
 }
 
 export async function generateSingle(
@@ -150,17 +184,30 @@ export async function runDailyBriefingJob(options?: {
   persisted: boolean;
   removed: number;
   articles: BriefingArticle[];
+  outcomes: BriefingGenerationOutcome[];
   geminiBatch?: boolean;
 }> {
   const editionDate = options?.editionDate ?? kstDateString();
   if (!options?.force && hasEdition(editionDate)) {
+    const existing = listSeeded().filter((item) => item.editionDate === editionDate);
     return {
       skipped: true,
       reason: "edition already published",
       editionDate,
       persisted: false,
       removed: 0,
-      articles: listSeeded().filter((item) => item.editionDate === editionDate),
+      articles: existing.filter(isPersistableBriefing),
+      outcomes: existing.map((article) => ({
+        name: article.focusKeyword?.trim() || article.title,
+        title: article.title,
+        kind: (article.kind === "main" ? "main" : "deep-dive") as "main" | "deep-dive",
+        channel: article.channel ?? "",
+        deskLabel: article.deskLabel,
+        slug: article.slug,
+        status: "ok" as const,
+        reason: "already-published",
+      })),
+      geminiBatch: false,
     };
   }
 
@@ -170,7 +217,7 @@ export async function runDailyBriefingJob(options?: {
   const useGeminiBatch =
     Boolean(options?.useGeminiBatch) ||
     (geminiBatchEnabled() && briefingProvider() === "gemini");
-  const articles = await generateEdition(editionDate, persist, {
+  const { articles, outcomes } = await generateEdition(editionDate, persist, {
     onChannel: options?.onChannel,
     channels: options?.channels,
     useGeminiBatch: options?.useGeminiBatch,
@@ -181,6 +228,7 @@ export async function runDailyBriefingJob(options?: {
     persisted: persist,
     removed,
     articles,
+    outcomes,
     geminiBatch: useGeminiBatch,
   };
 }
