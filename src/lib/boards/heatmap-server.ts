@@ -6,7 +6,7 @@ import {
   type HeatmapBoardPayload,
 } from "@/lib/boards/heatmap";
 import { rankLimitForBoard } from "@/lib/boards/limits";
-import { menuBoardsForChannel } from "@/lib/boards/registry";
+import { menuBoardsForChannel, isHeadlineNewsBoard } from "@/lib/boards/registry";
 import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
 import type { BoardDefinition, BoardRankEntry, CachedBoard } from "@/lib/boards/types";
@@ -69,7 +69,9 @@ function withLiveChartOverlay(
 export async function loadChannelHeatmapPayloads(
   channel: PostChannel,
 ): Promise<HeatmapBoardPayload[]> {
-  const defs = menuBoardsForChannel(channel).filter((board) => !board.deskKind);
+  const defs = menuBoardsForChannel(channel).filter(
+    (board) => !board.deskKind && !isHeadlineNewsBoard(board.slug),
+  );
   const snapshot = readPersistedSnapshot();
   const payloads: HeatmapBoardPayload[] = [];
   for (const def of defs) {

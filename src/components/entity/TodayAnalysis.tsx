@@ -73,7 +73,7 @@ export function TodayAnalysis({
       <TitleTag className={`mt-2 font-semibold tracking-tight ${compact ? "text-xl" : "text-2xl md:text-3xl"}`}>
         {article.title}
       </TitleTag>
-      <p className="mt-3 text-sm leading-6 text-muted">{article.excerpt}</p>
+      <p className="article-prose article-prose-lead mt-3 text-muted">{article.excerpt}</p>
       <p className="mt-2 font-sans text-[11px] text-muted">{article.editionDate}</p>
       <p className="mt-3 text-sm">
         <Link href={boardHref} className="underline hover:text-accent">
@@ -87,7 +87,7 @@ export function TodayAnalysis({
 
       <ContentSlot placement="intro" label={article.focusKeyword} />
 
-      <div className={`mt-6 ${compact ? "text-[15px]" : ""}`}>
+      <div className="article-prose mt-6">
         {article.sections.map((section, index) => {
           const minor = section.headingLevel === 3;
           return (
@@ -115,7 +115,7 @@ export function TodayAnalysis({
 
         <section>
           <SectionHeading as="h3">교차 확인 자료</SectionHeading>
-          <p className="mb-2 text-sm leading-7">
+          <p className="article-prose-text mb-2">
             외부 자료:{" "}
             <a
               href={article.externalLink.href}
@@ -126,14 +126,14 @@ export function TodayAnalysis({
               {article.externalLink.label}
             </a>
           </p>
-          <p className="text-sm leading-7">
+          <p className="article-prose-text">
             내부 링크 추천:{" "}
             <Link href={article.internalLink.href} className="underline hover:text-accent">
               [{article.internalLink.label}]
             </Link>
           </p>
           {article.sources?.length ? (
-            <ul className="mt-3 space-y-1 text-sm leading-7">
+            <ul className="mt-3 space-y-1">
               {article.sources.slice(0, 5).map((source) => (
                 <li key={source.url}>
                   <a
@@ -175,7 +175,7 @@ function AnalysisParagraph({
   if (text.includes(marker)) {
     const [before, after] = text.split(marker);
     return (
-      <p className="mb-3 text-sm leading-7">
+      <p className="article-prose-text mb-3">
         {before}
         내부 링크 추천:{" "}
         <Link href={internal.href} className="underline hover:text-accent">
@@ -185,5 +185,5 @@ function AnalysisParagraph({
       </p>
     );
   }
-  return <p className="mb-3 whitespace-pre-line text-sm leading-7">{text}</p>;
+  return <p className="article-prose-text mb-3 whitespace-pre-line">{text}</p>;
 }

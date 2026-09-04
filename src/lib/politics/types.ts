@@ -34,13 +34,15 @@ export const POLITICS_TYPE_LABEL: Record<PoliticsEntityType, string> = {
 
 export const POLITICS_CATEGORIES: { id: CategoryId; label: string }[] = [
   { id: "all", label: "종합" },
-  ...POLITICS_TYPE_ORDER.map((id) => ({ id, label: POLITICS_TYPE_LABEL[id] })),
+  ...POLITICS_TYPE_ORDER.filter((id) => id !== "headline_news").map((id) => ({
+    id,
+    label: POLITICS_TYPE_LABEL[id],
+  })),
 ];
 
 export const POLITICS_INDEX_META: { id: string; label: string; type?: EntityType; note: string }[] = [
-  { id: "pol-buzz", label: "정치종합", note: "9대 지표 합산" },
+  { id: "pol-buzz", label: "정치종합", note: "지표 합산" },
   { id: "pol-approval", label: "대통령지지도", note: "여론조사 기관 TOP 10 공표" },
-  { id: "pol-headline", label: "헤드라인지수", type: "headline_news", note: "정치 뉴스 노출" },
   { id: "pol-party", label: "정당지수", type: "party_support", note: "정당 언급·지지도" },
   { id: "pol-politician", label: "정치인지수", type: "politician_support", note: "인물 검색·보도" },
   { id: "pol-pundit", label: "평론가지수", type: "political_pundit", note: "평론·시사 버즈" },

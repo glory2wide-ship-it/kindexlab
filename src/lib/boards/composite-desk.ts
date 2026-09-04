@@ -1,5 +1,6 @@
-import { buildHeatmapItems, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
+import { buildHeatmapItems, withoutHeadlineHeatmapItems, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
 import { loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
+import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
 import { itemsForChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 import { attachTimeframeMetrics } from "@/lib/timeframes";
@@ -85,7 +86,11 @@ async function channelHeatmapPool(
   channel: PostChannel,
   market?: RankingsPayload,
 ): Promise<RankingEntity[]> {
-  const live = market ? itemsForChannel(market.items, channel) : [];
+  // Board-driven channels (incl. politics) never surface retired headline tiles.
+  if (channelUsesBoardHeatmap(channel)) {
+    return boardPool(channel);
+  }
+  const live = market ? withoutHeadlineHeatmapItems(itemsForChannel(market.items, channel)) : [];
   if (live.length) return live;
   return boardPool(channel);
 }
@@ -95,7 +100,10 @@ async function channelDeskPool(
   channel: PostChannel,
   market?: RankingsPayload,
 ): Promise<RankingEntity[]> {
-  const live = market ? itemsForChannel(market.items, channel) : [];
+  if (channelUsesBoardHeatmap(channel)) {
+    return boardPool(channel);
+  }
+  const live = market ? withoutHeadlineHeatmapItems(itemsForChannel(market.items, channel)) : [];
   if (live.length) return live;
   return boardPool(channel);
 }

@@ -1,6 +1,6 @@
 import { TYPE_ORDER } from "@/lib/categories";
 import { entityTypeForBoardSlug } from "@/lib/boards/entity-type";
-import { getBoard, menuBoardsForChannel } from "@/lib/boards/registry";
+import { getBoard, isHeadlineNewsBoard, menuBoardsForChannel } from "@/lib/boards/registry";
 import { CHANNEL_ENTITY_TYPES, getPostChannel } from "@/lib/posts/channels";
 import type { CategoryId, EntityType } from "@/lib/types";
 import type { PostChannel } from "@/lib/posts/types";
@@ -15,8 +15,7 @@ export interface ChannelBriefingDesk {
 /** Headlines desks are retired from the rail — never compose 심층분석 for them. */
 export function isHeadlineBriefingDesk(deskId: string | undefined): boolean {
   if (!deskId) return false;
-  if (deskId === "pol-headline") return true;
-  if (/headline-news-ranking$/.test(deskId)) return true;
+  if (isHeadlineNewsBoard(deskId)) return true;
   return getBoard(deskId)?.deskKind === "headlines";
 }
 

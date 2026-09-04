@@ -36,7 +36,8 @@ export async function GET(request: Request) {
 
   const boards = await loadChannelHeatmapPayloads(category);
   let liveItems: RankingEntity[] = [];
-  if (!channelUsesBoardHeatmap(category) || category === "politics") {
+  // Live feed only when the channel is not board-driven (politics now uses boards).
+  if (!channelUsesBoardHeatmap(category)) {
     try {
       const market = await getRankings();
       liveItems = itemsForChannel(market.items, category);
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
     gender,
     age,
     region,
-    preferLive: category === "politics" && !board,
+    preferLive: false,
   }).map(toTileEntity);
   const selected = board ? boards.find((item) => item.slug === board) : undefined;
 

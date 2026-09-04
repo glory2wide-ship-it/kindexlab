@@ -152,12 +152,13 @@ export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
   /** Travel desks are board-seeded; no dedicated ingest entity type yet. */
   travel: [],
   economy: ["economy_board"],
-  politics: [...POLITICS_TYPE_ORDER],
+  politics: POLITICS_TYPE_ORDER.filter((type) => type !== "headline_news"),
 };
 
 export function channelFromEntityType(type: EntityType): PostChannel {
   if (type === "economy_board") return "economy";
   if (type === "culture_board" || CHANNEL_ENTITY_TYPES.culture.includes(type)) return "culture";
+  if (type === "headline_news") return "politics";
   if (isPoliticsEntityType(type)) return "politics";
   return "entertainment";
 }

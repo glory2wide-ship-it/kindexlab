@@ -36,7 +36,7 @@ export function FaqList({ items }: { items: PostFaq[] }) {
           </summary>
           <div className="flex gap-3 border-t border-line px-4 py-3.5">
             <span className="mt-px font-sans text-xs font-bold text-muted">A</span>
-            <p className="flex-1 whitespace-pre-line text-sm leading-7 text-muted">{item.answer}</p>
+            <p className="article-prose-text flex-1 whitespace-pre-line text-muted">{item.answer}</p>
           </div>
         </details>
       ))}

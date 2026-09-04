@@ -1873,12 +1873,19 @@ export function isRailBoard(board: Pick<BoardDefinition, "railHidden">): boolean
   return !board.railHidden;
 }
 
+/** Retired 헤드라인 뉴스랭킹 desks — never feed category rails or 종합 heatmaps. */
+export function isHeadlineNewsBoard(slug: string | undefined | null): boolean {
+  if (!slug) return false;
+  if (slug === "pol-headline") return true;
+  return /headline-news-ranking$/.test(slug);
+}
+
 /** Category rail, 종합 heatmap, and sibling links — hides retired politics tabs and headline desks. */
 export function menuBoardsForChannel(channel: PostChannel): BoardDefinition[] {
   const boards = boardsForChannel(channel)
     .filter(isRailBoard)
     .filter((board) => !isRetiredPoliticsBoard(board.slug))
-    .filter((board) => board.deskKind !== "headlines");
+    .filter((board) => board.deskKind !== "headlines" && !isHeadlineNewsBoard(board.slug));
   if (channel === "entertainment") return sortMenusByOrder(boards, ENTERTAINMENT_MENU_ORDER);
   if (channel === "travel") return sortMenusByOrder(boards, TRAVEL_MENU_ORDER);
   if (channel === "politics") return sortMenusByOrder(boards, POLITICS_MENU_ORDER);

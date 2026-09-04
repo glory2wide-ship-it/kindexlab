@@ -35,6 +35,7 @@ import {
   isCultureGrantBoard,
 } from "@/lib/boards/culture-grants";
 import { entityTypeForBoardSlug } from "@/lib/boards/entity-type";
+import { isHeadlineNewsBoard } from "@/lib/boards/registry";
 import {
   ensureTravelGrantRanking,
   isTravelGrantBoard,
@@ -75,6 +76,27 @@ export interface HeatmapBoardPayload {
 export type HeatmapGender = "all" | GenderSegment;
 export type HeatmapAge = "all" | AgeSegment;
 export type HeatmapRegion = "all" | RegionSegment;
+
+/**
+ * Heatmap tiles that belong to the removed headline-news ranking menu.
+ * Filters by entity type, board slug prefix, and group label.
+ */
+export function isHeadlineHeatmapEntity(
+  entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">,
+): boolean {
+  if (entity.type === "headline_news") return true;
+  const boardSlug = entity.slug.includes("--") ? entity.slug.split("--")[0] : entity.slug;
+  if (isHeadlineNewsBoard(boardSlug)) return true;
+  if (/^(?:pol-)?headline[_-]news(?:-|$)/i.test(entity.slug)) return true;
+  if ((entity.heatmapGroup ?? "").includes("헤드라인")) return true;
+  return false;
+}
+
+export function withoutHeadlineHeatmapItems<
+  T extends Pick<RankingEntity, "type" | "slug" | "heatmapGroup">,
+>(items: T[]): T[] {
+  return items.filter((item) => !isHeadlineHeatmapEntity(item));
+}
 
 function normalizeBoardRanking(def: BoardDefinition, rows: BoardRankEntry[]): BoardRankEntry[] {
   if (def.slug === "political-influencer-power") return ensureInfluencerBoardRanking(rows);
@@ -351,6 +373,7 @@ function interleaveHeatmapPools(pools: RankingEntity[][], limit: number): Rankin
 /**
  * One board's ranking, or a channel composite grouped 1:1 with the board menu.
  * Passing `board: ""` or omitting it builds the composite.
+ * Retired 헤드라인 뉴스랭킹 tiles are always stripped.
  */
 export function buildHeatmapItems({
   boards,
@@ -382,14 +405,21 @@ export function buildHeatmapItems({
       selectHeatmapRows(selected, gender, age, boardLimit, region),
       selected,
     ).slice(0, boardLimit);
-    if (region !== "all" && boardUsesRegionFilter(selected.slug)) {
-      return entities.filter((item) => item.region === region || regionFromName(item.name) === region);
-    }
-    return entities;
+    const scoped =
+      region !== "all" && boardUsesRegionFilter(selected.slug)
+        ? entities.filter((item) => item.region === region || regionFromName(item.name) === region)
+        : entities;
+    return withoutHeadlineHeatmapItems(scoped);
   }
 
-  if (preferLive && liveItems?.length) {
-    return liveItems;
+  const liveClean = withoutHeadlineHeatmapItems(liveItems ?? []);
+  if (preferLive && liveClean.length) {
+    const channel = boards[0]?.channel ?? "politics";
+    return liveClean.slice(0, rankLimitForChannel(channel)).map((entity, index) => ({
+      ...entity,
+      rank: index + 1,
+      previousRank: index + 1,
+    }));
   }
 
   if (boards.length) {
@@ -397,14 +427,21 @@ export function buildHeatmapItems({
     const perBoard = compositePerBoard(channel);
     const pools = boards.map((item) => {
       const rows = selectHeatmapRows(item, gender, age, perBoard, region);
-      return rankRowsToEntities(rows, item).map((entity, index) => ({
-        ...entity,
-        rank: index + 1,
-        previousRank: index + 1,
-        heatmapGroup: item.shortTitle,
-      }));
+      return withoutHeadlineHeatmapItems(
+        rankRowsToEntities(rows, item).map((entity, index) => ({
+          ...entity,
+          rank: index + 1,
+          previousRank: index + 1,
+          heatmapGroup: item.shortTitle,
+        })),
+      );
     });
-    if (channel === "economy" || channel === "culture" || channel === "travel") {
+    if (
+      channel === "economy" ||
+      channel === "culture" ||
+      channel === "travel" ||
+      channel === "politics"
+    ) {
       const limit = rankLimitForChannel(channel);
       return interleaveHeatmapPools(pools, limit).map((entity, index) => ({
         ...entity,
@@ -412,10 +449,10 @@ export function buildHeatmapItems({
         previousRank: index + 1,
       }));
     }
-    return pools.flat();
+    return withoutHeadlineHeatmapItems(pools.flat());
   }
 
-  return liveItems ?? [];
+  return liveClean;
 }
 
 export function heatmapBoardTitle(

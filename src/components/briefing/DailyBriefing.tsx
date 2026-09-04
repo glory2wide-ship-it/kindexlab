@@ -59,7 +59,9 @@ export function DailyBriefing({
       <h1 className="mt-2 max-w-3xl text-2xl font-semibold tracking-tight md:text-3xl">
         {briefing.title}
       </h1>
-      <p className="mt-3 max-w-3xl whitespace-pre-line text-sm leading-6 text-muted">{briefing.excerpt}</p>
+      <p className="article-prose article-prose-lead mt-3 max-w-3xl whitespace-pre-line text-muted">
+        {briefing.excerpt}
+      </p>
       <p className="mt-4 font-mono text-[11px] text-muted">
         {briefing.editionDate} · {categoryLabel(briefing.category)}
       </p>
@@ -85,7 +87,7 @@ export function DailyBriefing({
         </Link>
       </nav>
 
-      <div className="prose-board mt-8 max-w-3xl space-y-8">
+      <div className="article-prose prose-board mt-8 max-w-3xl space-y-8">
         {(tapeSections.length ? tapeSections : briefing.sections.slice(0, 1)).map((section, index) => {
           const minor = section.headingLevel === 3;
           return (
@@ -98,7 +100,7 @@ export function DailyBriefing({
               {section.paragraphs.map((paragraph, paragraphIndex) => (
                 <p
                   key={`tape-${index}-${paragraphIndex}`}
-                  className="mb-4 whitespace-pre-line text-[15px] leading-8 text-ink/90"
+                  className="article-prose-text mb-4 whitespace-pre-line text-ink/90"
                 >
                   {paragraph}
                 </p>
@@ -126,7 +128,7 @@ export function DailyBriefing({
                 {section.paragraphs.map((paragraph, paragraphIndex) => (
                   <p
                     key={`${index}-${paragraphIndex}`}
-                    className="mb-4 whitespace-pre-line text-[15px] leading-8 text-ink/90"
+                    className="article-prose-text mb-4 whitespace-pre-line text-ink/90"
                   >
                     {paragraph}
                   </p>
@@ -140,7 +142,7 @@ export function DailyBriefing({
         {briefing.externalLink || internalLink ? (
           <section aria-labelledby="briefing-cross-links">
             <SectionHeading as="h2">교차 확인 자료</SectionHeading>
-            <ul className="space-y-3 text-sm leading-7">
+            <ul className="space-y-3">
               {briefing.externalLink ? (
                 <li>
                   <a
@@ -178,7 +180,7 @@ export function DailyBriefing({
                   <SectionHeading as="h3" tone="minor">
                     {item.question}
                   </SectionHeading>
-                  <p className="whitespace-pre-line text-[15px] leading-8 text-ink/90">{item.answer}</p>
+                  <p className="article-prose-text whitespace-pre-line text-ink/90">{item.answer}</p>
                 </div>
               ))}
             </div>

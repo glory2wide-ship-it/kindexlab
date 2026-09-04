@@ -55,7 +55,8 @@ export function channelUsesBoardHeatmap(channel: PostChannel): boolean {
     channel === "economy" ||
     channel === "culture" ||
     channel === "travel" ||
-    channel === "entertainment"
+    channel === "entertainment" ||
+    channel === "politics"
   );
 }
 

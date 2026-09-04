@@ -83,10 +83,12 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
         {channel.eyebrow} · Magazine
       </DeskEyebrow>
       <h1 className="max-w-3xl text-2xl font-semibold tracking-tight md:text-3xl">{post.title}</h1>
-      <p className="max-w-3xl whitespace-pre-line text-sm leading-6 text-muted">{post.excerpt}</p>
+      <p className="article-prose article-prose-lead max-w-3xl whitespace-pre-line text-muted">
+        {post.excerpt}
+      </p>
       <p className="font-mono text-[11px] text-muted">{post.editionDate} · 키워드 기반 이슈 칼럼</p>
 
-      <div className="prose-board mt-4 max-w-3xl">
+      <div className="article-prose prose-board mt-4 max-w-3xl">
         {/* Fact table first: with the stock cover gone it opens the body and
             doubles as the summary for a reader who only scans. */}
         {post.table ? <FactTable table={post.table} /> : null}
@@ -97,7 +99,7 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
             {section.paragraphs.map((paragraph, paragraphIndex) => (
               <p
                 key={`tape-${index}-${paragraphIndex}`}
-                className="mb-3 whitespace-pre-line text-sm leading-7 text-ink"
+                className="article-prose-text mb-3 whitespace-pre-line text-ink"
               >
                 {paragraph}
               </p>
@@ -118,7 +120,7 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
                 {section.paragraphs.map((paragraph, paragraphIndex) => (
                   <p
                     key={`${index}-${paragraphIndex}`}
-                    className="mb-3 whitespace-pre-line text-sm leading-7 text-ink"
+                    className="article-prose-text mb-3 whitespace-pre-line text-ink"
                   >
                     {paragraph}
                   </p>
@@ -132,7 +134,7 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
         {post.externalLink || post.internalLink || citations.length ? (
           <section>
             <SectionHeading as="h2">교차 확인 자료</SectionHeading>
-            <div className="space-y-2 text-sm leading-7">
+            <div className="space-y-2">
               {post.externalLink ? (
                 <p>
                   외부 자료:{" "}
@@ -159,7 +161,7 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
                 the same list the writer worked from. Publisher names alone are
                 not checkable, which is why entries without a URL are dropped. */}
             {citations.length ? (
-              <ul className="mt-3 space-y-1 text-sm leading-7">
+              <ul className="mt-3 space-y-1">
                 {citations.map((source) => (
                   <li key={source.id}>
                     <a

@@ -101,10 +101,7 @@ async function loadLiveItems(channel: PostChannel): Promise<RankingEntity[]> {
  */
 export async function collectHeatmapTopics(channel: PostChannel): Promise<HeatmapTopicPool> {
   const boards = await loadChannelHeatmapPayloads(channel);
-  const liveItems =
-    !channelUsesBoardHeatmap(channel) || channel === "politics"
-      ? await loadLiveItems(channel)
-      : [];
+  const liveItems = !channelUsesBoardHeatmap(channel) ? await loadLiveItems(channel) : [];
 
   const compositeRaw = buildHeatmapItems({
     boards,
@@ -112,7 +109,7 @@ export async function collectHeatmapTopics(channel: PostChannel): Promise<Heatma
     gender: "all",
     age: "all",
     region: "all",
-    preferLive: channel === "politics",
+    preferLive: false,
   });
   const composite = rankHeatmapSlice(compositeRaw, channel);
 

@@ -319,3 +319,29 @@ nav[aria-label$="서브 메뉴"] {
   font-family: var(--font-gothic) !important;
 }
 
+/**
+ * Shared body typography for 일일 브리핑 · 심층분석 · 이슈칼럼 · 오늘의 분석.
+ * Cumulative vs original 15px / leading-8 (2rem):
+ *   size ×1.05 ×1.04 → 16.38px
+ *   leading ×0.9 ×0.91 → 1.638rem
+ * Future articles inherit via shared article components.
+ */
+:root {
+  --article-font-size: 16.38px;
+  --article-line-height: 1.638rem;
+}
+
+.article-prose {
+  font-size: var(--article-font-size);
+  line-height: var(--article-line-height);
+}
+
+.article-prose p,
+.article-prose li,
+.article-prose-text,
+.article-prose-lead {
+  font-size: var(--article-font-size);
+  line-height: var(--article-line-height);
+}
+
+
