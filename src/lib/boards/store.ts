@@ -2,6 +2,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { AGE_SEGMENTS, applyDemographicWeights, dedupeSegments, isUnusableRankName } from "@/lib/boards/demographics";
 import { rankLimitForBoard, segmentLimitForBoard } from "@/lib/boards/limits";
+import { canonicalizeGameEsportsName } from "@/lib/boards/game-platforms";
 import { getBoard } from "@/lib/boards/registry";
 import { boardUsesRegionFilter, ensureFoodRestaurantRanking, ensureHousingApartmentRanking, HOUSING_BOARD_SLUG } from "@/lib/boards/regions";
 import type { BoardRankEntry, CachedBoard, DemographicRanking } from "@/lib/boards/types";
@@ -39,6 +40,19 @@ function enforceScoreOrder(rows: BoardRankEntry[]): BoardRankEntry[] {
   });
 }
 
+function sanitizeBoardRows(rows: BoardRankEntry[], slug: string): BoardRankEntry[] {
+  if (slug !== "game-esports-ranking") return rows;
+  const seen = new Set<string>();
+  const out: BoardRankEntry[] = [];
+  for (const row of rows) {
+    const name = canonicalizeGameEsportsName(row.name ?? "");
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    out.push({ ...row, name });
+  }
+  return out;
+}
+
 /** Maps 70s_plus → 70s and folds legacy 1,000-point scores down to 100. */
 export function normalizeCachedBoard(entry: CachedBoard): CachedBoard {
   const def = getBoard(entry.slug);
@@ -47,7 +61,12 @@ export function normalizeCachedBoard(entry: CachedBoard): CachedBoard {
   if (ageIn && !(ageIn["70s"]?.length) && ageIn["70s_plus"]?.length) {
     age["70s"] = ageIn["70s_plus"];
   }
-  const cleaned = scaleList((entry.ranking ?? []).filter((row) => !isUnusableRankName(row.name ?? "")));
+  const cleaned = scaleList(
+    sanitizeBoardRows(
+      (entry.ranking ?? []).filter((row) => !isUnusableRankName(row.name ?? "")),
+      entry.slug,
+    ),
+  );
   const ranking = padRankingFromSeeds(cleaned, entry.slug);
   const segmentLimit = def ? segmentLimitForBoard(def) : 5;
   const { value: deduped } = dedupeSegments(
@@ -88,7 +107,7 @@ function padRankingFromSeeds(ranking: BoardRankEntry[], slug: string): BoardRank
   if (slug === "governor-approval-index") {
     return enforceScoreOrder(ensureLocalPolicyRanking(ranking).slice(0, limit));
   }
-  if (slug === "government-support-fund" || slug === "government-subsidy-search") {
+  if (slug === "government-support-fund" || slug === "government-subsidy-search" || slug === "entertainment-government-grant-ranking") {
     return enforceScoreOrder(ensureSubsidyRanking(ranking).slice(0, limit));
   }
   if (isCultureGrantBoard(slug)) {
@@ -104,7 +123,7 @@ function padRankingFromSeeds(ranking: BoardRankEntry[], slug: string): BoardRank
     return enforceScoreOrder(ensureHousingApartmentRanking(ranking, limit));
   }
   if (boardUsesRegionFilter(slug)) {
-    return enforceScoreOrder(ensureFoodRestaurantRanking(ranking, def.seeds).slice(0, limit));
+    return enforceScoreOrder(ensureFoodRestaurantRanking(ranking, def.seeds, slug).slice(0, limit));
   }
   const seen = new Set(ranking.map((row) => row.name));
   const extra: BoardRankEntry[] = [];

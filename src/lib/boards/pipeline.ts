@@ -6,6 +6,7 @@ import { writeBoardReport } from "@/lib/boards/chain/report";
 import { polishBoardReport } from "@/lib/boards/chain/polish";
 import { buildBoardPump } from "@/lib/boards/chain/pump";
 import { BOARDS, boardPath, getBoard, isDeskBoard } from "@/lib/boards/registry";
+import { EXHIBITION_BOARD_SLUG, PERFORMANCE_BOARD_SLUG } from "@/lib/boards/region-catalogs";
 import { buildSampleBoard } from "@/lib/boards/seed";
 import {
   boardTtlHours,
@@ -14,6 +15,13 @@ import {
   writeBoard,
 } from "@/lib/boards/store";
 import type { BoardDefinition, BoardProvenance, CachedBoard } from "@/lib/boards/types";
+import {
+  fetchTicketSources,
+  pickExhibitionTicketRows,
+  pickPerformanceTicketRows,
+  ticketRowsToBoardSeeds,
+  ticketRowsToNewsLines,
+} from "@/lib/ingestion/sources/tickets";
 import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
 import type { NewsDoc } from "@/lib/news/types";
 import { SITE } from "@/lib/site";
@@ -103,12 +111,45 @@ async function generate(board: BoardDefinition, editionDate: string): Promise<Ca
   const previous = await readBoard(board.slug);
   const enabled = pipelineEnabled() && llmConfigured();
 
+  let ticketChartLines: string[] = [];
+  let ticketSeeds: string[] = [];
+  if (board.slug === PERFORMANCE_BOARD_SLUG || board.slug === EXHIBITION_BOARD_SLUG) {
+    try {
+      const ticketSources = await fetchTicketSources();
+      const ticketRows =
+        board.slug === PERFORMANCE_BOARD_SLUG
+          ? pickPerformanceTicketRows(ticketSources)
+          : pickExhibitionTicketRows(ticketSources);
+      ticketChartLines = ticketRowsToNewsLines(
+        ticketRows,
+        board.slug === PERFORMANCE_BOARD_SLUG ? "공연 티켓몰" : "전시 티켓몰",
+      );
+      ticketSeeds = ticketRowsToBoardSeeds(ticketRows);
+      logger.step("board:tickets", {
+        ok: ticketSources.filter((source) => source.ok).map((source) => source.id).join(",") || "none",
+        rows: ticketRows.length,
+      });
+      console.log(
+        `[rebuild:tickets] board=${board.slug} rows=${ticketRows.length} sources=${ticketSources
+          .filter((source) => source.ok)
+          .map((source) => source.id)
+          .join(",")}`,
+      );
+    } catch (error) {
+      logger.warn("board:tickets-failed", {
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  }
+
   const ranked = await rankBoard({
     board,
     docs,
     logger,
     timeoutMs: Math.min(45_000, Math.max(10_000, remaining())),
     previousRanking: previous?.ranking,
+    ticketChartLines,
+    ticketSeeds,
   });
 
   const { report: drafted, fromLlm } = await writeBoardReport({

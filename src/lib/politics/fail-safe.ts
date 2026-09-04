@@ -3,7 +3,7 @@ import type { BoardRankEntry } from "@/lib/boards/types";
 import { influencerSeedNames, matchPoliticsYoutubeSeed } from "@/lib/politics/youtube-seeds";
 import type { RankingEntity } from "@/lib/types";
 
-const TOP_N = 10;
+const TOP_N = 20;
 
 function isDeadScore(value: number | null | undefined): boolean {
   return !Number.isFinite(value) || (value as number) <= 0;

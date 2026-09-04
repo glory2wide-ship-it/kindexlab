@@ -5,7 +5,7 @@ import { DemographicTabs } from "@/components/boards/DemographicTabs";
 import { BoardReportBody } from "@/components/boards/BoardReportBody";
 import { clampAgeForBoard } from "@/lib/boards/age-tabs";
 import { filterKey, filterLabel, selectRanking, dropNamesForFilter } from "@/lib/boards/demographics";
-import { platformForGame, formatPlatformTag } from "@/lib/boards/game-platforms";
+import { canonicalizeGameEsportsName, platformForGame, formatPlatformTag } from "@/lib/boards/game-platforms";
 import { getBoard } from "@/lib/boards/registry";
 import { isCultureGrantBoard } from "@/lib/boards/culture-grants";
 import { boardUsesRegionFilter } from "@/lib/boards/regions";
@@ -41,14 +41,18 @@ function RankRow({
   const score = Number.isFinite(entry.score) ? entry.score : 0;
   const change = Number.isFinite(entry.changeRate) ? entry.changeRate : 0;
   const width = max > 0 ? Math.max(6, Math.round((score / max) * 100)) : 0;
-  const platform = boardSlug === "game-esports-ranking" ? platformForGame(entry.name) : undefined;
+  const displayName =
+    boardSlug === "game-esports-ranking"
+      ? canonicalizeGameEsportsName(entry.name || "")
+      : entry.name || "";
+  const platform = boardSlug === "game-esports-ranking" ? platformForGame(displayName) : undefined;
   const detailHref =
-    boardSlug && entry.name
-      ? entityHref({ slug: boardRowSlug(boardSlug, entry.name), name: entry.name })
+    boardSlug && displayName
+      ? entityHref({ slug: boardRowSlug(boardSlug, displayName), name: displayName })
       : null;
   const bracket =
     boardUsesRegionFilter(boardSlug) || isCultureGrantBoard(boardSlug)
-      ? parseBracketLabel(entry.name)
+      ? parseBracketLabel(displayName)
       : null;
 
   return (
@@ -72,7 +76,7 @@ function RankRow({
                   <span className="text-xs font-normal text-muted">{bracket.org}</span>
                 </span>
               ) : (
-                entry.name || "집계 중"
+                displayName || "집계 중"
               )}
             </a>
           ) : bracket ? (
@@ -81,7 +85,7 @@ function RankRow({
               <span className="text-xs font-normal text-muted">{bracket.org}</span>
             </span>
           ) : (
-            entry.name || "집계 중"
+            displayName || "집계 중"
           )}
         </p>
         <p className="mt-0.5 truncate text-xs text-muted">

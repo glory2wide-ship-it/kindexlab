@@ -520,11 +520,62 @@ export function ensureHousingApartmentRanking(
     });
 }
 
+function subjectOf(name: string): string {
+  return (parseBracketLabel(name)?.subject ?? name).trim();
+}
+
+/**
+ * 공연·전시 보드에서 공연장/미술관/몰 등 행사장명만 단독으로 올린 항목을 걸러낸다.
+ * 공연명·행사명이면 false.
+ */
+export function isCultureEventVenueOnly(name: string, slug?: string): boolean {
+  if (!slug || (slug !== PERFORMANCE_BOARD_SLUG && slug !== EXHIBITION_BOARD_SLUG)) return false;
+  const subject = subjectOf(name);
+  if (!subject) return true;
+  const compact = subject.replace(/\s+/g, "");
+
+  if (slug === PERFORMANCE_BOARD_SLUG) {
+    if (
+      /뮤지컬|콘서트|연극|오페라|발레|음악회|연주회|페스티벌|록페|리사이틀|갈라|쇼케이스|투어|팬미팅|창작극|창극|국악|판소리|무용단|합창단|시향|필하모닉|오케스트라|마임|한마당/.test(
+        subject,
+      )
+    ) {
+      return false;
+    }
+    return /예술의전당|문화회관|아트센터|콘서트하우스|오페라하우스|시어터|극장|연정국악원|야외극장|문화예술회관|시민문화관|학생문화센터|문화관광재단|트라이보울|드림씨어터|아람누리|치악예술관|소리문화의전당|한벽문화관|아트피아|탐라문화광장|제주아트센터|문화재단|영화의전당|나성동공연|^공연$/.test(
+      compact,
+    );
+  }
+
+  if (
+    /특별전|기획전|몰입|인사이드|체험전|팝업스토어|팝업전|미디어아트|비엔날레|트리엔날레|아트페어|일러스트|컬렉션|展|전시회|페어|페스티벌/.test(
+      subject,
+    )
+  ) {
+    if (/^(성수|해운대|동성로|판교|둔산|오송|천안|전주|나성|구미|송도|광교)\s*팝업(스토어)?$/.test(subject)) {
+      return true;
+    }
+    return false;
+  }
+
+  return (
+    /미술관$|박물관$|아트플랫폼|도서관전시|문화예술회관전시|클레이아크|기당미술관|아르떼뮤지엄|예술발전소|솔거미술관|시립미술관|도립미술관|문신미술관/.test(
+      compact,
+    ) ||
+    /^(성수|해운대|동성로|판교|둔산|오송|천안|전주|나성|구미|송도|광교|춘천|태화강)\s*(팝업|전시|팝업스토어)$/.test(
+      subject,
+    ) ||
+    (/팝업스토어$/.test(subject) && subject.replace(/\s+/g, "").length <= 8)
+  );
+}
+
 export function ensureFoodRestaurantRanking(
   rows: BoardRankEntry[],
   seeds: readonly string[] = [],
+  slug?: string,
 ): BoardRankEntry[] {
-  const tagged = rows.map((row) => tagRegionOnRow(row, seeds));
+  const usable = (name: string) => !isCultureEventVenueOnly(name, slug);
+  const tagged = rows.filter((row) => usable(row.name)).map((row) => tagRegionOnRow(row, seeds));
   const unique: BoardRankEntry[] = [];
   const seen = new Set<string>();
   for (const row of tagged) {
@@ -534,6 +585,7 @@ export function ensureFoodRestaurantRanking(
     unique.push(row);
   }
   for (const seed of seeds) {
+    if (!usable(seed)) continue;
     const key = normalizeName(seed);
     if (!key || seen.has(key)) continue;
     seen.add(key);

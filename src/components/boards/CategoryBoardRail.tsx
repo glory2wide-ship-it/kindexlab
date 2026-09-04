@@ -15,7 +15,7 @@ import type { PostChannel } from "@/lib/posts/types";
 /**
  * Ranking-board tabs. When `onSelect` is passed, clicks filter the heatmap
  * below instead of navigating away. "상세" still opens the full board page.
- * Culture inserts 종합 first, then 헤드라인 뉴스랭킹, then 문화·여행·레져 정부 지원금.
+ * Culture/politics/entertainment/travel: 종합 → 헤드라인 → 정부 지원금 …
  */
 export function CategoryBoardRail({
   channel,

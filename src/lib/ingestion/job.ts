@@ -10,6 +10,7 @@ import { fetchMovieSources } from "@/lib/ingestion/sources/movies";
 import { fetchShortsSources } from "@/lib/ingestion/sources/shorts";
 import { fetchPoliticsSources } from "@/lib/ingestion/sources/politics";
 import { fetchPoliticsYoutubeSources } from "@/lib/ingestion/sources/youtube-politics";
+import { fetchTicketSources } from "@/lib/ingestion/sources/tickets";
 import { fetchWebtoonSources } from "@/lib/ingestion/sources/webtoon";
 import type { IngestReport, IngestSnapshot } from "@/lib/ingestion/types";
 import type { RankingsPayload } from "@/lib/types";
@@ -50,7 +51,7 @@ export async function ingestLivePayload(options?: {
   previous?: IngestSnapshot;
 }): Promise<IngestReport> {
   const previous = options?.previous ?? readPersistedSnapshot();
-  const [music, movies, broadcast, buzz, webtoon, shorts, games, politics, politicsYoutube] =
+  const [music, movies, broadcast, buzz, webtoon, shorts, games, politics, politicsYoutube, tickets] =
     await Promise.all([
       fetchMusicSources(),
       fetchMovieSources(),
@@ -61,6 +62,7 @@ export async function ingestLivePayload(options?: {
       fetchGameSources(),
       fetchPoliticsSources(),
       fetchPoliticsYoutubeSources(),
+      fetchTicketSources(),
     ]);
   const sources = [
     ...music,
@@ -72,6 +74,7 @@ export async function ingestLivePayload(options?: {
     ...games,
     ...politics,
     ...politicsYoutube,
+    ...tickets,
   ];
   const composed = await composeLiveSnapshot(sources, previous);
   const updatedAt = new Date().toISOString();

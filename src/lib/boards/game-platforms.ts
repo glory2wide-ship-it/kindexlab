@@ -29,7 +29,8 @@ const GAME_PLATFORM_BY_NAME: Record<string, GamePlatformTag> = {
   원신: "모바일/PC/콘솔",
   젠지: "PC",
   t1: "PC",
-  한화생명: "PC",
+  한화생명e스포츠: "PC",
+  hle: "PC",
   스팀대작: "PC",
   던전앤파이터: "PC",
   로스트아크: "PC",
@@ -68,8 +69,28 @@ function normalizeGameName(name: string): string {
     .replace(/[()[\]{}]/g, "");
 }
 
+/**
+ * Bare "한화생명" is the insurer ticker; the LCK org must read as 한화생명e스포츠 / HLE.
+ */
+export function canonicalizeGameEsportsName(name: string): string {
+  const trimmed = name.trim();
+  const key = normalizeGameName(trimmed);
+  if (
+    key === "한화생명" ||
+    key === "hanwhalife" ||
+    key === "hanwhalifeinsurance" ||
+    /^한화생명보험/.test(key)
+  ) {
+    return "한화생명e스포츠";
+  }
+  if (key === "hle" || key === "hanwhalifeesports" || key === "한화생명esports") {
+    return "한화생명e스포츠";
+  }
+  return trimmed;
+}
+
 function classifyGamePlatform(name: string): GamePlatformTag {
-  const key = normalizeGameName(name);
+  const key = normalizeGameName(canonicalizeGameEsportsName(name));
   if (GAME_PLATFORM_BY_NAME[key]) return GAME_PLATFORM_BY_NAME[key];
 
   for (const [seed, tag] of Object.entries(GAME_PLATFORM_BY_NAME)) {
@@ -78,7 +99,7 @@ function classifyGamePlatform(name: string): GamePlatformTag {
 
   if (/리니지m|쿠키런|브롤|모바일|로얄|오딘|명일방주|우마무스메/.test(key)) return "모바일";
   if (/젤다|동물의숲|닌텐도|스위치|플스|ps5|스플래툰|마리오/.test(key)) return "콘솔";
-  if (/t1|젠지|한화|lck|e스포츠|esports/.test(key)) return "PC";
+  if (/t1|젠지|한화생명e스포츠|hle|lck|e스포츠|esports/.test(key)) return "PC";
   return "PC";
 }
 
@@ -98,8 +119,12 @@ export function entityPlatform(entity: Pick<RankingEntity, "name" | "platform" |
 }
 
 export function formatEntityName(entity: Pick<RankingEntity, "name" | "platform" | "slug" | "heatmapGroup">): string {
-  const platform = entityPlatform(entity);
-  return platform ? `[${platform}] ${entity.name}` : entity.name;
+  const name =
+    entity.slug?.startsWith("game-esports-ranking") || entity.heatmapGroup === "게임 e스포츠"
+      ? canonicalizeGameEsportsName(entity.name)
+      : entity.name;
+  const platform = entityPlatform({ ...entity, name });
+  return platform ? `[${platform}] ${name}` : name;
 }
 
 export function formatPlatformTag(platform: string): string {

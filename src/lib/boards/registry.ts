@@ -15,6 +15,7 @@ import {
   TRAVEL_GRANT_SLUG,
   TRAVEL_GRANT_TITLE,
 } from "@/lib/boards/travel-grants";
+import { ENT_GRANT_SLUG, ENT_GRANT_TITLE } from "@/lib/boards/entertainment-grants";
 import { regionalSeeds } from "@/lib/boards/regions";
 import {
   EXHIBITION_BOARD_SLUG,
@@ -412,15 +413,36 @@ export const BOARDS: BoardDefinition[] = [
     channel: "culture",
     title: "공연 랭킹",
     shortTitle: "공연 랭킹",
-    criteria: "연극·뮤지컬·콘서트·클래식의 예매·검색·티켓 파워와 공연 뉴스 화제성",
+    criteria: "연극·뮤지컬·콘서트·클래식의 NOL 인터파크·예스24·티켓링크·KOPIS 예매 순위와 검색·공연 뉴스 화제성",
     affiliateCategory: "오페라글라스 · 카메라",
-    queries: ["뮤지컬 예매 순위", "콘서트 티켓팅", "연극 인기 공연", "클래식 콘서트"],
+    queries: [
+      "뮤지컬 예매 순위",
+      "콘서트 티켓팅",
+      "인터파크 티켓 랭킹",
+      "예스24 공연 랭킹",
+      "연극 인기 공연",
+    ],
     focusKeyword: "공연 랭킹",
     supportKeyword: "티켓 파워",
     rankGuidance:
-      "종목명은 반드시 `[지역] 공연/공연장` 형식이다. 지역은 서울·경기·인천·부산·대구·광주·대전·울산·세종·강원·충북·충남·전북·전남·경북·경남·제주 중 하나다.",
+      "종목명은 반드시 `[지역] 공연명` 형식이다. 뮤지컬·연극·콘서트·오페라·발레·클래식 등 실제 공연/작품 제목만 쓴다. NOL 인터파크·예스24·티켓링크 예매 순위를 최우선으로 반영하라. 예술의전당·문화회관·아트센터 같은 공연장명만 단독으로 올리지 마라. 지역은 서울·경기·인천·부산·대구·광주·대전·울산·세종·강원·충북·충남·전북·전남·경북·경남·제주 중 하나다. 지역 탭마다 해당 지역 공연명 20개를 채운다.",
     seeds: regionalSeeds(PERFORMANCE_BOARD_SLUG),
     unitLabel: "공연",
+  },
+  {
+    id: "trv-h",
+    slug: "travel-headline-news-ranking",
+    channel: "travel",
+    deskKind: "headlines",
+    title: "헤드라인 뉴스 랭킹",
+    shortTitle: "헤드라인 뉴스랭킹",
+    criteria: "네이버·다음 여행·맛집·레저·생활문화 섹션 기사만 수집한 실시간 열독·급상승 순위",
+    affiliateCategory: "국내 숙박 · 나들이",
+    queries: ["여행 뉴스 헤드라인", "맛집 레저 생활 뉴스"],
+    focusKeyword: "헤드라인 뉴스",
+    supportKeyword: "여행 열독",
+    seeds: ["여행", "맛집", "나들이", "숙소", "항공"],
+    unitLabel: "기사",
   },
   {
     id: "cul-dom",
@@ -532,13 +554,19 @@ export const BOARDS: BoardDefinition[] = [
     channel: "culture",
     title: "전시·팝업스토어",
     shortTitle: "전시·팝업스토어",
-    criteria: "미술관·몰입형 전시·브랜드 팝업의 예약·오픈런·SNS 언급량",
+    criteria: "미술관·몰입형 전시·브랜드 팝업의 NOL 인터파크 전시/행사 예매 순위와 예약·오픈런·SNS 언급량",
     affiliateCategory: "삼각대 · 보조배터리",
-    queries: ["서울 전시회 추천", "성수 팝업스토어", "몰입형 전시", "더현대 팝업"],
+    queries: [
+      "서울 전시회 추천",
+      "인터파크 전시 랭킹",
+      "성수 팝업스토어",
+      "몰입형 전시",
+      "더현대 팝업",
+    ],
     focusKeyword: "전시 팝업",
     supportKeyword: "오픈런",
     rankGuidance:
-      "종목명은 반드시 `[지역] 전시/팝업` 형식이다. 지역은 서울·경기·인천·부산·대구·광주·대전·울산·세종·강원·충북·충남·전북·전남·경북·경남·제주 중 하나다.",
+      "종목명은 반드시 `[지역] 전시/팝업 행사명` 형식이다. 특별전·기획전·몰입전·팝업스토어 등 실제 행사 제목만 쓴다. NOL 인터파크 전시/행사 예매 순위를 최우선으로 반영하라. 미술관·박물관·몰 이름만 단독으로 올리지 마라. 지역은 서울·경기·인천·부산·대구·광주·대전·울산·세종·강원·충북·충남·전북·전남·경북·경남·제주 중 하나다. 지역 탭마다 해당 지역 행사명 20개를 채운다.",
     seeds: regionalSeeds(EXHIBITION_BOARD_SLUG),
     unitLabel: "전시",
   },
@@ -941,9 +969,21 @@ export const BOARDS: BoardDefinition[] = [
       "펜앤드마이크",
       "매불쇼",
       "이봉규TV",
+      "고성국TV",
+      "황희두TV",
+      "열린공감TV",
+      "장성민의 시사탱크",
+      "전원책TV",
+      "뉴스타파",
+      "오마이뉴스TV",
+      "민중의소리",
+      "시사타파",
+      "여의도스토리",
+      "정치인 숏츠",
+      "시사 클립",
     ],
     rankGuidance:
-      "유튜브 대형 시사 채널은 뉴스/미디어로 분류돼도 반드시 포함한다. '김어준의 겸손은 힘들다 뉴스공장'은 1위권 고정 후보이며 이름을 줄이거나 빼지 마라.",
+      "유튜브 대형 시사 채널은 뉴스/미디어로 분류돼도 반드시 포함한다. '김어준의 겸손은 힘들다 뉴스공장'은 1위권 고정 후보이며 이름을 줄이거나 빼지 마라. 히트맵은 20위까지 채운다.",
     unitLabel: "채널",
   },
   {
@@ -973,7 +1013,28 @@ export const BOARDS: BoardDefinition[] = [
     queries: ["부동산 정책 논란", "세금 개편", "연금 개혁 반발"],
     focusKeyword: "이슈 키워드",
     supportKeyword: "정책 논란",
-    seeds: ["종합부동산세", "연금개혁", "상속세", "의대 정원", "전세제도"],
+    seeds: [
+      "종합부동산세",
+      "연금개혁",
+      "상속세",
+      "의대 정원",
+      "전세제도",
+      "금투세",
+      "양도소득세",
+      "법인세",
+      "최저임금",
+      "주 4.5일제",
+      "노란봉투법",
+      "검찰개혁",
+      "공수처",
+      "중대재해처벌법",
+      "탄소중립",
+      "원전정책",
+      "기본소득",
+      "청년도약계좌",
+      "대선",
+      "특검",
+    ],
     unitLabel: "키워드",
   },
   {
@@ -1052,6 +1113,22 @@ export const BOARDS: BoardDefinition[] = [
     supportKeyword: "연예 열독",
     seeds: ["아이돌", "드라마", "예능", "컴백", "시상식"],
     unitLabel: "기사",
+  },
+  {
+    id: "ent-grant",
+    slug: ENT_GRANT_SLUG,
+    channel: "entertainment",
+    title: ENT_GRANT_TITLE,
+    shortTitle: ENT_GRANT_TITLE,
+    criteria: "중앙부처·공공기관 주관 지원금·혜택 사업의 검색·신청 관심도",
+    affiliateCategory: "생필품 핫딜",
+    queries: ["청년도약계좌", "문화누리카드", "근로장려금", "부모급여", "정부 지원금 신청"],
+    focusKeyword: "정부 지원금",
+    supportKeyword: "지원 사업",
+    seeds: [...SUBSIDY_SEEDS],
+    rankGuidance:
+      "이름은 반드시 '[소관 기관] 사업명' 형식이다. 예: [금융위원회] 청년도약계좌, [중소벤처기업부] 소상공인 전기요금 지원.",
+    unitLabel: "사업",
   },
   {
     id: "ent-2",
@@ -1388,7 +1465,7 @@ export const BOARDS: BoardDefinition[] = [
       "원신",
       "젠지",
       "T1",
-      "한화생명",
+      "한화생명e스포츠",
       "스팀 대작",
       "던전앤파이터",
       "로스트아크",
@@ -1408,7 +1485,7 @@ export const BOARDS: BoardDefinition[] = [
     ],
     unitLabel: "게임",
     rankGuidance:
-      "10대는 로블록스·브롤스타즈·마인크래프트, 20~30대는 LOL·발로란트·배그, 40대 이상은 FC온라인·스타크래프트 향수를 반영하라. 실제 게임/팀명만 사용하라.",
+      "10대는 로블록스·브롤스타즈·마인크래프트, 20~30대는 LOL·발로란트·배그, 40대 이상은 FC온라인·스타크래프트 향수를 반영하라. 실제 게임/팀명만 사용하라. LCK 팀은 T1·젠지·한화생명e스포츠처럼 팀 정식명을 쓰고, 보험사명 '한화생명'만 단독으로 쓰지 마라.",
     demographicSeeds: {
       age: {
         "10s": ["로블록스", "마인크래프트", "브롤스타즈", "쿠키런", "포켓몬 유나이트", "원신"],
@@ -1681,30 +1758,32 @@ export function getBoard(slug: string): BoardDefinition | undefined {
   return BY_SLUG.get(resolveBoardSlug(slug));
 }
 
-/** Travel/food rail — keep 여행 정부지원금 between outing and food. */
+/** Travel/food rail — 헤드라인 다음 여행 정부지원금. */
 const TRAVEL_MENU_ORDER = [
+  "travel-headline-news-ranking",
+  TRAVEL_GRANT_SLUG,
   "domestic-travel-ranking",
   "overseas-travel-ranking",
   "weekend-outing-ranking",
-  TRAVEL_GRANT_SLUG,
   "food-restaurant-ranking",
 ] as const;
 
-function sortTravelMenus(boards: BoardDefinition[]): BoardDefinition[] {
-  const rank = new Map(TRAVEL_MENU_ORDER.map((slug, index) => [slug, index]));
-  return [...boards].sort((a, b) => {
-    const left = rank.get(a.slug as (typeof TRAVEL_MENU_ORDER)[number]);
-    const right = rank.get(b.slug as (typeof TRAVEL_MENU_ORDER)[number]);
-    if (left == null && right == null) return a.slug.localeCompare(b.slug);
-    if (left == null) return 1;
-    if (right == null) return -1;
-    return left - right;
-  });
-}
+/** Politics rail — 헤드라인 다음 정부 지원금. */
+const POLITICS_MENU_ORDER = [
+  "headline-news-ranking",
+  "government-support-fund",
+  "party-support-chart",
+  "politician-support-chart",
+  "governor-approval-index",
+  "political-influencer-power",
+  "political-pundit-ranking",
+  "policy-controversy-index",
+] as const;
 
-/** Entertainment rail order: 음원 sits right of 시청률; 게임 e스포츠 sits right of 웹툰. */
+/** Entertainment rail — 헤드라인 다음 정부 지원금; 음원 sits right of 시청률. */
 const ENTERTAINMENT_MENU_ORDER = [
   "ent-headline-news-ranking",
+  ENT_GRANT_SLUG,
   "kpop-fandom-power",
   "trot-kayo-fandom-power",
   "realtime-tv-ratings",
@@ -1716,11 +1795,14 @@ const ENTERTAINMENT_MENU_ORDER = [
   "game-esports-ranking",
 ] as const;
 
-function sortEntertainmentMenus(boards: BoardDefinition[]): BoardDefinition[] {
-  const rank = new Map(ENTERTAINMENT_MENU_ORDER.map((slug, index) => [slug, index]));
+function sortMenusByOrder(
+  boards: BoardDefinition[],
+  order: readonly string[],
+): BoardDefinition[] {
+  const rank = new Map(order.map((slug, index) => [slug, index]));
   return [...boards].sort((a, b) => {
-    const left = rank.get(a.slug as (typeof ENTERTAINMENT_MENU_ORDER)[number]);
-    const right = rank.get(b.slug as (typeof ENTERTAINMENT_MENU_ORDER)[number]);
+    const left = rank.get(a.slug);
+    const right = rank.get(b.slug);
     if (left == null && right == null) return a.slug.localeCompare(b.slug);
     if (left == null) return 1;
     if (right == null) return -1;
@@ -1745,8 +1827,9 @@ export function menuBoardsForChannel(channel: PostChannel): BoardDefinition[] {
   const boards = boardsForChannel(channel)
     .filter(isRailBoard)
     .filter((board) => !isRetiredPoliticsBoard(board.slug));
-  if (channel === "entertainment") return sortEntertainmentMenus(boards);
-  if (channel === "travel") return sortTravelMenus(boards);
+  if (channel === "entertainment") return sortMenusByOrder(boards, ENTERTAINMENT_MENU_ORDER);
+  if (channel === "travel") return sortMenusByOrder(boards, TRAVEL_MENU_ORDER);
+  if (channel === "politics") return sortMenusByOrder(boards, POLITICS_MENU_ORDER);
   return boards;
 }
 

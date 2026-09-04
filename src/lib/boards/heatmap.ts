@@ -29,7 +29,7 @@ import type {
   RegionSegment,
 } from "@/lib/boards/types";
 import type { PostChannel } from "@/lib/posts/types";
-import { platformForGame } from "@/lib/boards/game-platforms";
+import { canonicalizeGameEsportsName, platformForGame } from "@/lib/boards/game-platforms";
 import {
   ensureCultureGrantRanking,
   isCultureGrantBoard,
@@ -78,7 +78,7 @@ export type HeatmapRegion = "all" | RegionSegment;
 function normalizeBoardRanking(def: BoardDefinition, rows: BoardRankEntry[]): BoardRankEntry[] {
   if (def.slug === "political-influencer-power") return ensureInfluencerBoardRanking(rows);
   if (def.slug === "governor-approval-index") return ensureLocalPolicyRanking(rows);
-  if (def.slug === "government-support-fund" || def.slug === "government-subsidy-search") {
+  if (def.slug === "government-support-fund" || def.slug === "government-subsidy-search" || def.slug === "entertainment-government-grant-ranking") {
     return ensureSubsidyRanking(rows);
   }
   if (isCultureGrantBoard(def.slug)) return ensureCultureGrantRanking(rows);
@@ -88,7 +88,7 @@ function normalizeBoardRanking(def: BoardDefinition, rows: BoardRankEntry[]): Bo
     return ensureHousingApartmentRanking(rows, rankLimitForChannel(def.channel));
   }
   if (boardUsesRegionFilter(def.slug)) {
-    return ensureFoodRestaurantRanking(rows, def.seeds);
+    return ensureFoodRestaurantRanking(rows, def.seeds, def.slug);
   }
   return rows;
 }
@@ -172,9 +172,14 @@ export function rankRowsToEntities(
 ): RankingEntity[] {
   const type = entityTypeForBoard(board);
   return (rows ?? []).map((row, index) => {
+    const displayName =
+      board.slug === "game-esports-ranking"
+        ? canonicalizeGameEsportsName(row.name || "")
+        : row.name || "";
     const toned = toneRankEntry(
       {
         ...row,
+        name: displayName || row.name,
         rank: row.rank || index + 1,
         score: Number.isFinite(row.score) && row.score > 0 ? row.score : 12,
         changeRate: Number.isFinite(row.changeRate) ? row.changeRate : 0,
@@ -187,10 +192,10 @@ export function rankRowsToEntities(
     const spark = Array.from({ length: 12 }, (_, step) =>
       Number((score * 10 * (1 + (change / 100) * ((step - 5) / 12))).toFixed(2)),
     );
-    const platform = board.slug === "game-esports-ranking" ? platformForGame(row.name) : undefined;
-    const context = labeledNameEn(row.name, board.shortTitle);
-    const href = rankingPath(boardRowSlug(board.slug, row.name || ""));
-    const region = row.region ?? regionFromName(row.name || "");
+    const platform = board.slug === "game-esports-ranking" ? platformForGame(displayName) : undefined;
+    const context = labeledNameEn(displayName, board.shortTitle);
+    const href = rankingPath(boardRowSlug(board.slug, displayName || ""));
+    const region = row.region ?? regionFromName(displayName || "");
     const regionTag = region ? REGION_LABEL[region] : undefined;
     const tags = (
       platform
@@ -198,9 +203,9 @@ export function rankRowsToEntities(
         : [context, board.shortTitle, board.unitLabel, regionTag]
     ).filter((tag, i, all): tag is string => Boolean(tag) && all.indexOf(tag) === i);
     return attachTimeframeMetrics({
-      id: `board:${board.slug}:${slugify(row.name) || index}`,
-      slug: boardRowSlug(board.slug, row.name || String(index)),
-      name: row.name || "집계 중",
+      id: `board:${board.slug}:${slugify(displayName) || index}`,
+      slug: boardRowSlug(board.slug, displayName || String(index)),
+      name: displayName || "집계 중",
       nameEn: context,
       type,
       rank,

@@ -19,7 +19,8 @@ import {
   ensureTravelGrantRanking,
   isTravelGrantBoard,
 } from "@/lib/boards/travel-grants";
-import { boardUsesRegionFilter, ensureFoodRestaurantRanking, ensureHousingApartmentRanking, HOUSING_BOARD_SLUG } from "@/lib/boards/regions";
+import { boardUsesRegionFilter, ensureFoodRestaurantRanking, ensureHousingApartmentRanking, HOUSING_BOARD_SLUG, isCultureEventVenueOnly } from "@/lib/boards/regions";
+import { EXHIBITION_BOARD_SLUG, PERFORMANCE_BOARD_SLUG } from "@/lib/boards/region-catalogs";
 import type {
   AgeSegment,
   BoardDefinition,
@@ -28,6 +29,7 @@ import type {
   GenderSegment,
   RegionSegment,
 } from "@/lib/boards/types";
+import { canonicalizeGameEsportsName } from "@/lib/boards/game-platforms";
 import { carryForwardBoardLeaders, ensureInfluencerBoardRanking } from "@/lib/politics/fail-safe";
 import {
   ensureLocalPolicyRanking,
@@ -109,14 +111,17 @@ function cleanNumber(value: unknown, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function toEntries(value: unknown, limit: number, unitLabel: string): BoardRankEntry[] {
+function toEntries(value: unknown, limit: number, unitLabel: string, boardSlug?: string): BoardRankEntry[] {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
   const rows: BoardRankEntry[] = [];
 
   for (const raw of value as RawRank[]) {
-    const name = cleanText(raw?.name, "").slice(0, 80);
+    const cleaned = cleanText(raw?.name, "").slice(0, 80);
+    const name =
+      boardSlug === "game-esports-ranking" ? canonicalizeGameEsportsName(cleaned) : cleaned;
     if (!name || isUnusableRankName(name)) continue;
+    if (isCultureEventVenueOnly(name, boardSlug)) continue;
     const key = name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
@@ -157,7 +162,7 @@ function enforceDescending(rows: BoardRankEntry[]): BoardRankEntry[] {
 function ensureSpecialRanking(board: BoardDefinition, rows: BoardRankEntry[]): BoardRankEntry[] {
   if (board.slug === "political-influencer-power") return ensureInfluencerBoardRanking(rows);
   if (board.slug === "governor-approval-index") return ensureLocalPolicyRanking(rows);
-  if (board.slug === "government-support-fund" || board.slug === "government-subsidy-search") {
+  if (board.slug === "government-support-fund" || board.slug === "government-subsidy-search" || board.slug === "entertainment-government-grant-ranking") {
     return ensureSubsidyRanking(rows);
   }
   if (isCultureGrantBoard(board.slug)) return ensureCultureGrantRanking(rows);
@@ -166,7 +171,7 @@ function ensureSpecialRanking(board: BoardDefinition, rows: BoardRankEntry[]): B
   if (board.slug === HOUSING_BOARD_SLUG) {
     return ensureHousingApartmentRanking(rows, rankLimitForBoard(board));
   }
-  if (boardUsesRegionFilter(board.slug)) return ensureFoodRestaurantRanking(rows, board.seeds);
+  if (boardUsesRegionFilter(board.slug)) return ensureFoodRestaurantRanking(rows, board.seeds, board.slug);
   return rows;
 }
 
@@ -194,7 +199,9 @@ function fallbackRanking(board: BoardDefinition, docs: NewsDoc[]): BoardRankEntr
     const quoted = [...title.matchAll(/[“"『「]([^”"』」]{2,40})[”"』」]/g)].map((match) => match[1]);
     return [title, ...quoted];
   }).filter((title) => title.length >= 2 && title.length <= 40 && !isUnusableRankName(title));
-  const names = [...board.seeds, ...fromNews];
+  const names = [...board.seeds, ...fromNews].map((name) =>
+    board.slug === "game-esports-ranking" ? canonicalizeGameEsportsName(name) : name,
+  );
   const unique: string[] = [];
   for (const name of names) {
     if (!unique.some((item) => item === name) && !isUnusableRankName(name)) unique.push(name);
@@ -220,14 +227,14 @@ function parseDemographics(
   const limit = segmentLimitForBoard(board);
 
   for (const key of GENDER_SEGMENTS) {
-    const rows = toEntries(raw?.gender?.[key], limit, board.unitLabel);
+    const rows = toEntries(raw?.gender?.[key], limit, board.unitLabel, board.slug);
     gender[key] = rows;
     if (rows.length) filled += 1;
   }
   const ageBlock = raw?.age as Record<string, unknown> | undefined;
   for (const key of AGE_SEGMENTS) {
     const source = key === "70s" ? (ageBlock?.["70s_plus"] ?? ageBlock?.["70s"]) : ageBlock?.[key];
-    const rows = toEntries(source, limit, board.unitLabel);
+    const rows = toEntries(source, limit, board.unitLabel, board.slug);
     age[key] = rows;
     if (rows.length) filled += 1;
   }
@@ -248,6 +255,32 @@ function padRanking(
   return [...seeded, ...extras].slice(0, limit).map((row, index) => ({ ...row, rank: index + 1 }));
 }
 
+function mergeTicketChartSeeds(
+  rows: BoardRankEntry[],
+  ticketSeeds: string[],
+  board: BoardDefinition,
+): BoardRankEntry[] {
+  if (!ticketSeeds.length) return rows;
+  if (board.slug !== PERFORMANCE_BOARD_SLUG && board.slug !== EXHIBITION_BOARD_SLUG) return rows;
+  const boosted: BoardRankEntry[] = ticketSeeds.slice(0, rankLimitForBoard(board)).map((name, index) => ({
+    rank: index + 1,
+    name,
+    score: Number((97.5 - index * 1.05).toFixed(2)),
+    changeRate: Number((((index % 5) - 2) * 0.9).toFixed(2)),
+    note: "티켓몰 예매 순위 반영",
+  }));
+  const seen = new Set(boosted.map((row) => row.name.replace(/\s+/g, "").toLowerCase()));
+  for (const row of rows) {
+    const key = (row.name ?? "").replace(/\s+/g, "").toLowerCase();
+    if (!key || seen.has(key) || isCultureEventVenueOnly(row.name, board.slug)) continue;
+    seen.add(key);
+    boosted.push(row);
+  }
+  return enforceDescending(
+    boosted.slice(0, rankLimitForBoard(board)).map((row, index) => ({ ...row, rank: index + 1 })),
+  );
+}
+
 /**
  * Step 1 — turn retrieved coverage into a ranked board with demographic slices.
  * Always resolves: a missing key or a malformed response falls back to seeds so
@@ -259,6 +292,10 @@ export async function rankBoard(input: {
   logger: AnalysisLogger;
   timeoutMs?: number;
   previousRanking?: BoardRankEntry[];
+  /** NOL 인터파크·예스24 등 티켓몰 공개 예매 순위 라인. */
+  ticketChartLines?: string[];
+  /** `[지역] 공연/행사명` 씨드 — 랭킹 상단에 우선 반영. */
+  ticketSeeds?: string[];
 }): Promise<RankResult> {
   const { board, docs, logger } = input;
   const totalN = rankLimitForBoard(board);
@@ -268,6 +305,14 @@ export async function rankBoard(input: {
     .slice(0, 16)
     .map((doc, index) => `${index + 1}. [${doc.publisher ?? "출처미상"}] ${doc.title} — ${doc.snippet ?? ""}`)
     .join("\n");
+
+  const ticketBlock = input.ticketChartLines?.length
+    ? [
+        "티켓몰 예매 순위(NOL 인터파크·예스24·티켓링크·KOPIS 공개 랭킹):",
+        ...input.ticketChartLines,
+        "위 예매 순위를 최우선 근거로 삼아 실제 공연명/행사명 랭킹을 구성하라. 공연장·미술관·몰 이름만 단독으로 올리지 마라.",
+      ].join("\n")
+    : "";
 
   const user = [
     `보드: ${board.title}`,
@@ -279,7 +324,8 @@ export async function rankBoard(input: {
       ? "지역 메타: 각 name은 `[시/도] 상호/음식` 형식이며, demographic_ranking.region에 시/도별 목록을 넣는다. 시/도 키는 seoul,gyeonggi,incheon,busan,daegu,gwangju,daejeon,ulsan,sejong,gangwon,chungbuk,chungnam,jeonbuk,jeonnam,gyeongbuk,gyeongnam,jeju 이다."
       : "",
     "",
-    context ? `수집된 최신 보도:\n${context}` : "수집된 보도가 없다. 통상적인 한국 시장 상황을 근거로 추정하라.",
+    ticketBlock,
+    context ? `수집된 최신 보도:\n${context}` : ticketBlock ? "" : "수집된 보도가 없다. 통상적인 한국 시장 상황을 근거로 추정하라.",
     "",
     `전체 1~${totalN}위와 성별(남/여) · 연령(10대~70대 이상, JSON 키 70s_plus)${boardUsesRegionFilter(board.slug) ? " · 지역(시/도)" : ""} 각 1~${segmentN}위를 아래 JSON 스키마로 반환하라.\n${schemaHint(board)}`,
   ]
@@ -296,9 +342,10 @@ export async function rankBoard(input: {
     model: draftModel(),
   });
 
-  const llmRanking = toEntries(parsed?.total_ranking, totalN, board.unitLabel);
+  const llmRanking = toEntries(parsed?.total_ranking, totalN, board.unitLabel, board.slug);
+  const withTickets = mergeTicketChartSeeds(llmRanking, input.ticketSeeds ?? [], board);
   const padded = padRanking(
-    llmRanking.length >= 5 ? llmRanking : fallbackRanking(board, docs),
+    withTickets.length >= 5 ? withTickets : fallbackRanking(board, docs),
     board,
     docs,
   );

@@ -14,6 +14,7 @@ export const BRIEFING_PROMPT_BOARD_SLUGS = [
   "government-subsidy-search", // 경제 · 경제 정부지원금
   "culture-leisure-grant-ranking", // 문화/생활 · 문화/생활 정부 지원금
   "travel-government-grant-ranking", // 여행/맛집 · 여행 정부지원금
+  "entertainment-government-grant-ranking", // 엔터 · 정부 지원금
 ] as const;
 
 export type BriefingPromptBoardSlug = (typeof BRIEFING_PROMPT_BOARD_SLUGS)[number];

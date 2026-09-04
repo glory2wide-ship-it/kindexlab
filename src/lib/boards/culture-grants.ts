@@ -118,6 +118,7 @@ export function isTwoLineBracketHeatmap(heatmapGroup?: string): boolean {
     heatmapGroup === CULTURE_GRANT_TITLE ||
     heatmapGroup === "문화/생활 정부 지원금" ||
     heatmapGroup === "여행 정부지원금" ||
+    heatmapGroup === "정부 지원금" ||
     heatmapGroup === "문화,여행,레져 정부 지원금"
   );
 }

@@ -13,7 +13,7 @@ import { politicsYoutubeSeedRows } from "@/lib/ingestion/sources/youtube-politic
 import type { ChartRow, IngestSnapshot, SourceResult } from "@/lib/ingestion/types";
 import type { RankingEntity } from "@/lib/types";
 
-const PER_TYPE = 10;
+const PER_TYPE = 20;
 
 function history(values: number[]): RankingEntity["history"] {
   const labels = ["D-6", "D-5", "D-4", "D-3", "D-2", "D-1", "오늘"];
@@ -132,7 +132,9 @@ function rowsForType(sources: SourceResult[], type: PoliticsEntityType): ChartRo
   const trends =
     type === "political_search"
       ? (sources.find((source) => source.id === "google-trends")?.items ?? []).filter((item) =>
-          /대선|총선|국회|탄핵|공천|지지율|특검|개헌|계엄|정당|대통령/.test(item.title),
+          /대선|총선|국회|탄핵|공천|지지율|특검|개헌|계엄|정당|대통령|종부세|종합부동산|연금|상속세|의대|전세|금투세|양도|법인세|최저임금|노란봉투|검찰|공수처|중대재해|탄소|원전|기본소득|청년도약/.test(
+            item.title,
+          ),
         )
       : [];
   const youtube =
@@ -199,7 +201,7 @@ function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRo
       return (right.metric ?? 0) - (left.metric ?? 0);
     });
   }
-  return withCatalog.slice(0, Math.max(PER_TYPE, type === "political_influencer" ? 12 : PER_TYPE)).map((row, index) => ({
+  return withCatalog.slice(0, Math.max(PER_TYPE, type === "political_influencer" ? 20 : PER_TYPE)).map((row, index) => ({
     ...row,
     rank: index + 1,
     title: type === "political_influencer" ? canonicalizeInfluencerTitle(row.title) : row.title,

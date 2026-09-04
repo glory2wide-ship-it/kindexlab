@@ -15,6 +15,7 @@ export interface PoliticsYoutubeSeed {
 /**
  * Master seed list for large Korean politics/current-affairs channels.
  * These are collected regardless of category filters on the trending feed.
+ * Keep ≥20 influencer seeds so the heatmap can fill top-20 tiles.
  */
 export const POLITICS_YOUTUBE_SEEDS: PoliticsYoutubeSeed[] = [
   {
@@ -82,6 +83,102 @@ export const POLITICS_YOUTUBE_SEEDS: PoliticsYoutubeSeed[] = [
     aliases: ["최욱", "매불쇼 라이브"],
     influencer: true,
     types: ["political_influencer", "political_pundit"],
+  },
+  {
+    name: "고성국TV",
+    nameEn: "Ko Sung-kuk TV",
+    channelId: "",
+    aliases: ["고성국"],
+    influencer: true,
+    types: ["political_influencer", "political_pundit"],
+  },
+  {
+    name: "황희두TV",
+    nameEn: "Hwang Hee-doo TV",
+    channelId: "",
+    aliases: ["황희두"],
+    influencer: true,
+    types: ["political_influencer", "political_pundit"],
+  },
+  {
+    name: "열린공감TV",
+    nameEn: "Open Empathy TV",
+    channelId: "",
+    aliases: ["열린공감"],
+    influencer: true,
+    types: ["political_influencer"],
+  },
+  {
+    name: "장성민의 시사탱크",
+    nameEn: "Jang Sung-min Current Affairs Tank",
+    channelId: "",
+    aliases: ["시사탱크", "장성민"],
+    influencer: true,
+    types: ["political_influencer", "political_pundit"],
+  },
+  {
+    name: "전원책TV",
+    nameEn: "Jeon Won-chaek TV",
+    channelId: "",
+    aliases: ["전원책"],
+    influencer: true,
+    types: ["political_influencer", "political_pundit"],
+  },
+  {
+    name: "뉴스타파",
+    nameEn: "Newstapa",
+    channelId: "",
+    aliases: ["한국탐사저널리즘센터"],
+    influencer: true,
+    types: ["political_influencer"],
+  },
+  {
+    name: "오마이뉴스TV",
+    nameEn: "OhmyNews TV",
+    channelId: "",
+    aliases: ["오마이뉴스"],
+    influencer: true,
+    types: ["political_influencer"],
+  },
+  {
+    name: "민중의소리",
+    nameEn: "Voice of the People",
+    channelId: "",
+    aliases: ["민소"],
+    influencer: true,
+    types: ["political_influencer"],
+  },
+  {
+    name: "시사타파",
+    nameEn: "Sisa Tapa",
+    channelId: "",
+    aliases: [],
+    influencer: true,
+    types: ["political_influencer"],
+  },
+  {
+    name: "여의도스토리",
+    nameEn: "Yeouido Story",
+    channelId: "",
+    aliases: ["여의도 스토리"],
+    influencer: true,
+    types: ["political_influencer"],
+  },
+  {
+    name: "정치인 숏츠",
+    nameEn: "Politician shorts",
+    channelId: "",
+    aliases: ["정치숏츠"],
+    influencer: true,
+    types: ["political_influencer"],
+  },
+  {
+    name: "시사 클립",
+    nameEn: "Current-affairs clips",
+    channelId: "",
+    aliases: ["시사클립"],
+    influencer: true,
+    types: ["political_influencer"],
   },
 ];
 
