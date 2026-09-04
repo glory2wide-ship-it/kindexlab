@@ -11,7 +11,7 @@ const payload: RankingsPayload = {
   items: rankings,
 };
 
-const ARCHIVE_DATES = ["2026-08-22", "2026-08-23", "2026-08-24"] as const;
+const ARCHIVE_DATES = [] as const;
 const ARCHIVE_CHANNELS: PostChannel[] = ["entertainment", "politics"];
 
 let cached: BriefingArticle[] | undefined;
