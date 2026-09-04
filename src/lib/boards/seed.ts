@@ -1,23 +1,21 @@
 import { analysisLogger } from "@/lib/analysis/log";
 import { kstDateString } from "@/lib/briefing/dates";
 import { rankFromSeeds } from "@/lib/boards/chain/rank";
-import { buildTemplateBoardReport } from "@/lib/boards/chain/report";
-import { buildTemplatePump } from "@/lib/boards/chain/pump";
+import { emptyBoardReport } from "@/lib/boards/chain/report";
 import { BOARDS, boardPath, isDeskBoard } from "@/lib/boards/registry";
 import { boardTtlHours, readBoard, writeBoard } from "@/lib/boards/store";
 import type { BoardDefinition, CachedBoard } from "@/lib/boards/types";
 import { SITE } from "@/lib/site";
 
 /**
- * Instant sample payload so a cold cache never blocks a page on four LLM calls.
- * Cron / getOrCreateBoard still overwrite this with a live chain result.
+ * Instant ranking shell so a cold cache never blocks a page on LLM calls.
+ * Editorial report prose stays empty until Gemini succeeds (BoardReportBody gates on chain).
  */
 export function buildSampleBoard(
   board: BoardDefinition,
   editionDate = kstDateString(),
 ): CachedBoard {
   const ranked = rankFromSeeds(board);
-  const report = buildTemplateBoardReport(board, ranked.ranking, ranked.demographics);
   const generatedAt = new Date();
   return {
     slug: board.slug,
@@ -31,8 +29,7 @@ export function buildSampleBoard(
     indexChangeRate: ranked.indexChangeRate,
     ranking: ranked.ranking,
     demographics: ranked.demographics,
-    report,
-    pump: buildTemplatePump(board, ranked.ranking, ranked.demographics),
+    report: emptyBoardReport(board),
     provenance: {
       kind: "template",
       newsDocs: 0,

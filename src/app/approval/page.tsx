@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DailyBriefing } from "@/components/briefing/DailyBriefing";
 import { AgencyPollComparisonBoard } from "@/components/politics/AgencyPollComparisonBoard";
 import { loadPoliticsDeskCopy } from "@/lib/politics/desk-store";
 import { SITE } from "@/lib/site";
@@ -36,7 +35,6 @@ export default async function PresidentialApprovalPage() {
         </p>
       </header>
       <AgencyPollComparisonBoard snapshot={desk.polls} />
-      <DailyBriefing briefing={desk.explainer} />
     </div>
   );
 }

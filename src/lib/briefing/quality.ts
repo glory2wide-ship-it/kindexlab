@@ -17,10 +17,18 @@ export function briefingPlainText(article: Pick<BriefingArticle, "title" | "exce
 }
 
 /**
- * Persisted and live briefings must be LLM columns, not `editorial/copy.ts`
- * template padding. Template drafts are kept only as generation shells.
+ * Persisted and live briefings must be Gemini columns (`bodyHtml` / `bodyMarkdown`
+ * from the premium single-pass). Editorial templates from `compose*` / poll-briefing
+ * never ship to readers — keep them only as overnight generation shells.
  */
+export function isGeminiBriefingArticle(
+  article: Pick<BriefingArticle, "bodyHtml" | "bodyMarkdown">,
+): boolean {
+  return Boolean(article.bodyHtml?.trim() || article.bodyMarkdown?.trim());
+}
+
 export function isPersistableBriefing(article: BriefingArticle): boolean {
+  if (!isGeminiBriefingArticle(article)) return false;
   const plain = briefingPlainText(article);
   const prose = briefingPlainText({ ...article, title: "" });
   if (hasTemplateConnectiveSpam(prose, 1)) return false;

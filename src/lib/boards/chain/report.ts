@@ -111,6 +111,20 @@ export function buildTemplateBoardReport(
   return padToMinimum(fallbackReport(board, ranking, demographics), board, ranking, demographics);
 }
 
+/** Ranking shells only — no editorial prose until Gemini writes the board report. */
+export function emptyBoardReport(board: BoardDefinition): BoardReport {
+  return {
+    title: board.title,
+    excerpt: "",
+    sections: [],
+    table: { caption: "", headers: [], rows: [] },
+    faq: [],
+    targetAnalysis: { heading: "", headingLevel: 2, paragraphs: [] },
+    characterCount: 0,
+    readingMinutes: 0,
+  };
+}
+
 function fallbackReport(
   board: BoardDefinition,
   ranking: BoardRankEntry[],

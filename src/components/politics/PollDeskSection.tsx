@@ -1,14 +1,13 @@
-import { DailyBriefing } from "@/components/briefing/DailyBriefing";
 import { AgencyPollComparisonBoard } from "@/components/politics/AgencyPollComparisonBoard";
-import { kstDateString } from "@/lib/briefing/dates";
-import { composeAgencyPollArticle } from "@/lib/politics/poll-briefing";
 import { getPollBoardForEntity, isPollComparableType } from "@/lib/politics/polls";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
 
+/**
+ * Poll comparison data only — never render editorial template prose.
+ * Narrative columns come from Gemini (오늘의 분석 / overnight briefing) when ready.
+ */
 export async function PollDeskSection({
   entity,
-  market,
-  related = [],
 }: {
   entity: RankingEntity;
   market: RankingsPayload;
@@ -17,17 +16,6 @@ export async function PollDeskSection({
   if (!isPollComparableType(entity.type)) return null;
   const polls = await getPollBoardForEntity(entity);
   if (!polls) return null;
-  const briefing = composeAgencyPollArticle({
-    polls,
-    entity,
-    market,
-    editionDate: kstDateString(),
-  });
 
-  return (
-    <div className="space-y-6">
-      <AgencyPollComparisonBoard snapshot={polls} />
-      <DailyBriefing briefing={briefing} related={related} />
-    </div>
-  );
+  return <AgencyPollComparisonBoard snapshot={polls} />;
 }

@@ -9,6 +9,7 @@ import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
 import { SupportIndexChart } from "@/components/politics/SupportIndexChart";
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
+import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import { getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
 import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import { formatRate } from "@/lib/format";
@@ -28,7 +29,7 @@ const loadDetail = cache(async (id: string, name?: string) => {
   let article: TodayAnalysisArticle | undefined;
   try {
     const analysis = await getOrCreateAnalysis({ entity, market, related });
-    if (analysis.entry.provenance.kind === "chain") article = analysis.entry.article;
+    if (analysis.entry && isGeminiAnalysis(analysis.entry)) article = analysis.entry.article;
   } catch {
     /* data sections stand alone */
   }

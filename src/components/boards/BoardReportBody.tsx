@@ -8,8 +8,13 @@ import type { CachedBoard } from "@/lib/boards/types";
  * Shopping shelves stay off until AdSense approval.
  */
 export function BoardReportBody({ board }: { board: CachedBoard }) {
+  // Template / seed shells keep ranking tiles only — prose waits for Gemini.
+  if (board.provenance?.kind !== "chain") return null;
+
   const report = board.report;
   const sections = report?.sections ?? [];
+  if (!sections.length) return null;
+
   const midpoint = Math.max(1, Math.ceil(sections.length / 2));
   const table = report?.table;
   const faq = report?.faq ?? [];

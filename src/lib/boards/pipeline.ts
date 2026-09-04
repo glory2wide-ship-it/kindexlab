@@ -2,7 +2,7 @@ import { llmConfigured, llmModel } from "@/lib/analysis/chain/llm";
 import { analysisLogger } from "@/lib/analysis/log";
 import { kstDateString } from "@/lib/briefing/dates";
 import { rankBoard } from "@/lib/boards/chain/rank";
-import { writeBoardReport } from "@/lib/boards/chain/report";
+import { emptyBoardReport, writeBoardReport } from "@/lib/boards/chain/report";
 import { polishBoardReport } from "@/lib/boards/chain/polish";
 import { buildBoardPump } from "@/lib/boards/chain/pump";
 import { BOARDS, boardPath, getBoard, isDeskBoard } from "@/lib/boards/registry";
@@ -160,31 +160,35 @@ async function generate(board: BoardDefinition, editionDate: string): Promise<Ca
     timeoutMs: Math.min(60_000, Math.max(10_000, remaining())),
   });
 
-  const report =
-    fromLlm && remaining() > 10_000
+  // Prose columns ship only from Gemini. Ranking/demographics still update on miss.
+  const report = fromLlm
+    ? remaining() > 10_000
       ? await polishBoardReport({
           report: drafted,
           logger,
           timeoutMs: Math.min(45_000, remaining()),
         })
-      : drafted;
+      : drafted
+    : emptyBoardReport(board);
 
   const articleUrl = `${SITE.url}${boardPath(board.slug)}`;
-  const pump = await buildBoardPump({
-    board,
-    ranking: ranked.ranking,
-    demographics: ranked.demographics,
-    articleUrl,
-    logger,
-    timeoutMs: Math.min(30_000, Math.max(8_000, remaining())),
-  });
+  const pump = fromLlm
+    ? await buildBoardPump({
+        board,
+        ranking: ranked.ranking,
+        demographics: ranked.demographics,
+        articleUrl,
+        logger,
+        timeoutMs: Math.min(30_000, Math.max(8_000, remaining())),
+      })
+    : undefined;
 
   const generatedAt = new Date();
   const provenance: BoardProvenance = {
     kind: fromLlm ? "chain" : "template",
     newsDocs: docs.length,
     publishers: publishers.slice(0, 6),
-    model: enabled ? llmModel() : undefined,
+    model: fromLlm && enabled ? llmModel() : undefined,
     demographicsFromLlm: ranked.demographicsFromLlm,
     buildMs: logger.elapsed(),
   };

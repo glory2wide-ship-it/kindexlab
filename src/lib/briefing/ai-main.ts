@@ -97,7 +97,8 @@ function passesBriefingQualityGate(plain: string): boolean {
 
 /**
  * Replaces a template briefing draft with a premium Gemini column when retrieval
- * and the LLM chain succeed. Falls back to the draft on any failure.
+ * and the LLM chain succeed. On failure returns the draft shell — callers must
+ * not ship it (`isPersistableBriefing` / store gates keep templates off the site).
  */
 export async function enrichBriefingWithAi(
   draft: BriefingArticle,

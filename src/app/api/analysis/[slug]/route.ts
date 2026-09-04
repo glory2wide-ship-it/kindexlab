@@ -1,4 +1,5 @@
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
+import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import { getRankings } from "@/lib/api";
 import { resolveAnalysisEntity } from "@/lib/editorial/today-analysis";
 import { decodeRouteSlug } from "@/lib/slugs";
@@ -26,19 +27,23 @@ export async function GET(
     force: new URL(request.url).searchParams.get("force") === "1",
   });
 
+  const grounded = isGeminiAnalysis(entry);
+
   return Response.json(
     {
-      article: entry.article,
-      provenance: entry.provenance,
-      pump: entry.pump ?? null,
-      generatedAt: entry.generatedAt,
-      expiresAt: entry.expiresAt,
+      article: grounded && entry ? entry.article : null,
+      provenance: grounded && entry
+        ? entry.provenance
+        : { kind: "pending", newsDocs: 0, publishers: [], facts: [], buildMs: 0 },
+      pump: grounded && entry ? (entry.pump ?? null) : null,
+      generatedAt: grounded && entry ? entry.generatedAt : null,
+      expiresAt: grounded && entry ? entry.expiresAt : null,
     },
     {
       headers: {
         "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
         "X-Analysis-Cache": cache,
-        "X-Analysis-Source": entry.provenance.kind,
+        "X-Analysis-Source": grounded && entry ? entry.provenance.kind : "pending",
       },
     },
   );

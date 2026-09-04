@@ -6,6 +6,7 @@ import { desksForChannel, isHeadlineBriefingDesk } from "@/lib/briefing/desks";
 import { channelUsesBoardBriefing, composeBoardChannelEdition } from "@/lib/briefing/from-boards";
 import { collectHeatmapTopics } from "@/lib/briefing/heatmap-topics";
 import { persistEdition, removePersistedEdition } from "@/lib/briefing/persist";
+import { isPersistableBriefing } from "@/lib/briefing/quality";
 import { geminiBatchEnabled, briefingProvider } from "@/lib/analysis/chain/llm";
 import { POST_CHANNELS } from "@/lib/posts/channels";
 import { getRankings } from "@/lib/providers/trends";
@@ -107,7 +108,8 @@ export async function generateEdition(
       );
     }
   }
-  return articles;
+  // Never hand template shells to display callers — Gemini columns only.
+  return articles.filter(isPersistableBriefing);
 }
 
 export async function generateSingle(

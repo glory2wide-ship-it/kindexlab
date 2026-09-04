@@ -67,16 +67,31 @@ async function handle(request: Request) {
     const related = market.items
       .filter((item) => item.id !== entity.id && item.type === entity.type)
       .slice(0, 6);
-    const entry = await refreshAnalysis({ entity, market, related });
-    results.push({
-      slug: entry.slug,
-      keyword: entry.keyword,
-      kind: entry.provenance.kind,
-      newsDocs: entry.provenance.newsDocs,
-      chars: entry.article.characterCount,
-      buildMs: entry.provenance.buildMs,
-    });
-    revalidatePath(rankingPath(entry.slug));
+    try {
+      const entry = await refreshAnalysis({ entity, market, related });
+      results.push({
+        slug: entry.slug,
+        keyword: entry.keyword,
+        kind: entry.provenance.kind,
+        newsDocs: entry.provenance.newsDocs,
+        chars: entry.article.characterCount,
+        buildMs: entry.provenance.buildMs,
+      });
+      revalidatePath(rankingPath(entry.slug));
+    } catch (error) {
+      results.push({
+        slug: entity.slug,
+        keyword: entity.name,
+        kind: "failed",
+        newsDocs: 0,
+        chars: 0,
+        buildMs: 0,
+      });
+      console.warn(
+        `[analysis:generate] ${entity.slug}:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
   }
 
   for (const index of market.indices) revalidatePath(indexPath(index.id));
@@ -84,9 +99,9 @@ async function handle(request: Request) {
   return NextResponse.json({
     ok: true,
     cleared,
-    generated: results.length,
+    generated: results.filter((item) => item.kind === "chain").length,
     chained: results.filter((item) => item.kind === "chain").length,
-    templated: results.filter((item) => item.kind === "template").length,
+    failed: results.filter((item) => item.kind === "failed").length,
     totalMs: Date.now() - startedAt,
     results,
   });

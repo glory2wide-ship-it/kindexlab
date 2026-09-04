@@ -7,7 +7,9 @@ import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
+import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import { getRankings } from "@/lib/api";
+import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import { formatRate } from "@/lib/format";
 import { APPROVAL_INDEX_ID } from "@/lib/ingestion/composite";
 import {
@@ -61,7 +63,13 @@ export default async function IndexDetailPage({
   const related = constituentsForIndex(index.id, market.items).slice(0, 8);
   const pollLead = related[0] ?? entity;
   const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
-  const analysis = await getOrCreateAnalysis({ entity, market, related });
+  let analysisArticle: TodayAnalysisArticle | undefined;
+  try {
+    const analysis = await getOrCreateAnalysis({ entity, market, related });
+    if (analysis.entry && isGeminiAnalysis(analysis.entry)) analysisArticle = analysis.entry.article;
+  } catch {
+    /* charts and constituents stand alone until Gemini fills the column */
+  }
 
   return (
     <div className="space-y-8">
@@ -74,7 +82,9 @@ export default async function IndexDetailPage({
       </p>
       <EntityHero entity={entity} kicker={`섹터 지수 · ${index.note}`} />
       <BuzzChart entity={entity} initialTimeframe={initialTimeframe} />
-      <TodayAnalysis article={analysis.entry.article} entityHref={`${indexPath(index.id)}#chart`} />
+      {analysisArticle ? (
+        <TodayAnalysis article={analysisArticle} entityHref={`${indexPath(index.id)}#chart`} />
+      ) : null}
       <PollDeskSection entity={pollLead} market={market} related={related} />
       {related.length ? (
         <RelatedRankingDesk entity={entity} related={related} heading="구성 종목" />
