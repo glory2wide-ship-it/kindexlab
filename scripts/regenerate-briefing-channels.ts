@@ -14,6 +14,7 @@ async function main() {
     force: true,
     editionDate,
     channels: channels.length ? channels : undefined,
+    useGeminiBatch: process.env.GEMINI_USE_BATCH !== "0",
     onChannel: (channel, count) => console.log(`  ${channel}: ${count} articles`),
   });
 

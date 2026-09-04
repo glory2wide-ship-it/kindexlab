@@ -43,7 +43,8 @@ export async function getChannelBriefingEdition(channel: PostChannel): Promise<B
   const today = kstDateString();
   const persisted = persistedChannelEdition(channel, today).filter(isPersistableBriefing);
   if (persisted.length) {
-    return persisted.map((item) => withBriefingCover(item));
+    // listPersisted already strips cover images — return as-is.
+    return persisted;
   }
   const live = await composeLiveChannelEdition(today, channel);
   return live.filter(isPersistableBriefing).map((item) => withBriefingCover(item));

@@ -168,35 +168,52 @@ export async function enrichMainBriefingWithAi(
 }
 
 
-/** Briefing editions run many premium calls back-to-back; keep concurrency low. */
-const BRIEFING_AI_BATCH_SIZE = 1;
-const BRIEFING_AI_BATCH_DELAY_MS = 3_000;
+/** Live / interactive runs: one article at a time. */
+const BRIEFING_AI_LIVE_SIZE = 1;
+const BRIEFING_AI_LIVE_DELAY_MS = 3_000;
+/** Overnight Batch wave — mains + deep-dives coalesce into fewer Gemini Batch jobs. */
+export const BRIEFING_OVERNIGHT_BATCH_SIZE = 12;
 
 /**
- * Gemini Batch coalescing for overnight / cron briefing runs when GEMINI_USE_BATCH=1.
- * Live API stays sequential (or lightly concurrent) otherwise.
+ * Gemini Batch coalescing for overnight / cron briefing runs when
+ * GEMINI_USE_BATCH=1 or `forceGeminiBatch` is set. Live stays sequential.
  */
-function briefingUsesGeminiBatch(): boolean {
-  return geminiBatchEnabled() && briefingProvider() === "gemini";
+function briefingUsesGeminiBatch(force?: boolean): boolean {
+  if (briefingProvider() !== "gemini") return false;
+  if (force) return true;
+  return geminiBatchEnabled();
 }
 
-function briefingAiConcurrency(): number {
-  if (!briefingUsesGeminiBatch()) return BRIEFING_AI_BATCH_SIZE;
+function briefingAiConcurrency(force?: boolean): number {
+  if (!briefingUsesGeminiBatch(force)) return BRIEFING_AI_LIVE_SIZE;
   const parsed = Number.parseInt(
-    process.env.GEMINI_BATCH_CONCURRENCY ?? process.env.OPENAI_BATCH_CONCURRENCY ?? "",
+    process.env.BRIEFING_OVERNIGHT_BATCH_SIZE ??
+      process.env.GEMINI_BATCH_CONCURRENCY ??
+      process.env.OPENAI_BATCH_CONCURRENCY ??
+      "",
     10,
   );
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 4;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : BRIEFING_OVERNIGHT_BATCH_SIZE;
 }
 
-/** Enriches every article in a channel edition (main + deep-dives) via Gemini. */
-export async function enrichChannelEditionWithAi(articles: BriefingArticle[]): Promise<BriefingArticle[]> {
+/**
+ * Enriches every article in an edition (channel mains + submenu deep-dives) via Gemini.
+ * Overnight callers pass `forceGeminiBatch: true` so Batch (−50%) is used even if the
+ * process env flag was omitted.
+ */
+export async function enrichChannelEditionWithAi(
+  articles: BriefingArticle[],
+  options?: { forceGeminiBatch?: boolean },
+): Promise<BriefingArticle[]> {
   if (!briefingLlmConfigured() || !articles.length) return articles;
+
+  const force = Boolean(options?.forceGeminiBatch);
+  const useBatch = briefingUsesGeminiBatch(force);
 
   const run = async () => {
     const enriched: BriefingArticle[] = [];
-    const concurrency = briefingAiConcurrency();
-    const delayMs = briefingUsesGeminiBatch() ? 0 : BRIEFING_AI_BATCH_DELAY_MS;
+    const concurrency = briefingAiConcurrency(force);
+    const delayMs = useBatch ? 0 : BRIEFING_AI_LIVE_DELAY_MS;
 
     for (let index = 0; index < articles.length; index += concurrency) {
       const batch = articles.slice(index, index + concurrency);
@@ -218,10 +235,14 @@ export async function enrichChannelEditionWithAi(articles: BriefingArticle[]): P
     return enriched;
   };
 
-  if (briefingUsesGeminiBatch()) {
+  if (useBatch) {
+    const mains = articles.filter((item) => item.kind === "main").length;
+    const dives = articles.filter((item) => item.kind === "deep-dive").length;
     analysisLogger("briefing:batch").step("gemini-batch-mode", {
       articles: articles.length,
-      concurrency: briefingAiConcurrency(),
+      mains,
+      deepDives: dives,
+      concurrency: briefingAiConcurrency(force),
     });
     return withGeminiBatchChat(run);
   }

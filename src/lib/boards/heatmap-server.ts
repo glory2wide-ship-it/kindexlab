@@ -22,10 +22,12 @@ import type { RankingEntity, RankingsPayload } from "@/lib/types";
  * Prefer live ingest chart rows for music / movie boards so heatmaps track crawls.
  * Server-only — keeps fs-backed snapshot reads out of client bundles.
  */
-function liveRankingForBoard(def: BoardDefinition): BoardRankEntry[] | undefined {
+function liveRankingForBoard(
+  def: BoardDefinition,
+  snapshot: ReturnType<typeof readPersistedSnapshot>,
+): BoardRankEntry[] | undefined {
   const type = entityTypeForBoardSlug(def.slug);
   if (type !== "music_chart" && type !== "movie") return undefined;
-  const snapshot = readPersistedSnapshot();
   if (!snapshot?.items?.length) return undefined;
   const limit = rankLimitForBoard(def);
   const rows = snapshot.items
@@ -46,8 +48,12 @@ function liveRankingForBoard(def: BoardDefinition): BoardRankEntry[] | undefined
   return rows.length >= 5 ? rows : undefined;
 }
 
-function withLiveChartOverlay(def: BoardDefinition, cached: CachedBoard): HeatmapBoardPayload {
-  const live = liveRankingForBoard(def);
+function withLiveChartOverlay(
+  def: BoardDefinition,
+  cached: CachedBoard,
+  snapshot: ReturnType<typeof readPersistedSnapshot>,
+): HeatmapBoardPayload {
+  const live = liveRankingForBoard(def, snapshot);
   if (!live) return toHeatmapPayload(def, cached);
   const overlay: CachedBoard = {
     ...cached,
@@ -64,11 +70,12 @@ export async function loadChannelHeatmapPayloads(
   channel: PostChannel,
 ): Promise<HeatmapBoardPayload[]> {
   const defs = menuBoardsForChannel(channel).filter((board) => !board.deskKind);
+  const snapshot = readPersistedSnapshot();
   const payloads: HeatmapBoardPayload[] = [];
   for (const def of defs) {
     try {
       const cached = await seedBoardIfMissing(def);
-      payloads.push(withLiveChartOverlay(def, cached));
+      payloads.push(withLiveChartOverlay(def, cached, snapshot));
     } catch {
       /* skip a board that cannot be seeded; the rest still render */
     }

@@ -62,10 +62,24 @@ export function scrubBannedPhraseStems(text: string): string {
   return out;
 }
 
+/** Drop checklist / “확인해야 할 N가지” padding sentences without an LLM round-trip. */
+const GENERIC_PADDING_SENTENCE =
+  /(?:체크리스트|실행\s*체크리스트|독자가\s*(?:먼저|반드시)\s*확인|확인해야\s*할\s*(?:N|몇|\d+)|꼼꼼히\s*점검)/i;
+
+export function scrubGenericPaddingProse(text: string): string {
+  const parts = text
+    .split(/(?<=[.!?。…]|\n)/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0 && !GENERIC_PADDING_SENTENCE.test(part));
+  return parts.join(" ").replace(/\s{2,}/g, " ").trim();
+}
+
 /** Full free post-process for a single prose field. */
 export function autoCorrectProse(text: string): string {
   return ensureSentencePunctuation(
-    scrubBannedPhraseStems(scrubBoilerplatePhrases(normalizeWhitespace(text))),
+    scrubBannedPhraseStems(
+      scrubGenericPaddingProse(scrubBoilerplatePhrases(normalizeWhitespace(text))),
+    ),
   );
 }
 

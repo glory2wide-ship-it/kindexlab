@@ -6,6 +6,7 @@ import { desksForChannel, isHeadlineBriefingDesk } from "@/lib/briefing/desks";
 import { channelUsesBoardBriefing, composeBoardChannelEdition } from "@/lib/briefing/from-boards";
 import { collectHeatmapTopics } from "@/lib/briefing/heatmap-topics";
 import { persistEdition, removePersistedEdition } from "@/lib/briefing/persist";
+import { geminiBatchEnabled, briefingProvider } from "@/lib/analysis/chain/llm";
 import { POST_CHANNELS } from "@/lib/posts/channels";
 import { getRankings } from "@/lib/providers/trends";
 import type { BriefingArticle } from "@/lib/types";
@@ -49,15 +50,19 @@ export async function composeChannelEditionWithAi(
   channel: PostChannel,
   editionDate: string,
   publishedAt?: string,
+  options?: { useGeminiBatch?: boolean },
 ): Promise<BriefingArticle[]> {
   const at = publishedAt ?? editionDateTime(editionDate);
   const draft = await composeChannelDraft(channel, editionDate, at);
-  return enrichChannelEditionWithAi(draft);
+  return enrichChannelEditionWithAi(draft, { forceGeminiBatch: options?.useGeminiBatch });
 }
 
 /**
  * Generates the full daily edition across all five channels (main + rail
  * deep-dives; headlines desks excluded) using the premium Gemini pipeline.
+ *
+ * Overnight: compose every channel first, then enrich mains + deep-dives in one
+ * Gemini Batch session (−50%) when `useGeminiBatch` / GEMINI_USE_BATCH is on.
  */
 export async function generateEdition(
   editionDate = kstDateString(),
@@ -65,18 +70,33 @@ export async function generateEdition(
   options?: {
     onChannel?: (channel: PostChannel, count: number) => void;
     channels?: PostChannel[];
+    /** Overnight Batch for mains + submenu deep-dives (−50%). */
+    useGeminiBatch?: boolean;
   },
 ): Promise<BriefingArticle[]> {
   const publishedAt = editionDateTime(editionDate);
-  const articles: BriefingArticle[] = [];
   const targets = options?.channels?.length
     ? POST_CHANNELS.filter(({ id }) => options.channels!.includes(id))
     : POST_CHANNELS;
 
+  const drafts: BriefingArticle[] = [];
   for (const { id: channel } of targets) {
-    const enriched = await composeChannelEditionWithAi(channel, editionDate, publishedAt);
-    articles.push(...enriched);
-    options?.onChannel?.(channel, enriched.length);
+    const channelDrafts = await composeChannelDraft(channel, editionDate, publishedAt);
+    drafts.push(...channelDrafts);
+    const mains = channelDrafts.filter((item) => item.kind === "main").length;
+    const dives = channelDrafts.filter((item) => item.kind === "deep-dive").length;
+    console.log(`[briefing] ${channel} drafted mains=${mains} deep-dives=${dives}`);
+  }
+
+  const articles = await enrichChannelEditionWithAi(drafts, {
+    forceGeminiBatch: options?.useGeminiBatch,
+  });
+
+  for (const { id: channel } of targets) {
+    options?.onChannel?.(
+      channel,
+      articles.filter((item) => item.channel === channel).length,
+    );
   }
 
   if (persist) {
@@ -119,6 +139,8 @@ export async function runDailyBriefingJob(options?: {
   editionDate?: string;
   channels?: PostChannel[];
   onChannel?: (channel: PostChannel, count: number) => void;
+  /** Overnight: Gemini Batch for daily mains + submenu deep-dives. */
+  useGeminiBatch?: boolean;
 }): Promise<{
   skipped: boolean;
   reason?: string;
@@ -126,6 +148,7 @@ export async function runDailyBriefingJob(options?: {
   persisted: boolean;
   removed: number;
   articles: BriefingArticle[];
+  geminiBatch?: boolean;
 }> {
   const editionDate = options?.editionDate ?? kstDateString();
   if (!options?.force && hasEdition(editionDate)) {
@@ -142,9 +165,13 @@ export async function runDailyBriefingJob(options?: {
   const removed =
     options?.force && !options.channels?.length ? await removePersistedEdition(editionDate) : 0;
   const persist = options?.persist ?? true;
+  const useGeminiBatch =
+    Boolean(options?.useGeminiBatch) ||
+    (geminiBatchEnabled() && briefingProvider() === "gemini");
   const articles = await generateEdition(editionDate, persist, {
     onChannel: options?.onChannel,
     channels: options?.channels,
+    useGeminiBatch: options?.useGeminiBatch,
   });
   return {
     skipped: false,
@@ -152,5 +179,6 @@ export async function runDailyBriefingJob(options?: {
     persisted: persist,
     removed,
     articles,
+    geminiBatch: useGeminiBatch,
   };
 }

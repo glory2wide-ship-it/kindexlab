@@ -39,7 +39,10 @@ export function getTrendsSource(): TrendsSource {
 }
 
 function loadMockRankings(): RankingsPayload {
-  console.warn("[kindexlab:trends] using mock fixture");
+  if (process.env.NODE_ENV === "development" && !(globalThis as { __kindexMockWarned?: boolean }).__kindexMockWarned) {
+    (globalThis as { __kindexMockWarned?: boolean }).__kindexMockWarned = true;
+    console.warn("[kindexlab:trends] using mock fixture");
+  }
   const items = [
     ...rankings,
     ...seedPoliticsRankings().filter((item) => !rankings.some((row) => row.slug === item.slug)),

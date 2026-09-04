@@ -95,6 +95,41 @@ function toPremiumSources(sources: ContextSource[]): PremiumSource[] {
   }));
 }
 
+/** Max links shown under “교차 확인 자료”. RAG may retrieve more for grounding. */
+export const DISPLAY_SOURCE_LIMIT = 5;
+
+/**
+ * Picks a short, publisher-diverse cite list for the reader-facing source block.
+ * Full retrieval stays available for URL validation and the LLM prompt.
+ */
+export function selectDisplaySources(
+  sources: PremiumSource[],
+  limit = DISPLAY_SOURCE_LIMIT,
+): PremiumSource[] {
+  if (sources.length <= limit) return sources;
+  const ranked = [...sources].sort((left, right) => {
+    const tierScore = (tier: PremiumSource["tier"]) => (tier === "news" ? 0 : tier === "web" ? 1 : 2);
+    const byTier = tierScore(left.tier) - tierScore(right.tier);
+    if (byTier !== 0) return byTier;
+    return (right.publishedAt ?? "").localeCompare(left.publishedAt ?? "");
+  });
+  const picked: PremiumSource[] = [];
+  const seenPublishers = new Set<string>();
+  for (const source of ranked) {
+    const key = (source.publisher || source.url).trim().toLowerCase();
+    if (key && seenPublishers.has(key)) continue;
+    if (key) seenPublishers.add(key);
+    picked.push(source);
+    if (picked.length >= limit) return picked;
+  }
+  for (const source of ranked) {
+    if (picked.some((item) => item.url === source.url)) continue;
+    picked.push(source);
+    if (picked.length >= limit) break;
+  }
+  return picked;
+}
+
 /**
  * Retrieves live coverage for one keyword and renders it as prompt context.
  *

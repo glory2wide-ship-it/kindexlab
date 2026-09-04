@@ -34,7 +34,7 @@ export function CategoryDeskGrid({
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     try {
-      const response = await fetch(`/api/unified-desks?t=${Date.now()}`, {
+      const response = await fetch(`/api/unified-desks`, {
         cache: "no-store",
       });
       if (!response.ok) return;

@@ -14,7 +14,13 @@ async function handle(request: Request) {
   const url = new URL(request.url);
   const force = url.searchParams.get("force") === "1";
   const editionDate = url.searchParams.get("date") ?? undefined;
-  const result = await runDailyBriefingJob({ persist: true, force, editionDate });
+  const result = await runDailyBriefingJob({
+    persist: true,
+    force,
+    editionDate,
+    // Overnight cron: Batch for daily mains + submenu deep-dives (−50%).
+    useGeminiBatch: true,
+  });
 
   return NextResponse.json({
     ok: true,

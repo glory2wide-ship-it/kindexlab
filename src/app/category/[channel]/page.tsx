@@ -8,7 +8,8 @@ import { readBoard } from "@/lib/boards/store";
 import type { CachedBoard } from "@/lib/boards/types";
 import { getPostChannel, isPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
 
-export const dynamic = "force-dynamic";
+/** Align with channel desks (`/[category]`) — boards refresh on the 3-minute cadence. */
+export const revalidate = 180;
 
 export function generateStaticParams() {
   return POST_CHANNELS.map((channel) => ({ channel: channel.id }));

@@ -1,5 +1,5 @@
 import snapshotFile from "@/data/ingestion/snapshot.json";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { composeLiveSnapshot, snapshotToPayload } from "@/lib/ingestion/compose";
 import { fetchBroadcastSources } from "@/lib/ingestion/sources/broadcast";
@@ -16,12 +16,23 @@ import type { IngestReport, IngestSnapshot } from "@/lib/ingestion/types";
 import type { RankingsPayload } from "@/lib/types";
 
 let memorySnapshot: IngestSnapshot | undefined;
+/** Avoid re-parsing the multi-MB snapshot.json on every rankings / heatmap call. */
+let diskSnapshotCache: IngestSnapshot | undefined;
+let diskSnapshotMtimeMs = -1;
 
 function readDiskSnapshot(): IngestSnapshot | undefined {
   try {
     const file = path.join(process.cwd(), "src", "data", "ingestion", "snapshot.json");
+    const mtimeMs = statSync(file).mtimeMs;
+    if (diskSnapshotCache?.items?.length && mtimeMs === diskSnapshotMtimeMs) {
+      return diskSnapshotCache;
+    }
     const snapshot = JSON.parse(readFileSync(file, "utf8")) as IngestSnapshot;
-    if (snapshot?.items?.length) return snapshot;
+    if (snapshot?.items?.length) {
+      diskSnapshotCache = snapshot;
+      diskSnapshotMtimeMs = mtimeMs;
+      return snapshot;
+    }
   } catch {
     // Fall through to the bundled copy when the file is missing at runtime.
   }
@@ -45,6 +56,8 @@ export function readPersistedSnapshot(): IngestSnapshot | undefined {
 
 function rememberSnapshot(snapshot: IngestSnapshot) {
   memorySnapshot = snapshot;
+  diskSnapshotCache = snapshot;
+  diskSnapshotMtimeMs = Date.now();
 }
 
 export async function ingestLivePayload(options?: {

@@ -1,14 +1,14 @@
 import type { RankingEntity, TrendEntity, TrendsPayload } from "@/lib/types";
 
 export async function fetchTrendsSnapshot(): Promise<TrendsPayload | null> {
-  const url = `/api/trends?category=all&timeframe=1m&refresh=1&_ts=${Date.now()}`;
+  // Do not pass refresh=1 — that forces a full multi-source ingest on every
+  // 3-minute client poll. getRankings already background-refreshes when stale.
+  const url = `/api/trends?category=all&timeframe=1m`;
   try {
     const response = await fetch(url, {
       cache: "no-store",
       headers: {
         Accept: "application/json",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
       },
     });
     if (!response.ok) {

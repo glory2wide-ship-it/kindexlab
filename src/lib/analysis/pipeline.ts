@@ -196,7 +196,10 @@ function generateOnce(options: {
 }
 
 /**
- * On-demand entry point for detail pages.
+ * On-demand entry point for detail pages — always Live Gemini (not Batch).
+ *
+ * Overnight cost savings use `runHeatmapAnalysisOvernight` + GEMINI_USE_BATCH
+ * in CI; this path never wraps `withGeminiBatchChat`, so first-click stays immediate.
  *
  * - First visitor click on a cold slug queues Gemini generation (miss → template,
  *   background refresh).

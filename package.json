@@ -18,6 +18,8 @@
         "posts:generate": "tsx scripts/generate-posts.ts",
         "analysis:check": "tsx scripts/check-analysis-override.ts",
         "analysis:audit": "tsx scripts/audit-cache.ts",
+        "analysis:heatmap": "tsx scripts/generate-heatmap-analysis.ts",
+        "analysis:heatmap:local": "tsx --env-file=.env.local scripts/generate-heatmap-analysis.ts",
         "boards:generate": "tsx --env-file=.env.local scripts/generate-boards.ts",
         "boards:audit": "tsx scripts/audit-boards.ts",
         "premium:generate": "tsx --env-file=.env.local scripts/generate-premium.ts",

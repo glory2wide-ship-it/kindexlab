@@ -4,6 +4,7 @@ import {
   canGenerateContext,
   collectPremiumContext,
   isRetrievedUrl,
+  selectDisplaySources,
   type PremiumSource,
 } from "@/lib/premium/context";
 import {
@@ -896,7 +897,8 @@ export async function generatePremiumArticle(input: {
       jsonLd,
       characterCount: finalChars,
       keywordCount,
-      sources: context.sources,
+      // Reader-facing cite list only — full retrieval stays in context for URL checks.
+      sources: selectDisplaySources(context.sources),
       placements: describePlacements(rendered.markdown),
       model,
     },

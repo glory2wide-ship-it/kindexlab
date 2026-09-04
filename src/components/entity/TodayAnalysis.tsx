@@ -134,7 +134,7 @@ export function TodayAnalysis({
           </p>
           {article.sources?.length ? (
             <ul className="mt-3 space-y-1 text-sm leading-7">
-              {article.sources.map((source) => (
+              {article.sources.slice(0, 5).map((source) => (
                 <li key={source.url}>
                   <a
                     href={source.url}

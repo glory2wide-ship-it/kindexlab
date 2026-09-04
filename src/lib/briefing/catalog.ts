@@ -10,22 +10,37 @@ function extras(): BriefingArticle[] {
   return (extraFile as { articles?: BriefingArticle[] }).articles ?? [];
 }
 
+/** Process-lifetime index — extra.json is static until the next deploy/restart. */
+let persistedCache: BriefingArticle[] | null = null;
+const persistedByChannelDate = new Map<string, BriefingArticle[]>();
+
+function channelDateKey(channel: PostChannel, editionDate: string): string {
+  return `${channel}:${editionDate}`;
+}
+
 /** Every persisted briefing row (extra.json + published seeds). */
 export function listPersisted(): BriefingArticle[] {
+  if (persistedCache) return persistedCache;
   const map = new Map<string, BriefingArticle>();
   for (const item of [...publishedBriefings(), ...extras()]) {
     map.set(item.slug, withBriefingCover(item));
   }
-  return [...map.values()].sort(compareArticles);
+  persistedCache = [...map.values()].sort(compareArticles);
+  return persistedCache;
 }
 
 export function persistedChannelEdition(
   channel: PostChannel,
   editionDate: string,
 ): BriefingArticle[] {
-  return listPersisted()
+  const key = channelDateKey(channel, editionDate);
+  const hit = persistedByChannelDate.get(key);
+  if (hit) return hit;
+  const rows = listPersisted()
     .filter((item) => item.channel === channel && item.editionDate === editionDate)
     .sort(compareArticles);
+  persistedByChannelDate.set(key, rows);
+  return rows;
 }
 
 /** Archived seeds only — today's live edition is served from persisted or template compose. */
