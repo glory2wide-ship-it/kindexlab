@@ -5,7 +5,6 @@ import { FactTable } from "@/components/article/FactTable";
 import { FaqList } from "@/components/article/FaqList";
 import { SectionHeading } from "@/components/article/SectionHeading";
 import { SITE } from "@/lib/site";
-import { formatCount } from "@/lib/format";
 import { channelHref, channelSectionHref, getPostChannel, inferPostChannel } from "@/lib/posts/channels";
 import type { GeneratedPost } from "@/lib/posts/types";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
@@ -85,10 +84,7 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
       </DeskEyebrow>
       <h1 className="max-w-3xl text-2xl font-semibold tracking-tight md:text-3xl">{post.title}</h1>
       <p className="max-w-3xl whitespace-pre-line text-sm leading-6 text-muted">{post.excerpt}</p>
-      <p className="font-mono text-[11px] text-muted">
-        {post.editionDate} · {post.readingMinutes ?? 1}분 · {formatCount(post.wordCount || post.characterCount)}
-        어절 · 키워드 기반 이슈 칼럼
-      </p>
+      <p className="font-mono text-[11px] text-muted">{post.editionDate} · 키워드 기반 이슈 칼럼</p>
 
       <div className="prose-board mt-4 max-w-3xl">
         {/* Fact table first: with the stock cover gone it opens the body and

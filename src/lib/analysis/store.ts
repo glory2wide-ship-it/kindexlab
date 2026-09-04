@@ -35,7 +35,8 @@ let loadedMtimeMs = -1;
 
 export function analysisTtlHours(): number {
   const parsed = Number.parseInt(process.env.ANALYSIS_TTL_HOURS ?? "", 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 12;
+  // Default 72h (3 days): same heatmap name keeps the column until then.
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 72;
 }
 
 export function isExpired(entry: CachedAnalysis, now = Date.now()): boolean {

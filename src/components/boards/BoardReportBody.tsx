@@ -2,7 +2,6 @@
 
 import { ContentSlot } from "@/components/monetization/ContentSlot";
 import type { CachedBoard } from "@/lib/boards/types";
-import { formatCount } from "@/lib/format";
 
 /**
  * The ranking report. AdSense slots sit at the intro/mid/footer marks.
@@ -40,9 +39,7 @@ export function BoardReportBody({ board }: { board: CachedBoard }) {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{report?.title || board.title}</h1>
         <p className="text-sm leading-7 text-ink/85">{report?.excerpt || board.title}</p>
-        <p className="text-xs text-muted">
-          {board.editionDate} · {formatCount(report?.characterCount)}자 · 약 {report?.readingMinutes ?? 1}분
-        </p>
+        <p className="text-xs text-muted">{board.editionDate}</p>
       </header>
 
       <ContentSlot placement="intro" />

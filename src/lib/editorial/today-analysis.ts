@@ -23,6 +23,7 @@ import {
   countKeyword,
   dropRepeatedSentences,
   extractSentences,
+  fitSentenceLength,
   hasBannedCopy,
   officialLinkForTopic,
   resetEditorialPass,
@@ -36,10 +37,14 @@ import type { PostChannel, PostFaq, PostLink, PostTable } from "@/lib/posts/type
 import { rankingPath } from "@/lib/slugs";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
 import { ensureSentencePunctuation } from "@/lib/premium/seo-format";
+import type { PremiumArticle } from "@/lib/premium/generate";
 
 /** Korean 자수: characters with whitespace excluded, the usual editorial unit. */
 export const ANALYSIS_MIN = 800;
 export const ANALYSIS_MAX = 1000;
+/** Briefing-aligned band for single-pass Gemini columns (일일 브리핑과 동일). */
+export const ANALYSIS_BRIEFING_MIN = 1400;
+export const ANALYSIS_BRIEFING_MAX = 1800;
 
 export interface TodayAnalysisSection {
   heading: string;
@@ -81,15 +86,20 @@ export interface TodayAnalysisReport {
 }
 
 /**
- * Body produced by the news-grounded LLM chain. Only the prose is replaced: the
- * table, FAQ, links, cover image and the length/keyword audit all stay on the
- * deterministic path, so a weak model degrades to a valid column rather than a
- * broken one.
+ * Body produced by the news-grounded LLM path. Prose (and optionally table/FAQ
+ * from the briefing single-pass) can replace the deterministic template.
  */
 export interface TodayAnalysisOverride {
   title?: string;
   excerpt?: string;
   sections?: TodayAnalysisSection[];
+  table?: PostTable;
+  faq?: PostFaq[];
+  externalLink?: PostLink;
+  internalLink?: PostLink;
+  bodyMarkdown?: string;
+  jsonLd?: string;
+  sources?: TodayAnalysisArticle["sources"];
 }
 
 export function analysisPlainText(article: TodayAnalysisArticle | null | undefined): string {
@@ -224,25 +234,26 @@ function normalizeArticle(article: TodayAnalysisArticle): void {
 function ensureKeywords(article: TodayAnalysisArticle): void {
   const text = analysisPlainText(article);
   const extra: string[] = [];
+  const used = new Set<string>();
   const missingFocus = Math.max(0, 5 - countKeyword(text, article.focusKeyword));
   const missingSupport = Math.max(0, 5 - countKeyword(text, article.supportKeyword));
+  const focusSeeds = [
+    `${article.focusKeyword}는 배경과 습관으로 가른다`,
+    `${article.focusKeyword} 관심은 입문 질문에서 갈린다`,
+    `${article.focusKeyword} 체류는 다음날 같은 대화에 남는지다`,
+  ];
+  const supportSeeds = [
+    `${article.supportKeyword}가 같은 주제면 테마다`,
+    `${article.supportKeyword}가 빠지면 단독 유행이다`,
+    `${article.supportKeyword} 동조는 옆 이름에서 읽힌다`,
+  ];
   for (let i = 0; i < missingFocus; i += 1) {
-    extra.push(
-      i === 0
-        ? `${article.focusKeyword}는 배경과 습관으로 가른다`
-        : i === 1
-          ? `${article.focusKeyword} 관심은 입문 질문에서 갈린다`
-          : `${article.focusKeyword} 체류는 다음날 같은 대화에 남는지다`,
-    );
+    const fitted = fitSentenceLength(focusSeeds[i % focusSeeds.length] ?? focusSeeds[0]!, used);
+    if (fitted) extra.push(fitted);
   }
   for (let i = 0; i < missingSupport; i += 1) {
-    extra.push(
-      i === 0
-        ? `${article.supportKeyword}가 같은 주제면 테마다`
-        : i === 1
-          ? `${article.supportKeyword}가 빠지면 단독 유행이다`
-          : `${article.supportKeyword} 동조는 옆 이름에서 읽힌다`,
-    );
+    const fitted = fitSentenceLength(supportSeeds[i % supportSeeds.length] ?? supportSeeds[0]!, used);
+    if (fitted) extra.push(fitted);
   }
   if (!extra.length) return;
   const target = article.sections.at(-1);
@@ -316,20 +327,21 @@ function ensureFocusLeadParagraph(article: TodayAnalysisArticle): void {
   const focus = article.focusKeyword;
   const section = article.sections[0];
   if (!section?.paragraphs.length) return;
-  if (section.paragraphs.some((paragraph) => paragraph.includes(focus))) return;
+  // Audit checks the first paragraph only — presence later in the section is not enough.
+  if (section.paragraphs[0]?.includes(focus)) return;
+  const used = new Set<string>();
   const candidates = [
     `${focus}가 오늘 다시 화제다`,
     `${focus} 관심이 다시 모인다`,
     `지금 화제는 ${focus}다`,
   ];
-  const leadBody = candidates.find((line) => {
-    const len = charLen(line);
-    return len >= SENT_MIN && len <= SENT_MAX;
-  });
-  if (!leadBody) return;
+  const lead =
+    candidates.map((line) => fitSentenceLength(line, used)).find(Boolean) ||
+    fitSentenceLength(`${focus}가 오늘 다시 화제다`, used);
+  if (!lead) return;
   // Own paragraph entry so normalize cannot glue the lead onto the next clause
   // without a sentence boundary.
-  section.paragraphs = [`${leadBody}.`, ...section.paragraphs];
+  section.paragraphs = [lead, ...section.paragraphs];
 }
 
 function reviewUntilReady(
@@ -495,11 +507,14 @@ export function composeTodayAnalysis(options: {
     sections: override?.sections?.length
       ? normalizeOverrideSections(override.sections)
       : sections,
-    table,
-    faq,
-    externalLink: officialLinkForTopic(entity.type, channel),
-    internalLink,
+    table: override?.table?.rows?.length ? override.table : table,
+    faq: override?.faq?.length ? override.faq : faq,
+    externalLink: override?.externalLink ?? officialLinkForTopic(entity.type, channel),
+    internalLink: override?.internalLink ?? internalLink,
     reviewed: false,
+    bodyMarkdown: override?.bodyMarkdown,
+    jsonLd: override?.jsonLd,
+    sources: override?.sources,
   };
 
   const reserve = uniqueLines([
@@ -518,6 +533,77 @@ export function composeTodayAnalysis(options: {
     // second lead sentence is what was gluing EXTEND pads past the 40자 cap.
     skipWeave: Boolean(override?.sections?.length),
   });
+}
+
+/**
+ * Maps a briefing single-pass `PremiumArticle` into Today's Analysis without
+ * re-running the legacy 800~1,000자 pad/trim path (that band conflicts with
+ * the shared 1,400~1,800자 briefing rules).
+ */
+export function composePremiumTodayAnalysis(options: {
+  entity: RankingEntity;
+  market: RankingsPayload;
+  related?: RankingEntity[];
+  editionDate?: string;
+  premium: PremiumArticle;
+}): TodayAnalysisArticle {
+  resetEditorialPass();
+  const { entity, premium } = options;
+  const editionDate = options.editionDate ?? kstDateString();
+  const peers =
+    options.related?.length
+      ? options.related
+      : options.market.items
+          .filter((item) => item.id !== entity.id && item.type === entity.type)
+          .slice(0, 6);
+  const keyword = issueKeywordFromEntity(
+    entity,
+    peers.map((item) => ({ name: item.name, slug: item.slug })),
+  );
+  const { focus, supportKw } = pickKeywords(keyword);
+  const sections = normalizeOverrideSections(
+    premium.sections.map((section) => ({
+      heading: section.heading,
+      headingLevel: section.headingLevel,
+      paragraphs: section.paragraphs,
+    })),
+  );
+  const chars =
+    premium.characterCount > 0
+      ? premium.characterCount
+      : [premium.title, premium.excerpt, ...sections.flatMap((s) => [s.heading, ...s.paragraphs]), ...premium.faq.flatMap((f) => [f.question, f.answer])]
+          .join(" ")
+          .replace(/\s+/g, "").length;
+
+  return {
+    id: `today-${editionDate}-${entity.slug}`,
+    slug: `${editionDate}-${entity.slug}-today`,
+    entitySlug: entity.slug,
+    title: premium.title.includes(focus) || premium.title.includes(entity.name)
+      ? premium.title
+      : `${focus}가 지금 화제인 이유, 오늘 ${TYPE_LABEL[entity.type] || entity.type} 입문`,
+    excerpt: premium.excerpt,
+    editionDate,
+    publishedAt: editionDateTime(editionDate),
+    characterCount: chars,
+    readingMinutes: Math.max(2, Math.round(chars / 500)),
+    focusKeyword: focus,
+    supportKeyword: supportKw,
+    sections,
+    table: premium.table,
+    faq: premium.faq,
+    externalLink: premium.externalLink,
+    internalLink: premium.internalLink,
+    reviewed: true,
+    bodyMarkdown: premium.bodyMarkdown,
+    jsonLd: premium.jsonLd,
+    sources: premium.sources.map((source) => ({
+      title: source.title,
+      url: source.url,
+      publisher: source.publisher,
+      publishedAt: source.publishedAt,
+    })),
+  };
 }
 
 export function resolveAnalysisEntity(

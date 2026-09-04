@@ -2,24 +2,23 @@ import { getBoard } from "@/lib/boards/registry";
 import type { PostChannel } from "@/lib/posts/types";
 
 /**
- * Board heatmaps whose "오늘의 분석" columns use the daily-briefing editor
- * prompts instead of the default today-analysis editorial prompt.
- *
- * Matched by board slug prefix on entity slugs (`{boardSlug}--{name}`).
+ * Today's Analysis always uses the same Gemini prompts as 일일 브리핑 /
+ * 심층분석 (`STATIC_SYSTEM_PROMPT` + `buildSinglePassUserPrompt`).
+ * Board-slug gating was removed — every heatmap detail column shares that path.
  */
+
+/** @deprecated All boards use briefing prompts; kept for script compatibility. */
 export const BRIEFING_PROMPT_BOARD_SLUGS = [
-  "governor-approval-index", // 정치 · 지자체 정책지수
-  "government-support-fund", // 정치 · 정부 지원금
-  "policy-controversy-index", // 정치 · 이슈 키워드
-  "government-subsidy-search", // 경제 · 경제 정부지원금
-  "culture-leisure-grant-ranking", // 문화/생활 · 문화/생활 정부 지원금
-  "travel-government-grant-ranking", // 여행/맛집 · 여행 정부지원금
-  "entertainment-government-grant-ranking", // 엔터 · 정부 지원금
+  "governor-approval-index",
+  "government-support-fund",
+  "policy-controversy-index",
+  "government-subsidy-search",
+  "culture-leisure-grant-ranking",
+  "travel-government-grant-ranking",
+  "entertainment-government-grant-ranking",
 ] as const;
 
 export type BriefingPromptBoardSlug = (typeof BRIEFING_PROMPT_BOARD_SLUGS)[number];
-
-const BRIEFING_BOARD_SET = new Set<string>(BRIEFING_PROMPT_BOARD_SLUGS);
 
 /** Extracts `{boardSlug}` from `boardSlug--row-slug` entity ids. */
 export function boardSlugFromEntitySlug(entitySlug: string | undefined): string | undefined {
@@ -29,9 +28,9 @@ export function boardSlugFromEntitySlug(entitySlug: string | undefined): string 
   return entitySlug.slice(0, at);
 }
 
-export function usesBriefingAnalysisPrompt(entitySlug: string | undefined): boolean {
-  const boardSlug = boardSlugFromEntitySlug(entitySlug);
-  return Boolean(boardSlug && BRIEFING_BOARD_SET.has(boardSlug));
+/** Always true — Today's Analysis shares briefing prompts site-wide. */
+export function usesBriefingAnalysisPrompt(_entitySlug?: string): boolean {
+  return true;
 }
 
 export function analysisPromptChannel(entitySlug: string | undefined): PostChannel | undefined {

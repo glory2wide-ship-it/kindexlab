@@ -1,6 +1,6 @@
 import { TYPE_ORDER } from "@/lib/categories";
 import { entityTypeForBoardSlug } from "@/lib/boards/entity-type";
-import { menuBoardsForChannel } from "@/lib/boards/registry";
+import { getBoard, menuBoardsForChannel } from "@/lib/boards/registry";
 import { CHANNEL_ENTITY_TYPES, getPostChannel } from "@/lib/posts/channels";
 import type { CategoryId, EntityType } from "@/lib/types";
 import type { PostChannel } from "@/lib/posts/types";
@@ -10,6 +10,14 @@ export interface ChannelBriefingDesk {
   label: string;
   category: CategoryId;
   indexId?: string;
+}
+
+/** Headlines desks are retired from the rail — never compose 심층분석 for them. */
+export function isHeadlineBriefingDesk(deskId: string | undefined): boolean {
+  if (!deskId) return false;
+  if (deskId === "pol-headline") return true;
+  if (/headline-news-ranking$/.test(deskId)) return true;
+  return getBoard(deskId)?.deskKind === "headlines";
 }
 
 /**
@@ -78,9 +86,12 @@ export function resolveBriefingDeskId(deskId: string | undefined, channel: PostC
 /**
  * Lower-menu deep-dive desks — always mirror the ranking-board rail
  * (`menuBoardsForChannel`) so tabs and 심층 분석 cards stay 1:1.
+ * Headlines boards are excluded even if they reappear in a stale menu order.
  */
 export function desksForChannel(channel: PostChannel): ChannelBriefingDesk[] {
-  const boards = menuBoardsForChannel(channel);
+  const boards = menuBoardsForChannel(channel).filter(
+    (board) => board.deskKind !== "headlines" && !isHeadlineBriefingDesk(board.slug),
+  );
   if (boards.length) {
     const fallback = defaultCategoryForChannel(channel);
     return boards.map((board) => ({

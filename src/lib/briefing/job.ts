@@ -2,6 +2,7 @@ import { enrichBriefingWithAi, enrichChannelEditionWithAi } from "@/lib/briefing
 import { hasEdition, listSeeded } from "@/lib/briefing/catalog";
 import { composeArticle, composeChannelEdition } from "@/lib/briefing/compose";
 import { editionDateTime, kstDateString } from "@/lib/briefing/dates";
+import { desksForChannel, isHeadlineBriefingDesk } from "@/lib/briefing/desks";
 import { channelUsesBoardBriefing, composeBoardChannelEdition } from "@/lib/briefing/from-boards";
 import { collectHeatmapTopics } from "@/lib/briefing/heatmap-topics";
 import { persistEdition, removePersistedEdition } from "@/lib/briefing/persist";
@@ -9,6 +10,12 @@ import { POST_CHANNELS } from "@/lib/posts/channels";
 import { getRankings } from "@/lib/providers/trends";
 import type { BriefingArticle } from "@/lib/types";
 import type { PostChannel } from "@/lib/posts/types";
+
+function withoutHeadlineDeepDives(articles: BriefingArticle[]): BriefingArticle[] {
+  return articles.filter(
+    (article) => article.kind === "main" || !isHeadlineBriefingDesk(article.deskId),
+  );
+}
 
 async function composeChannelDraft(
   channel: PostChannel,
@@ -20,11 +27,21 @@ async function composeChannelDraft(
   console.log(
     `[briefing] ${channel} heatmap topics: composite=${topicPool.composite.length} desks=${Object.keys(topicPool.byDesk).length} lead=${topicPool.composite[0]?.name ?? "—"}`,
   );
-  if (channelUsesBoardBriefing(channel)) {
-    return composeBoardChannelEdition(channel, editionDate, publishedAt, topicPool);
+  const draft = channelUsesBoardBriefing(channel)
+    ? await composeBoardChannelEdition(channel, editionDate, publishedAt, topicPool)
+    : composeChannelEdition(await getRankings(), channel, editionDate, publishedAt, topicPool);
+
+  const expected = new Set(desksForChannel(channel).map((desk) => desk.id));
+  const diveIds = new Set(
+    draft.filter((article) => article.kind === "deep-dive").map((article) => article.deskId),
+  );
+  for (const deskId of expected) {
+    if (!diveIds.has(deskId)) {
+      console.warn(`[briefing] ${channel} missing deep-dive desk: ${deskId}`);
+    }
   }
-  const payload = await getRankings();
-  return composeChannelEdition(payload, channel, editionDate, publishedAt, topicPool);
+
+  return withoutHeadlineDeepDives(draft);
 }
 
 /** Composes and Gemini-enriches every briefing for one channel (main + deep-dives). */
@@ -39,8 +56,8 @@ export async function composeChannelEditionWithAi(
 }
 
 /**
- * Generates the full daily edition across all five channels (46 articles on
- * current desk counts) using the premium Gemini pipeline.
+ * Generates the full daily edition across all five channels (main + rail
+ * deep-dives; headlines desks excluded) using the premium Gemini pipeline.
  */
 export async function generateEdition(
   editionDate = kstDateString(),

@@ -45,7 +45,7 @@ import {
 import { describeSmartRoute, resolveBriefingModel } from "@/lib/premium/smart-routing";
 import { cleanLlmField } from "@/lib/premium/clean";
 import { expandBriefingLength, patchDraftViolations, type QualityViolation } from "@/lib/premium/error-patch";
-import { autoCorrectArticleFields, scrubBannedPhraseStems } from "@/lib/premium/postprocess";
+import { autoCorrectArticleFields, padArticleLengthLocally, scrubBannedPhraseStems } from "@/lib/premium/postprocess";
 import { ARTICLE_JSON_SCHEMA, REWRITE_LIST_JSON_SCHEMA, hasRequiredKeys } from "@/lib/premium/schemas";
 import {
   applySeoHeadingStructure,
@@ -383,6 +383,11 @@ export async function generatePremiumArticle(input: {
   /** KST edition date YYYY-MM-DD — anchors tense/freshness in the prompt. */
   editionDate?: string;
   briefing?: boolean;
+  /**
+   * Today's Analysis only: skip the Gemini length-expand call and pad with
+   * local/regex seed lines instead. Daily briefing keeps LLM expand.
+   */
+  skipLengthExpandLlm?: boolean;
 }): Promise<PremiumResult> {
   const { keyword, slug, logger } = input;
   const deadline = Date.now() + (input.timeoutMs ?? 150_000);
@@ -597,25 +602,30 @@ export async function generatePremiumArticle(input: {
   });
 
   if (chars < minChars && remaining() > 20_000) {
-    logger.warn("premium-length-patch", { chars, minChars });
-    const expanded = await expandBriefingLength({
-      draft: { title, excerpt: excerptText, sections, faq: faqText },
-      keyword,
-      newsContext: context.block,
-      minChars,
-      maxChars: BRIEFING_FULL_TARGET_MAX_CHARS,
-      currentChars: chars,
-      channel: input.channel,
-      logger,
-      timeoutMs: Math.min(90_000, remaining()),
-    });
-    if (expanded) {
-      title = expanded.title;
-      excerptText = expanded.excerpt;
-      sections = expanded.sections as PremiumSection[];
-      faqText = expanded.faq;
+    if (input.skipLengthExpandLlm) {
+      logger.warn("premium-length-pad-local", { chars, minChars });
+      const seedLines = [
+        ...context.signalFacts,
+        ...context.sources.flatMap((source) =>
+          [source.title, source.snippet].filter((value): value is string => Boolean(value?.trim())),
+        ),
+      ];
+      const padded = padArticleLengthLocally({
+        title,
+        excerpt: excerptText,
+        sections,
+        faq: faqText,
+        keyword,
+        seedLines,
+        minChars,
+        maxChars: BRIEFING_FULL_TARGET_MAX_CHARS,
+      });
+      title = padded.title;
+      excerptText = padded.excerpt;
+      sections = padded.sections as PremiumSection[];
+      faqText = padded.faq;
       sections = applySeoHeadingStructure(sections) as PremiumSection[];
-      const expandedChars = premiumCharCount(
+      const paddedChars = premiumCharCount(
         lengthPlain(input.briefing, {
           title,
           excerpt: excerptText,
@@ -625,10 +635,45 @@ export async function generatePremiumArticle(input: {
           table,
         }),
       );
-      logger.step("premium-body-after-length-patch", {
+      logger.step("premium-body-after-local-pad", {
         sections: sections.length,
-        chars: expandedChars,
+        chars: paddedChars,
+        added: padded.added,
       });
+    } else {
+      logger.warn("premium-length-patch", { chars, minChars });
+      const expanded = await expandBriefingLength({
+        draft: { title, excerpt: excerptText, sections, faq: faqText },
+        keyword,
+        newsContext: context.block,
+        minChars,
+        maxChars: BRIEFING_FULL_TARGET_MAX_CHARS,
+        currentChars: chars,
+        channel: input.channel,
+        logger,
+        timeoutMs: Math.min(90_000, remaining()),
+      });
+      if (expanded) {
+        title = expanded.title;
+        excerptText = expanded.excerpt;
+        sections = expanded.sections as PremiumSection[];
+        faqText = expanded.faq;
+        sections = applySeoHeadingStructure(sections) as PremiumSection[];
+        const expandedChars = premiumCharCount(
+          lengthPlain(input.briefing, {
+            title,
+            excerpt: excerptText,
+            sections,
+            faq: faqText,
+            takeaways,
+            table,
+          }),
+        );
+        logger.step("premium-body-after-length-patch", {
+          sections: sections.length,
+          chars: expandedChars,
+        });
+      }
     }
   }
 

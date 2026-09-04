@@ -41,6 +41,7 @@ export const BOARDS: BoardDefinition[] = [
     slug: "eco-headline-news-ranking",
     channel: "economy",
     deskKind: "headlines",
+    railHidden: true,
     title: "헤드라인 뉴스 랭킹",
     shortTitle: "헤드라인 뉴스랭킹",
     criteria: "네이버·다음 경제 섹션과 포털 헤드라인 실시간 열독 순위",
@@ -380,6 +381,7 @@ export const BOARDS: BoardDefinition[] = [
     slug: "culture-headline-news-ranking",
     channel: "culture",
     deskKind: "headlines",
+    railHidden: true,
     title: "헤드라인 뉴스 랭킹",
     shortTitle: "헤드라인 뉴스랭킹",
     criteria: "네이버·다음 생활문화와 공연·전시·여행·맛집·레저·생활 섹션 기사만 수집한 실시간 열독·급상승 순위",
@@ -425,8 +427,32 @@ export const BOARDS: BoardDefinition[] = [
     focusKeyword: "공연 랭킹",
     supportKeyword: "티켓 파워",
     rankGuidance:
-      "종목명은 반드시 `[지역] 공연명` 형식이다. 뮤지컬·연극·콘서트·오페라·발레·클래식 등 실제 공연/작품 제목만 쓴다. NOL 인터파크·예스24·티켓링크 예매 순위를 최우선으로 반영하라. 예술의전당·문화회관·아트센터 같은 공연장명만 단독으로 올리지 마라. 지역은 서울·경기·인천·부산·대구·광주·대전·울산·세종·강원·충북·충남·전북·전남·경북·경남·제주 중 하나다. 지역 탭마다 해당 지역 공연명 20개를 채운다.",
+      "종목명은 반드시 `[지역] 공연명` 형식이다. 뮤지컬·연극·콘서트·오페라·발레·클래식 등 실제 공연/작품 제목만 쓴다. NOL 인터파크·예스24·티켓링크 예매 순위를 최우선으로 반영하라. 예술의전당·문화회관·아트센터 같은 공연장명만 단독으로 올리지 마라. 지역은 서울·경기·인천·부산·대구·광주·대전·울산·세종·강원·충북·충남·전북·전남·경북·경남·제주 중 하나다. 지역 탭마다 해당 지역 공연명 20개를 채운다. 아동/유치원(kids)에는 어린이·유아·키즈·가족 뮤지컬·인형극·키즈 클래식 등 아동이 관람 가능한 공연만 넣고, 위키드·데스노트·시카고·아이돌 콘서트 등 일반·성인 타깃 공연은 절대 넣지 마라.",
     seeds: regionalSeeds(PERFORMANCE_BOARD_SLUG),
+    demographicSeeds: {
+      age: {
+        kids: [
+          "[서울] 어린이 뮤지컬 알라딘",
+          "[서울] 가족 뮤지컬 겨울왕국",
+          "[서울] 어린이 뮤지컬 라이온킹",
+          "[서울] 어린이 발레 호두까기인형",
+          "[경기] 키즈 클래식 콘서트",
+          "[경기] 가족 뮤지컬 아기돼지 삼형제",
+          "[인천] 인천아트 어린이 음악극",
+          "[부산] 어린이 인형극",
+          "[대구] 유아 음악회",
+          "[광주] 어린이 뮤지컬",
+          "[대전] 키즈 가족 공연",
+          "[울산] 어린이 연극",
+          "[세종] 유아 인형극",
+          "[강원] 가족 뮤지컬",
+          "[충북] 어린이 음악극",
+          "[전북] 키즈 클래식",
+          "[경남] 어린이 발레",
+          "[제주] 가족 인형극",
+        ],
+      },
+    },
     unitLabel: "공연",
   },
   {
@@ -434,6 +460,7 @@ export const BOARDS: BoardDefinition[] = [
     slug: "travel-headline-news-ranking",
     channel: "travel",
     deskKind: "headlines",
+    railHidden: true,
     title: "헤드라인 뉴스 랭킹",
     shortTitle: "헤드라인 뉴스랭킹",
     criteria: "네이버·다음 여행·맛집·레저·생활문화 섹션 기사만 수집한 실시간 열독·급상승 순위",
@@ -566,8 +593,33 @@ export const BOARDS: BoardDefinition[] = [
     focusKeyword: "전시 팝업",
     supportKeyword: "오픈런",
     rankGuidance:
-      "종목명은 반드시 `[지역] 전시/팝업 행사명` 형식이다. 특별전·기획전·몰입전·팝업스토어 등 실제 행사 제목만 쓴다. NOL 인터파크 전시/행사 예매 순위를 최우선으로 반영하라. 미술관·박물관·몰 이름만 단독으로 올리지 마라. 지역은 서울·경기·인천·부산·대구·광주·대전·울산·세종·강원·충북·충남·전북·전남·경북·경남·제주 중 하나다. 지역 탭마다 해당 지역 행사명 20개를 채운다.",
+      "종목명은 반드시 `[지역] 전시/팝업 행사명` 형식이다. 특별전·기획전·몰입전·팝업스토어 등 실제 행사 제목만 쓴다. NOL 인터파크 전시/행사 예매 순위를 최우선으로 반영하라. 미술관·박물관·몰 이름만 단독으로 올리지 마라. 지역은 서울·경기·인천·부산·대구·광주·대전·울산·세종·강원·충북·충남·전북·전남·경북·경남·제주 중 하나다. 지역 탭마다 해당 지역 행사명 20개를 채운다. 아동/유치원(kids)에는 어린이 체험전·디즈니·카카오프렌즈·캐릭터 팝업 등 아동이 관람·체험 가능한 행사만 넣고, 성인 아트·패션 팝업은 넣지 마라.",
     seeds: regionalSeeds(EXHIBITION_BOARD_SLUG),
+    demographicSeeds: {
+      age: {
+        kids: [
+          "[서울] 디즈니 100주년 팝업",
+          "[서울] 카카오프렌즈 성수 팝업",
+          "[서울] 어린이 체험전",
+          "[경기] 용인 디즈니 팝업",
+          "[경기] 성남 카카오프렌즈 팝업",
+          "[인천] 송도 디즈니 팝업",
+          "[부산] 센텀 디즈니 팝업",
+          "[대구] 어린이 과학체험전",
+          "[광주] 가족 몰입형 체험전",
+          "[대전] 카카오프렌즈 둔산 팝업",
+          "[울산] 디즈니 팝업",
+          "[세종] 세종 어린이 체험전",
+          "[강원] 춘천 디즈니 팝업",
+          "[충북] 청주 어린이 체험전",
+          "[전북] 전주 디즈니 팝업",
+          "[전남] 여수 카카오프렌즈 팝업",
+          "[경북] 경주 디즈니 팝업",
+          "[경남] 창원 캐릭터 팝업스토어",
+          "[제주] 제주 디즈니 팝업",
+        ],
+      },
+    },
     unitLabel: "전시",
   },
   {
@@ -837,6 +889,7 @@ export const BOARDS: BoardDefinition[] = [
     slug: "headline-news-ranking",
     channel: "politics",
     deskKind: "headlines",
+    railHidden: true,
     title: "헤드라인 뉴스 랭킹",
     shortTitle: "헤드라인 뉴스랭킹",
     criteria: "네이버·다음 정치 섹션과 포털 헤드라인 실시간 열독 순위",
@@ -1104,6 +1157,7 @@ export const BOARDS: BoardDefinition[] = [
     slug: "ent-headline-news-ranking",
     channel: "entertainment",
     deskKind: "headlines",
+    railHidden: true,
     title: "헤드라인 뉴스 랭킹",
     shortTitle: "헤드라인 뉴스랭킹",
     criteria: "네이버·다음 연예 섹션과 포털 헤드라인 실시간 열독 순위",
@@ -1758,9 +1812,8 @@ export function getBoard(slug: string): BoardDefinition | undefined {
   return BY_SLUG.get(resolveBoardSlug(slug));
 }
 
-/** Travel/food rail — 헤드라인 다음 여행 정부지원금. */
+/** Travel/food rail — 여행 정부지원금이 첫 보드. */
 const TRAVEL_MENU_ORDER = [
-  "travel-headline-news-ranking",
   TRAVEL_GRANT_SLUG,
   "domestic-travel-ranking",
   "overseas-travel-ranking",
@@ -1768,9 +1821,8 @@ const TRAVEL_MENU_ORDER = [
   "food-restaurant-ranking",
 ] as const;
 
-/** Politics rail — 헤드라인 다음 정부 지원금. */
+/** Politics rail — 정부 지원금이 첫 보드. */
 const POLITICS_MENU_ORDER = [
-  "headline-news-ranking",
   "government-support-fund",
   "party-support-chart",
   "politician-support-chart",
@@ -1780,9 +1832,8 @@ const POLITICS_MENU_ORDER = [
   "policy-controversy-index",
 ] as const;
 
-/** Entertainment rail — 헤드라인 다음 정부 지원금; 음원 sits right of 시청률. */
+/** Entertainment rail — 정부 지원금이 첫 보드; 음원 sits right of 시청률. */
 const ENTERTAINMENT_MENU_ORDER = [
-  "ent-headline-news-ranking",
   ENT_GRANT_SLUG,
   "kpop-fandom-power",
   "trot-kayo-fandom-power",
@@ -1822,11 +1873,12 @@ export function isRailBoard(board: Pick<BoardDefinition, "railHidden">): boolean
   return !board.railHidden;
 }
 
-/** Category rail, 종합 heatmap, and sibling links — hides retired politics tabs. */
+/** Category rail, 종합 heatmap, and sibling links — hides retired politics tabs and headline desks. */
 export function menuBoardsForChannel(channel: PostChannel): BoardDefinition[] {
   const boards = boardsForChannel(channel)
     .filter(isRailBoard)
-    .filter((board) => !isRetiredPoliticsBoard(board.slug));
+    .filter((board) => !isRetiredPoliticsBoard(board.slug))
+    .filter((board) => board.deskKind !== "headlines");
   if (channel === "entertainment") return sortMenusByOrder(boards, ENTERTAINMENT_MENU_ORDER);
   if (channel === "travel") return sortMenusByOrder(boards, TRAVEL_MENU_ORDER);
   if (channel === "politics") return sortMenusByOrder(boards, POLITICS_MENU_ORDER);

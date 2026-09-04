@@ -9,6 +9,13 @@ import {
   REGION_LABEL,
   reweightRegionByDemographic,
 } from "@/lib/boards/regions";
+import {
+  ensureKidsCultureSegment,
+  isKidsFriendlyCultureEvent,
+  selectKidsCultureAllRanking,
+  selectKidsCultureRegionRanking,
+  shouldFilterKidsCultureSegment,
+} from "@/lib/boards/kids-culture";
 import type {
   AgeSegment,
   BoardDefinition,
@@ -21,10 +28,13 @@ import type {
 
 export const GENDER_SEGMENTS: GenderSegment[] = ["male", "female"];
 
-export const AGE_SEGMENTS: AgeSegment[] = ["10s", "20s", "30s", "40s", "50s", "60s", "70s"];
+export const AGE_SEGMENTS: AgeSegment[] = ["kids", "10s", "20s", "30s", "40s", "50s", "60s", "70s"];
 
-/** Tabs shown in 연령 보기. Legacy `70s` data is folded into `60s`. */
+/** Tabs shown in 연령 보기. Legacy `70s` data is folded into `60s`. `kids` is board-scoped. */
 export const VISIBLE_AGE_SEGMENTS: AgeSegment[] = ["10s", "20s", "30s", "40s", "50s", "60s"];
+
+/** Age cohorts the LLM must fill for `demographicsFromLlm` (kids is optional / board-scoped). */
+export const CORE_AGE_SEGMENTS: AgeSegment[] = ["10s", "20s", "30s", "40s", "50s", "60s", "70s"];
 
 export const GENDER_LABEL: Record<GenderSegment, string> = {
   male: "남성",
@@ -32,6 +42,7 @@ export const GENDER_LABEL: Record<GenderSegment, string> = {
 };
 
 export const AGE_LABEL: Record<AgeSegment, string> = {
+  kids: "아동/유치원",
   "10s": "10대",
   "20s": "20대",
   "30s": "30대",
@@ -182,6 +193,7 @@ export function selectRanking(
   const drop = (rows: BoardRankEntry[]) =>
     rows.filter((row) => !blocked.has(normalizeName(row.name)));
   const region = options?.region ?? "all";
+  const kidsBoard = shouldFilterKidsCultureSegment(options?.boardSlug) && age === "kids";
   const genderAge =
     gender !== "all" && age !== "all"
       ? blendRankings(
@@ -195,6 +207,16 @@ export function selectRanking(
         : age !== "all"
           ? drop(rowsForAgeSegment(demographics, age, total, limit))
           : drop(total);
+
+  if (kidsBoard) {
+    const kidsBase = (genderAge.length ? genderAge : drop(rowsForAgeSegment(demographics, "kids", total, limit))).filter(
+      (row) => isKidsFriendlyCultureEvent(row.name),
+    );
+    if (region === "all") {
+      return selectKidsCultureAllRanking(kidsBase, drop(total), limit, options?.boardSlug);
+    }
+    return selectKidsCultureRegionRanking(kidsBase, drop(total), region, limit, options?.boardSlug);
+  }
 
   if (region === "all") {
     if (gender === "all" && age === "all") return drop(total).slice(0, limit);
@@ -225,6 +247,7 @@ export function selectRanking(
 const SEGMENT_ROTATE: Record<Exclude<SegmentKey, "total">, number> = {
   male: 0,
   female: 1,
+  kids: 4,
   "10s": 2,
   "20s": 1,
   "30s": 0,
@@ -328,6 +351,16 @@ export function applyDemographicWeights(
   }
   const age = { ...demographics.age } as DemographicRanking["age"];
   for (const key of AGE_SEGMENTS) {
+    if (key === "kids" && shouldFilterKidsCultureSegment(board.slug)) {
+      age[key] = ensureKidsCultureSegment(
+        board.demographicSeeds?.age?.kids,
+        demographics.age[key],
+        ranking,
+        limit,
+        `${board.shortTitle} 아동/유치원 관람 가능`,
+      );
+      continue;
+    }
     age[key] = mergeSeededSegment(
       board.demographicSeeds?.age?.[key],
       board.demographicExclude?.age?.[key],
@@ -436,7 +469,7 @@ export function deriveDemographics(
 /** True when every segment has at least one row, i.e. the board can be filtered. */
 export function demographicsComplete(demographics: DemographicRanking): boolean {
   const genderOk = GENDER_SEGMENTS.every((key) => demographics.gender[key]?.length > 0);
-  const ageOk = AGE_SEGMENTS.every((key) => demographics.age[key]?.length > 0);
+  const ageOk = CORE_AGE_SEGMENTS.every((key) => demographics.age[key]?.length > 0);
   return genderOk && ageOk;
 }
 

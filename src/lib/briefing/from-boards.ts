@@ -2,6 +2,7 @@ import type { PostChannel } from "@/lib/posts/types";
 import { boardPath, menuBoardsForChannel } from "@/lib/boards/registry";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
 import type { CachedBoard } from "@/lib/boards/types";
+import { isHeadlineBriefingDesk } from "@/lib/briefing/desks";
 import { formatKoreanDate } from "@/lib/briefing/dates";
 import { withBriefingCover } from "@/lib/briefing/cover";
 import {
@@ -220,7 +221,10 @@ export async function composeBoardChannelEdition(
   topicPool?: HeatmapTopicPool,
 ): Promise<BriefingArticle[]> {
   const pool = topicPool ?? (await collectHeatmapTopics(channel));
-  const defs = menuBoardsForChannel(channel);
+  // Mirror desksForChannel: never draft 심층분석 for retired headline boards.
+  const defs = menuBoardsForChannel(channel).filter(
+    (def) => def.deskKind !== "headlines" && !isHeadlineBriefingDesk(def.slug),
+  );
   const loaded = (
     await Promise.all(
       defs.map(async (def) => {

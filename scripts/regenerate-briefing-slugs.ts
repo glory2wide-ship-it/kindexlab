@@ -1,7 +1,9 @@
 import { enrichBriefingWithAi } from "../src/lib/briefing/ai-main";
 import { composeChannelEdition } from "../src/lib/briefing/compose";
 import { editionDateTime } from "../src/lib/briefing/dates";
+import { isHeadlineBriefingDesk } from "../src/lib/briefing/desks";
 import { channelUsesBoardBriefing, composeBoardChannelEdition } from "../src/lib/briefing/from-boards";
+import { collectHeatmapTopics } from "../src/lib/briefing/heatmap-topics";
 import { persistEdition } from "../src/lib/briefing/persist";
 import { isPersistableBriefing } from "../src/lib/briefing/quality";
 import { briefingRelatedKeywords } from "../src/lib/premium/briefing-editorial";
@@ -23,11 +25,13 @@ async function composeChannelDraft(
   editionDate: string,
 ): Promise<BriefingArticle[]> {
   const publishedAt = editionDateTime(editionDate);
-  if (channelUsesBoardBriefing(channel)) {
-    return composeBoardChannelEdition(channel, editionDate, publishedAt);
-  }
-  const payload = await getRankings();
-  return composeChannelEdition(payload, channel, editionDate, publishedAt);
+  const topicPool = await collectHeatmapTopics(channel);
+  const draft = channelUsesBoardBriefing(channel)
+    ? await composeBoardChannelEdition(channel, editionDate, publishedAt, topicPool)
+    : composeChannelEdition(await getRankings(), channel, editionDate, publishedAt, topicPool);
+  return draft.filter(
+    (article) => article.kind === "main" || !isHeadlineBriefingDesk(article.deskId),
+  );
 }
 
 function enrichmentRelatedKeywords(article: BriefingArticle, edition: BriefingArticle[]): string[] {

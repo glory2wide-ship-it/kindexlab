@@ -12,7 +12,6 @@ import {
 } from "@/lib/premium/internal-link";
 import { rankingPath } from "@/lib/slugs";
 import { SITE } from "@/lib/site";
-import { formatCount } from "@/lib/format";
 import type { BriefingArticle, RankingEntity } from "@/lib/types";
 
 export function DailyBriefing({
@@ -62,8 +61,7 @@ export function DailyBriefing({
       </h1>
       <p className="mt-3 max-w-3xl whitespace-pre-line text-sm leading-6 text-muted">{briefing.excerpt}</p>
       <p className="mt-4 font-mono text-[11px] text-muted">
-        {briefing.editionDate} · {categoryLabel(briefing.category)} · {briefing.readingMinutes ?? 1}분
-        읽기 · 약 {formatCount(briefing.wordCount)}단어 · 애드센스 고품질 본문 기준 충족
+        {briefing.editionDate} · {categoryLabel(briefing.category)}
       </p>
 
       <nav className="mt-6 flex flex-wrap gap-2 text-sm" aria-label="관련 보드">

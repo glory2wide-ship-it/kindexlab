@@ -63,14 +63,15 @@ export function geminiBatchEnabled(): boolean {
 }
 
 /**
- * All article / board / premium generation defaults to Gemini.
- * Set LLM_PROVIDER=anthropic only for an explicit alternate; openai is ignored
- * for content generation (kept only as a legacy live path if forced).
+ * All article / board / premium / 오늘의 분석 generation defaults to Gemini.
+ * Set LLM_PROVIDER=anthropic only for an explicit alternate.
+ * LLM_PROVIDER=openai is ignored (legacy env) — content gen never uses OpenAI.
  */
 export function llmProvider(): LlmProvider {
   const forced = process.env.LLM_PROVIDER?.trim().toLowerCase();
   if (forced === "anthropic") return "anthropic";
-  if (forced === "openai") return "openai";
+  // openai override is ignored for content generation — always Gemini unless anthropic.
+  if (forced === "openai") return "gemini";
   if (forced === "gemini") return "gemini";
   if (process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) return "anthropic";
   return "gemini";
@@ -170,6 +171,33 @@ export const BRIEFING_LLM = {
   },
   draftModel: () => draftModel(briefingProvider()),
   editorModel: () => editorModel(briefingProvider()),
+};
+
+/**
+ * Provider for heatmap detail "오늘의 분석".
+ * Same Gemini path as 일일 브리핑 (`generatePremiumArticle` single-pass).
+ * Never OpenAI, even if LLM_PROVIDER=openai remains in .env.
+ */
+export function analysisProvider(): LlmProvider {
+  const forced = (process.env.ANALYSIS_LLM_PROVIDER || "").trim().toLowerCase();
+  if (forced === "anthropic") return "anthropic";
+  return "gemini";
+}
+
+export function analysisLlmConfigured(): boolean {
+  const provider = analysisProvider();
+  if (provider === "gemini") return geminiConfigured();
+  if (provider === "anthropic") return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+  return false;
+}
+
+/** Fixed provider + models for 오늘의 분석 (aligned with BRIEFING_LLM). */
+export const ANALYSIS_LLM = {
+  get provider(): LlmProvider {
+    return analysisProvider();
+  },
+  draftModel: () => draftModel(analysisProvider()),
+  editorModel: () => editorModel(analysisProvider()),
 };
 
 /** Rate-limit retries. Batched rebuilds burst well past the per-minute quota. */

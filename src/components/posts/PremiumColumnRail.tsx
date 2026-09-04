@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { formatCount } from "@/lib/format";
 import { channelHref, getPostChannel } from "@/lib/posts/channels";
 import type { FeaturedColumn } from "@/lib/posts/featured";
 
@@ -53,10 +52,7 @@ function ColumnCard({ column, lead = false }: { column: FeaturedColumn; lead?: b
           <span className="rounded-full border border-accent/40 px-2 py-0.5 font-sans text-[10px] font-semibold text-accent">
             {meta.label}
           </span>
-          <span className="font-sans text-[11px] text-muted">
-            {post.editionDate} · {post.readingMinutes ?? 1}분 ·{" "}
-            {formatCount(post.characterCount)}자
-          </span>
+          <span className="font-sans text-[11px] text-muted">{post.editionDate}</span>
         </div>
         <h3
           className={`mt-2 font-semibold tracking-tight ${lead ? "text-lg md:text-xl" : "text-sm leading-6"}`}

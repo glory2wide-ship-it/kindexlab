@@ -7,7 +7,7 @@ import { tickerChangeRate } from "@/lib/ticker/rank";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
 
 /** Tiles on the unified landing heatmap. */
-export const UNIFIED_HEATMAP_TILES = 20;
+export const UNIFIED_HEATMAP_TILES = 15;
 /** Rows shown on each desk summary card. */
 export const DESK_TOP_N = 3;
 

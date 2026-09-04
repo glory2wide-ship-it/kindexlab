@@ -3,7 +3,7 @@ import type { TodayAnalysisSection } from "@/lib/editorial/today-analysis";
 
 export type GenderSegment = "male" | "female";
 
-export type AgeSegment = "10s" | "20s" | "30s" | "40s" | "50s" | "60s" | "70s";
+export type AgeSegment = "kids" | "10s" | "20s" | "30s" | "40s" | "50s" | "60s" | "70s";
 
 export type RegionSegment =
   | "seoul"

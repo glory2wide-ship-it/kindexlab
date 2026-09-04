@@ -444,7 +444,7 @@ export function entityMatchesRegion(
   return (item.tags ?? []).some((tag) => normalizeRegionInput(tag) === region || tag === label);
 }
 
-function catalogRowsForRegion(region: RegionSegment, slug?: string): BoardRankEntry[] {
+export function catalogRowsForRegion(region: RegionSegment, slug?: string): BoardRankEntry[] {
   return catalogForBoard(slug)[region].map((subject, index) => ({
     rank: index + 1,
     name: formatBracketLabel(REGION_LABEL[region], subject),

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { categoryLabel } from "@/lib/briefing/metrics";
 import { isLiveEdition } from "@/lib/briefing/dates";
 import type { BriefingArticle } from "@/lib/types";
-import { formatCount } from "@/lib/format";
 
 /** Text-only featured briefing — matches landing lead column card. */
 export function FeaturedBriefingCard({
@@ -25,8 +24,7 @@ export function FeaturedBriefingCard({
             {live ? " · Live" : " · Archive"}
           </span>
           <span className="font-sans text-[11px] text-muted">
-            {article.editionDate} · {article.deskLabel || categoryLabel(article.category)} ·{" "}
-            {article.readingMinutes ?? 1}분 · {formatCount(article.wordCount)}단어
+            {article.editionDate} · {article.deskLabel || categoryLabel(article.category)}
           </span>
         </div>
         <h2 className="mt-2 text-lg font-semibold tracking-tight md:text-xl">{article.title}</h2>

@@ -3,7 +3,6 @@ import { categoryLabel, heatmapHref } from "@/lib/briefing/metrics";
 import { isLiveEdition } from "@/lib/briefing/dates";
 import { channelSectionHref, isPostChannel } from "@/lib/posts/channels";
 import type { BriefingArticle } from "@/lib/types";
-import { formatCount } from "@/lib/format";
 
 /** Text-only briefing card — matches landing `PremiumColumnRail` layout. */
 export function BriefingCard({
@@ -37,8 +36,7 @@ export function BriefingCard({
             {live ? " · Live" : " · Archive"}
           </span>
           <span className="font-sans text-[11px] text-muted">
-            {article.editionDate} · {categoryLabel(article.category)} · {article.readingMinutes ?? 1}분 ·{" "}
-            {formatCount(article.wordCount)}단어
+            {article.editionDate} · {categoryLabel(article.category)}
           </span>
         </div>
         <h3

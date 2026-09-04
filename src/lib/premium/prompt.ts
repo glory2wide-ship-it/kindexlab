@@ -258,7 +258,7 @@ export function llmOutputFormatRules(): string {
   ].join("\n");
 }
 
-/** Legacy helper for analysis/chain/draft — persona + static rules. */
+/** Legacy helper — prefer buildCacheableSystemPrompt for live generation. */
 export function briefingWritingRules(channel?: string): string {
   return [
     "[데일리 브리핑 에디터 페르소나]",

@@ -8,7 +8,6 @@ import { stripRowQualifier } from "@/lib/boards/heatmap";
 import { rankingPath } from "@/lib/slugs";
 import { SITE } from "@/lib/site";
 import { analysisPlainText, type TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
-import { formatCount } from "@/lib/format";
 
 export function TodayAnalysis({
   article,
@@ -75,9 +74,7 @@ export function TodayAnalysis({
         {article.title}
       </TitleTag>
       <p className="mt-3 text-sm leading-6 text-muted">{article.excerpt}</p>
-      <p className="mt-2 font-sans text-[11px] text-muted">
-        {article.editionDate} · {article.readingMinutes ?? 1}분 · {formatCount(article.characterCount)}자
-      </p>
+      <p className="mt-2 font-sans text-[11px] text-muted">{article.editionDate}</p>
       <p className="mt-3 text-sm">
         <Link href={boardHref} className="underline hover:text-accent">
           지수(INDEX)에서 이 키워드 보기

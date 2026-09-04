@@ -3,7 +3,6 @@ import Link from "next/link";
 import { BriefingCard } from "@/components/briefing/BriefingCard";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import { getChannelBriefingEdition } from "@/lib/api";
-import { formatCount } from "@/lib/format";
 import {
   channelHref,
   channelSectionHref,
@@ -16,10 +15,7 @@ import type { GeneratedPost, PostChannel } from "@/lib/posts/types";
 function PostCard({ post, href }: { post: GeneratedPost; href: string }) {
   return (
     <Link href={href} className="block rounded-2xl border border-line bg-panel p-5 hover:border-accent">
-      <p className="font-mono text-[11px] text-muted">
-        {post.editionDate} · {formatCount(post.wordCount || post.characterCount)}
-        {post.wordCount ? "어절" : "자"}
-      </p>
+      <p className="font-mono text-[11px] text-muted">{post.editionDate}</p>
       <h2 className="mt-2 text-lg font-semibold tracking-tight">{post.title}</h2>
       <p className="mt-2 text-sm leading-6 text-muted">{post.excerpt}</p>
     </Link>

@@ -1,4 +1,4 @@
-﻿import { revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { refreshAnalysis } from "@/lib/analysis/pipeline";
 import { clearAnalysis } from "@/lib/analysis/store";
@@ -61,8 +61,8 @@ async function handle(request: Request) {
     buildMs: number;
   }[] = [];
 
-  // Sequential on purpose: the chain is three LLM calls per keyword, and running
-  // the batch in parallel trips provider rate limits well before it saves time.
+  // Sequential on purpose: each keyword is one Gemini single-pass (+ optional
+  // length expand), and parallel batches trip provider rate limits quickly.
   for (const entity of targets) {
     const related = market.items
       .filter((item) => item.id !== entity.id && item.type === entity.type)

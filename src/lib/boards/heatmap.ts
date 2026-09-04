@@ -39,6 +39,7 @@ import {
   ensureTravelGrantRanking,
   isTravelGrantBoard,
 } from "@/lib/boards/travel-grants";
+import { shouldFilterKidsCultureSegment, selectKidsCultureAllRanking, selectKidsCultureRegionRanking } from "@/lib/boards/kids-culture";
 import { ensureInfluencerBoardRanking } from "@/lib/politics/fail-safe";
 import {
   ensureLocalPolicyRanking,
@@ -103,8 +104,12 @@ export function toHeatmapPayload(def: BoardDefinition, cached: CachedBoard): Hea
     influencerSeedNames().some((name) => !ranking.some((row) => namesOverlap(row.name, name)));
   // Culture grants must always re-slice demographics after travel rows are stripped,
   // otherwise stale demographic tables keep 여행 정부지원금 names on the heatmap.
+  // Kids tabs must re-slice so adult chart fillers (e.g. 위키드) never linger.
   const demographics =
-    isCultureGrantBoard(def.slug) || namesChanged || seedsMissing
+    isCultureGrantBoard(def.slug) ||
+    shouldFilterKidsCultureSegment(def.slug) ||
+    namesChanged ||
+    seedsMissing
       ? deriveDemographics(ranking, def)
       : cached.demographics;
   const index = computeBoardIndex(ranking, def.slug);
@@ -276,9 +281,18 @@ export function selectHeatmapRows(
         boardSlug: board.slug,
       });
       const local = filterRowsByRegion(selected, region);
-      if (local.length) return padRegionOnly(local, region, cap, board.slug);
+      if (local.length) {
+        if (shouldFilterKidsCultureSegment(board.slug) && age === "kids") {
+          return selectKidsCultureRegionRanking(local, ranking, region, cap, board.slug);
+        }
+        return padRegionOnly(local, region, cap, board.slug);
+      }
     } catch {
       /* same-region catalog still fills the board */
+    }
+    if (shouldFilterKidsCultureSegment(board.slug) && age === "kids") {
+      const kidsRows = demographics.age?.kids ?? [];
+      return selectKidsCultureRegionRanking(kidsRows, ranking, region, cap, board.slug);
     }
     const cached = filterRowsByRegion(demographics.region?.[region], region);
     const fromTotal = filterRowsByRegion(ranking, region);
@@ -291,6 +305,11 @@ export function selectHeatmapRows(
       region,
       boardSlug: board.slug,
     });
+    if (shouldFilterKidsCultureSegment(board.slug) && age === "kids") {
+      return selected.length
+        ? selected.slice(0, cap)
+        : selectKidsCultureAllRanking(demographics.age?.kids ?? [], ranking, cap, board.slug);
+    }
     const blocked = new Set(
       dropNamesForFilter(board, gender, age).map((name) => name.replace(/\s+/g, "").toLowerCase()),
     );
@@ -303,6 +322,9 @@ export function selectHeatmapRows(
     if (padded.length) return padded;
   } catch {
     /* fall through to seed-safe list */
+  }
+  if (shouldFilterKidsCultureSegment(board.slug) && age === "kids") {
+    return selectKidsCultureAllRanking(demographics.age?.kids ?? [], ranking, cap, board.slug);
   }
   return padRankEntries(ranking.filter(Boolean), ranking, cap);
 }

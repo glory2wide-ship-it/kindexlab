@@ -3,6 +3,7 @@ import type { AnalysisLogger } from "@/lib/analysis/log";
 import type { NewsDoc } from "@/lib/news/types";
 import {
   AGE_SEGMENTS,
+  CORE_AGE_SEGMENTS,
   applyDemographicWeights,
   dedupeSegments,
   deriveDemographics,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/boards/travel-grants";
 import { boardUsesRegionFilter, ensureFoodRestaurantRanking, ensureHousingApartmentRanking, HOUSING_BOARD_SLUG, isCultureEventVenueOnly } from "@/lib/boards/regions";
 import { EXHIBITION_BOARD_SLUG, PERFORMANCE_BOARD_SLUG } from "@/lib/boards/region-catalogs";
+import { boardUsesKidsAgeTab } from "@/lib/boards/kids-culture";
 import type {
   AgeSegment,
   BoardDefinition,
@@ -77,6 +79,7 @@ const SYSTEM = [
   "프론트는 성별과 연령 탭을 동시에 켤 수 있다. 두 목록에 같은 이름이 겹쳐야 교차 필터가 의미를 갖는다.",
   "9개 세그먼트(남/여/10대~70대 이상)의 목록은 서로 모두 달라야 한다. 같은 목록을 두 세그먼트에 반복해 쓰지 마라.",
   "특히 30대·40대·50대·60대·70대를 같은 순서로 복사하지 마라. 연령이 올라갈수록 데뷔 연차가 오래된 대상의 비중이 커진다.",
+  "아동/유치원(kids) 세그먼트가 있으면 어린이·유아·키즈·가족 관람 가능 종목만 넣고, 위키드·데스노트·시카고·아이돌 콘서트·성인 아트전은 금지다.",
   "이름은 실제 고유명사만 쓴다. '영화 A', '종목 1' 같은 플레이스홀더와 장르명(한국 상업영화 등)은 금지다.",
   "반드시 지정된 JSON 스키마만 반환한다.",
 ].join(" ");
@@ -87,6 +90,9 @@ function schemaHint(board: BoardDefinition): string {
   const regionBlock = boardUsesRegionFilter(board.slug)
     ? `,\n    "region": { "seoul": [ ...${segment}개 ], "busan": [ ... ], "...시/도 키": [ ... ] }`
     : "";
+  const ageSchema = boardUsesKidsAgeTab(board.slug)
+    ? `"kids": [ ...${segment}개 ], "10s": [ ...${segment}개 ], "20s": [ ...${segment}개 ], "30s": [ ...${segment}개 ], "40s": [ ...${segment}개 ], "50s": [ ...${segment}개 ], "60s": [ ...${segment}개 ], "70s_plus": [ ...${segment}개 ]`
+    : `"10s": [ ...${segment}개 ], "20s": [ ...${segment}개 ], "30s": [ ...${segment}개 ], "40s": [ ...${segment}개 ], "50s": [ ...${segment}개 ], "60s": [ ...${segment}개 ], "70s_plus": [ ...${segment}개 ]`;
   return [
     "{",
     '  "index_value": 숫자(100점 척도 보드 종합 지수),',
@@ -94,7 +100,7 @@ function schemaHint(board: BoardDefinition): string {
     `  "total_ranking": [ { "name": "${board.unitLabel}명", "score": 숫자, "change_rate": 숫자, "note": "문장" } × ${total} ],`,
     '  "demographic_ranking": {',
     `    "gender": { "male": [ ...${segment}개 ], "female": [ ...${segment}개 ] },`,
-    `    "age": { "10s": [ ...${segment}개 ], "20s": [ ...${segment}개 ], "30s": [ ...${segment}개 ], "40s": [ ...${segment}개 ], "50s": [ ...${segment}개 ], "60s": [ ...${segment}개 ], "70s_plus": [ ...${segment}개 ] }${regionBlock}`,
+    `    "age": { ${ageSchema} }${regionBlock}`,
     "  }",
     "}",
   ].join("\n");
@@ -232,14 +238,18 @@ function parseDemographics(
     if (rows.length) filled += 1;
   }
   const ageBlock = raw?.age as Record<string, unknown> | undefined;
+  const requiredAges = boardUsesKidsAgeTab(board.slug) ? AGE_SEGMENTS : CORE_AGE_SEGMENTS;
   for (const key of AGE_SEGMENTS) {
     const source = key === "70s" ? (ageBlock?.["70s_plus"] ?? ageBlock?.["70s"]) : ageBlock?.[key];
     const rows = toEntries(source, limit, board.unitLabel, board.slug);
     age[key] = rows;
-    if (rows.length) filled += 1;
+    if (requiredAges.includes(key) && rows.length) filled += 1;
   }
 
-  return { value: { gender, age }, complete: filled === GENDER_SEGMENTS.length + AGE_SEGMENTS.length };
+  return {
+    value: { gender, age },
+    complete: filled === GENDER_SEGMENTS.length + requiredAges.length,
+  };
 }
 
 function padRanking(
@@ -327,7 +337,7 @@ export async function rankBoard(input: {
     ticketBlock,
     context ? `수집된 최신 보도:\n${context}` : ticketBlock ? "" : "수집된 보도가 없다. 통상적인 한국 시장 상황을 근거로 추정하라.",
     "",
-    `전체 1~${totalN}위와 성별(남/여) · 연령(10대~70대 이상, JSON 키 70s_plus)${boardUsesRegionFilter(board.slug) ? " · 지역(시/도)" : ""} 각 1~${segmentN}위를 아래 JSON 스키마로 반환하라.\n${schemaHint(board)}`,
+    `전체 1~${totalN}위와 성별(남/여) · 연령(${boardUsesKidsAgeTab(board.slug) ? "아동/유치원·" : ""}10대~70대 이상, JSON 키 ${boardUsesKidsAgeTab(board.slug) ? "kids·" : ""}70s_plus)${boardUsesRegionFilter(board.slug) ? " · 지역(시/도)" : ""} 각 1~${segmentN}위를 아래 JSON 스키마로 반환하라.\n${schemaHint(board)}`,
   ]
     .filter((line) => line !== "")
     .join("\n");

@@ -111,3 +111,113 @@ export function autoCorrectArticleFields(input: {
 export function remainingBannedHits(text: string): string[] {
   return PREMIUM_BANNED_PHRASES.filter((phrase) => text.includes(phrase));
 }
+
+function plainCharCount(parts: string[]): number {
+  return parts.join(" ").replace(/\s+/g, "").length;
+}
+
+/**
+ * Zero-cost length pad for Today's Analysis when the LLM length-expand call is
+ * skipped. Appends grounded seed lines (signal facts / snippets) into the last
+ * sections and FAQ answers until minChars, then runs autoCorrect.
+ */
+export function padArticleLengthLocally(input: {
+  title: string;
+  excerpt: string;
+  sections: SeoSection[];
+  faq: PostFaq[];
+  keyword: string;
+  seedLines: string[];
+  minChars: number;
+  maxChars: number;
+}): {
+  title: string;
+  excerpt: string;
+  sections: SeoSection[];
+  faq: PostFaq[];
+  added: number;
+} {
+  const sections = input.sections.map((section) => ({
+    ...section,
+    paragraphs: [...section.paragraphs],
+  }));
+  const faq = input.faq.map((item) => ({ ...item }));
+  const keyword = input.keyword.trim();
+  const seen = new Set<string>();
+  const seeds = input.seedLines
+    .map((line) => scrubBannedPhraseStems(scrubBoilerplatePhrases(normalizeWhitespace(line))))
+    .map((line) => line.replace(/^[-·•\d.\s]+/, "").trim())
+    .filter((line) => {
+      if (line.length < 12) return false;
+      const key = line.slice(0, 48);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+  const measure = () =>
+    plainCharCount([
+      input.title,
+      input.excerpt,
+      ...sections.flatMap((section) => [section.heading ?? "", ...section.paragraphs]),
+      ...faq.flatMap((item) => [item.question ?? "", item.answer ?? ""]),
+    ]);
+
+  let chars = measure();
+  let added = 0;
+  let seedIndex = 0;
+  let guard = 0;
+
+  while (chars < input.minChars && guard < 40) {
+    guard += 1;
+    const raw = seeds[seedIndex++];
+    if (!raw) break;
+
+    let sentence = ensureSentencePunctuation(raw);
+    if (!sentence.includes(keyword) && keyword.length >= 2 && sentence.length < 80) {
+      sentence = ensureSentencePunctuation(`${keyword} 관련해 ${sentence}`);
+    }
+    if (plainCharCount([sentence]) < 12) continue;
+
+    const targetSection = sections[(added + sections.length - 1) % Math.max(sections.length, 1)];
+    if (targetSection) {
+      targetSection.paragraphs.push(sentence);
+      added += 1;
+    } else if (faq[added % Math.max(faq.length, 1)]) {
+      const item = faq[added % faq.length]!;
+      item.answer = ensureSentencePunctuation(`${item.answer} ${sentence}`);
+      added += 1;
+    } else {
+      break;
+    }
+
+    chars = measure();
+    if (chars > input.maxChars + 80) break;
+  }
+
+  // Stretch FAQ answers slightly with already-used section tails when seeds ran out.
+  while (chars < input.minChars && faq.length && guard < 48) {
+    guard += 1;
+    const lastSection = sections[sections.length - 1];
+    const donor = lastSection?.paragraphs[lastSection.paragraphs.length - 1];
+    if (!donor) break;
+    const item = faq[guard % faq.length]!;
+    const extra = ensureSentencePunctuation(
+      `${keyword} 맥락에서 ${donor.replace(/\.+$/, "").slice(0, 60)} 흐름이 이어진다`,
+    );
+    if (item.answer.includes(extra.slice(0, 20))) break;
+    item.answer = ensureSentencePunctuation(`${item.answer} ${extra}`);
+    added += 1;
+    chars = measure();
+  }
+
+  const corrected = autoCorrectArticleFields({
+    title: input.title,
+    excerpt: input.excerpt,
+    sections,
+    faq,
+  });
+
+  return { ...corrected, added };
+}
+

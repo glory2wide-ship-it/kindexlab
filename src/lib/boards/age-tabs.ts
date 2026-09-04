@@ -1,5 +1,8 @@
 import { VISIBLE_AGE_SEGMENTS, normalizeVisibleAge } from "@/lib/boards/demographics";
+import { boardUsesKidsAgeTab } from "@/lib/boards/kids-culture";
 import type { AgeSegment } from "@/lib/boards/types";
+
+export { boardUsesKidsAgeTab };
 
 const IDOL_AGES: AgeSegment[] = ["10s", "20s", "30s"];
 const TROT_AGES: AgeSegment[] = ["40s", "50s", "60s"];
@@ -8,6 +11,8 @@ const TROT_AGES: AgeSegment[] = ["40s", "50s", "60s"];
 export function ageTabsForBoard(slug?: string): AgeSegment[] | undefined {
   if (slug === "kpop-fandom-power") return IDOL_AGES;
   if (slug === "trot-kayo-fandom-power") return TROT_AGES;
+  // Build lazily so we never touch VISIBLE_AGE_SEGMENTS during demographics init.
+  if (boardUsesKidsAgeTab(slug)) return ["kids", ...VISIBLE_AGE_SEGMENTS];
   return undefined;
 }
 
