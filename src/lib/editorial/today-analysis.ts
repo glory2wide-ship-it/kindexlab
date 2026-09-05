@@ -514,7 +514,8 @@ export function composeTodayAnalysis(options: {
     reviewed: false,
     bodyMarkdown: override?.bodyMarkdown,
     jsonLd: override?.jsonLd,
-    sources: override?.sources,
+    // 교차 확인 자료 UI는 외부/내부 링크만 노출 — 신문 기사 목록은 저장하지 않음.
+    sources: undefined,
   };
 
   const reserve = uniqueLines([
@@ -597,12 +598,9 @@ export function composePremiumTodayAnalysis(options: {
     reviewed: true,
     bodyMarkdown: premium.bodyMarkdown,
     jsonLd: premium.jsonLd,
-    sources: premium.sources.map((source) => ({
-      title: source.title,
-      url: source.url,
-      publisher: source.publisher,
-      publishedAt: source.publishedAt,
-    })),
+    // RAG sources stay in the generator for grounding; the article surface
+    // only keeps 외부 자료 + 내부 링크 추천 under 교차 확인 자료.
+    sources: undefined,
   };
 }
 

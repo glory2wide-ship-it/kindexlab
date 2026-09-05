@@ -6,7 +6,6 @@ import {
   CandlestickSeries,
   ColorType,
   CrosshairMode,
-  HistogramSeries,
   LineType,
   createChart,
   createSeriesMarkers,
@@ -31,14 +30,6 @@ function readCssVar(name: string, fallback: string): string {
   if (typeof window === "undefined") return fallback;
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return value || fallback;
-}
-
-function layoutPanes(chart: IChartApi, totalHeight: number) {
-  const panes = chart.panes();
-  const volumeH = Math.max(72, Math.round(totalHeight * 0.22));
-  const priceH = Math.max(160, totalHeight - volumeH);
-  if (panes[0]) panes[0].setHeight(priceH);
-  if (panes[1]) panes[1].setHeight(volumeH);
 }
 
 function lockPriceScale(
@@ -75,7 +66,6 @@ export function TradingViewChart({
   const hostRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const priceRef = useRef<ISeriesApi<"Candlestick"> | ISeriesApi<"Area"> | null>(null);
-  const volumeRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const labelsRef = useRef<Map<number, string>>(new Map());
 
@@ -98,10 +88,6 @@ export function TradingViewChart({
           '"Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-serif',
         fontSize: 11,
         attributionLogo: true,
-        panes: {
-          separatorColor: line,
-          separatorHoverColor: muted,
-        },
       },
       grid: {
         vertLines: { color: line, style: 3 },
@@ -142,31 +128,10 @@ export function TradingViewChart({
       },
     });
 
-    const volumeSeries = chart.addSeries(
-      HistogramSeries,
-      {
-        priceFormat: { type: "volume" },
-        priceScaleId: "right",
-        lastValueVisible: false,
-        priceLineVisible: false,
-        base: 0,
-      },
-      1,
-    );
-    volumeSeries.priceScale().applyOptions({
-      scaleMargins: { top: 0.18, bottom: 0.06 },
-      borderVisible: false,
-    });
-
-    layoutPanes(chart, height);
-
     chartRef.current = chart;
-    volumeRef.current = volumeSeries;
 
     const onResize = () => {
-      layoutPanes(chart, host.clientHeight || height);
       if (priceRef.current) {
-        // Keep locked range after layout changes.
         const visible = priceRef.current.priceScale().getVisibleRange();
         if (visible) priceRef.current.priceScale().setVisibleRange(visible);
       }
@@ -179,16 +144,14 @@ export function TradingViewChart({
       chart.remove();
       chartRef.current = null;
       priceRef.current = null;
-      volumeRef.current = null;
     };
   }, [height]);
 
   useEffect(() => {
     const chart = chartRef.current;
-    const volumeSeries = volumeRef.current;
-    if (!chart || !volumeSeries || candles.length < 1) return;
+    if (!chart || candles.length < 1) return;
 
-    const { ohlc, volume, area, labelByTime, priceMin, priceMax } = toLwcSeries(
+    const { ohlc, area, labelByTime, priceMin, priceMax } = toLwcSeries(
       candles,
       timeframe,
       linePath,
@@ -283,16 +246,15 @@ export function TradingViewChart({
       }
     }
 
-    volumeSeries.setData(volume);
-    layoutPanes(chart, hostRef.current?.clientHeight || height);
     chart.timeScale().fitContent();
 
     // fitContent can reset price scale — re-lock after it.
     if (priceRef.current) {
       if (style === "line") {
-        const values = (linePath && linePath.length === candles.length * 4
-          ? ohlc.map((b) => b.close)
-          : area.map((p) => p.value));
+        const values =
+          linePath && linePath.length === candles.length * 4
+            ? ohlc.map((b) => b.close)
+            : area.map((p) => p.value);
         lockPriceScale(priceRef.current, Math.min(...values), Math.max(...values));
       } else {
         lockPriceScale(priceRef.current, priceMin, priceMax);

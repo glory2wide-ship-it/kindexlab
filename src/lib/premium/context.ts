@@ -104,12 +104,13 @@ function toPremiumSources(sources: ContextSource[]): PremiumSource[] {
   }));
 }
 
-/** Max links shown under “교차 확인 자료”. RAG may retrieve more for grounding. */
+/** Max links formerly shown under “교차 확인 자료” (premium columns). */
 export const DISPLAY_SOURCE_LIMIT = 5;
 
 /**
- * Picks a short, publisher-diverse cite list for the reader-facing source block.
- * Full retrieval stays available for URL validation and the LLM prompt.
+ * Picks a short, publisher-diverse cite list when a surface still stores
+ * display sources. Today's Analysis no longer attaches these — RAG keeps the
+ * full retrieval set for grounding / URL validation only.
  */
 export function selectDisplaySources(
   sources: PremiumSource[],

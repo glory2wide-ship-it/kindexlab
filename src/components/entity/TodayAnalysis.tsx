@@ -134,25 +134,6 @@ export function TodayAnalysis({
               [{article.internalLink.label}]
             </Link>
           </p>
-          {article.sources?.length ? (
-            <ul className="mt-3 space-y-1">
-              {article.sources.slice(0, 5).map((source) => (
-                <li key={source.url}>
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-accent"
-                  >
-                    {source.title}
-                  </a>
-                  <span className="ml-2 text-xs text-muted">
-                    {[source.publisher, source.publishedAt].filter(Boolean).join(" · ")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
         </section>
 
         <section>
