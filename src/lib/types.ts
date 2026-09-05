@@ -56,6 +56,17 @@ export interface SeriesPoint {
   v: number;
 }
 
+/** One OHLC bar for HTS-style candlestick charts (nested from the base minute path). */
+export interface CandlePoint {
+  t: string;
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+  /** Bar volume (synthetic share of the entity volume window). */
+  v: number;
+}
+
 /** Per-timeframe snapshot used by charts and the public /api/trends payload. */
 export interface TimeframeMetric {
   buzzScore: number;

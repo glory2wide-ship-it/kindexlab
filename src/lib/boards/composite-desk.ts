@@ -95,19 +95,6 @@ async function channelHeatmapPool(
   return boardPool(channel);
 }
 
-/** Desk summary cards — prefer live ingest (same as heatmap) so rates move every refresh. */
-async function channelDeskPool(
-  channel: PostChannel,
-  market?: RankingsPayload,
-): Promise<RankingEntity[]> {
-  if (channelUsesBoardHeatmap(channel)) {
-    return boardPool(channel);
-  }
-  const live = market ? withoutHeadlineHeatmapItems(itemsForChannel(market.items, channel)) : [];
-  if (live.length) return live;
-  return boardPool(channel);
-}
-
 /** Uses the same 3m change field as the ticker and channel heatmap. */
 function deskTopItem(item: RankingEntity): RankingEntity {
   const enriched = attachTimeframeMetrics(item);
@@ -130,13 +117,10 @@ function deskTopItem(item: RankingEntity): RankingEntity {
 export async function loadUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMarket> {
   const loaded = await Promise.all(
     POST_CHANNELS.map(async (meta) => {
-      const [heatmapPool, deskPoolItems] = await Promise.all([
-        channelHeatmapPool(meta.id, market),
-        channelDeskPool(meta.id, market),
-      ]);
-      const ranked = tagChannel([...heatmapPool].sort(byHeat), meta.id);
-      const deskRanked = tagChannel([...deskPoolItems].sort(byHeat), meta.id);
-      return { meta, ranked, deskRanked };
+      // One board load per channel (heatmap + desk used to double-fetch).
+      const pool = await channelHeatmapPool(meta.id, market);
+      const ranked = tagChannel([...pool].sort(byHeat), meta.id);
+      return { meta, ranked };
     }),
   );
 
@@ -145,12 +129,12 @@ export async function loadUnifiedMarket(market?: RankingsPayload): Promise<Unifi
     UNIFIED_HEATMAP_TILES,
   ).map((item, index) => ({ ...item, rank: index + 1, previousRank: index + 1 }));
 
-  const desks: ChannelDesk[] = loaded.map(({ meta, deskRanked }) => ({
+  const desks: ChannelDesk[] = loaded.map(({ meta, ranked }) => ({
     channel: meta.id,
     label: meta.label,
     href: meta.href,
     eyebrow: meta.eyebrow,
-    top: deskRanked.slice(0, DESK_TOP_N).map(deskTopItem),
+    top: ranked.slice(0, DESK_TOP_N).map(deskTopItem),
   }));
 
   return { items, desks };

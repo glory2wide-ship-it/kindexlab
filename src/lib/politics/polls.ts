@@ -566,13 +566,17 @@ async function crawlPresidentialPolls(): Promise<PollBoardSnapshot> {
 }
 
 async function loadPresidentialPolls(): Promise<PollBoardSnapshot> {
+  // Never block rankings/RSC on a long RSS crawl — seed within 120ms, warm cache async.
   try {
-    return await Promise.race([
-      crawlPresidentialPolls(),
+    const crawl = crawlPresidentialPolls();
+    const seeded = await Promise.race([
+      crawl,
       new Promise<PollBoardSnapshot>((resolve) => {
-        setTimeout(() => resolve(seedPresidentialPolls()), 7000);
+        setTimeout(() => resolve(seedPresidentialPolls()), 120);
       }),
     ]);
+    void crawl.catch(() => undefined);
+    return seeded;
   } catch (error) {
     console.warn("[kindexlab:polls] crawl failed, using seed", error);
     return seedPresidentialPolls();
@@ -584,10 +588,16 @@ const cachedPresidentialPolls = unstable_cache(loadPresidentialPolls, ["agency-p
 });
 
 export async function getPresidentialPolls(): Promise<PollBoardSnapshot> {
+  // Prefer seed instantly on the request path; unstable_cache can still wait on a cold crawl.
   try {
-    return await cachedPresidentialPolls();
+    return await Promise.race([
+      cachedPresidentialPolls(),
+      new Promise<PollBoardSnapshot>((resolve) => {
+        setTimeout(() => resolve(seedPresidentialPolls()), 80);
+      }),
+    ]);
   } catch {
-    return loadPresidentialPolls();
+    return seedPresidentialPolls();
   }
 }
 

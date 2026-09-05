@@ -228,6 +228,14 @@ export async function getEntityBySlug(
   slug: string,
   fallbackName?: string,
 ): Promise<RankingEntity | undefined> {
+  const incoming = decodeRouteSlug(slug);
+  // Heatmap tiles use `boardSlug--name` — resolve the board row first so we
+  // don't pay for a full getRankings() on the common click path.
+  if (incoming.includes("--")) {
+    const { resolveBoardOrKeywordEntity } = await import("@/lib/entity/resolve");
+    const fromBoard = await resolveBoardOrKeywordEntity(slug, fallbackName);
+    if (fromBoard) return fromBoard;
+  }
   const payload = await getRankings();
   const live = findBySlug(payload.items, slug);
   if (live) return live;

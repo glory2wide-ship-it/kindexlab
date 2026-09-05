@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { computeBoardIndex } from "@/lib/boards/board-index";
 import { deriveDemographics } from "@/lib/boards/demographics";
 import {
@@ -17,6 +18,10 @@ import { isPoliticsIndex } from "@/lib/politics/types";
 import type { ChannelLiveMarket } from "@/components/dashboard/ChannelMarketDesk";
 import type { PostChannel } from "@/lib/posts/types";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
+
+/** Process-local board payload memo (survives across RSC requests in `next dev`). */
+const CHANNEL_BOARD_MEMO = new Map<string, { at: number; payloads: HeatmapBoardPayload[] }>();
+const CHANNEL_BOARD_TTL_MS = 60_000;
 
 /**
  * Prefer live ingest chart rows for music / movie boards so heatmaps track crawls.
@@ -66,7 +71,7 @@ function withLiveChartOverlay(
   return toHeatmapPayload(def, overlay);
 }
 
-export async function loadChannelHeatmapPayloads(
+async function loadChannelHeatmapPayloadsUncached(
   channel: PostChannel,
 ): Promise<HeatmapBoardPayload[]> {
   const defs = menuBoardsForChannel(channel).filter(
@@ -74,16 +79,32 @@ export async function loadChannelHeatmapPayloads(
   );
   const snapshot = readPersistedSnapshot();
   const payloads: HeatmapBoardPayload[] = [];
-  for (const def of defs) {
-    try {
-      const cached = await seedBoardIfMissing(def);
-      payloads.push(withLiveChartOverlay(def, cached, snapshot));
-    } catch {
-      /* skip a board that cannot be seeded; the rest still render */
-    }
+  // Seed boards in parallel — sequential await was a major homepage cost.
+  const settled = await Promise.all(
+    defs.map(async (def) => {
+      try {
+        const cached = await seedBoardIfMissing(def);
+        return withLiveChartOverlay(def, cached, snapshot);
+      } catch {
+        return null;
+      }
+    }),
+  );
+  for (const row of settled) {
+    if (row) payloads.push(row);
   }
   return payloads;
 }
+
+export const loadChannelHeatmapPayloads = cache(async (channel: PostChannel): Promise<HeatmapBoardPayload[]> => {
+  const hit = CHANNEL_BOARD_MEMO.get(channel);
+  if (hit && Date.now() - hit.at < CHANNEL_BOARD_TTL_MS) {
+    return hit.payloads;
+  }
+  const payloads = await loadChannelHeatmapPayloadsUncached(channel);
+  CHANNEL_BOARD_MEMO.set(channel, { at: Date.now(), payloads });
+  return payloads;
+});
 
 /**
  * Drops the fields a heatmap tile never reads.

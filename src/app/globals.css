@@ -13,6 +13,9 @@
   --up: #16a34a;
   --down: #dc2626;
   --accent: #c9a227;
+  /* US-style candle colors (up green / down red) — chart-only. */
+  --hts-up: #16a34a;
+  --hts-down: #dc2626;
 }
 
 .dark {
@@ -26,6 +29,8 @@
   --up: #22c55e;
   --down: #ef4444;
   --accent: #e8b923;
+  --hts-up: #22c55e;
+  --hts-down: #ef4444;
 }
 
 @theme inline {
@@ -38,6 +43,8 @@
   --color-ink: var(--ink);
   --color-up: var(--up);
   --color-down: var(--down);
+  --color-hts-up: var(--hts-up);
+  --color-hts-down: var(--hts-down);
   --color-accent: var(--accent);
   --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", var(--font-inter),
     system-ui, -apple-system, "Segoe UI", sans-serif;

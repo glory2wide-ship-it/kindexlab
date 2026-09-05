@@ -39,14 +39,9 @@ const loadDetail = cache(async (slug: string, name?: string) => {
   const entity = await getEntityBySlug(slug, name);
   if (!entity) return null;
 
+  // Related + market share one cached getRankings(); board entities already resolved above.
   const [related, market] = await Promise.all([getRelatedEntities(entity), getRankings()]);
 
-  // Only a news-grounded column is worth printing. The deterministic composer
-  // fills one skeleton per keyword — the same sentences, the same FAQ answers,
-  // the subject's name dropped into the slots — and noindex only hides that from
-  // the crawler, not from a reader who clicks through from the heatmap. Dropping
-  // the block leaves the index card, the buzz chart and the related rail, all of
-  // which are measured data rather than prose written around an empty middle.
   let article: TodayAnalysisArticle | undefined;
   try {
     const analysis = await getOrCreateAnalysis({ entity, market, related });
