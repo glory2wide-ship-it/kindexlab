@@ -13,7 +13,9 @@ fi
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-git add -- "$@"
+# -f: overnight analysis cache under src/data/analysis/ is gitignored locally
+# but must still ship to production via this workflow.
+git add -f -- "$@"
 if git diff --cached --quiet; then
   echo "No staged changes for: $*"
   exit 0
