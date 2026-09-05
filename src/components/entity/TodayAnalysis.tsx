@@ -70,24 +70,26 @@ export function TodayAnalysis({
           키워드 · {topic}
         </p>
       ) : null}
-      <TitleTag className={`mt-2 font-semibold tracking-tight ${compact ? "text-xl" : "text-2xl md:text-3xl"}`}>
+      <TitleTag
+        className={`mt-2 max-w-3xl font-semibold tracking-tight ${compact ? "text-xl" : "text-2xl md:text-3xl"}`}
+      >
         {article.title}
       </TitleTag>
-      <p className="article-prose article-prose-lead mt-3 text-muted">{article.excerpt}</p>
-      <p className="mt-2 font-sans text-[11px] text-muted">{article.editionDate}</p>
-      <p className="mt-3 text-sm">
+      <p className="article-prose article-prose-lead mt-3 max-w-3xl text-muted">{article.excerpt}</p>
+      <p className="mt-2 max-w-3xl font-sans text-[11px] text-muted">{article.editionDate}</p>
+      <p className="mt-3 max-w-3xl text-sm">
         <Link href={boardHref} className="underline hover:text-accent">
           지수(INDEX)에서 이 키워드 보기
         </Link>
       </p>
 
-      {/* The fact table leads the body: it is the densest block on the page and
-          now carries the opening visual weight on its own. */}
-      <FactTable table={article.table} />
+      <div className="article-prose prose-board mt-6 max-w-3xl">
+        {/* The fact table leads the body: it is the densest block on the page and
+            now carries the opening visual weight on its own. */}
+        <FactTable table={article.table} />
 
-      <ContentSlot placement="intro" label={article.focusKeyword} />
+        <ContentSlot placement="intro" label={article.focusKeyword} />
 
-      <div className="article-prose mt-6">
         {article.sections.map((section, index) => {
           const minor = section.headingLevel === 3;
           return (
