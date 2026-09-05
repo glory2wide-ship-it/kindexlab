@@ -120,7 +120,10 @@ async function main() {
   );
   console.log(`[report] ${delivery.detail}`);
 
-  if (run.failed > 0) {
+  // Partial misses are expected on some nights; report them by email/issue
+  // without failing the whole workflow. Hard failure stays reserved for
+  // zero-output / thrown runs handled by the top-level catch.
+  if (run.generated === 0 && targets.length > 0) {
     process.exitCode = 1;
   }
 }

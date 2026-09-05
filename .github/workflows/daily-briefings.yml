@@ -86,6 +86,7 @@ jobs:
         if: always() && steps.generate.outcome != 'skipped'
         continue-on-error: true
         env:
+          GH_TOKEN: ${{ github.token }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}

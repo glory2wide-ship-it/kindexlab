@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Email a generation report HTML artifact.
 # Prefers RESEND_API_KEY; then Gmail SMTP (SMTP_USER + SMTP_PASS app password);
-# finally opens a GitHub Issue (emails repo watchers / assignee).
+# finally opens a GitHub Issue (repo notifications / assignee).
 set -euo pipefail
 
 HTML_PATH="${1:-}"
@@ -86,7 +86,8 @@ PY
 fi
 
 # Fallback: GitHub Issue → notification email to repo watchers (owner).
-if [ -n "${GITHUB_TOKEN:-}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
+if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
+  export GH_TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
   BODY_FILE="$(mktemp)"
   {
     echo "수신 예정: **${TO}**"
@@ -108,6 +109,6 @@ if [ -n "${GITHUB_TOKEN:-}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
   exit 0
 fi
 
-echo "[report] no mail transport configured for ${TO}"
-echo "::error::Add GitHub secrets SMTP_USER + SMTP_PASS (Gmail app password) or RESEND_API_KEY."
-exit 1
+echo "[report] no mail transport configured for ${TO}, and GitHub issue fallback is unavailable"
+echo "::warning::Add GitHub secrets SMTP_USER + SMTP_PASS (Gmail app password) or RESEND_API_KEY for direct email delivery."
+exit 0
