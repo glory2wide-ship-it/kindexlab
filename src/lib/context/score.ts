@@ -31,14 +31,23 @@ export function computeContextScore(signalFacts: SignalFact[], sources: ContextS
 
 export function canGenerateContext(ctx: {
   score: number;
-  sources: { url: string; tier?: ContextSource["tier"] }[];
+  sources: { url: string; tier?: ContextSource["tier"]; snippet?: string }[];
+  sourceTextChars?: number;
 }): boolean {
   if (!ctx.sources.length) return false;
   if (ctx.score >= MIN_CONTEXT_SCORE) return true;
   const newsCount = ctx.sources.filter((source) => source.tier === "news").length;
   const citable = ctx.sources.filter((source) => source.url);
+  const webLike = ctx.sources.filter((source) => source.tier === "web" || source.tier === "youtube");
+  const snippetChars =
+    ctx.sourceTextChars ??
+    ctx.sources.reduce((sum, source) => sum + (source.snippet?.replace(/\s+/g, "").length ?? 0), 0);
   // News-less keywords may still clear the bar with web/blog/youtube fallbacks.
   if (newsCount <= NEWS_FALLBACK_THRESHOLD && citable.length >= 2 && ctx.score >= 4) {
+    return true;
+  }
+  // Multi-source fallback mode: enough citable web/video evidence plus usable text.
+  if (newsCount === 0 && webLike.length >= 3 && citable.length >= 3 && snippetChars >= 240) {
     return true;
   }
   return false;

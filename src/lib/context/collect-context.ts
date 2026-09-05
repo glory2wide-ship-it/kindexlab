@@ -1,4 +1,5 @@
 import { crawlKeywordNewsRss, publisherLinksFromDescription } from "@/lib/context/crawl-news-rss";
+import { fetchGoogleCustomSearch } from "@/lib/context/fallback-google-cse";
 import { fetchNaverWebFallback } from "@/lib/context/fallback-naver";
 import { fetchSerperWeb } from "@/lib/context/fallback-serper";
 import { fetchYoutubeFallback } from "@/lib/context/fallback-youtube";
@@ -63,6 +64,18 @@ function mergeSources(existing: ContextSource[], incoming: ContextSource[]): Con
     out.push(source);
   }
   return out;
+}
+
+function sourceSnippetChars(sources: ContextSource[]): number {
+  return sources.reduce((sum, source) => sum + (source.snippet?.replace(/\s+/g, "").length ?? 0), 0);
+}
+
+function tierCounts(sources: ContextSource[]): Partial<Record<ContextSource["tier"], number>> {
+  const counts: Partial<Record<ContextSource["tier"], number>> = {};
+  for (const source of sources) {
+    counts[source.tier] = (counts[source.tier] ?? 0) + 1;
+  }
+  return counts;
 }
 
 async function materializeSources(
@@ -230,18 +243,21 @@ export async function collectArticleContext(
   const providers = [...news.providers];
 
   if (newsCount <= NEWS_FALLBACK_THRESHOLD) {
-    const [naverWeb, serperWeb] = await Promise.all([
+    const [naverWeb, serperWeb, googleCse] = await Promise.all([
       fetchNaverWebFallback(keyword, 5),
       fetchSerperWeb(keyword, 5),
+      fetchGoogleCustomSearch(keyword, 5),
     ]);
     if (naverWeb.length) providers.push("naver-web");
     if (serperWeb.length) providers.push("serper-web");
-    sources = mergeSources(sources, mergeSources(naverWeb, serperWeb));
+    if (googleCse.length) providers.push("google-cse");
+    sources = mergeSources(sources, mergeSources(mergeSources(naverWeb, serperWeb), googleCse));
     newsCount = countNewsSources(sources);
   }
 
   const webCount = sources.filter((source) => source.tier === "web").length;
-  if (newsCount <= NEWS_FALLBACK_THRESHOLD && webCount <= 2) {
+  const snippetCharsAfterWeb = sourceSnippetChars(sources);
+  if (newsCount <= NEWS_FALLBACK_THRESHOLD && (webCount <= 2 || snippetCharsAfterWeb < 260)) {
     const videos = await fetchYoutubeFallback(keyword, 3);
     if (videos.length) providers.push("youtube-fallback");
     sources = mergeSources(sources, videos);
@@ -276,6 +292,8 @@ export async function collectArticleContext(
     lookbackHours: news.lookbackHours,
     score,
     intentHints,
+    sourceTextChars: sourceSnippetChars(sources),
+    tierCounts: tierCounts(sources),
   };
   ctx.block = renderContextBlock(ctx, { asOfDate: options.asOfDate });
   return ctx;

@@ -36,7 +36,7 @@ export const STATIC_SYSTEM_PROMPT = [
   `[애드센스·워드프레스 SEO]
 1. Full/Sparse/Shorts: 공백 제외 1,400~1,800자. 하한 1,400자 미달 시 품질 게이트 실패. 팩트 + Why + How + 표 + 전망으로 밀도를 채우고 패딩·물타기는 금지.
 2. H1은 title 하나. 본문 sections는 스키마상 최소 4개(H2, headingLevel 2). FAQ 질문은 H3 개념.
-3. 포커스 키워드를 excerpt(도입부 상위 10%)에 1회 이상, 본문 합계 5회 이상 자연 배치(목표 5~7회, 과도한 반복 금지).
+3. 포커스 키워드는 문서 전체(title·excerpt·본문·FAQ)에서 정확히 5~6회만 자연 배치하세요. 7회를 넘기면 과반복 실패입니다. 소제목·표·FAQ 질문에는 불필요하게 반복하지 마세요.
 4. Markdown/JSON Table 1개 필수(caption은 '팩트 체크' 또는 '핵심 팩트 요약'). FAQ 3개 이상(Shorts는 1~2개).
 5. externalLink.href는 제공된 뉴스 URL을 그대로 복사. 가상 URL 금지. internalLink.href는 사이트에 실제 존재하는 경로만 (/board/…, /economy/briefing, /ranking/… 등). /search?q= 금지.
 6. 표·FAQ는 사실 기반. 체크리스트성 How 나열 금지.
@@ -60,6 +60,9 @@ export interface BriefingInputParams {
   focusKeyword: string;
   relatedKeywords: string[];
   newsContext: string;
+  sparseGuidance?: string;
+  minChars?: number;
+  maxChars?: number;
   /** KST calendar date for this edition (YYYY-MM-DD). Anchors tense and freshness. */
   editionDate?: string;
 }
@@ -76,19 +79,26 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
     focusKeyword,
     relatedKeywords,
     newsContext,
+    sparseGuidance,
+    minChars,
+    maxChars,
     editionDate,
   } = params;
 
   const related =
     relatedKeywords.filter(Boolean).join(", ") ||
     "직접 연관 키워드 없음 — 무관한 소재를 억지로 엮지 마세요.";
+  const floor = minChars ?? 1400;
+  const ceiling = maxChars ?? 1800;
+  const charBand = `${floor}~${ceiling}자`;
+  const charTarget = floor === 1000 ? "1,100~1,500" : "1,500~1,700";
 
   const modeGuide =
     mode === "shorts"
-      ? "Shorts: 1,400~1,800자. H2=팩트→Why→How→전망. 표1·FAQ1~2. 패딩 금지."
+      ? `Shorts: ${charBand}. H2=팩트→Why→How→전망. 표1·FAQ1~2. 패딩 금지.`
       : mode === "sparse"
-        ? "Sparse: 1,400~1,800자. H2=팩트→Why→How→전망. 체크리스트 금지, 랭킹·검색 유입 Why 중심."
-        : "Full: 1,400~1,800자. H2=팩트→Why→How→전망(스키마 4개). FAQ 3개+. 표 필수.";
+        ? `Sparse: ${charBand}. H2=팩트→Why→How→전망. 체크리스트 금지, 랭킹·검색 유입 Why 중심.`
+        : `Full: ${charBand}. H2=팩트→Why→How→전망(스키마 4개). FAQ 3개+. 표 필수.`;
 
   const sectionCount = "정확히 4 (Structured Outputs minItems=4)";
   const paraPerSection = "정확히 4 (스키마 minItems=4)";
@@ -108,6 +118,7 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
     "[최신 뉴스 데이터 (RAG Context)]",
     newsContext?.trim() ||
       "수집된 뉴스 데이터가 없습니다. 포커스 키워드의 랭킹·검색 유입 현상만 밀도 있게 작성하세요.",
+    sparseGuidance?.trim() ? `\n${sparseGuidance.trim()}` : "",
     "",
     "[시제·시의성 — 본 호출 필수]",
     `- 본문의 '오늘'은 에디션 날짜 ${editionLine}입니다.`,
@@ -117,11 +128,14 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
     "- 연관 키워드가 다른 작품·도서·전시·지원금이면 인과로 묶지 마세요.",
     "",
     "[작성 지시 — 단일 패스·Low-value 방지]",
-    `위 RAG 팩트를 뼈대로 [포커스 키워드] "${focusKeyword}"를 excerpt 상위 10%에 1회, 본문에 합계 5회 이상 넣어 완전한 JSON을 한 번에 작성하세요.`,
+    `위 RAG 팩트를 뼈대로 [포커스 키워드] "${focusKeyword}"를 문서 전체에서 정확히 5~6회만 사용해 완전한 JSON을 한 번에 작성하세요.`,
+    `- 키워드 배치 예산: title 1회 이하, excerpt 1회, 본문 2~3회, FAQ 전체 1회 이하. 같은 문단에 같은 키워드를 2회 이상 반복하지 마세요.`,
+    "- 소제목·표 caption·표 cell·FAQ 질문에는 포커스 키워드를 불필요하게 반복하지 마세요. 사건명·공연명·앨범명·차트명 같은 구체 명사로 바꾸세요.",
+    "- 포커스 키워드를 2회 이상 쓴 뒤에는 '가수', '이번 공연', '해당 무대', '이번 일정'처럼 확인 가능한 대체 표현을 섞어 반복을 피하세요.",
     `- sections는 ${sectionCount}개. heading에 ❶❷❸❹와 이 사안 고유명사를 넣으세요.`,
     "- ❶ 핵심 사건·팩트 맥락  ❷ Why(왜 지금 주목·시장 배경)  ❸ How(독자 일상·소비·활용 요령, 목록형 체크리스트 금지)  ❹ 전망·파급(확인된 일정·신호만).",
     `- 각 섹션 paragraphs는 ${paraPerSection}개, 각 문단은 ${sentences}문장. 한 문장은 공백 제외 35~50자.`,
-    "- title+excerpt+sections+faq 합계 공백 제외 1,400~1,800자(목표 1,500~1,700). 단순 사실 나열·패딩으로 채우지 마세요.",
+    `- title+excerpt+sections+faq 합계 공백 제외 ${charBand}(목표 ${charTarget}). 단순 사실 나열·패딩으로 채우지 마세요.`,
     "- table 1개: 지표·일정·비교·수치(헤더 3열+, 행 2~4). faq는 Full/Sparse 3개+·Shorts 1~2개(답변 각 2~3문장).",
     "- externalLink는 위 뉴스 데이터의 실제 URL만.",
     '- internalLink.href는 /board/… · /{channel}/briefing · /ranking/… 등 실제 화면 경로만. /search?q= 금지. label은 "관련 글: …" 또는 보드명.',

@@ -23,17 +23,17 @@ export function FactTable({
         <span className="block font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
           {eyebrow}
         </span>
-        <span className="mt-1 block text-sm font-semibold leading-6 text-ink">{table.caption}</span>
+        <span className="mt-1 block text-[14.5px] font-semibold leading-6 text-ink">{table.caption}</span>
       </figcaption>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[30rem] border-collapse text-sm">
+        <table className="w-full min-w-[30rem] border-collapse text-[14.5px]">
           <thead>
             <tr className="bg-board/70">
               {table.headers.map((header) => (
                 <th
                   key={header}
                   scope="col"
-                  className="whitespace-nowrap border-b border-line px-4 py-3 text-left font-sans text-xs font-semibold uppercase tracking-wide text-muted"
+                  className="whitespace-nowrap border-b border-line px-4 py-3 text-left font-sans text-[12.4px] font-semibold uppercase tracking-wide text-muted"
                 >
                   {header}
                 </th>

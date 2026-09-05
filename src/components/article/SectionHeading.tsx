@@ -21,13 +21,13 @@ export function SectionHeading({
   if (tone === "minor") {
     return (
       <Tag className="mb-3 mt-7 text-base font-semibold leading-7 tracking-tight text-ink">
-        <span className="border-b-2 border-accent/30 pb-0.5">{children}</span>
+        <span className="border-b-2 border-accent/30 pb-0.5 text-[16.8px]">{children}</span>
       </Tag>
     );
   }
 
   return (
-    <Tag className="mb-4 mt-9 border-b border-line pb-2 text-lg font-semibold leading-8 tracking-tight text-ink md:text-xl">
+    <Tag className="mb-4 mt-9 border-b border-line pb-2 text-[18.9px] font-semibold leading-8 tracking-tight text-ink md:text-[21px]">
       <span className="mr-2.5 inline-block h-[1.05em] w-1 translate-y-[0.15em] rounded-full bg-accent align-top" />
       {children}
     </Tag>

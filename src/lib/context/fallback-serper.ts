@@ -38,7 +38,7 @@ function toSource(
     title,
     url: item.link,
     publisher: item.publisher?.trim() || (tier === "youtube" ? "YouTube" : "Web"),
-    snippet: item.snippet?.trim()?.slice(0, 220),
+    snippet: item.snippet?.trim()?.slice(0, 320),
     publishedAt: item.date,
     tier,
   };

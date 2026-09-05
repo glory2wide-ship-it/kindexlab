@@ -1,6 +1,7 @@
 import { BRIEFING_LLM, chatJson, briefingLlmConfigured } from "@/lib/analysis/chain/llm";
 import type { AnalysisLogger } from "@/lib/analysis/log";
 import {
+  buildSparseEnrichmentPrompt,
   canGenerateContext,
   collectPremiumContext,
   isRetrievedUrl,
@@ -389,6 +390,11 @@ export async function generatePremiumArticle(input: {
    * local/regex seed lines instead. Daily briefing keeps LLM expand.
    */
   skipLengthExpandLlm?: boolean;
+  /** Allow one LLM quality/length repair pass even in briefing mode. */
+  allowBriefingRepairLlm?: boolean;
+  /** Today's Analysis may use a lower floor than main/dive briefings. */
+  minCharsOverride?: number;
+  maxCharsOverride?: number;
 }): Promise<PremiumResult> {
   const { keyword, slug, logger } = input;
   const deadline = Date.now() + (input.timeoutMs ?? 150_000);
@@ -416,6 +422,10 @@ export async function generatePremiumArticle(input: {
     unwrapped: context.unwrapped.resolved,
     unresolvable: context.unwrapped.failed,
     lookbackHours: context.lookbackHours,
+    sourceTextChars: context.sourceTextChars,
+    newsCount: context.tierCounts.news ?? 0,
+    webCount: context.tierCounts.web ?? 0,
+    youtubeCount: context.tierCounts.youtube ?? 0,
   });
   for (const fact of context.signalFacts) {
     logger.detail(`· [signal] ${fact.slice(0, 100)}`);
@@ -458,7 +468,9 @@ export async function generatePremiumArticle(input: {
     });
   }
 
-  const minChars = input.briefing ? briefingMinChars(mode) : PREMIUM_MIN_CHARS;
+  const minChars =
+    input.minCharsOverride ?? (input.briefing ? briefingMinChars(mode) : PREMIUM_MIN_CHARS);
+  const maxChars = input.maxCharsOverride ?? BRIEFING_FULL_TARGET_MAX_CHARS;
   const minFaq = input.briefing && mode === "shorts" ? 1 : PREMIUM_FAQ_MIN;
   /** Structured Outputs ARTICLE_JSON_SCHEMA.minItems = 4 */
   const minSections = 4;
@@ -483,6 +495,13 @@ export async function generatePremiumArticle(input: {
     focusKeyword: keyword,
     relatedKeywords: filteredRelated,
     newsContext: context.block,
+    sparseGuidance: buildSparseEnrichmentPrompt(context, {
+      briefing: input.briefing,
+      minChars,
+      maxChars,
+    }),
+    minChars,
+    maxChars,
     editionDate,
   });
 
@@ -619,7 +638,7 @@ export async function generatePremiumArticle(input: {
         keyword,
         seedLines,
         minChars,
-        maxChars: BRIEFING_FULL_TARGET_MAX_CHARS,
+        maxChars,
       });
       title = padded.title;
       excerptText = padded.excerpt;
@@ -648,7 +667,7 @@ export async function generatePremiumArticle(input: {
         keyword,
         newsContext: context.block,
         minChars,
-        maxChars: BRIEFING_FULL_TARGET_MAX_CHARS,
+        maxChars,
         currentChars: chars,
         channel: input.channel,
         logger,
@@ -725,8 +744,8 @@ export async function generatePremiumArticle(input: {
   };
 
   let violations = collectViolations();
-  // Briefing: no LLM regen — regex post-process only. Premium columns may still patch.
-  if (!input.briefing && violations.length && remaining() > 15_000) {
+  // Premium columns always allow repair; briefings/오늘의 분석 opt in explicitly.
+  if ((!input.briefing || input.allowBriefingRepairLlm) && violations.length && remaining() > 15_000) {
     logger.warn("premium-quality-patch", { codes: violations.map((item) => item.code).join(",") });
     const patched = await patchDraftViolations({
       draft: { title, excerpt: excerptText, sections, faq: faqText },

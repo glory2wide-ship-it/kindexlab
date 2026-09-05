@@ -42,8 +42,8 @@ import type { PremiumArticle } from "@/lib/premium/generate";
 /** Korean 자수: characters with whitespace excluded, the usual editorial unit. */
 export const ANALYSIS_MIN = 800;
 export const ANALYSIS_MAX = 1000;
-/** Briefing-aligned band for single-pass Gemini columns (일일 브리핑과 동일). */
-export const ANALYSIS_BRIEFING_MIN = 1400;
+/** Today's Analysis Gemini floor for future generations. */
+export const ANALYSIS_BRIEFING_MIN = 1000;
 export const ANALYSIS_BRIEFING_MAX = 1800;
 
 export interface TodayAnalysisSection {

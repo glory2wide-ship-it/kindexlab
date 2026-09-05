@@ -63,7 +63,7 @@ export async function fetchYoutubeFallback(keyword: string, limit = 3): Promise<
       const url = `https://www.youtube.com/watch?v=${id}`;
       if (seen.has(url)) continue;
       seen.add(url);
-      const description = snippet.description?.replace(/\s+/g, " ").trim().slice(0, 220);
+      const description = snippet.description?.replace(/\s+/g, " ").trim().slice(0, 420);
       out.push({
         title,
         url,

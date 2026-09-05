@@ -39,6 +39,8 @@ export interface PremiumContext {
   intentHints: string[];
   /** True when news RSS/API returned at or below the fallback threshold. */
   newsThin: boolean;
+  sourceTextChars: number;
+  tierCounts: Partial<Record<ContextSource["tier"], number>>;
 }
 
 /** @deprecated Use MIN_CONTEXT_SCORE + canGenerateContext instead. */
@@ -57,13 +59,20 @@ export function isSparseContext(ctx: Pick<PremiumContext, "sources" | "newsThin"
  * Extra user-message guidance when Tier 1 news is thin.
  * Structure-only hints — facts must still come from collected URLs and signal facts.
  */
-export function buildSparseEnrichmentPrompt(ctx: PremiumContext, options?: { briefing?: boolean }): string {
+export function buildSparseEnrichmentPrompt(
+  ctx: PremiumContext,
+  options?: { briefing?: boolean; minChars?: number; maxChars?: number },
+): string {
   if (!isSparseContext(ctx)) return "";
+  const minChars = options?.minChars ?? 1400;
+  const maxChars = options?.maxChars ?? 1800;
   if (options?.briefing) {
     return [
       "[데이터 부족 모드 — 브리핑]",
-      "수집 뉴스가 적습니다. 억지 분량·체크리스트 패딩 대신 팩트→Why→How→전망(+표) 뼈대로 밀도 있게 쓰세요.",
-      "확인되지 않은 사실은 단정하지 마세요. 1,400~1,800자 구간을 패딩 없이 채우세요.",
+      "수집 뉴스가 적습니다. 일반 웹문서, 네이버 블로그, 유튜브 설명란, 연관검색 의도를 함께 참고해 팩트→Why→How→전망(+표) 뼈대로 밀도 있게 쓰세요.",
+      "대체 출처의 제목·요약·설명란에 있는 고유명사와 실제 URL만 근거로 사용하세요. 확인되지 않은 사실은 단정하지 마세요.",
+      `${minChars}~${maxChars}자 구간을 패딩 없이 채우세요. 같은 명사를 반복해 분량을 채우지 마세요.`,
+      `수집 현황: news=${ctx.tierCounts.news ?? 0}, web=${ctx.tierCounts.web ?? 0}, youtube=${ctx.tierCounts.youtube ?? 0}, sourceTextChars=${ctx.sourceTextChars}.`,
       ctx.intentHints.length
         ? `[참고 의도 — 사실 근거 아님]\n${ctx.intentHints.map((hint, index) => `${index + 1}. ${hint}`).join("\n")}`
         : "",
@@ -163,6 +172,8 @@ export async function collectPremiumContext(
     signalFacts: ctx.signalFacts.map((fact) => fact.text),
     intentHints: ctx.intentHints,
     newsThin: countNewsSources(ctx.sources) <= NEWS_FALLBACK_THRESHOLD,
+    sourceTextChars: ctx.sourceTextChars,
+    tierCounts: ctx.tierCounts,
   };
 }
 

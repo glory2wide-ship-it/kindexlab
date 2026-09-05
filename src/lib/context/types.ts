@@ -30,4 +30,8 @@ export interface CollectedContext {
   score: number;
   /** Tier 3: FAQ / section hints only — not treated as verifiable facts. */
   intentHints: string[];
+  /** Non-empty source snippets/descriptions total chars — guides sparse fallback prompting. */
+  sourceTextChars: number;
+  /** Source counts by tier for debugging and prompt branching. */
+  tierCounts: Partial<Record<ContextTier, number>>;
 }

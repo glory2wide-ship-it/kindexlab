@@ -58,7 +58,7 @@ async function searchNaver(
         title,
         url: item.link,
         publisher: item.bloggername?.trim() || publisher,
-        snippet: plain(item.description)?.slice(0, 220),
+        snippet: plain(item.description)?.slice(0, 320),
         tier: "web",
       });
       if (out.length >= limit) break;

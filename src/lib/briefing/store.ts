@@ -2,6 +2,7 @@ import { cache } from "react";
 import { compareArticles, listPersisted, listSeeded, persistedChannelEdition } from "@/lib/briefing/catalog";
 import { withBriefingCover } from "@/lib/briefing/cover";
 import { compareDatesDesc, isLiveEdition, kstDateString } from "@/lib/briefing/dates";
+import { desksForChannel, resolveBriefingDeskId } from "@/lib/briefing/desks";
 import { isPersistableBriefing } from "@/lib/briefing/quality";
 import { ALL_CATEGORIES } from "@/lib/categories";
 import { isPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
@@ -16,11 +17,39 @@ export function parseChannelFromSlug(slug: string): PostChannel | undefined {
 
 /**
  * Reader-facing edition: Gemini-persisted articles only.
- * Never compose editorial templates on miss — leave the slot empty until overnight Batch.
+ * When today's run misses a slot, keep showing the most recent successful article
+ * for that slot instead of exposing a blank card or template shell.
  */
 export async function getChannelBriefingEdition(channel: PostChannel): Promise<BriefingArticle[]> {
   const today = kstDateString();
-  return persistedChannelEdition(channel, today).filter(isPersistableBriefing);
+  const todays = persistedChannelEdition(channel, today).filter(isPersistableBriefing);
+  const persisted = listPersisted()
+    .filter((item) => item.channel === channel)
+    .filter(isPersistableBriefing)
+    .sort(compareArticles);
+
+  const byDesk = new Map<string, BriefingArticle>();
+  for (const article of todays) {
+    if (article.kind !== "deep-dive") continue;
+    const deskId = resolveBriefingDeskId(article.deskId, channel);
+    if (deskId) byDesk.set(deskId, article);
+  }
+
+  const main =
+    todays.find((item) => item.kind === "main") ??
+    persisted.find((item) => item.kind === "main");
+
+  for (const desk of desksForChannel(channel)) {
+    if (byDesk.has(desk.id)) continue;
+    const fallback = persisted.find(
+      (item) => item.kind === "deep-dive" && resolveBriefingDeskId(item.deskId, channel) === desk.id,
+    );
+    if (fallback) byDesk.set(desk.id, fallback);
+  }
+
+  return [main, ...desksForChannel(channel).map((desk) => byDesk.get(desk.id))]
+    .filter((item): item is BriefingArticle => Boolean(item))
+    .sort(compareArticles);
 }
 
 export function splitChannelEdition(articles: BriefingArticle[]): {

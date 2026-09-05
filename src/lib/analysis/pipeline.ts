@@ -95,8 +95,11 @@ async function generate(options: {
     timeoutMs: budgetMs(),
     editionDate,
     briefing: true,
-    // Cost control: no Gemini length-expand for Today's Analysis.
-    skipLengthExpandLlm: true,
+    // Today's Analysis prioritizes fill-rate; allow one repair/expand pass.
+    skipLengthExpandLlm: false,
+    allowBriefingRepairLlm: true,
+    minCharsOverride: 1_000,
+    maxCharsOverride: 1_800,
   });
 
   if (!result.ok) {
