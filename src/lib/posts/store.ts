@@ -41,6 +41,16 @@ function normalizePost(post: GeneratedPost): GeneratedPost {
 
 const fileRel = path.join("src", "data", "posts", "generated.json");
 const memory = new Map<string, GeneratedPost>();
+let fileWriteQueue = Promise.resolve();
+
+function queueFileWrite<T>(task: () => Promise<T>): Promise<T> {
+  const run = fileWriteQueue.then(task, task);
+  fileWriteQueue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
 
 function bundled(): GeneratedPost[] {
   const articles = (generatedFile as { articles?: GeneratedPost[] }).articles;
@@ -127,14 +137,16 @@ export async function replaceGeneratedArticles(
     if (await supabaseUpsert(post)) supabase = true;
   }
   if (process.env.VERCEL === "1") return { file: false, supabase };
-  try {
-    const file = path.join(process.cwd(), fileRel);
-    await mkdir(path.dirname(file), { recursive: true });
-    await writeFile(file, `${JSON.stringify({ articles: normalized }, null, 2)}\n`, "utf8");
-    return { file: true, supabase };
-  } catch {
-    return { file: false, supabase };
-  }
+  return queueFileWrite(async () => {
+    try {
+      const file = path.join(process.cwd(), fileRel);
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, `${JSON.stringify({ articles: normalized }, null, 2)}\n`, "utf8");
+      return { file: true, supabase };
+    } catch {
+      return { file: false, supabase };
+    }
+  });
 }
 
 export async function persistGeneratedPost(post: GeneratedPost): Promise<{ file: boolean; supabase: boolean }> {
@@ -142,16 +154,18 @@ export async function persistGeneratedPost(post: GeneratedPost): Promise<{ file:
   memory.set(normalized.slug, normalized);
   const supabase = await supabaseUpsert(normalized);
   if (process.env.VERCEL === "1") return { file: false, supabase };
-  try {
-    const existing = await readDisk();
-    const merged = [normalized, ...existing.filter((item) => item.slug !== normalized.slug)];
-    const file = path.join(process.cwd(), fileRel);
-    await mkdir(path.dirname(file), { recursive: true });
-    await writeFile(file, `${JSON.stringify({ articles: merged }, null, 2)}\n`, "utf8");
-    return { file: true, supabase };
-  } catch {
-    return { file: false, supabase };
-  }
+  return queueFileWrite(async () => {
+    try {
+      const existing = await readDisk();
+      const merged = [normalized, ...existing.filter((item) => item.slug !== normalized.slug)];
+      const file = path.join(process.cwd(), fileRel);
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, `${JSON.stringify({ articles: merged }, null, 2)}\n`, "utf8");
+      return { file: true, supabase };
+    } catch {
+      return { file: false, supabase };
+    }
+  });
 }
 
 export async function listPosts(): Promise<GeneratedPost[]> {
