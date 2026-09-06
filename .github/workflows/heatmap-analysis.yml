@@ -1,0 +1,107 @@
+name: Heatmap today's analysis
+
+# Pre-generates 오늘의 분석 for every category heatmap menu tile via Gemini
+# Batch (−50%), then commits cache.json so production serves warm columns.
+# First-click on a cold slug still uses Live API in the Next.js app (immediate).
+#
+# Cron: 05:00 KST (after 04:00 briefings start; before morning traffic).
+on:
+  schedule:
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "TTL 안이어도 전체 재생성"
+        type: boolean
+        required: false
+        default: false
+      channel:
+        description: "채널 한정 (entertainment/politics/economy/culture/travel)"
+        required: false
+        default: ""
+      limit:
+        description: "생성 상한 (비우면 전체)"
+        required: false
+        default: ""
+
+concurrency:
+  group: heatmap-analysis
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Require Gemini API key
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "${GEMINI_API_KEY}" ]; then
+            echo "::error::GEMINI_API_KEY GitHub secret is missing. Add it under Settings → Secrets."
+            exit 1
+          fi
+
+      - name: Generate heatmap 오늘의 분석 (Gemini Batch)
+        id: generate
+        run: |
+          set -euo pipefail
+          EDITION="$(TZ=Asia/Seoul date +%F)"
+          echo "edition=$EDITION" >> "$GITHUB_OUTPUT"
+          ARGS="--date=$EDITION"
+          if [ -n "${{ inputs.channel }}" ]; then ARGS="$ARGS --channel=${{ inputs.channel }}"; fi
+          if [ -n "${{ inputs.limit }}" ]; then ARGS="$ARGS --limit=${{ inputs.limit }}"; fi
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          echo "args=$ARGS"
+          npx tsx scripts/generate-heatmap-analysis.ts $ARGS
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GEMINI_EDITOR_MODEL: ${{ vars.GEMINI_EDITOR_MODEL }}
+          BRIEFING_LLM_PROVIDER: gemini
+          LLM_PROVIDER: gemini
+          GEMINI_USE_BATCH: "true"
+          GEMINI_BATCH_CONCURRENCY: "4"
+          ANALYSIS_OVERNIGHT_BATCH_SIZE: "20"
+          GEMINI_MAX_CONCURRENCY: "4"
+          TRENDS_DATA_SOURCE: live
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          REPORT_EMAIL_TO: glory2wide@gmail.com
+
+      - name: Email heatmap analysis report
+        if: always() && steps.generate.outcome != 'skipped'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          REPORT_EMAIL_TO: glory2wide@gmail.com
+          REPORT_EMAIL_FROM: ${{ secrets.REPORT_EMAIL_FROM }}
+        run: |
+          chmod +x scripts/ci-email-report.sh
+          EDITION="${{ steps.generate.outputs.edition }}"
+          if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
+          scripts/ci-email-report.sh \
+            "artifacts/generation-reports/heatmap-analysis-${EDITION}.html" \
+            "[KindexLab] 오늘의 분석 생성 보고 · ${EDITION}"
+
+      - name: Commit and push analysis cache
+        run: |
+          chmod +x scripts/ci-commit-push.sh
+          scripts/ci-commit-push.sh "chore: publish heatmap today's analysis" src/data/analysis/cache.json

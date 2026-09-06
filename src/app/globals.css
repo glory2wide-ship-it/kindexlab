@@ -1,0 +1,354 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f3efe6;
+  --foreground: #141821;
+  --board: #f3efe6;
+  --panel: #fffdf8;
+  --line: #e2dacb;
+  --muted: #667085;
+  --ink: #141821;
+  --up: #16a34a;
+  --down: #dc2626;
+  --accent: #c9a227;
+  /* US-style candle colors (up green / down red) — chart-only. */
+  --hts-up: #16a34a;
+  --hts-down: #dc2626;
+}
+
+.dark {
+  --background: #07080b;
+  --foreground: #e8eaf1;
+  --board: #07080b;
+  --panel: #10131a;
+  --line: #232833;
+  --muted: #8b93a7;
+  --ink: #e8eaf1;
+  --up: #22c55e;
+  --down: #ef4444;
+  --accent: #e8b923;
+  --hts-up: #22c55e;
+  --hts-down: #ef4444;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-board: var(--board);
+  --color-panel: var(--panel);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-ink: var(--ink);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-hts-up: var(--hts-up);
+  --color-hts-down: var(--hts-down);
+  --color-accent: var(--accent);
+  --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", var(--font-inter),
+    system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-gothic: var(--font-noto-sans-kr), "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo",
+    "Pretendard Variable", Pretendard, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "Cascadia Mono", monospace;
+}
+
+html,
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-sans);
+}
+
+svg text {
+  font-family: var(--font-sans);
+}
+
+svg a {
+  cursor: pointer;
+}
+
+body {
+  background: var(--board);
+  color: var(--ink);
+}
+
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-track {
+  animation: ticker var(--ticker-duration, 180s) linear infinite;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes market-pulse {
+  0% {
+    opacity: 0.45;
+    transform: scale(0.992);
+    filter: brightness(1.18);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.006);
+    filter: brightness(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.market-live-flash {
+  animation: market-pulse 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.header-live-blink {
+  animation: blink 3s infinite;
+}
+
+@keyframes board-rank-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Rows stagger in when the demographic filter changes; the list is remounted on
+   segment change so the sequence replays rather than snapping to the new order. */
+.board-rank-row {
+  animation: board-rank-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .market-live-flash,
+  .board-rank-row,
+  .flip-leaf-top,
+  .flip-leaf-bottom,
+  .live-blink,
+  .header-live-blink {
+    animation: none;
+  }
+
+  .board-rank-row {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.flip-board {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12em;
+  color: inherit;
+  font: inherit;
+  letter-spacing: -0.04em;
+}
+
+.kpi-score {
+  max-width: 100%;
+  font-size: clamp(0.94rem, calc(100cqi / 7.17), 1.62rem);
+  line-height: 1.15;
+}
+
+.kpi-score .flip-board {
+  max-width: 100%;
+  gap: 0.05em;
+}
+
+.kpi-score .flip-glyph {
+  width: 0.62em;
+  height: 1.15em;
+}
+
+.kpi-score .flip-punct {
+  width: 0.26em;
+}
+
+.kpi-score .flip-glyph-face,
+.kpi-score .flip-half-bottom .flip-glyph-face,
+.kpi-score .flip-leaf-bottom .flip-glyph-face {
+  height: 1.15em;
+}
+
+.flip-punct {
+  display: inline-block;
+  width: 0.32em;
+  text-align: center;
+}
+
+.flip-glyph {
+  position: relative;
+  display: inline-block;
+  width: 0.7em;
+  height: 1.22em;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-line) 85%, transparent);
+  border-radius: 0.14em;
+  background: color-mix(in srgb, var(--color-line) 28%, var(--color-panel));
+  perspective: 14em;
+  transform-style: preserve-3d;
+}
+
+.flip-glyph::after {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  z-index: 3;
+  height: 1px;
+  background: color-mix(in srgb, var(--color-ink) 22%, transparent);
+  content: "";
+}
+
+.flip-half,
+.flip-leaf {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 50%;
+  overflow: hidden;
+}
+
+.flip-half-top,
+.flip-leaf-top {
+  top: 0;
+}
+
+.flip-half-bottom,
+.flip-leaf-bottom {
+  top: 50%;
+}
+
+.flip-glyph-face {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: flex;
+  height: 1.22em;
+  align-items: center;
+  justify-content: center;
+}
+
+.flip-half-top .flip-glyph-face,
+.flip-leaf-top .flip-glyph-face {
+  top: 0;
+}
+
+.flip-half-bottom .flip-glyph-face,
+.flip-leaf-bottom .flip-glyph-face {
+  bottom: 0;
+}
+
+.flip-leaf {
+  z-index: 2;
+  background: color-mix(in srgb, var(--color-line) 28%, var(--color-panel));
+  backface-visibility: hidden;
+}
+
+.flip-leaf-top {
+  transform-origin: bottom center;
+  animation: flip-fold-top 0.32s ease-in var(--flip-delay, 0ms) forwards;
+}
+
+.flip-leaf-bottom {
+  transform-origin: top center;
+  transform: rotateX(90deg);
+  animation: flip-fold-bottom 0.28s ease-out calc(var(--flip-delay, 0ms) + 0.32s)
+    forwards;
+}
+
+@keyframes flip-fold-top {
+  from {
+    transform: rotateX(0deg);
+  }
+  to {
+    transform: rotateX(-90deg);
+  }
+}
+
+@keyframes flip-fold-bottom {
+  from {
+    transform: rotateX(90deg);
+  }
+  to {
+    transform: rotateX(0deg);
+  }
+}
+
+.category-sub-nav {
+  margin-left: auto;
+}
+
+nav[aria-label$="서브 메뉴"] {
+  margin-left: auto;
+}
+
+.category-sub-nav-bar {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.category-sub-nav-eyebrow {
+  min-width: 0;
+}
+
+.index-gothic,
+.index-gothic * {
+  font-family: var(--font-gothic) !important;
+}
+
+/**
+ * Shared body typography for 일일 브리핑 · 심층분석 · 이슈칼럼 · 오늘의 분석.
+ * Based on the original 15px / leading-8 (2rem):
+ *   size +11.3% total -> 16.7px
+ *   leading -23.5% total -> 1.53rem
+ * Future articles inherit via shared article components.
+ */
+:root {
+  --article-font-size: 16.7px;
+  --article-line-height: 1.53rem;
+}
+
+.article-prose {
+  font-size: var(--article-font-size);
+  line-height: var(--article-line-height);
+}
+
+.article-prose p,
+.article-prose li,
+.article-prose-text,
+.article-prose-lead {
+  font-size: var(--article-font-size);
+  line-height: var(--article-line-height);
+}
+
+
