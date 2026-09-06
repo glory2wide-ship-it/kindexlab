@@ -1,9 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Soft-nav / HMR assets are blocked when the preview host (localhost vs
-  // 127.0.0.1) does not match the origin Next was opened with.
-  allowedDevOrigins: ["127.0.0.1", "localhost"],
+  // Next 16 blocks cross-origin `/_next/*` in dev (403). Cursor Cloud previews
+  // hit the app through proxied hosts (and sometimes sandboxed iframes that send
+  // `Origin: null`), so those sources must be allowlisted or HTML loads while
+  // JS/CSS fail and the UI looks stuck. `**` matches nested subdomains.
+  allowedDevOrigins: [
+    "127.0.0.1",
+    "localhost",
+    "**.cursorusercontent.com",
+    "**.cursor.sh",
+    "**.portless.dev",
+    "null",
+  ],
   async headers() {
     return [
       ...(process.env.NODE_ENV === "production"
