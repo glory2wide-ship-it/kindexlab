@@ -27,7 +27,6 @@ export const TIMEFRAMES: TimeframeOption[] = [
   { id: "10m", label: "10분", group: "분봉" },
   { id: "30m", label: "30분", group: "분봉" },
   { id: "60m", label: "60분", group: "분봉" },
-  { id: "120m", label: "120분", group: "분봉" },
   { id: "1d", label: "일봉", group: "일봉" },
   { id: "1w", label: "주봉", group: "주봉" },
   { id: "1mo", label: "월봉", group: "월봉" },
