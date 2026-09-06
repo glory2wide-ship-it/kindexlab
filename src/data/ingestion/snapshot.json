@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-06T11:21:15.262Z",
+  "updatedAt": "2026-09-06T11:35:48.167Z",
   "status": "open",
   "sources": [
     {
@@ -25,13 +25,15 @@
     },
     {
       "id": "youtube-music",
-      "ok": true,
-      "count": 20
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "apple-music",
-      "ok": true,
-      "count": 50
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "itunes",
@@ -42,7 +44,7 @@
       "id": "circle",
       "ok": false,
       "count": 0,
-      "error": "empty"
+      "error": "fetch failed"
     },
     {
       "id": "kobis-daily",
@@ -54,7 +56,7 @@
       "id": "naver-movie",
       "ok": false,
       "count": 0,
-      "error": "no rows"
+      "error": "fetch failed"
     },
     {
       "id": "maxmovie",
@@ -64,8 +66,9 @@
     },
     {
       "id": "nielsen-terrestrial",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "nielsen-cable",
@@ -74,50 +77,57 @@
     },
     {
       "id": "news-ent",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "news-kpop",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "news-tv",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "news-creator",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "google-trends",
-      "ok": true,
-      "count": 10
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "naver-webtoon-daily",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "naver-webtoon-weekly",
-      "ok": true,
-      "count": 50
+      "ok": false,
+      "count": 0,
+      "error": "no rows"
     },
     {
       "id": "kakao-webtoon",
       "ok": false,
       "count": 0,
-      "error": "HTTP 404 for https://gateway-kw.kakao.com/section/v1/pages/general-ranking"
+      "error": "fetch failed"
     },
     {
       "id": "youtube-trending",
       "ok": false,
       "count": 0,
-      "error": "HTTP 400 for https://www.youtube.com/youtubei/v1/browse?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&prettyPrint=false"
+      "error": "fetch failed"
     },
     {
       "id": "youtube-trending-html",
@@ -132,73 +142,92 @@
     },
     {
       "id": "apple-ios-games-free",
-      "ok": true,
-      "count": 30
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "apple-ios-games-grossing",
-      "ok": true,
-      "count": 30
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "steam-most-played",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "steam-charts",
-      "ok": true,
-      "count": 30
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "playstation-store",
-      "ok": true,
-      "count": 21
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
-      "id": "news-politics",
-      "ok": true,
-      "count": 40
-    },
-    {
-      "id": "news-politics-search",
-      "ok": true,
-      "count": 40
-    },
-    {
-      "id": "news-party",
-      "ok": true,
-      "count": 2
-    },
-    {
-      "id": "news-politician",
+      "id": "console-watchlist",
       "ok": true,
       "count": 12
     },
     {
+      "id": "news-politics",
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
+    },
+    {
+      "id": "news-politics-search",
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
+    },
+    {
+      "id": "news-party",
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
+    },
+    {
+      "id": "news-politician",
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
+    },
+    {
       "id": "news-pundit",
-      "ok": true,
-      "count": 10
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "news-pol-influencer",
-      "ok": true,
-      "count": 8
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "news-pol-ratings",
-      "ok": true,
-      "count": 6
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "news-policy",
-      "ok": true,
-      "count": 5
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "news-subsidy",
-      "ok": true,
-      "count": 4
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "youtube-politics-seeds",
@@ -208,33 +237,39 @@
     },
     {
       "id": "interpark-musical",
-      "ok": true,
-      "count": 50
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "interpark-concert",
-      "ok": true,
-      "count": 50
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "interpark-drama",
-      "ok": true,
-      "count": 50
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "interpark-classic",
-      "ok": true,
-      "count": 50
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "interpark-exhibit",
-      "ok": true,
-      "count": 50
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "yes24-ticket-rank",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed"
     },
     {
       "id": "ticketlink-rank",
