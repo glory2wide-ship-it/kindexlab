@@ -94,7 +94,7 @@ export const CHANNEL_SECTIONS: {
     id: "briefing",
     path: "/briefing",
     label: "일일브리핑",
-    description: "키워드 기반 심층 이슈 칼럼, 마크다운 표, FAQ",
+    description: "키워드 기반 심층 브리핑, 마크다운 표, FAQ",
   },
   {
     id: "archive",

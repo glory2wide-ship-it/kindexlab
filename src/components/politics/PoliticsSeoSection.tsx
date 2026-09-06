@@ -106,7 +106,7 @@ export function PoliticsSeoSection({
 
       {teasers.length ? (
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold tracking-tight">이슈 칼럼</h2>
+          <h2 className="text-xl font-semibold tracking-tight">관련 브리핑</h2>
           <ul className="grid gap-3 md:grid-cols-2">
             {teasers.map((post) => (
               <li key={post.slug} className="rounded-2xl border border-line bg-panel p-4">

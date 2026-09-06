@@ -60,7 +60,7 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
             </p>
             <p>
               상단 GNB의 엔터테인먼트·정치·경제·문화/생활·여행/맛집 데스크마다 실시간 지수,
-              일일브리핑, 이슈 칼럼, 아카이브, 소개가 같은 규격으로 제공됩니다.
+              일일브리핑, 아카이브, 소개가 같은 규격으로 제공됩니다.
             </p>
           </section>
           <section className="space-y-3 text-[15px] leading-8">

@@ -24,7 +24,7 @@ export default function PrivacyPage() {
         </p>
         <p>
           서비스는 {CATEGORY_LIST} 카테고리의 실시간 지수(INDEX), 랭킹 보드, 데일리 브리핑·심층
-          분석, 이슈 칼럼을 제공합니다. 본 방침은 위 카테고리 페이지를 포함한 서비스 전반에
+          분석을 제공합니다. 본 방침은 위 카테고리 페이지를 포함한 서비스 전반에
           동일하게 적용됩니다.
         </p>
       </LegalSection>
