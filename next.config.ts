@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Soft-nav / HMR assets are blocked when the preview host (localhost vs
+  // 127.0.0.1) does not match the origin Next was opened with.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   async headers() {
     return [
       ...(process.env.NODE_ENV === "production"
