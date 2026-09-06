@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { computeBoardIndex } from "@/lib/boards/board-index";
 import { boardPath, categoryBoardPath, menuBoardsForChannel } from "@/lib/boards/registry";
-import { seedMissingBoards } from "@/lib/boards/seed";
 import { readBoard } from "@/lib/boards/store";
 import type { CachedBoard } from "@/lib/boards/types";
 import { getPostChannel, isPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
@@ -103,14 +102,9 @@ export default async function CategoryBoardsPage({
 
   const meta = getPostChannel(channel);
   const boards = menuBoardsForChannel(channel);
-  try {
-    await seedMissingBoards();
-  } catch {
-    /* ignore seed failures — cards fall back to 집계 대기 */
-  }
-  // Read-only: the list shows whatever is cached. Generation happens on the
-  // board detail page or via cron, so opening a category never blocks on 7 LLM
-  // pipelines at once.
+  // Read-only: show whatever is already cached. Generation happens on the board
+  // detail page or via cron — never block this index on LLM pipelines or a
+  // global seed scan of every board in the registry.
   const cached = await Promise.all(boards.map((board) => readBoard(board.slug)));
 
   return (

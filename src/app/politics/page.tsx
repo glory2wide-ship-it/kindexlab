@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { ChannelBriefingPage } from "@/components/briefing/ChannelBriefingPage";
 import { ChannelMarketDesk } from "@/components/dashboard/ChannelMarketDesk";
-import { getRankings } from "@/lib/api";
-import { stripBoardDemographics } from "@/lib/boards/heatmap";
-import { channelLiveMarket, loadChannelHeatmapPayloads } from "@/lib/boards/heatmap-server";
-import { seedMissingBoards } from "@/lib/boards/seed";
+import { loadChannelDeskData } from "@/lib/boards/channel-page-data";
 import { getPostChannel, LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
-import type { RankingsPayload } from "@/lib/types";
 
 /** ISR: matches the 3-minute live board refresh cadence. */
 export const revalidate = 180;
@@ -27,28 +24,22 @@ export const metadata: Metadata = {
 };
 
 export default async function PoliticsBoardPage() {
-  let market: RankingsPayload;
-  try {
-    market = await getRankings();
-  } catch {
-    market = { updatedAt: new Date().toISOString(), status: "open", indices: [], items: [] };
-  }
-  try {
-    await seedMissingBoards();
-  } catch {
-    /* best-effort */
-  }
-  const boards = await loadChannelHeatmapPayloads("politics");
+  const { boards, liveMarket } = await loadChannelDeskData("politics");
 
   return (
     <div className="space-y-8">
-      <ChannelMarketDesk
-        channel="politics"
-        boards={stripBoardDemographics(boards)}
-        liveMarket={channelLiveMarket(market, "politics", boards)}
-      />
+      <ChannelMarketDesk channel="politics" boards={boards} liveMarket={liveMarket} />
       <section className="border-t border-line pt-8">
-        <ChannelBriefingPage channel="politics" titleLevel={2} />
+        <Suspense
+          fallback={
+            <div className="space-y-3" aria-hidden>
+              <div className="h-8 w-48 animate-pulse rounded bg-line/70" />
+              <div className="h-40 animate-pulse rounded-2xl bg-line/40" />
+            </div>
+          }
+        >
+          <ChannelBriefingPage channel="politics" titleLevel={2} />
+        </Suspense>
       </section>
     </div>
   );

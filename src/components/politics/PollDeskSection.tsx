@@ -1,6 +1,6 @@
 import { AgencyPollComparisonBoard } from "@/components/politics/AgencyPollComparisonBoard";
 import { getPollBoardForEntity, isPollComparableType } from "@/lib/politics/polls";
-import type { RankingEntity, RankingsPayload } from "@/lib/types";
+import type { RankingEntity } from "@/lib/types";
 
 /**
  * Poll comparison data only — never render editorial template prose.
@@ -10,7 +10,6 @@ export async function PollDeskSection({
   entity,
 }: {
   entity: RankingEntity;
-  market: RankingsPayload;
   related?: RankingEntity[];
 }) {
   if (!isPollComparableType(entity.type)) return null;

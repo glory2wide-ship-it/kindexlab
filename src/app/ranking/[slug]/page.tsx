@@ -40,6 +40,8 @@ const loadDetail = cache(async (slug: string, name?: string) => {
   if (!entity) return null;
 
   // Related + market share one cached getRankings(); board entities already resolved above.
+  // getRelatedEntities already hits the cached getRankings(); reuse that payload
+  // for analysis instead of awaiting a second named call in the critical path.
   const [related, market] = await Promise.all([getRelatedEntities(entity), getRankings()]);
 
   let article: TodayAnalysisArticle | undefined;
@@ -50,7 +52,7 @@ const loadDetail = cache(async (slug: string, name?: string) => {
     /* leave the block out; the data sections below stand on their own */
   }
 
-  return { entity, related, market, article, grounded: Boolean(article) };
+  return { entity, related, article, grounded: Boolean(article) };
 });
 
 export async function generateMetadata({
@@ -94,7 +96,7 @@ export default async function RankingDetailPage({
   const query = searchParams ? await searchParams : {};
   const detail = await loadDetail(slug, typeof query.name === "string" ? query.name : undefined);
   if (!detail) notFound();
-  const { entity, related, market, article: analysisArticle } = detail;
+  const { entity, related, article: analysisArticle } = detail;
   const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
 
   const jsonLd = {
@@ -132,7 +134,7 @@ export default async function RankingDetailPage({
         <SupportIndexChart kind="politician" subject={entity.name} />
       ) : null}
       {analysisArticle ? <TodayAnalysis article={analysisArticle} keyword={entity.name} /> : null}
-      <PollDeskSection entity={entity} market={market} related={related} />
+      <PollDeskSection entity={entity} related={related} />
       <RelatedRankingDesk entity={entity} related={related} />
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DemographicTabs } from "@/components/boards/DemographicTabs";
 import { HeatmapCountdownFallback } from "@/components/dashboard/HeatmapCountdown";
 import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundary";
@@ -86,6 +86,12 @@ export function MarketWorkspace({
   remainingSec?: number;
   refreshing?: boolean;
 }) {
+  useEffect(() => {
+    // Warm the treemap chunk while the desk chrome paints so category
+    // navigations do not sit on an empty skeleton after RSC arrives.
+    void import("@/components/dashboard/TreemapCanvas");
+  }, []);
+
   const [view, setView] = useState<ViewMode>(initialView);
   const [category, setCategory] = useState<CategoryId>(initialCategory);
   const [timeframe, setTimeframe] = useState<Timeframe>("3m");

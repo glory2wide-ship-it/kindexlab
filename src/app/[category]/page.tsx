@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChannelDeskWithBriefing } from "@/components/dashboard/ChannelDeskWithBriefing";
-import { getChannelBriefingEdition, getRankings, splitChannelEdition } from "@/lib/api";
-import { stripBoardDemographics } from "@/lib/boards/heatmap";
-import { channelLiveMarket, loadChannelHeatmapPayloads } from "@/lib/boards/heatmap-server";
-import { seedMissingBoards } from "@/lib/boards/seed";
+import { loadChannelPageData } from "@/lib/boards/channel-page-data";
 import { getPostChannel, isPostChannel, LIVE_INDEX_LABEL } from "@/lib/posts/channels";
-import type { RankingsPayload } from "@/lib/types";
 
 /** ISR: matches the 3-minute live board refresh cadence. */
 export const revalidate = 180;
@@ -33,36 +29,14 @@ export default async function CategoryBoardPage({
 }) {
   const { category } = await params;
   if (!isPostChannel(category)) notFound();
-  let market: RankingsPayload;
-  try {
-    market = await getRankings();
-  } catch {
-    market = { updatedAt: new Date().toISOString(), status: "open", indices: [], items: [] };
-  }
-  try {
-    await seedMissingBoards();
-  } catch {
-    /* sample seed is best-effort — the rail still renders */
-  }
-  const boards = await loadChannelHeatmapPayloads(category);
 
-  // Board rail ↔ index cards ↔ 심층 분석 stay 1:1 (travel includes 여행 정부지원금).
-  let main;
-  let dives: Awaited<ReturnType<typeof splitChannelEdition>>["dives"] = [];
-  try {
-    const edition = await getChannelBriefingEdition(category);
-    const split = splitChannelEdition(edition);
-    main = split.main;
-    dives = split.dives;
-  } catch {
-    main = undefined;
-    dives = [];
-  }
+  const { boards, liveMarket, main, dives } = await loadChannelPageData(category);
+
   return (
     <ChannelDeskWithBriefing
       channel={category}
-      boards={stripBoardDemographics(boards)}
-      liveMarket={channelLiveMarket(market, category, boards)}
+      boards={boards}
+      liveMarket={liveMarket}
       main={main}
       dives={dives}
       titleLevel={2}

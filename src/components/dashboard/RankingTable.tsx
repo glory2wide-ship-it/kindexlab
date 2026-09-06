@@ -115,6 +115,7 @@ export function RankingTable({
                 className={`cursor-pointer border-b border-line/80 font-sans transition-colors hover:bg-board/80 ${
                   selectedSlug === item.slug ? "bg-accent/10" : ""
                 }`}
+                onPointerDown={() => router.prefetch(entityHref(item))}
                 onMouseEnter={() => router.prefetch(entityHref(item))}
                 onClick={() => {
                   const href = entityHref(item);

@@ -35,13 +35,16 @@ export function UnifiedMarketBoard({
   useEffect(() => {
     const intervalMs = Math.max(1, refreshIntervalSec) * 1000;
     deadlineRef.current = Date.now() + intervalMs;
+    // 1s ticks (was 250ms) — enough for the countdown, far less main-thread
+    // contention while the user is mid soft-navigation to a category/entity.
     const tick = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
       const remainingMs = deadlineRef.current - Date.now();
       setRemainingSec(Math.max(0, Math.ceil(remainingMs / 1000)));
       if (remainingMs > 0) return;
       deadlineRef.current = Date.now() + intervalMs;
       startTransition(() => router.refresh());
-    }, 250);
+    }, 1000);
     return () => window.clearInterval(tick);
   }, [refreshIntervalSec, router]);
 

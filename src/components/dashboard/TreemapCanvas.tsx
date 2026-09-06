@@ -81,6 +81,14 @@ export function TreemapView({
 }) {
   const safeItems = Array.isArray(items) ? items : [];
   const router = useRouter();
+
+  useEffect(() => {
+    // Prefetch the first tiles so the common click path is warm before hover.
+    for (const entity of items.slice(0, 8)) {
+      router.prefetch(entityHref(entity));
+    }
+  }, [items, router]);
+
   const wrapRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState({ width: 1100, height: 640 });
   const [hover, setHover] = useState<HoverState | null>(null);
@@ -228,6 +236,11 @@ export function TreemapView({
               className="cursor-pointer"
               aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name} ${rate} ${scoreLabel}`}
               data-heatmap-rank={rank}
+              onPointerDown={() => {
+                // Mobile has no hover; kick off the RSC flight on press so
+                // router.push below usually hits a warm cache.
+                router.prefetch(href);
+              }}
               onMouseEnter={(event) => {
                 router.prefetch(href);
                 moveHover(event, entity, series, change);

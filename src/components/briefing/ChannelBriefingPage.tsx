@@ -1,5 +1,6 @@
 import { ChannelBriefingLayout } from "@/components/briefing/ChannelBriefingLayout";
 import { getChannelBriefingEdition, splitChannelEdition } from "@/lib/api";
+import { slimBriefingForCard, slimBriefingsForCards } from "@/lib/briefing/card-dto";
 import type { PostChannel } from "@/lib/posts/types";
 
 /** Shared 종합 히어로 + 하부 메뉴 그리드 page body. Entertainment, politics, economy, and culture all bind here. */
@@ -17,8 +18,8 @@ export async function ChannelBriefingPage({
   try {
     const edition = await getChannelBriefingEdition(channel);
     const split = splitChannelEdition(edition);
-    main = split.main;
-    dives = split.dives;
+    main = split.main ? slimBriefingForCard(split.main) : undefined;
+    dives = slimBriefingsForCards(split.dives);
   } catch {
     main = undefined;
     dives = [];
