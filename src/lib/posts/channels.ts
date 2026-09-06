@@ -5,7 +5,7 @@ import { isPoliticsEntityType, POLITICS_TYPE_ORDER } from "@/lib/politics/types"
 export type ChannelSectionId = "board" | "briefing" | "archive" | "about";
 
 /** Page heading for a channel's live index board, and the tab title it drives. */
-export const LIVE_INDEX_LABEL = "실시간 지수 / LIVE INDEX";
+export const LIVE_INDEX_LABEL = "실시간 지수";
 
 /**
  * Two-character desk tags for the unified landing heatmap.
@@ -35,7 +35,7 @@ export const POST_CHANNELS: {
     id: "entertainment",
     href: "/entertainment",
     label: "엔터테인먼트",
-    eyebrow: "ENTERTAINMENT DESK",
+    eyebrow: "ENTERTAINMENT",
     indexTitle: "엔터테인먼트 지수",
     description:
       "음원·시청률·웹툰·게임·숏폼·인플루언서 공개 순위를 실시간 지수와 브리핑으로 읽습니다.",
@@ -44,7 +44,7 @@ export const POST_CHANNELS: {
     id: "politics",
     href: "/politics",
     label: "정치",
-    eyebrow: "POLITICS ISSUE INDEX DESK",
+    eyebrow: "POLITICS",
     indexTitle: "정치 이슈 지수",
     description:
       "정당·정치인 지지도, 헤드라인, 평론가·시사 유튜브, 지자체 정책·지원금을 지수로 읽습니다.",
@@ -53,7 +53,7 @@ export const POST_CHANNELS: {
     id: "economy",
     href: "/economy",
     label: "경제",
-    eyebrow: "ECONOMY ISSUE INDEX DESK",
+    eyebrow: "ECONOMY",
     indexTitle: "경제 이슈 지수",
     description:
       "금리·증시·환율·물가·부동산·정부 지원금·창업·경제 헤드라인을 랭킹 보드로 읽습니다.",
@@ -62,7 +62,7 @@ export const POST_CHANNELS: {
     id: "culture",
     href: "/culture",
     label: "문화/생활",
-    eyebrow: "CULTURE & LIVING ISSUE INDEX DESK",
+    eyebrow: "CULTURE & LIVING",
     indexTitle: "문화/생활 이슈 지수",
     description:
       "공연·전시·웹툰·문화 지원·맛집·생활 트렌드와 문화 헤드라인을 한 데스크에서 읽습니다.",
@@ -71,7 +71,7 @@ export const POST_CHANNELS: {
     id: "travel",
     href: "/travel",
     label: "여행/맛집",
-    eyebrow: "TRAVEL & FOOD ISSUE INDEX DESK",
+    eyebrow: "TRAVEL & FOOD",
     indexTitle: "여행/맛집 이슈 지수",
     description:
       "국내 여행·나들이·지역 맛집·숙박·레저 화제를 랭킹 보드와 헤드라인으로 읽습니다.",
