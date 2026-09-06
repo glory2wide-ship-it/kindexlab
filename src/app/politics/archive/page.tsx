@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "정치 아카이브",
-  description: "정치 종합 브리핑과 하부 메뉴 심층 분석 목록.",
+  description: "정치 종합 브리핑과 Update 키워드 목록.",
   alternates: { canonical: channelSectionHref("politics", "archive") },
   openGraph: {
     title: `정치 아카이브 · ${SITE.name}`,

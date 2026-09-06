@@ -6,7 +6,7 @@ import { trendsRevalidateSec } from "@/lib/refresh";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Landing “카테고리별 실시간 데스크” client poll — mirrors loadUnifiedMarket desks. */
+/** Landing “LIVE KinDex” client poll — mirrors loadUnifiedMarket desks. */
 export async function GET() {
   // Serve the cached snapshot; stale data already triggers a background ingest
   // inside getRankings. Forcing refresh:true here re-ran the full crawl every

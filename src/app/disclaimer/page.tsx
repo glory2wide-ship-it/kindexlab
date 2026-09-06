@@ -18,7 +18,7 @@ export default function DisclaimerPage() {
       <LegalSection title="1. 정보 제공 목적">
         <p>
           {SITE.name}({SITE.nameKo})가 표시하는 순위, 등락률, 거래량, 지수, 차트, 데일리 브리핑,
-          카테고리 심층 분석은 모두 {CATEGORY_LIST} 카테고리의 이슈·화제성을 관측하기 위한
+          카테고리 Update 키워드는 모두 {CATEGORY_LIST} 카테고리의 이슈·화제성을 관측하기 위한
           정보입니다. 금융투자상품의 시세, 기업 가치, 신용 평가, 매수·매도 추천이 아닙니다.
         </p>
       </LegalSection>
@@ -40,7 +40,7 @@ export default function DisclaimerPage() {
       </LegalSection>
       <LegalSection title="4. 브리핑 본문">
         <p>
-          데일리 브리핑과 {CATEGORY_LIST} 카테고리 심층 분석은 당일 스냅샷을 해석한 편집
+          데일리 브리핑과 {CATEGORY_LIST} 카테고리 Update 키워드는 당일 스냅샷을 해석한 편집
           콘텐츠입니다. 가설이 다음날 지수(INDEX)에서 뒤집힐 수 있으며, 회사는 예측 적중을
           약속하지 않습니다. 인물·작품·방송·정책·상품에 대한 평가는 화제성 관측일 뿐
           명예·실적·계약에 대한 단정이 아닙니다.

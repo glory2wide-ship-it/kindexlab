@@ -107,7 +107,7 @@ async function main() {
 
   const delivery = await deliverGenerationReport(
     {
-      subject: `[KinDex] 브리핑·심층분석 생성 보고 · ${result.editionDate}`,
+      subject: `[KinDex] 브리핑·Update 키워드 생성 보고 · ${result.editionDate}`,
       editionDate: result.editionDate,
       pipeline: "daily-briefings",
       generatedAt: new Date().toISOString(),
@@ -122,7 +122,7 @@ async function main() {
           })),
         },
         {
-          title: "하부메뉴 심층분석",
+          title: "Update 키워드",
           rows: dives.map((item) => ({
             ...toRow(item),
             status: result.skipped ? "skip" : item.status,

@@ -43,7 +43,7 @@ export interface AnalysisResult {
 }
 
 /**
- * Runs the same Gemini single-pass as 일일 브리핑 / 심층분석
+ * Runs the same Gemini single-pass as 일일 브리핑 / Update 키워드
  * (`STATIC_SYSTEM_PROMPT` + `buildSinglePassUserPrompt`), then maps the
  * premium article into the Today's Analysis shape.
  *

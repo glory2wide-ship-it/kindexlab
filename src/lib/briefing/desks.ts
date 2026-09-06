@@ -12,7 +12,7 @@ export interface ChannelBriefingDesk {
   indexId?: string;
 }
 
-/** Headlines desks are retired from the rail — never compose 심층분석 for them. */
+/** Headlines desks are retired from the rail — never compose Update 키워드 for them. */
 export function isHeadlineBriefingDesk(deskId: string | undefined): boolean {
   if (!deskId) return false;
   if (isHeadlineNewsBoard(deskId)) return true;
@@ -84,7 +84,7 @@ export function resolveBriefingDeskId(deskId: string | undefined, channel: PostC
 
 /**
  * Lower-menu deep-dive desks — always mirror the ranking-board rail
- * (`menuBoardsForChannel`) so tabs and 심층 분석 cards stay 1:1.
+ * (`menuBoardsForChannel`) so tabs and Update 키워드 cards stay 1:1.
  * Headlines boards are excluded even if they reappear in a stale menu order.
  */
 export function desksForChannel(channel: PostChannel): ChannelBriefingDesk[] {

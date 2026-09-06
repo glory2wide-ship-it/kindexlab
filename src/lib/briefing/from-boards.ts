@@ -201,7 +201,7 @@ function mainFromBoards(
         kind: "briefing",
         paragraphs: [
           `${leadName}이(가) ${rankedBoards[0]?.shortTitle ?? meta.label} 보드 히트맵 1위입니다. ${support} 흐름과 검색·보도 신호가 겹친 결과입니다.`,
-          lines.slice(4).join(" ") || `${meta.label} 나머지 보드는 아래 심층 카드에서 따로 읽습니다.`,
+          lines.slice(4).join(" ") || `${meta.label} 나머지 보드는 아래 Update 키워드 카드에서 따로 읽습니다.`,
         ],
       },
     ],
@@ -221,7 +221,7 @@ export async function composeBoardChannelEdition(
   topicPool?: HeatmapTopicPool,
 ): Promise<BriefingArticle[]> {
   const pool = topicPool ?? (await collectHeatmapTopics(channel));
-  // Mirror desksForChannel: never draft 심층분석 for retired headline boards.
+  // Mirror desksForChannel: never draft Update 키워드 for retired headline boards.
   const defs = menuBoardsForChannel(channel).filter(
     (def) => def.deskKind !== "headlines" && !isHeadlineBriefingDesk(def.slug),
   );

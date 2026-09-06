@@ -37,7 +37,7 @@ git merge github/main
 | --- | --- |
 | `/` | 히트맵/리스트 지수(INDEX), 타임프레임(3m~60m, Daily, Weekly, Monthly), 오늘의 브리핑 레일 |
 | `/ranking/[slug]` | 분봉·일·주·월 차트, 쿠팡 상품 |
-| `/briefing` | 오늘 발행분 허브(종합 1 + 히트맵 카테고리 심층) |
+| `/briefing` | 오늘 발행분 허브(종합 1 + Update 키워드) |
 | `/briefing/[slug]` | 1,000단어+ H2/H3 브리핑 본문 |
 | `/briefing/archive` | 어제 이전 에디션 검색·카테고리 필터 |
 | `/about` | 데이터 구성·시세 산출 방식 |
@@ -53,7 +53,7 @@ git merge github/main
 
 ## 일일 브리핑 자동화
 
-매일 KST 07:00(`0 22 * * *` UTC)에 종합 1편 + 히트맵 전 카테고리 심층(급등·급락 분석, H2/H3, 1,000단어 이상)을 생성합니다. 본문은 랭킹 스냅샷을 넣는 결정론적 작성기를 기본으로 하고, `OPENAI_API_KEY`가 있으면 OpenAI로 윤문한 뒤 1,000단어 미만이면 작성기로 되돌립니다. 날짜가 바뀌면 전날 기사는 `/briefing/archive`에서 검색됩니다.
+매일 KST 07:00(`0 22 * * *` UTC)에 종합 1편 + Update 키워드(급등·급락 분석, H2/H3, 1,000단어 이상)를 생성합니다. 본문은 랭킹 스냅샷을 넣는 결정론적 작성기를 기본으로 하고, `OPENAI_API_KEY`가 있으면 OpenAI로 윤문한 뒤 1,000단어 미만이면 작성기로 되돌립니다. 날짜가 바뀌면 전날 기사는 `/briefing/archive`에서 검색됩니다.
 
 ```bash
 npm run briefing:generate

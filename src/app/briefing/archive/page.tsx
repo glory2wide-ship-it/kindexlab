@@ -15,7 +15,7 @@ import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 export const metadata: Metadata = {
   title: "브리핑 아카이브",
   description:
-    "날짜가 지난 KinDex 일일 브리핑과 카테고리 심층을 검색합니다. 히트맵과 종목 시세로 다시 연결되는 장기 SEO 아카이브입니다.",
+    "날짜가 지난 KinDex 일일 브리핑과 Update 키워드를 검색합니다. 히트맵과 종목 시세로 다시 연결되는 장기 SEO 아카이브입니다.",
   alternates: { canonical: "/briefing/archive" },
 };
 

@@ -15,7 +15,7 @@ export async function generateMetadata({
   const meta = getPostChannel(category);
   return {
     title: `${meta.label} 일일브리핑`,
-    description: `${meta.label} 종합 브리핑과 하부 메뉴 심층 분석. 표, FAQ, 1,500단어 이상 본문을 같은 규격으로 발행합니다.`,
+    description: `${meta.label} 종합 브리핑과 Update 키워드. 표, FAQ, 1,500단어 이상 본문을 같은 규격으로 발행합니다.`,
     alternates: { canonical: channelSectionHref(category, "briefing") },
   };
 }

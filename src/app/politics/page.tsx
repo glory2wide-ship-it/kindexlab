@@ -14,11 +14,11 @@ const meta = getPostChannel("politics");
 export const metadata: Metadata = {
   title: `${meta.label} ${LIVE_INDEX_LABEL}`,
   description:
-    "정치 종합 브리핑과 헤드라인·대통령·정당 등 하부 메뉴 심층 분석, 히트맵 지수를 같은 페이지에서 봅니다.",
+    "정치 종합 브리핑과 헤드라인·대통령·정당 등 Update 키워드, 히트맵 지수를 같은 페이지에서 봅니다.",
   alternates: { canonical: meta.href },
   openGraph: {
     title: `${meta.indexTitle} · ${SITE.name}`,
-    description: "정치 종합 브리핑과 하부 메뉴 심층 분석, 3분봉 히트맵 지수.",
+    description: "정치 종합 브리핑과 Update 키워드, 3분봉 히트맵 지수.",
     url: `${SITE.url}/politics`,
   },
 };

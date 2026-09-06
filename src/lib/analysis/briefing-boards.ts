@@ -3,7 +3,7 @@ import type { PostChannel } from "@/lib/posts/types";
 
 /**
  * Today's Analysis always uses the same Gemini prompts as 일일 브리핑 /
- * 심층분석 (`STATIC_SYSTEM_PROMPT` + `buildSinglePassUserPrompt`).
+ * Update 키워드 (`STATIC_SYSTEM_PROMPT` + `buildSinglePassUserPrompt`).
  * Board-slug gating was removed — every heatmap detail column shares that path.
  */
 

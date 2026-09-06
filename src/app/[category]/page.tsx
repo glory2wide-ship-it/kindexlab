@@ -17,7 +17,7 @@ export async function generateMetadata({
   const meta = getPostChannel(category);
   return {
     title: `${meta.label} ${LIVE_INDEX_LABEL}`,
-    description: `${meta.indexTitle}와 종합 브리핑, 하부 메뉴 심층 분석을 한 페이지에서 봅니다. ${meta.description}`,
+    description: `${meta.indexTitle}와 종합 브리핑, Update 키워드를 한 페이지에서 봅니다. ${meta.description}`,
     alternates: { canonical: meta.href },
   };
 }

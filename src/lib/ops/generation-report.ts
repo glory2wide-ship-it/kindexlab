@@ -19,7 +19,7 @@ export interface GenerationReportRow {
 }
 
 export interface GenerationReportSection {
-  /** e.g. 일일 브리핑 / 하부메뉴 심층분석 / 이슈칼럼 / 오늘의 분석 */
+  /** e.g. 일일 브리핑 / Update 키워드 / 이슈칼럼 / 오늘의 분석 */
   title: string;
   rows: GenerationReportRow[];
 }

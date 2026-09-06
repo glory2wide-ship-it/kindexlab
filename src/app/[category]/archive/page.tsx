@@ -22,7 +22,7 @@ export async function generateMetadata({
   const meta = getPostChannel(category);
   return {
     title: `${meta.label} 아카이브`,
-    description: `${meta.label} 종합 브리핑과 하부 메뉴 심층 분석 목록.`,
+    description: `${meta.label} 종합 브리핑과 Update 키워드 목록.`,
     alternates: { canonical: channelSectionHref(category, "archive") },
   };
 }

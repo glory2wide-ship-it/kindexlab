@@ -158,7 +158,7 @@ export function renderContextBlock(
   if (asOf) {
     lines.push(`[에디션 기준일(KST)] ${asOf}`);
     lines.push(
-      "시의성: 최신(≤3일)·최근(≤14일)을 title·❶ 앵글로. 배경·오래된 배경은 과거형 배경만. 오래된 배경으로 오늘의 심층을 쓰지 마세요.",
+      "시의성: 최신(≤3일)·최근(≤14일)을 title·❶ 앵글로. 배경·오래된 배경은 과거형 배경만. 오래된 배경으로 오늘의 Update 키워드를 쓰지 마세요.",
     );
     lines.push("");
   }

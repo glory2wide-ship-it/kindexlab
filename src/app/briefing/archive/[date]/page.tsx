@@ -25,7 +25,7 @@ export async function generateMetadata({
   if (!isEditionDate(date)) return { title: "브리핑 아카이브" };
   return {
     title: `${formatKoreanDate(date)} 브리핑`,
-    description: `${date} KinDex 일일 트렌드 브리핑 아카이브. 종합 해설과 카테고리 심층을 날짜별로 보관합니다.`,
+    description: `${date} KinDex 일일 트렌드 브리핑 아카이브. 종합 해설과 Update 키워드를 날짜별로 보관합니다.`,
     alternates: { canonical: `/briefing/archive/${date}` },
   };
 }
@@ -82,8 +82,8 @@ export default async function BriefingArchiveDatePage({
         <DeskEyebrow variant="xs">DAILY EDITION</DeskEyebrow>
         <h1 className="text-3xl font-semibold tracking-tight">{formatKoreanDate(date)} 브리핑</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          이 날짜에 발행된 종합 브리핑과 카테고리 심층입니다. 하루 종합 1편과 히트맵 전 카테고리
-          심층이 자동으로 묶여 장기 검색 유입용 아카이브가 됩니다.
+          이 날짜에 발행된 종합 브리핑과 Update 키워드입니다. 하루 종합 1편과 히트맵 전 카테고리
+          Update 키워드가 자동으로 묶여 장기 검색 유입용 아카이브가 됩니다.
         </p>
         <ArchiveSearchForm />
       </header>

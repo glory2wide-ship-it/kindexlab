@@ -1,5 +1,6 @@
 import { BriefingCard } from "@/components/briefing/BriefingCard";
 import { FeaturedBriefingCard } from "@/components/briefing/FeaturedBriefingCard";
+import { UPDATE_KEYWORD_LABEL } from "@/lib/briefing/labels";
 import {
   channelMainLabel,
   desksForChannel,
@@ -44,7 +45,7 @@ export function ChannelBriefingLayout({
           {heading ?? `${meta.label} 일일브리핑`}
         </TitleTag>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          상단은 {channelMainLabel(channel)}이고, 아래는 하부 메뉴별 심층 분석입니다. 지수(INDEX)는 키워드를 고르는
+          상단은 {channelMainLabel(channel)}이고, 아래는 {UPDATE_KEYWORD_LABEL}입니다. 지수(INDEX)는 키워드를 고르는
           트리거이고, 본문은 그 키워드만으로 쓴 독립 칼럼입니다.
         </p>
       </header>
@@ -59,7 +60,7 @@ export function ChannelBriefingLayout({
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-2">
-          <SectionTitle className="text-lg font-semibold tracking-tight">하부 메뉴 심층 분석</SectionTitle>
+          <SectionTitle className="text-lg font-semibold tracking-tight">{UPDATE_KEYWORD_LABEL}</SectionTitle>
           <p className="font-mono text-[11px] text-muted">
             {activeDeskId
               ? `${desks[0]?.label ?? "선택 메뉴"} · 보드 연동`
@@ -89,7 +90,7 @@ export function ChannelBriefingLayout({
                     {desk.label}
                   </span>
                   <p className="mt-3 text-sm leading-6 text-muted">
-                    {desk.label} 심층 분석은 같은 그리드 규격으로 다음 에디션에 붙습니다.
+                    {desk.label} {UPDATE_KEYWORD_LABEL}는 같은 그리드 규격으로 다음 에디션에 붙습니다.
                   </p>
                 </article>
               );
@@ -97,7 +98,7 @@ export function ChannelBriefingLayout({
           </div>
         ) : (
           <p className="rounded-2xl border border-dashed border-line bg-panel p-6 text-sm leading-6 text-muted">
-            {meta.label} 하부 메뉴가 열리면 같은 그리드에 심층 분석 카드가 자동으로 붙습니다.
+            {meta.label} 하부 메뉴가 열리면 같은 그리드에 {UPDATE_KEYWORD_LABEL} 카드가 자동으로 붙습니다.
           </p>
         )}
       </section>

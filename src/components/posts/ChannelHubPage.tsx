@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BriefingCard } from "@/components/briefing/BriefingCard";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import { getChannelBriefingEdition } from "@/lib/api";
+import { UPDATE_KEYWORD_LABEL } from "@/lib/briefing/labels";
 import {
   channelHref,
   channelSectionHref,
@@ -49,7 +50,7 @@ export async function ChannelHubPage({ channel }: { channel: PostChannel }) {
       <header className="space-y-3">
         <h1 className="text-3xl font-semibold tracking-tight">{meta.label} 이슈 칼럼</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          오늘의 일일·심층 브리핑과 키워드 매거진 칼럼을 모았습니다. 지수(INDEX)는 키워드를 고르는
+          오늘의 일일 브리핑·Update 키워드와 키워드 매거진 칼럼을 모았습니다. 지수(INDEX)는 키워드를 고르는
           트리거이고, 본문은 그 키워드만으로 쓴 독립 칼럼입니다.
         </p>
         <p className="text-sm text-muted">
@@ -87,7 +88,7 @@ export async function ChannelHubPage({ channel }: { channel: PostChannel }) {
                   kicker={
                     article.kind === "main"
                       ? `${meta.label} 종합`
-                      : article.deskLabel || "심층 분석"
+                      : article.deskLabel || UPDATE_KEYWORD_LABEL
                   }
                   lead={article.kind === "main"}
                 />

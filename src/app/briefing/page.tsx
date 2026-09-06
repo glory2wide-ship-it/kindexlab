@@ -11,7 +11,7 @@ import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 export const metadata: Metadata = {
   title: "데일리 트렌드 브리핑",
   description:
-    "엔터테인먼트·정치·경제·문화/생활·여행/맛집 각 채널의 종합 브리핑과 하부 메뉴 심층 분석을 매일 발행합니다. 어제 글은 매거진 아카이브로 쌓입니다.",
+    "엔터테인먼트·정치·경제·문화/생활·여행/맛집 각 채널의 종합 브리핑과 Update 키워드를 매일 발행합니다. 어제 글은 매거진 아카이브로 쌓입니다.",
   alternates: { canonical: "/briefing" },
 };
 
@@ -53,7 +53,7 @@ export default async function BriefingHubPage() {
         <DeskEyebrow variant="xs">BRIEFING DESK</DeskEyebrow>
         <h1 className="text-3xl font-semibold tracking-tight">오늘의 트렌드 브리핑</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          카테고리마다 상단은 종합 브리핑, 아래는 하부 메뉴별 심층 분석입니다. 날짜가 바뀌면 전날
+          카테고리마다 상단은 종합 브리핑, 아래는 Update 키워드입니다. 날짜가 바뀌면 전날
           기사는 검색 가능한 아카이브로 넘어갑니다.
         </p>
         <ArchiveSearchForm />
@@ -68,7 +68,7 @@ export default async function BriefingHubPage() {
           >
             <DeskEyebrow variant="base">{channel.eyebrow}</DeskEyebrow>
             <h2 className="mt-2 font-semibold tracking-tight">{channel.label} 일일브리핑</h2>
-            <p className="mt-1 text-xs leading-5 text-muted">종합 브리핑 + 하부 메뉴 심층 분석</p>
+            <p className="mt-1 text-xs leading-5 text-muted">종합 브리핑 + Update 키워드</p>
           </Link>
         ))}
       </nav>
@@ -82,7 +82,7 @@ export default async function BriefingHubPage() {
                 href={channelSectionHref(channel.id, "briefing")}
                 className="text-sm text-accent hover:underline"
               >
-                {channel.label} 일일브리핑 · 심층 {dives.length}편 →
+                {channel.label} 일일브리핑 · Update 키워드 {dives.length}편 →
               </Link>
             </div>
             {main ? (
