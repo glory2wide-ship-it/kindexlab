@@ -4,15 +4,15 @@ function publicSiteUrl(): string {
   return "https://kindexlab.com";
 }
 
-export const SITE_INDEX_HEADLINE = "킨덱스랩! / KOREA INDEX LAB.";
+export const SITE_INDEX_HEADLINE = "킨덱스! / KinDex";
 
 /** Head copy on the landing page hero, above the unified heatmap. */
 export const SITE_LANDING_HEADLINE =
   "엔터·정치·경제·문화·여행 데스크를 한 판에 올린 통합 지수 보드입니다. 타일 우측 상단이 출처 데스크입니다.";
 
 export const SITE = {
-  name: "KOREA INDEX LAB.",
-  nameKo: "킨덱스랩",
+  name: "KinDex",
+  nameKo: "킨덱스",
   company: "디엘파크주식회사",
   companyShort: "디엘파크",
   tagline: "THINK KOR.",

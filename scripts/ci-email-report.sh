@@ -5,7 +5,7 @@
 set -euo pipefail
 
 HTML_PATH="${1:-}"
-SUBJECT="${2:-KindexLab generation report}"
+SUBJECT="${2:-KinDex generation report}"
 TO="${REPORT_EMAIL_TO:-glory2wide@gmail.com}"
 FROM="${REPORT_EMAIL_FROM:-}"
 
@@ -26,7 +26,7 @@ fi
 export REPORT_TXT_PATH="$TXT_PATH"
 
 if [ -n "${RESEND_API_KEY:-}" ]; then
-  export REPORT_FROM="${FROM:-KindexLab Reports <onboarding@resend.dev>}"
+  export REPORT_FROM="${FROM:-KinDex Reports <onboarding@resend.dev>}"
   python3 - <<'PY'
 import json, os, pathlib, urllib.request
 payload = {

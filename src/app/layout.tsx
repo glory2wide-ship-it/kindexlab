@@ -34,8 +34,8 @@ export const metadata: Metadata = {
   },
   description: SITE.description,
   keywords: [
-    "KindexLab",
-    "킨덱스랩",
+    "KinDex",
+    "킨덱스",
     "kindexlab.com",
     "화제성 순위",
     "셀럽 랭킹",

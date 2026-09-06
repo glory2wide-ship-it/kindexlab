@@ -12,7 +12,7 @@ export function SiteHeader() {
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 overflow-visible px-4">
           <Link href="/" className="flex min-w-0 items-center gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-accent font-sans text-[11px] font-bold tracking-tight text-black">
-              KL
+              KD
             </span>
             <span className="leading-tight">
               <span className="block font-gothic text-sm font-semibold tracking-tight sm:text-base">

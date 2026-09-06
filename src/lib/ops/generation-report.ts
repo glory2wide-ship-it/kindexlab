@@ -207,7 +207,7 @@ export function renderGenerationReportHtml(report: GenerationReport): string {
   ${costTable(cost)}
   ${report.sections.map(sectionTable).join("\n")}
   ${notes ? `<ul style="margin:0;padding-left:18px;color:#475467;font-size:13px;">${notes}</ul>` : ""}
-  <p style="margin:24px 0 0;color:#98a2b3;font-size:11px;">KindexLab overnight generation report · recipient ${DEFAULT_REPORT_EMAIL_TO}</p>
+  <p style="margin:24px 0 0;color:#98a2b3;font-size:11px;">KinDex overnight generation report · recipient ${DEFAULT_REPORT_EMAIL_TO}</p>
 </body>
 </html>`;
 }
@@ -303,7 +303,7 @@ export async function deliverGenerationReport(
     const text = renderGenerationReportText(withCost);
     const resendKey = (process.env.RESEND_API_KEY ?? "").trim();
     const from =
-      (process.env.REPORT_EMAIL_FROM ?? "").trim() || "KindexLab Reports <onboarding@resend.dev>";
+      (process.env.REPORT_EMAIL_FROM ?? "").trim() || "KinDex Reports <onboarding@resend.dev>";
     if (resendKey) {
       try {
         await sendViaResend({

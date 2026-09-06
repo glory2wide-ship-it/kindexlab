@@ -1,4 +1,4 @@
-# KindexLab
+# KinDex
 
 디엘파크주식회사가 운영하는 K-컬처 화제 지수(INDEX)입니다. 도메인: [kindexlab.com](https://kindexlab.com). Finviz 스타일 트리맵과 리스트로 버즈·음원·시청률·웹툰·숏폼·게임을 보여 주며, Google AdSense 자동 광고와 쿠팡 파트너스 연동을 전제로 합니다.
 

@@ -19,7 +19,7 @@ function product(
 export const marketIndices: MarketIndex[] = [
   {
     id: "k-buzz",
-    label: "KindexLab 종합",
+    label: "KinDex 종합",
     value: 1284.62,
     changeRate: 2.41,
     changePoints: 30.24,

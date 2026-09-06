@@ -85,7 +85,7 @@ async function main() {
 
   const delivery = await deliverGenerationReport(
     {
-      subject: `[KindexLab] 오늘의 분석 생성 보고 · ${editionDate}`,
+      subject: `[KinDex] 오늘의 분석 생성 보고 · ${editionDate}`,
       editionDate,
       pipeline: "heatmap-analysis",
       generatedAt: new Date().toISOString(),

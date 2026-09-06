@@ -42,7 +42,7 @@ import type { AffiliateProduct, EntityType, MarketIndex, RankingEntity, Rankings
 const MEASUREMENT_HISTORY_LIMIT = 60;
 
 const INDEX_META: { id: string; label: string; type?: EntityType; note: string }[] = [
-  { id: "k-buzz", label: "KindexLab 종합", note: "정치 지지도·검색량·이슈 합산" },
+  { id: "k-buzz", label: "KinDex 종합", note: "정치 지지도·검색량·이슈 합산" },
   { id: "kpop", label: "K-POP지수", type: "kpop", note: "차트 아티스트 수급" },
   { id: "broadcast", label: "방송지수", type: "tv_show", note: "편성·화제 합산" },
   { id: "celebrity", label: "셀럽지수", type: "celebrity", note: "검색·뉴스 버즈" },

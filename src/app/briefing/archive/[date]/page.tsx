@@ -25,7 +25,7 @@ export async function generateMetadata({
   if (!isEditionDate(date)) return { title: "브리핑 아카이브" };
   return {
     title: `${formatKoreanDate(date)} 브리핑`,
-    description: `${date} KindexLab 일일 트렌드 브리핑 아카이브. 종합 해설과 카테고리 심층을 날짜별로 보관합니다.`,
+    description: `${date} KinDex 일일 트렌드 브리핑 아카이브. 종합 해설과 카테고리 심층을 날짜별로 보관합니다.`,
     alternates: { canonical: `/briefing/archive/${date}` },
   };
 }

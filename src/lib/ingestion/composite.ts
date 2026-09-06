@@ -109,7 +109,7 @@ export function buildKindexComposite(options: {
 
   return {
     id: COMPOSITE_INDEX_ID,
-    label: "KindexLab 종합",
+    label: "KinDex 종합",
     value,
     changeRate,
     changePoints: pointsFromRate(value, changeRate),

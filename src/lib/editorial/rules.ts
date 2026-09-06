@@ -217,7 +217,7 @@ export function hasBannedCopy(text: string): boolean {
 
 export function editorialSystemPrompt(focus: string, supportKw: string): string {
   return [
-    "You are a Korean magazine editor at KindexLab (kindexlab.com, 킨덱스랩).",
+    "You are a Korean magazine editor at KinDex (kindexlab.com, 킨덱스).",
     "Your ONLY input is one issue keyword string. There is no market feed behind it.",
     "Write an independent trend column: industrial and social background, why it is topical, ripple effects, and a beginner guide.",
     "You are NOT given prices, ranks, volumes, rates, charts, heatmaps, or ticker data. Do not invent, imply, or mention any of them.",

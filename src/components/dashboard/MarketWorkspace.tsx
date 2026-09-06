@@ -280,7 +280,7 @@ export function MarketWorkspace({
         {view === "treemap" && sortedItems.length > 0 ? (
           <HeatmapLegend />
         ) : (
-          <span>KOREA INDEX LAB. Hierarchical Heatmap</span>
+          <span>KinDex Hierarchical Heatmap</span>
         )}
       </div>
 
