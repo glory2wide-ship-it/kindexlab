@@ -181,28 +181,14 @@ export function ChannelMarketDesk({
     [applyLocal, channel],
   );
 
-  const filterKeyRef = useRef("");
-  const selectedSlugRef = useRef(selectedSlug);
   useEffect(() => {
     if (deskKind) return;
-    const nextKey = `${selectedSlug}:${gender}:${age}:${region}`;
-    const menuChanged = selectedSlugRef.current !== selectedSlug;
-    selectedSlugRef.current = selectedSlug;
-    if (
-      menuChanged ||
-      (boardUsesRegionFilter(selectedSlug) &&
-        filterKeyRef.current &&
-        filterKeyRef.current !== nextKey)
-    ) {
-      setItems([]);
-      setBoardIndices([]);
-    }
-    filterKeyRef.current = nextKey;
+    // Keep the previous heatmap painted; fetchHeatmap calls applyLocal first
+    // so the board swaps in place instead of flashing an empty panel.
     void fetchHeatmap(selectedSlug, gender, age, region);
   }, [selectedSlug, gender, age, region, fetchHeatmap, deskKind]);
 
   useEffect(() => {
-    setBoardIndices([]);
     const timer = window.setTimeout(() => {
       setBoardIndices(
         boards.map((board) => {

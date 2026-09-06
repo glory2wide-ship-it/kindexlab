@@ -30,6 +30,7 @@ export function CategorySubNav({ channel }: { channel: PostChannel }) {
               <Link
                 key={item.id}
                 href={href}
+                prefetch
                 title={item.description}
                 className={
                   isActive
