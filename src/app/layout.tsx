@@ -111,7 +111,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col bg-board font-sans text-ink antialiased">
         <Script id="theme-boot" strategy="beforeInteractive">
-          {`(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){}})();`}
+          {`(function(){try{var t=localStorage.getItem('theme');var d=t==='dark';var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){}})();`}
         </Script>
         {/*
          * Ads load after the page is idle. `afterInteractive` puts the AdSense
