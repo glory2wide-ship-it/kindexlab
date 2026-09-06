@@ -35,7 +35,7 @@ git merge github/main
 
 | 경로 | 역할 |
 | --- | --- |
-| `/` | 히트맵/리스트 지수(INDEX), 타임프레임(1m~120m, Daily, Weekly, Monthly), 오늘의 브리핑 레일 |
+| `/` | 히트맵/리스트 지수(INDEX), 타임프레임(3m~60m, Daily, Weekly, Monthly), 오늘의 브리핑 레일 |
 | `/ranking/[slug]` | 분봉·일·주·월 차트, 쿠팡 상품 |
 | `/briefing` | 오늘 발행분 허브(종합 1 + 히트맵 카테고리 심층) |
 | `/briefing/[slug]` | 1,000단어+ H2/H3 브리핑 본문 |
