@@ -69,11 +69,11 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <p className="text-sm text-muted">
-        <Link href={channelSectionHref(channel.id, "posts")} className="hover:text-ink">
+        <Link href={channelSectionHref(channel.id, "board")} className="hover:text-ink">
           이슈 칼럼
         </Link>
         <span className="mx-2">/</span>
-        <Link href={channelSectionHref(channel.id, "posts")} className="hover:text-ink">
+        <Link href={channelSectionHref(channel.id, "board")} className="hover:text-ink">
           {channel.label}
         </Link>
         <span className="mx-2">/</span>

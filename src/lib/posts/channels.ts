@@ -2,7 +2,7 @@ import type { CategoryId, EntityType, RankingEntity } from "@/lib/types";
 import type { GeneratedPost, PostChannel } from "@/lib/posts/types";
 import { isPoliticsEntityType, POLITICS_TYPE_ORDER } from "@/lib/politics/types";
 
-export type ChannelSectionId = "board" | "briefing" | "posts" | "archive" | "about";
+export type ChannelSectionId = "board" | "briefing" | "archive" | "about";
 
 /** Page heading for a channel's live index board, and the tab title it drives. */
 export const LIVE_INDEX_LABEL = "실시간 지수 / LIVE INDEX";
@@ -38,7 +38,7 @@ export const POST_CHANNELS: {
     eyebrow: "ENTERTAINMENT DESK",
     indexTitle: "엔터테인먼트 지수",
     description:
-      "음원·시청률·웹툰·게임·숏폼·인플루언서 공개 순위를 실시간 지수와 브리핑·칼럼으로 읽습니다.",
+      "음원·시청률·웹툰·게임·숏폼·인플루언서 공개 순위를 실시간 지수와 브리핑으로 읽습니다.",
   },
   {
     id: "politics",
@@ -97,16 +97,10 @@ export const CHANNEL_SECTIONS: {
     description: "키워드 기반 심층 이슈 칼럼, 마크다운 표, FAQ",
   },
   {
-    id: "posts",
-    path: "/posts",
-    label: "이슈칼럼",
-    description: "시세와 무관한 정보성 매거진 칼럼",
-  },
-  {
     id: "archive",
     path: "/archive",
     label: "아카이브",
-    description: "지난 이슈 칼럼 목록",
+    description: "지난 브리핑 목록",
   },
   {
     id: "about",
@@ -220,8 +214,9 @@ export function affiliateKeyword(channel: PostChannel, fallback?: string): strin
 
 export function resolveChannelSection(segment: string | null): ChannelSectionId {
   if (!segment) return "board";
-  if (segment === "briefing" || segment === "posts" || segment === "archive" || segment === "about") {
+  if (segment === "briefing" || segment === "archive" || segment === "about") {
     return segment;
   }
-  return "posts";
+  // Retired "posts" (이슈칼럼) URLs fall back to the live board.
+  return "board";
 }

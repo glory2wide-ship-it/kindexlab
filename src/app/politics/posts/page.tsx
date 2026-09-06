@@ -1,10 +1,6 @@
-import type { Metadata } from "next";
-import { ChannelHubPage, channelHubMetadata } from "@/components/posts/ChannelHubPage";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = channelHubMetadata("politics");
-
+/** Politics 이슈칼럼 hub retired. */
 export default function PoliticsPostsPage() {
-  return <ChannelHubPage channel="politics" />;
+  redirect("/politics");
 }

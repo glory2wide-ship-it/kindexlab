@@ -1,17 +1,15 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { BriefingCard } from "@/components/briefing/BriefingCard";
 import { ChannelBriefingPage } from "@/components/briefing/ChannelBriefingPage";
 import { getArchiveBriefings } from "@/lib/api";
-import { briefingMatchesChannel, channelHref, channelSectionHref } from "@/lib/posts/channels";
-import { listPostsByChannel } from "@/lib/posts/store";
+import { briefingMatchesChannel, channelSectionHref } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "정치 아카이브",
-  description: "정치 종합 브리핑과 하부 메뉴 심층 분석, 지난 이슈 칼럼 목록.",
+  description: "정치 종합 브리핑과 하부 메뉴 심층 분석 목록.",
   alternates: { canonical: channelSectionHref("politics", "archive") },
   openGraph: {
     title: `정치 아카이브 · ${SITE.name}`,
@@ -20,36 +18,12 @@ export const metadata: Metadata = {
 };
 
 export default async function PoliticsArchivePage() {
-  const [posts, archive] = await Promise.all([
-    listPostsByChannel("politics"),
-    getArchiveBriefings(),
-  ]);
+  const archive = await getArchiveBriefings();
   const past = archive.filter((article) => briefingMatchesChannel(article, "politics"));
 
   return (
     <div className="space-y-12">
       <ChannelBriefingPage channel="politics" heading="정치 아카이브" />
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">이슈 칼럼 아카이브</h2>
-        {posts.length ? (
-          <ul className="grid gap-3 md:grid-cols-2">
-            {posts.map((post) => (
-              <li key={post.slug}>
-                <Link
-                  href={channelHref("politics", post.slug)}
-                  className="block rounded-2xl border border-line bg-panel p-5 hover:border-accent"
-                >
-                  <p className="font-mono text-[11px] text-muted">{post.editionDate}</p>
-                  <h3 className="mt-2 font-semibold tracking-tight">{post.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted">{post.excerpt}</p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted">아직 보관된 칼럼이 없습니다.</p>
-        )}
-      </section>
       {past.length ? (
         <section className="space-y-4">
           <h2 className="text-lg font-semibold">지난 브리핑</h2>
@@ -64,7 +38,9 @@ export default async function PoliticsArchivePage() {
             ))}
           </div>
         </section>
-      ) : null}
+      ) : (
+        <p className="text-sm text-muted">아직 보관된 브리핑이 없습니다.</p>
+      )}
     </div>
   );
 }

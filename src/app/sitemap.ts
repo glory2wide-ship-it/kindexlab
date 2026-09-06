@@ -1,7 +1,6 @@
 import { listAnalysis } from "@/lib/analysis/store";
 import { getAllBriefingSlugs, listEditionDates } from "@/lib/api";
-import { CHANNEL_SECTIONS, channelHref, channelSectionHref, inferPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
-import { listPosts } from "@/lib/posts/store";
+import { CHANNEL_SECTIONS, channelSectionHref, POST_CHANNELS } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 import { decodeRouteSlug, rankingUrl } from "@/lib/slugs";
 import type { MetadataRoute } from "next";
@@ -9,11 +8,11 @@ import type { MetadataRoute } from "next";
 /**
  * Rebuilt on a timer rather than per request.
  *
- * Assembling this list means a live rankings fetch plus a full read of the
- * column store, which measured around 24s under load — long enough that a
- * crawler is liable to give up on it. The underlying data turns over on the
- * order of hours, so serving a ten-minute-old list costs nothing in freshness
- * and hands Googlebot an immediate response.
+ * Assembling this list means a live rankings fetch plus analysis reads, which
+ * measured around 24s under load — long enough that a crawler is liable to give
+ * up on it. The underlying data turns over on the order of hours, so serving a
+ * ten-minute-old list costs nothing in freshness and hands Googlebot an
+ * immediate response.
  */
 export const revalidate = 600;
 
@@ -25,10 +24,9 @@ function toDate(raw: string | undefined, fallback: Date): Date {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [briefingSlugs, editionDates, posts, analyses] = await Promise.all([
+  const [briefingSlugs, editionDates, analyses] = await Promise.all([
     getAllBriefingSlugs(),
     listEditionDates(),
-    listPosts(),
     listAnalysis(),
   ]);
   const now = new Date();
@@ -54,7 +52,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: SITE.url, lastModified: now, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE.url}/briefing`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
-    { url: `${SITE.url}/posts`, lastModified: now, changeFrequency: "hourly", priority: 0.85 },
     ...POST_CHANNELS.flatMap((channel) =>
       CHANNEL_SECTIONS.map((section) => ({
         url: `${SITE.url}${channelSectionHref(channel.id, section.id)}`,
@@ -85,12 +82,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "weekly" as const,
       priority: 0.7,
-    })),
-    ...posts.map((post) => ({
-      url: `${SITE.url}${channelHref(inferPostChannel(post), post.slug)}`,
-      lastModified: toDate(post.updatedAt ?? post.publishedAt, now),
-      changeFrequency: "daily" as const,
-      priority: 0.72,
     })),
     ...[...rankingEntries].map(([slug, meta]) => ({
       url: rankingUrl(SITE.url, slug),

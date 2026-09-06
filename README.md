@@ -64,17 +64,9 @@ npm run briefing:generate -- --force 2026-08-25
 
 정기 실행은 GitHub Actions가 전담합니다. Vercel Cron은 생성 결과를 저장할 수 없어(런타임 파일시스템이 읽기 전용) 매번 만든 것을 그대로 버리므로 `vercel.json`에서 제거했습니다. 같은 잡을 `/api/cron/briefings`로 직접 호출할 수는 있으며, 이때는 `CRON_SECRET`이 필요합니다. 이미 같은 날짜 슬러그가 있으면 건너뜁니다(`?force=1`로 재생성).
 
-## 이슈 칼럼 자동화
+## 이슈 칼럼 (종료)
 
-`.github/workflows/premium-columns.yml`이 매일 KST 05:20에 뉴스 근거를 모아 칼럼을 생성하고 `src/data/posts/generated.json`을 커밋합니다. 커밋이 곧 배포이므로 이 경로로만 생성물이 프로덕션에 남습니다.
-
-```bash
-npm run premium:generate -- --dry --limit=10     # 대상만 확인
-npm run premium:generate -- --limit=10           # 10편 생성
-npm run premium:generate -- --purge --date=2026-09-01
-```
-
-뉴스 근거를 3건 이상 찾지 못한 키워드는 건너뛰고, 해당 랭킹 상세 페이지는 `noindex`로 남아 사이트맵과 RSS에서도 빠집니다.
+이슈 칼럼(=premium columns) 메뉴·생성 파이프라인은 종료했습니다. 관련 스케줄 워크플로와 생성 스크립트는 비활성화되어 있으며, 예전 `/posts` URL은 홈/채널 보드로 리다이렉트됩니다.
 
 ## 지수와 측정값
 

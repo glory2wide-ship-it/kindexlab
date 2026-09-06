@@ -1,6 +1,4 @@
 import { listAnalysis } from "@/lib/analysis/store";
-import { channelHref, inferPostChannel } from "@/lib/posts/channels";
-import { listPosts } from "@/lib/posts/store";
 import { SITE } from "@/lib/site";
 import { decodeRouteSlug, rankingUrl } from "@/lib/slugs";
 
@@ -46,23 +44,10 @@ function rfc822(raw: string | undefined): string {
 }
 
 export async function GET() {
-  const [analyses, posts] = await Promise.all([listAnalysis(), listPosts()]);
+  // 이슈칼럼 store retired — feed carries grounded analysis only.
+  const analyses = await listAnalysis();
 
   const bySlug = new Map<string, FeedItem>();
-  for (const post of posts) {
-    // Column slugs carry the Korean keyword. Percent-encode it the way
-    // `rankingPath` does, so the feed publishes a URI rather than an IRI that
-    // each aggregator would have to normalise on its own.
-    const slug = encodeURIComponent(decodeRouteSlug(post.slug));
-    const url = `${SITE.url}${channelHref(inferPostChannel(post), slug)}`;
-    bySlug.set(url, {
-      url,
-      title: post.title,
-      excerpt: post.excerpt ?? "",
-      stamp: post.updatedAt || post.publishedAt,
-      category: post.focusKeyword || undefined,
-    });
-  }
   for (const entry of analyses) {
     // Matches the sitemap and the detail page's robots tag: a template column is
     // not something to push at an aggregator.

@@ -55,6 +55,27 @@ const nextConfig: NextConfig = {
         destination: "/board/kospi-fomo-index",
         permanent: true,
       },
+      // 이슈칼럼(premium columns) retired — keep old URLs from 404ing.
+      {
+        source: "/posts",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/posts/:slug*",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/:category(entertainment|politics|economy|culture|travel)/posts",
+        destination: "/:category",
+        permanent: true,
+      },
+      {
+        source: "/:category(entertainment|politics|economy|culture|travel)/posts/:slug*",
+        destination: "/:category",
+        permanent: true,
+      },
     ];
   },
   images: {

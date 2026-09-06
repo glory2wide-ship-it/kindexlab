@@ -27,7 +27,7 @@ export function channelHubMetadata(channel: PostChannel): Metadata {
   return {
     title: `${meta.label} 이슈 칼럼`,
     description: meta.description,
-    alternates: { canonical: channelSectionHref(channel, "posts") },
+    alternates: { canonical: channelSectionHref(channel, "board") },
   };
 }
 
@@ -59,7 +59,7 @@ export async function ChannelHubPage({ channel }: { channel: PostChannel }) {
           {POST_CHANNELS.filter((item) => item.id !== channel).map((item) => (
             <span key={item.id}>
               <span className="mx-2">·</span>
-              <Link href={channelSectionHref(item.id, "posts")} className="underline hover:text-ink">
+              <Link href={channelSectionHref(item.id, "board")} className="underline hover:text-ink">
                 {item.label}
               </Link>
             </span>
@@ -139,7 +139,7 @@ export async function PostsIndexWithChannels() {
         {POST_CHANNELS.map((item) => (
           <li key={item.id}>
             <Link
-              href={channelSectionHref(item.id, "posts")}
+              href={channelSectionHref(item.id, "board")}
               className="block rounded-2xl border border-line bg-panel p-4 hover:border-accent"
             >
               <DeskEyebrow variant="base">{item.eyebrow}</DeskEyebrow>

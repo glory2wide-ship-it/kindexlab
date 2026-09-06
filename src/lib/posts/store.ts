@@ -126,9 +126,15 @@ async function supabaseList(): Promise<GeneratedPost[]> {
   }
 }
 
+/** Hard stop for 이슈칼럼 writes after the product surface was retired. */
+const ISSUE_COLUMNS_RETIRED = true;
+
 export async function replaceGeneratedArticles(
   posts: GeneratedPost[],
 ): Promise<{ file: boolean; supabase: boolean }> {
+  if (ISSUE_COLUMNS_RETIRED && posts.length > 0) {
+    throw new Error("이슈칼럼(premium columns) generation is retired; refusing to write articles.");
+  }
   memory.clear();
   const normalized = posts.map(normalizePost);
   for (const post of normalized) memory.set(post.slug, post);
@@ -150,6 +156,9 @@ export async function replaceGeneratedArticles(
 }
 
 export async function persistGeneratedPost(post: GeneratedPost): Promise<{ file: boolean; supabase: boolean }> {
+  if (ISSUE_COLUMNS_RETIRED) {
+    throw new Error("이슈칼럼(premium columns) generation is retired; refusing to persist articles.");
+  }
   const normalized = normalizePost(post);
   memory.set(normalized.slug, normalized);
   const supabase = await supabaseUpsert(normalized);
