@@ -7,6 +7,7 @@
     },
     "scripts": {
         "dev": "next dev",
+        "dev:cloud": "next dev --hostname 0.0.0.0 --port 43123",
         "build": "next build",
         "start": "next start",
         "lint": "eslint",

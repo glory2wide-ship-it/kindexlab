@@ -6,13 +6,23 @@
 
 ## 실행
 
+GitHub 저장소: [glory2wide-ship-it/kindexlab](https://github.com/glory2wide-ship-it/kindexlab)
+
 ```bash
-npm install
-cp .env.example .env.local
+npm ci
+./scripts/ensure-local-env.sh
 npm run dev
 ```
 
-로컬에서는 `.env.local`의 `NEXT_PUBLIC_SITE_URL`을 `http://localhost:3000`으로 두면 됩니다. 배포 기본값은 `https://kindexlab.com`입니다.
+기본 개발 서버는 `http://localhost:3000`입니다. Cursor Cloud Agent에서는 `npm run dev:cloud`로 `http://127.0.0.1:43123`에 띄웁니다. `ensure-local-env.sh`는 API 키 없이 mock 랭킹으로 화면을 볼 수 있게 `.env.local`을 만듭니다. 라이브 수집·칼럼 생성·브리핑 LLM은 `.env.example`의 키를 `.env.local`에 넣으면 됩니다. 배포 기본값은 `https://kindexlab.com`입니다.
+
+GitHub 원본과 동기화하려면:
+
+```bash
+git remote add github https://github.com/glory2wide-ship-it/kindexlab.git
+git fetch github
+git merge github/main
+```
 
 ## 스택
 
