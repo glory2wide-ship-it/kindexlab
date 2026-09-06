@@ -4,7 +4,7 @@ import { formatRefreshCountdown } from "@/lib/refresh";
 
 /** Keep the same outer box as the neighboring "시세 산출 방식" control (30px). */
 const SHELL_CLASS =
-  "inline-flex min-w-[13.5rem] shrink-0 items-center justify-center rounded-md border border-line bg-accent px-3 text-xs font-medium tabular-nums text-black";
+  "inline-flex min-w-[10.8rem] shrink-0 items-center justify-center rounded-md border border-line bg-accent px-3 text-xs font-medium tabular-nums text-black";
 const SHELL_STYLE = { height: 30, boxSizing: "border-box" as const };
 const CLOCK_STYLE = { textAlign: "center" as const, lineHeight: 1 };
 
@@ -12,7 +12,7 @@ export function HeatmapCountdownFallback() {
   return (
     <div role="timer" className={SHELL_CLASS} style={SHELL_STYLE} aria-hidden>
       <span className="refresh-countdown w-full text-center" style={CLOCK_STYLE}>
-        Next Update in 3 min
+        Update 3 min
       </span>
     </div>
   );
