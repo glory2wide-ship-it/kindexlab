@@ -17,7 +17,7 @@ export function PremiumColumnRail({ columns }: { columns: FeaturedColumn[] }) {
     <section aria-labelledby="trend-briefing-heading" className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 id="trend-briefing-heading" className="text-xl font-semibold tracking-tight">
-          오늘의 트렌드 브리핑
+          Update 브리핑
         </h2>
         <div className="flex gap-3 text-sm">
           <Link href="/briefing" className="font-medium text-accent hover:underline">

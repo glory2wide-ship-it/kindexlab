@@ -28,7 +28,7 @@ function byImportance(a: GeneratedPost, b: GeneratedPost): number {
  * whole rail to whichever desk was rebuilt last. Alternating desks keeps the
  * landing rail as cross-category as the board above it.
  *
- * Do **not** use this for the landing "오늘의 트렌드 브리핑" section — those
+ * Do **not** use this for the landing "Update 브리핑" section — those
  * posts come from generated.json and can carry yesterday's editionDate. Use
  * `loadFeaturedBriefings` from `@/lib/briefing/featured` instead.
  */

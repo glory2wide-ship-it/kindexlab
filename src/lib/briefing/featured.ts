@@ -23,7 +23,7 @@ function assertTodaysEditions(articles: BriefingArticle[], today: string): void 
 /**
  * Today's live briefings across every desk, drawn round-robin.
  *
- * The landing rail is titled "오늘의 트렌드 브리핑", so it must reflect the
+ * The landing rail is titled "Update 브리핑", so it must reflect the
  * current KST edition — not archived premium columns from generated.json.
  */
 export async function loadFeaturedBriefings(limit: number): Promise<BriefingArticle[]> {

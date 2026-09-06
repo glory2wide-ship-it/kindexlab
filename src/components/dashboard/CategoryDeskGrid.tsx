@@ -67,7 +67,7 @@ export function CategoryDeskGrid({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="desk-grid-heading" className="text-xl font-semibold tracking-tight">
-            카테고리별 실시간 데스크
+            LIVE KinDex
           </h2>
         </div>
       </div>
