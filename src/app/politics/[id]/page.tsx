@@ -102,7 +102,7 @@ export default async function PoliticsSupportDetailPage({
       <BuzzChart entity={entity} initialTimeframe={initialTimeframe} />
       <SupportIndexChart kind={kind} subject={entity.name} />
       {analysisArticle ? <TodayAnalysis article={analysisArticle} keyword={entity.name} /> : null}
-      <PollDeskSection entity={entity} market={market} related={related} />
+      <PollDeskSection entity={entity} related={related} />
       <RelatedRankingDesk entity={entity} related={related} />
       <p className="text-xs text-muted">
         데이터 출처 · {SITE.name} 정치 데스크 · 리서치 기관별 일봉/주봉/월봉·조사 방식·관련 기사는 이 상세

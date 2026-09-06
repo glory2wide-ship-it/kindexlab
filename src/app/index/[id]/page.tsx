@@ -85,7 +85,7 @@ export default async function IndexDetailPage({
       {analysisArticle ? (
         <TodayAnalysis article={analysisArticle} entityHref={`${indexPath(index.id)}#chart`} />
       ) : null}
-      <PollDeskSection entity={pollLead} market={market} related={related} />
+      <PollDeskSection entity={pollLead} related={related} />
       {related.length ? (
         <RelatedRankingDesk entity={entity} related={related} heading="구성 종목" />
       ) : null}
