@@ -1,5 +1,5 @@
 /**
- * Display-name → Naver Finance symbol for 주식 heatmap quotes.
+ * Display-name → Naver Finance symbol for 주식 / 해외 주식 heatmap quotes.
  * Theme keywords (코스피, 이차전지 …) are intentionally omitted.
  */
 
@@ -12,6 +12,7 @@ export interface StockSymbol {
 }
 
 const BY_NAME: Record<string, StockSymbol> = {
+  // Domestic
   삼성전자: { market: "kr", code: "005930" },
   SK하이닉스: { market: "kr", code: "000660" },
   현대차: { market: "kr", code: "005380" },
@@ -31,6 +32,8 @@ const BY_NAME: Record<string, StockSymbol> = {
   카카오뱅크: { market: "kr", code: "323410" },
   에코프로: { market: "kr", code: "086520" },
   알테오젠: { market: "kr", code: "196170" },
+
+  // Overseas / 서학
   엔비디아: { market: "us", code: "NVDA.O" },
   NVIDIA: { market: "us", code: "NVDA.O" },
   테슬라: { market: "us", code: "TSLA.O" },
@@ -39,6 +42,17 @@ const BY_NAME: Record<string, StockSymbol> = {
   Apple: { market: "us", code: "AAPL.O" },
   TSMC: { market: "us", code: "TSM" },
   대만반도체: { market: "us", code: "TSM" },
+  아마존: { market: "us", code: "AMZN.O" },
+  아마존닷컴: { market: "us", code: "AMZN.O" },
+  마이크로소프트: { market: "us", code: "MSFT.O" },
+  구글: { market: "us", code: "GOOGL.O" },
+  알파벳: { market: "us", code: "GOOGL.O" },
+  메타: { market: "us", code: "META.O" },
+  페이스북: { market: "us", code: "META.O" },
+  넷플릭스: { market: "us", code: "NFLX.O" },
+  브로드컴: { market: "us", code: "AVGO.O" },
+  AMD: { market: "us", code: "AMD.O" },
+  인텔: { market: "us", code: "INTC.O" },
 };
 
 /** Normalize board row names before lookup (strip qualifiers / whitespace). */
@@ -57,3 +71,4 @@ export function stockSymbolForName(name: string): StockSymbol | undefined {
 }
 
 export const KOSPI_STOCK_BOARD_SLUG = "kospi-fomo-index";
+export const OVERSEAS_STOCK_BOARD_SLUG = "overseas-stock-index";

@@ -292,8 +292,11 @@ export function ChannelMarketDesk({
           refreshing={refreshing}
           title={selectedBoard ? selectedBoard.title : title}
           subtitle={
-            selectedBoard?.slug === "kospi-fomo-index"
+            selectedBoard?.slug === "kospi-fomo-index" ||
+            selectedBoard?.slug === "overseas-stock-index"
               ? `${demo === "전체" ? "전체" : demo} 순위 · 네이버금융 현재가·전일 대비 등락률을 히트맵에 표시합니다. 약 3분마다 갱신됩니다.`
+              : selectedBoard?.slug === "commodities-fx-index"
+                ? `${demo === "전체" ? "전체" : demo} 순위 · 네이버금융 환율·원자재 시세·등락률을 히트맵에 표시합니다. 약 3분마다 갱신됩니다.`
               : selectedBoard
                 ? `${demo === "전체" ? "전체" : demo} 순위 · 100점 척도. 분봉 필터와 성별·연령${showRegion ? "·지역" : ""} 탭이 함께 적용됩니다.`
                 : `${demo === "전체" ? "채널 종합" : demo} · 상단 보드 주제와 1:1로 묶인 히트맵입니다.`

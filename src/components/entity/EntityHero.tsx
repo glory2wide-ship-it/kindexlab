@@ -1,7 +1,7 @@
 import { TIMEFRAMES } from "@/lib/categories";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel, scoreLabel } from "@/lib/format";
 import {
-  formatStockPrice,
+  formatNaverMeasurement,
   isNaverStockMeasurement,
 } from "@/lib/market/naver-finance-format";
 import { buildTimeframeMetrics } from "@/lib/timeframes";
@@ -9,11 +9,8 @@ import type { RankingEntity } from "@/lib/types";
 
 /** Ratings and star scores read wrong when abbreviated; counts read wrong when not. */
 function formatMeasurement(value: number, unit: string): string {
-  if (unit === "원") {
-    return `${Math.round(value).toLocaleString("ko-KR")}원`;
-  }
-  if (unit === "USD") {
-    return formatStockPrice({ price: value, currency: "USD" });
+  if (unit === "원" || unit === "KRW" || unit === "USD" || unit.startsWith("USD") || unit.startsWith("USc") || unit === "원/g") {
+    return formatNaverMeasurement({ value, unit: unit === "KRW" ? "원" : unit });
   }
   const shown =
     unit === "%" || unit === "점"

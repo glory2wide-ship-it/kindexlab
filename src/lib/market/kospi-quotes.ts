@@ -1,13 +1,35 @@
-import { KOSPI_STOCK_BOARD_SLUG } from "@/lib/market/stock-codes";
+import {
+  COMMODITIES_FX_BOARD_SLUG,
+} from "@/lib/market/market-index-codes";
+import {
+  formatMarketIndexPrice,
+  fetchNaverMarketIndexQuotesForNames,
+} from "@/lib/market/naver-market-index";
 import {
   fetchNaverQuotesForNames,
   formatStockPrice,
   NAVER_FINANCE_SOURCE,
 } from "@/lib/market/naver-finance";
+import {
+  KOSPI_STOCK_BOARD_SLUG,
+  OVERSEAS_STOCK_BOARD_SLUG,
+} from "@/lib/market/stock-codes";
 import type { RankingEntity } from "@/lib/types";
 
 export function isKospiStockBoardSlug(slug?: string | null): boolean {
   return slug === KOSPI_STOCK_BOARD_SLUG;
+}
+
+export function isOverseasStockBoardSlug(slug?: string | null): boolean {
+  return slug === OVERSEAS_STOCK_BOARD_SLUG;
+}
+
+export function isCommoditiesFxBoardSlug(slug?: string | null): boolean {
+  return slug === COMMODITIES_FX_BOARD_SLUG;
+}
+
+export function isStockQuoteBoardSlug(slug?: string | null): boolean {
+  return isKospiStockBoardSlug(slug) || isOverseasStockBoardSlug(slug);
 }
 
 export function isKospiStockEntity(entity: Pick<RankingEntity, "slug" | "heatmapGroup">): boolean {
@@ -18,12 +40,40 @@ export function isKospiStockEntity(entity: Pick<RankingEntity, "slug" | "heatmap
   );
 }
 
-function withQuote(entity: RankingEntity, quote: {
+export function isOverseasStockEntity(
+  entity: Pick<RankingEntity, "slug" | "heatmapGroup">,
+): boolean {
+  return (
+    entity.slug.startsWith(`${OVERSEAS_STOCK_BOARD_SLUG}--`) ||
+    entity.heatmapGroup === "해외 주식"
+  );
+}
+
+export function isCommoditiesFxEntity(
+  entity: Pick<RankingEntity, "slug" | "heatmapGroup">,
+): boolean {
+  return (
+    entity.slug.startsWith(`${COMMODITIES_FX_BOARD_SLUG}--`) ||
+    entity.heatmapGroup === "원자재·환율"
+  );
+}
+
+type LiveQuote = {
   price: number;
   changeRate: number;
-  currency: "KRW" | "USD";
+  unit: string;
   observedAt: string;
-}): RankingEntity {
+  priceText: string;
+};
+
+function stripQuoteSuffix(summary: string): string {
+  return summary
+    .replace(/\s*·\s*\$?[\d,.]+(?:원(?:\/g)?|¢)?(?:\s*\([+-]?[\d.]+%\))?/g, "")
+    .replace(/\s*·\s*[\d,.]+\s+[A-Za-z/%]+(?:\s*\([+-]?[\d.]+%\))?/g, "")
+    .trim();
+}
+
+function withQuote(entity: RankingEntity, quote: LiveQuote): RankingEntity {
   const metrics = entity.metrics
     ? (Object.fromEntries(
         Object.entries(entity.metrics).map(([key, metric]) => [
@@ -34,8 +84,7 @@ function withQuote(entity: RankingEntity, quote: {
     : entity.metrics;
 
   const signed = `${quote.changeRate >= 0 ? "+" : ""}${quote.changeRate.toFixed(2)}%`;
-  const priceText = formatStockPrice(quote);
-  const baseSummary = entity.summary.replace(/\s*·\s*[\d,.]+원(?:\s*\([+-]?[\d.]+%\))?/g, "").trim();
+  const baseSummary = stripQuoteSuffix(entity.summary);
 
   return {
     ...entity,
@@ -43,46 +92,102 @@ function withQuote(entity: RankingEntity, quote: {
     metrics,
     measurement: {
       value: quote.price,
-      unit: quote.currency === "USD" ? "USD" : "원",
+      unit: quote.unit,
       label: "현재가",
       source: NAVER_FINANCE_SOURCE,
       changeRate: quote.changeRate,
       observedAt: quote.observedAt,
     },
-    summary: `${baseSummary || entity.summary} · ${priceText} (${signed})`.trim(),
+    summary: `${baseSummary || entity.summary} · ${quote.priceText} (${signed})`.trim(),
   };
 }
 
+async function attachStockQuotes(entities: RankingEntity[]): Promise<RankingEntity[]> {
+  const quotes = await fetchNaverQuotesForNames(entities.map((item) => item.name));
+  if (!quotes.size) return entities;
+
+  return entities.map((entity) => {
+    const quote = quotes.get(entity.name);
+    if (!quote) return entity;
+    return withQuote(entity, {
+      price: quote.price,
+      changeRate: quote.changeRate,
+      unit: quote.currency === "USD" ? "USD" : "원",
+      observedAt: quote.observedAt,
+      priceText: formatStockPrice(quote),
+    });
+  });
+}
+
+async function attachMarketIndexQuotes(entities: RankingEntity[]): Promise<RankingEntity[]> {
+  const quotes = await fetchNaverMarketIndexQuotesForNames(entities.map((item) => item.name));
+  if (!quotes.size) return entities;
+
+  return entities.map((entity) => {
+    const quote = quotes.get(entity.name);
+    if (!quote) return entity;
+    return withQuote(entity, {
+      price: quote.price,
+      changeRate: quote.changeRate,
+      unit: quote.unit === "KRW" ? "원" : quote.unit,
+      observedAt: quote.observedAt,
+      priceText: formatMarketIndexPrice(quote),
+    });
+  });
+}
+
 /**
- * Attach Naver Finance last price + day change to every mapped kospi-board tile.
- * FOMO buzz score stays for tile size; quote drives displayed rate/color.
+ * Attach Naver Finance live quotes for 주식 / 해외 주식 / 원자재·환율 boards.
+ * Buzz score stays for tile size; quote drives displayed rate/color.
  */
 export async function attachKospiStockQuotes(
   entities: RankingEntity[],
   boardSlug?: string | null,
 ): Promise<RankingEntity[]> {
   if (!entities.length) return entities;
-  if (boardSlug && !isKospiStockBoardSlug(boardSlug)) return entities;
 
-  const targets = isKospiStockBoardSlug(boardSlug)
-    ? entities
-    : entities.filter(isKospiStockEntity);
-  if (!targets.length) return entities;
+  if (isStockQuoteBoardSlug(boardSlug)) {
+    return attachStockQuotes(entities);
+  }
+  if (isCommoditiesFxBoardSlug(boardSlug)) {
+    return attachMarketIndexQuotes(entities);
+  }
 
-  const quotes = await fetchNaverQuotesForNames(targets.map((item) => item.name));
-  if (!quotes.size) return entities;
+  // Detail / mixed payloads without an explicit board filter.
+  if (boardSlug) return entities;
 
-  return entities.map((entity) => {
-    const quote = quotes.get(entity.name);
-    if (!quote) return entity;
-    if (!isKospiStockBoardSlug(boardSlug) && !isKospiStockEntity(entity)) return entity;
-    return withQuote(entity, quote);
-  });
+  const stockTargets = entities.filter(
+    (entity) => isKospiStockEntity(entity) || isOverseasStockEntity(entity),
+  );
+  const fxTargets = entities.filter(isCommoditiesFxEntity);
+
+  let next = entities;
+  if (stockTargets.length) {
+    const quoted = await attachStockQuotes(stockTargets);
+    const byId = new Map(quoted.map((item) => [item.id, item]));
+    next = next.map((item) => byId.get(item.id) ?? item);
+  }
+  if (fxTargets.length) {
+    const quoted = await attachMarketIndexQuotes(fxTargets);
+    const byId = new Map(quoted.map((item) => [item.id, item]));
+    next = next.map((item) => byId.get(item.id) ?? item);
+  }
+  return next;
 }
 
-/** Detail-page helper: refresh quote for one kospi-board entity. */
+/** Detail-page helper: refresh quote for stock / FX board entities. */
 export async function enrichEntityWithKospiQuote(entity: RankingEntity): Promise<RankingEntity> {
-  if (!isKospiStockEntity(entity)) return entity;
-  const [enriched] = await attachKospiStockQuotes([entity], KOSPI_STOCK_BOARD_SLUG);
-  return enriched ?? entity;
+  if (isKospiStockEntity(entity)) {
+    const [enriched] = await attachKospiStockQuotes([entity], KOSPI_STOCK_BOARD_SLUG);
+    return enriched ?? entity;
+  }
+  if (isOverseasStockEntity(entity)) {
+    const [enriched] = await attachKospiStockQuotes([entity], OVERSEAS_STOCK_BOARD_SLUG);
+    return enriched ?? entity;
+  }
+  if (isCommoditiesFxEntity(entity)) {
+    const [enriched] = await attachKospiStockQuotes([entity], COMMODITIES_FX_BOARD_SLUG);
+    return enriched ?? entity;
+  }
+  return entity;
 }

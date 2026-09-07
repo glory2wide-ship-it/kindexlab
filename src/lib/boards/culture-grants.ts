@@ -114,6 +114,7 @@ export function isTwoLineBracketHeatmap(heatmapGroup?: string): boolean {
     heatmapGroup === "지역별 음식/맛집" ||
     heatmapGroup === "부동산 관심 랭킹" ||
     heatmapGroup === "부동산" ||
+    heatmapGroup === "지역별 부동산" ||
     heatmapGroup === "부동산 지수" ||
     heatmapGroup === "공연 랭킹" ||
     heatmapGroup === "공연" ||
