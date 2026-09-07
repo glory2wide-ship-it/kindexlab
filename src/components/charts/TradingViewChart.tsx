@@ -55,6 +55,7 @@ export function TradingViewChart({
   style = "line",
   positive = true,
   height = 420,
+  pricePrecision = 2,
 }: {
   candles: CandlePoint[];
   linePath?: number[];
@@ -62,6 +63,8 @@ export function TradingViewChart({
   style?: ChartStyle;
   positive?: boolean;
   height?: number;
+  /** Decimal places on the right price scale (stocks/FX/commodities). */
+  pricePrecision?: number;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -113,6 +116,15 @@ export function TradingViewChart({
         scaleMargins: { top: 0.08, bottom: 0.1 },
         autoScale: true,
       },
+      localization: {
+        locale: "ko-KR",
+        timeFormatter: (time: Time) => formatLwcTime(time, labelsRef.current),
+        priceFormatter: (price: number) =>
+          price.toLocaleString("ko-KR", {
+            minimumFractionDigits: Math.min(pricePrecision, 4),
+            maximumFractionDigits: Math.min(pricePrecision, 4),
+          }),
+      },
       timeScale: {
         borderColor: line,
         timeVisible: true,
@@ -121,10 +133,6 @@ export function TradingViewChart({
         barSpacing: 8,
         minBarSpacing: 3,
         tickMarkFormatter: (time: Time) => formatLwcTime(time, labelsRef.current),
-      },
-      localization: {
-        locale: "ko-KR",
-        timeFormatter: (time: Time) => formatLwcTime(time, labelsRef.current),
       },
     });
 
@@ -145,7 +153,7 @@ export function TradingViewChart({
       chartRef.current = null;
       priceRef.current = null;
     };
-  }, [height]);
+  }, [height, pricePrecision]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -158,6 +166,11 @@ export function TradingViewChart({
     );
     labelsRef.current = labelByTime;
     const autoscale = priceAutoscaleProvider(priceMin, priceMax);
+    const priceFormat = {
+      type: "price" as const,
+      precision: Math.min(Math.max(pricePrecision, 0), 4),
+      minMove: Number(`1e-${Math.min(Math.max(pricePrecision, 0), 4)}`),
+    };
 
     markersRef.current = null;
     if (priceRef.current) {
@@ -188,6 +201,7 @@ export function TradingViewChart({
           lastValueVisible: true,
           priceLineColor: tone,
           priceLineWidth: 1,
+          priceFormat,
           autoscaleInfoProvider: autoscale,
         },
         0,
@@ -215,6 +229,7 @@ export function TradingViewChart({
           lastValueVisible: true,
           priceLineColor: tone,
           priceLineWidth: 1,
+          priceFormat,
           crosshairMarkerVisible: true,
           crosshairMarkerRadius: 5,
           crosshairMarkerBorderColor: panel,
@@ -260,7 +275,7 @@ export function TradingViewChart({
         lockPriceScale(priceRef.current, priceMin, priceMax);
       }
     }
-  }, [candles, linePath, timeframe, style, positive, height]);
+  }, [candles, linePath, timeframe, style, positive, height, pricePrecision]);
 
   return (
     <div className="relative w-full overflow-hidden rounded-lg border border-line/50 bg-panel">

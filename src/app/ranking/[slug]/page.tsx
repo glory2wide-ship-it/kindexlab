@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { BuzzChart } from "@/components/entity/BuzzChart";
 import { EntityHero } from "@/components/entity/EntityHero";
+import { MarketPriceChart } from "@/components/entity/MarketPriceChart";
 import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
@@ -14,6 +15,7 @@ import { getAllSlugs, getEntityBySlug, getRankings, getRelatedEntities } from "@
 import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import { formatRate } from "@/lib/format";
 import { enrichEntityWithKospiQuote } from "@/lib/market/kospi-quotes";
+import { resolveMarketChartInstrument } from "@/lib/market/naver-chart";
 import { SITE } from "@/lib/site";
 import { rankingPath, rankingUrl } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
@@ -100,6 +102,7 @@ export default async function RankingDetailPage({
   if (!detail) notFound();
   const { entity, related, article: analysisArticle } = detail;
   const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
+  const marketInstrument = resolveMarketChartInstrument(entity);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -128,7 +131,15 @@ export default async function RankingDetailPage({
         {entity.name}
       </p>
       <EntityHero entity={entity} />
-      <BuzzChart entity={entity} initialTimeframe={initialTimeframe} />
+      {marketInstrument ? (
+        <MarketPriceChart
+          entity={entity}
+          instrument={marketInstrument}
+          initialTimeframe={initialTimeframe === "3m" ? "1d" : initialTimeframe}
+        />
+      ) : (
+        <BuzzChart entity={entity} initialTimeframe={initialTimeframe} />
+      )}
       {entity.type === "party_support" ? (
         <SupportIndexChart kind="party" subject={entity.name} />
       ) : null}

@@ -126,9 +126,46 @@ function uniqueAscendingTimes(
   return times as UTCTimestamp[];
 }
 
+function parseRealTimeSec(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (/^\d{10}$/.test(trimmed)) return Number(trimmed);
+  if (/^\d{13}$/.test(trimmed)) return Math.floor(Number(trimmed) / 1000);
+  if (/^\d{8}$/.test(trimmed)) {
+    const iso = `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}T00:00:00+09:00`;
+    const ms = Date.parse(iso);
+    return Number.isNaN(ms) ? null : Math.floor(ms / 1000);
+  }
+  if (/^\d{12}$/.test(trimmed)) {
+    const iso = `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}T${trimmed.slice(8, 10)}:${trimmed.slice(10, 12)}:00+09:00`;
+    const ms = Date.parse(iso);
+    return Number.isNaN(ms) ? null : Math.floor(ms / 1000);
+  }
+  if (/^\d{14}$/.test(trimmed)) {
+    const iso = `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}T${trimmed.slice(8, 10)}:${trimmed.slice(10, 12)}:${trimmed.slice(12, 14)}+09:00`;
+    const ms = Date.parse(iso);
+    return Number.isNaN(ms) ? null : Math.floor(ms / 1000);
+  }
+  const ms = Date.parse(trimmed);
+  return Number.isNaN(ms) ? null : Math.floor(ms / 1000);
+}
+
+function candlesHaveRealTimes(candles: CandlePoint[]): boolean {
+  if (candles.length < 2) return Boolean(candles[0] && parseRealTimeSec(candles[0].t) != null);
+  let parsed = 0;
+  for (const bar of candles.slice(0, 8)) {
+    if (parseRealTimeSec(bar.t) != null) parsed += 1;
+  }
+  return parsed >= Math.min(2, candles.length);
+}
+
 /**
- * Map synthetic candles onto ascending UTC seconds so Lightweight Charts
+ * Map candles onto ascending UTC seconds so Lightweight Charts
  * can render them with TradingView-style scales / crosshair / volume pane.
+ *
+ * When `candle.t` already carries a real unix / date stamp (Naver live charts),
+ * those timestamps are preserved. Synthetic buzz candles keep the legacy
+ * evenly-spaced mapping.
  *
  * @param linePath - denser closes for the area/line series (preferred).
  */
@@ -146,15 +183,21 @@ export function toLwcSeries(
 } {
   const step = stepSeconds(timeframe);
   const end = Math.floor(Date.now() / 1000);
+  const useReal = candlesHaveRealTimes(candles);
   const start = end - Math.max(candles.length - 1, 0) * step;
   const labelByTime = new Map<number, string>();
   const maxVol = Math.max(...candles.map((bar) => bar.v), 1);
 
   const ohlc: LwcCandle[] = [];
   const volume: LwcVolume[] = [];
+  let previousTime = 0;
 
   candles.forEach((bar, index) => {
-    const time = (start + index * step) as UTCTimestamp;
+    let timeSec = useReal ? parseRealTimeSec(bar.t) : start + index * step;
+    if (timeSec == null) timeSec = start + index * step;
+    if (timeSec <= previousTime) timeSec = previousTime + 1;
+    previousTime = timeSec;
+    const time = timeSec as UTCTimestamp;
     labelByTime.set(time as number, formatKstChartLabel(time as number, timeframe, end));
     ohlc.push({
       time,
@@ -174,14 +217,18 @@ export function toLwcSeries(
 
   const path =
     linePath && linePath.length >= 2 ? linePath : candles.map((bar) => bar.c);
-  const areaTimes = uniqueAscendingTimes(path.length, start, start + Math.max(candles.length - 1, 0) * step);
+  const areaStart = ohlc[0] ? (ohlc[0].time as number) : start;
+  const areaEnd = ohlc.length ? (ohlc[ohlc.length - 1]!.time as number) : end;
+  const areaTimes = useReal && ohlc.length === path.length
+    ? ohlc.map((bar) => bar.time)
+    : uniqueAscendingTimes(path.length, areaStart, areaEnd);
   const area: LwcArea[] = path.map((value, index) => ({
     time: areaTimes[index]!,
     value,
   }));
 
   // Label a few area points from nearest candle labels for the crosshair.
-  area.forEach((point, index) => {
+  area.forEach((point) => {
     if (labelByTime.has(point.time as number)) return;
     labelByTime.set(
       point.time as number,
