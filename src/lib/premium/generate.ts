@@ -23,6 +23,7 @@ import {
   premiumPromptCacheKey,
 } from "@/lib/premium/prompt";
 import {
+  applyHybridAnalysisHeadings,
   buildHybridAnalysisSystemPrompt,
   buildDataJournalistUserPrompt,
 } from "@/lib/premium/data-journalist-prompt";
@@ -503,7 +504,7 @@ export async function generatePremiumArticle(input: {
   const cacheKey = premiumPromptCacheKey({
     briefing: input.briefing,
     channel: input.channel,
-    mode: dataJournalist ? `hybrid80-${mode}` : mode,
+    mode: dataJournalist ? `hybrid80-outline4-${mode}` : mode,
   });
   const model = resolveBriefingModel({
     briefing: input.briefing,
@@ -653,7 +654,12 @@ export async function generatePremiumArticle(input: {
     title = `${keyword} 핵심 이슈 브리핑`;
   }
 
-  sections = applySeoHeadingStructure(sections) as PremiumSection[];
+  const finalizeSections = (next: PremiumSection[]): PremiumSection[] =>
+    dataJournalist
+      ? (applyHybridAnalysisHeadings(next) as PremiumSection[])
+      : (applySeoHeadingStructure(next) as PremiumSection[]);
+
+  sections = finalizeSections(sections);
 
   const chars = premiumCharCount(
     lengthPlain(input.briefing, { title, excerpt: excerptText, sections, faq: faqText, takeaways, table }),
@@ -685,7 +691,7 @@ export async function generatePremiumArticle(input: {
       });
       title = padded.title;
       excerptText = padded.excerpt;
-      sections = applySeoHeadingStructure(padded.sections as PremiumSection[]) as PremiumSection[];
+      sections = finalizeSections(padded.sections as PremiumSection[]);
       faqText = padded.faq;
       const paddedChars = premiumCharCount(
         lengthPlain(input.briefing, {
@@ -725,7 +731,7 @@ export async function generatePremiumArticle(input: {
       if (expanded) {
         title = expanded.title;
         excerptText = expanded.excerpt;
-        sections = applySeoHeadingStructure(expanded.sections as PremiumSection[]) as PremiumSection[];
+        sections = finalizeSections(expanded.sections as PremiumSection[]);
         faqText = expanded.faq;
         const expandedChars = premiumCharCount(
           lengthPlain(input.briefing, {
@@ -827,7 +833,7 @@ export async function generatePremiumArticle(input: {
       } else {
         title = patched.title;
         excerptText = patched.excerpt;
-        sections = applySeoHeadingStructure(nextSections) as PremiumSection[];
+        sections = finalizeSections(nextSections);
         faqText = patched.faq;
         violations = collectViolations();
       }
