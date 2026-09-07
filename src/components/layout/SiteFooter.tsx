@@ -70,7 +70,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-line py-4 text-center font-sans text-[11px] leading-5 text-muted">
-        히트맵 종목은 3분마다 갱신, 브리핑 매거진은 매일 1회 갱신됩니다.
+        히트맵 키워드는 3분마다, 브리핑 매거진은 매일 1회 갱신됩니다.
         <br />
         © {year} {SITE.companyShort} · {SITE.name} All rights reserved.
       </div>
