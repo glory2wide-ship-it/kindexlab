@@ -56,13 +56,34 @@ async function main() {
   const all = await listHeatmapAnalysisTargets({ channel, boardSlug });
   assertRequiredHeatmapBoards(all, { channel, boardSlug });
 
+  // Optional one-off focus file (no workflow change required):
+  // scripts/.analysis-focus → government-subsidy-search|지역사랑상품권
+  let focused = all;
+  try {
+    const { readFile } = await import("node:fs/promises");
+    const path = await import("node:path");
+    const focusFile = path.join(process.cwd(), "scripts", ".analysis-focus");
+    const line = (await readFile(focusFile, "utf8")).trim().split("\n")[0]?.trim();
+    if (line && !line.startsWith("#")) {
+      const [focusBoard, focusName] = line.split("|").map((part) => part.trim());
+      focused = all.filter((target) => {
+        const boardOk = !focusBoard || target.boardSlug === focusBoard;
+        const nameOk = !focusName || target.entity.name.includes(focusName);
+        return boardOk && nameOk;
+      });
+      console.log(`[focus] ${line} → ${focused.length} target(s)`);
+    }
+  } catch {
+    // no focus file
+  }
+
   const byBoard = new Map<string, number>();
-  for (const target of all) {
+  for (const target of focused) {
     byBoard.set(target.boardSlug, (byBoard.get(target.boardSlug) ?? 0) + 1);
   }
   const overseasCount = byBoard.get(OVERSEAS_STOCK_BOARD_SLUG) ?? 0;
   console.log(
-    `[inventory] ${all.length}건 · edition=${editionDate} · force=${force}` +
+    `[inventory] ${focused.length}건 · edition=${editionDate} · force=${force}` +
       (channel ? ` · channel=${channel}` : "") +
       (boardSlug ? ` · board=${boardSlug}` : ""),
   );
@@ -75,8 +96,8 @@ async function main() {
     console.log(`[inventory] 해외 주식(${OVERSEAS_STOCK_BOARD_SLUG})=${overseasCount}건`);
   }
 
-  const limit = num("limit", all.length);
-  const targets = all.slice(offset, offset + limit);
+  const limit = num("limit", focused.length);
+  const targets = focused.slice(offset, offset + limit);
 
   console.log(`[run] ${targets.length}건 / 전체 ${all.length}건 (offset=${offset})`);
 
