@@ -12,15 +12,19 @@ import {
   type IChartApi,
   type ISeriesApi,
   type ISeriesMarkersPluginApi,
+  type LogicalRange,
   type Time,
 } from "lightweight-charts";
 import {
   HTS_DOWN,
   HTS_UP,
   formatLwcTime,
+  ohlcExtremes,
   priceAutoscaleProvider,
   priceVisibleRange,
   toLwcSeries,
+  valueExtremes,
+  type LwcCandle,
 } from "@/lib/charts/lwc-data";
 import type { CandlePoint, Timeframe } from "@/lib/types";
 
@@ -32,6 +36,8 @@ function readCssVar(name: string, fallback: string): string {
   return value || fallback;
 }
 
+const PRICE_MARGINS = { top: 0.04, bottom: 0.05 } as const;
+
 function lockPriceScale(
   series: ISeriesApi<"Candlestick"> | ISeriesApi<"Area">,
   priceMin: number,
@@ -40,12 +46,41 @@ function lockPriceScale(
   const range = priceVisibleRange(priceMin, priceMax);
   const scale = series.priceScale();
   scale.applyOptions({
-    scaleMargins: { top: 0.08, bottom: 0.1 },
-    autoScale: true,
+    scaleMargins: PRICE_MARGINS,
+    autoScale: false,
   });
   // AreaSeries otherwise pulls 0 into the scale → flat line at the top.
   scale.setAutoScale(false);
   scale.setVisibleRange(range);
+}
+
+/**
+ * Fit Y to the bars currently on screen — full-series min/max made KRW charts
+ * look flat when history spanned far more than the visible window.
+ */
+function fitPriceToVisibleRange(
+  chart: IChartApi,
+  series: ISeriesApi<"Candlestick"> | ISeriesApi<"Area">,
+  style: ChartStyle,
+  ohlc: LwcCandle[],
+  lineValues: number[],
+  logical?: LogicalRange | null,
+) {
+  const range = logical ?? chart.timeScale().getVisibleLogicalRange();
+  const from = range ? Math.floor(range.from) : 0;
+  const to = range ? Math.ceil(range.to) : ohlc.length - 1;
+
+  if (style === "candle") {
+    const extremes = ohlcExtremes(ohlc, from, to) ?? ohlcExtremes(ohlc);
+    if (extremes) lockPriceScale(series, extremes.min, extremes.max);
+    return;
+  }
+
+  const extremes =
+    valueExtremes(lineValues, from, to) ??
+    valueExtremes(lineValues) ??
+    ohlcExtremes(ohlc, from, to);
+  if (extremes) lockPriceScale(series, extremes.min, extremes.max);
 }
 
 export function TradingViewChart({
@@ -74,6 +109,12 @@ export function TradingViewChart({
   const priceRef = useRef<ISeriesApi<"Candlestick"> | ISeriesApi<"Area"> | null>(null);
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const labelsRef = useRef<Map<number, string>>(new Map());
+  const seriesDataRef = useRef<{ style: ChartStyle; ohlc: LwcCandle[]; lineValues: number[] }>({
+    style: "line",
+    ohlc: [],
+    lineValues: [],
+  });
+  const fitRafRef = useRef<number | null>(null);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -116,8 +157,8 @@ export function TradingViewChart({
       },
       rightPriceScale: {
         borderColor: line,
-        scaleMargins: { top: 0.08, bottom: 0.1 },
-        autoScale: true,
+        scaleMargins: PRICE_MARGINS,
+        autoScale: false,
       },
       localization: {
         locale: "ko-KR",
@@ -145,16 +186,32 @@ export function TradingViewChart({
 
     chartRef.current = chart;
 
+    const scheduleFit = (logical?: LogicalRange | null) => {
+      if (fitRafRef.current != null) window.cancelAnimationFrame(fitRafRef.current);
+      fitRafRef.current = window.requestAnimationFrame(() => {
+        fitRafRef.current = null;
+        const series = priceRef.current;
+        if (!series) return;
+        const { style: chartStyle, ohlc, lineValues } = seriesDataRef.current;
+        if (!ohlc.length) return;
+        fitPriceToVisibleRange(chart, series, chartStyle, ohlc, lineValues, logical);
+      });
+    };
+
+    const onVisibleRange = (logical: LogicalRange | null) => {
+      scheduleFit(logical);
+    };
+    chart.timeScale().subscribeVisibleLogicalRangeChange(onVisibleRange);
+
     const onResize = () => {
-      if (priceRef.current) {
-        const visible = priceRef.current.priceScale().getVisibleRange();
-        if (visible) priceRef.current.priceScale().setVisibleRange(visible);
-      }
+      scheduleFit();
     };
     window.addEventListener("resize", onResize);
 
     return () => {
       window.removeEventListener("resize", onResize);
+      chart.timeScale().unsubscribeVisibleLogicalRangeChange(onVisibleRange);
+      if (fitRafRef.current != null) window.cancelAnimationFrame(fitRafRef.current);
       markersRef.current = null;
       chart.remove();
       chartRef.current = null;
@@ -172,6 +229,15 @@ export function TradingViewChart({
       linePath,
     );
     labelsRef.current = labelByTime;
+
+    // Prefer closes (1 point/bar). The OHLC walk path is 4× denser and can break the area series.
+    const lineValues =
+      linePath && linePath.length === candles.length * 4
+        ? ohlc.map((bar) => bar.close)
+        : area.map((point) => point.value);
+
+    seriesDataRef.current = { style, ohlc, lineValues };
+
     const autoscale = priceAutoscaleProvider(priceMin, priceMax);
     const priceFormat = {
       type: "price" as const,
@@ -217,10 +283,8 @@ export function TradingViewChart({
         0,
       );
       candleSeries.setData(ohlc);
-      lockPriceScale(candleSeries, priceMin, priceMax);
       priceRef.current = candleSeries;
     } else {
-      // Prefer closes (1 point/bar). The OHLC walk path is 4× denser and can break the area series.
       const areaData =
         linePath && linePath.length === candles.length * 4
           ? ohlc.map((bar) => ({ time: bar.time, value: bar.close }))
@@ -245,16 +309,13 @@ export function TradingViewChart({
           crosshairMarkerBorderColor: panel,
           crosshairMarkerBackgroundColor: tone,
           autoscaleInfoProvider: priceAutoscaleProvider(
-            Math.min(...areaData.map((p) => p.value)),
-            Math.max(...areaData.map((p) => p.value)),
+            Math.min(...lineValues),
+            Math.max(...lineValues),
           ),
         },
         0,
       );
       areaSeries.setData(areaData);
-      const lineMin = Math.min(...areaData.map((p) => p.value));
-      const lineMax = Math.max(...areaData.map((p) => p.value));
-      lockPriceScale(areaSeries, lineMin, lineMax);
       priceRef.current = areaSeries;
 
       const last = areaData[areaData.length - 1];
@@ -288,17 +349,10 @@ export function TradingViewChart({
       chart.timeScale().fitContent();
     }
 
-    // fitContent / setVisibleLogicalRange can reset price scale — re-lock after it.
+    // fitContent / setVisibleLogicalRange can reset price scale — lock to the
+    // on-screen window so 분봉~월봉 moves read clearly (esp. KRW equities).
     if (priceRef.current) {
-      if (style === "line") {
-        const values =
-          linePath && linePath.length === candles.length * 4
-            ? ohlc.map((b) => b.close)
-            : area.map((p) => p.value);
-        lockPriceScale(priceRef.current, Math.min(...values), Math.max(...values));
-      } else {
-        lockPriceScale(priceRef.current, priceMin, priceMax);
-      }
+      fitPriceToVisibleRange(chart, priceRef.current, style, ohlc, lineValues);
     }
   }, [candles, linePath, timeframe, style, positive, height, pricePrecision, initialVisibleBars]);
 

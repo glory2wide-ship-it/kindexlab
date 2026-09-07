@@ -244,28 +244,84 @@ export function toLwcSeries(
   return { ohlc, volume, area, labelByTime, priceMin, priceMax };
 }
 
+/**
+ * Tight Y window around the data so small % moves fill the pane.
+ *
+ * Previous floor (`1% of price` + absolute `0.6`) made KRW equities look flat —
+ * a 0.3% session move sat in a 1%+ band and read as a horizontal line.
+ */
+export function priceVisibleRange(minValue: number, maxValue: number): { from: number; to: number } {
+  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
+    return { from: 0, to: 1 };
+  }
+  const lo = Math.min(minValue, maxValue);
+  const hi = Math.max(minValue, maxValue);
+  const mid = (lo + hi) / 2;
+  const dataSpan = hi - lo;
+  // ~0.12% of mid price (or tiny absolute for FX/near-zero) — enough to avoid
+  // a zero-height scale without swallowing real wiggles.
+  const floor = Math.max(Math.abs(mid) * 0.0012, 1e-8);
+  const span = Math.max(dataSpan, floor);
+  const pad = Math.max(span * 0.05, floor * 0.2);
+  return { from: lo - pad, to: hi + pad };
+}
+
 export function priceAutoscaleProvider(minValue: number, maxValue: number) {
-  const span = Math.max(maxValue - minValue, Math.abs(maxValue) * 0.01, 0.6);
-  const pad = span * 0.1;
-  const lo = minValue - pad;
-  const hi = maxValue + pad;
+  const range = priceVisibleRange(minValue, maxValue);
   // LWC AreaSeries defaults to including 0 — always override that range.
   return (_original?: () => { priceRange: { minValue: number; maxValue: number } | null } | null) => ({
     priceRange: {
-      minValue: lo,
-      maxValue: hi,
+      minValue: range.from,
+      maxValue: range.to,
     },
     margins: {
-      above: 6,
-      below: 6,
+      above: 4,
+      below: 4,
     },
   });
 }
 
-export function priceVisibleRange(minValue: number, maxValue: number): { from: number; to: number } {
-  const span = Math.max(maxValue - minValue, Math.abs(maxValue) * 0.01, 0.6);
-  const pad = span * 0.1;
-  return { from: minValue - pad, to: maxValue + pad };
+/** High/low (and open/close) extremes for a logical bar window. */
+export function ohlcExtremes(
+  bars: Array<{ high: number; low: number; open?: number; close?: number }>,
+  fromIndex?: number,
+  toIndex?: number,
+): { min: number; max: number } | null {
+  if (!bars.length) return null;
+  const start = Math.max(0, Math.floor(fromIndex ?? 0));
+  const end = Math.min(bars.length - 1, Math.ceil(toIndex ?? bars.length - 1));
+  if (end < start) return null;
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (let i = start; i <= end; i += 1) {
+    const bar = bars[i]!;
+    min = Math.min(min, bar.low, bar.open ?? bar.low, bar.close ?? bar.low);
+    max = Math.max(max, bar.high, bar.open ?? bar.high, bar.close ?? bar.high);
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+  return { min, max };
+}
+
+/** Min/max of area/line values for a logical index window. */
+export function valueExtremes(
+  values: number[],
+  fromIndex?: number,
+  toIndex?: number,
+): { min: number; max: number } | null {
+  if (!values.length) return null;
+  const start = Math.max(0, Math.floor(fromIndex ?? 0));
+  const end = Math.min(values.length - 1, Math.ceil(toIndex ?? values.length - 1));
+  if (end < start) return null;
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (let i = start; i <= end; i += 1) {
+    const value = values[i]!;
+    if (!Number.isFinite(value)) continue;
+    min = Math.min(min, value);
+    max = Math.max(max, value);
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+  return { min, max };
 }
 
 export function formatLwcTime(time: unknown, labelByTime: Map<number, string>): string {
