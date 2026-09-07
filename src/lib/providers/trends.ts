@@ -252,8 +252,14 @@ export async function getEntitiesBySlugs(slugs: string[]): Promise<RankingEntity
 
 export async function getRelatedEntities(
   entity: RankingEntity,
-  limit = 4,
+  limit = 8,
 ): Promise<RankingEntity[]> {
+  // Board heatmap rows (경제·문화/생활·여행/맛집) live in board cache, not the
+  // live rankings tape — prefer same-board peers so detail "같은 섹터 종목" fills.
+  const { relatedEntitiesFromSameBoard } = await import("@/lib/entity/resolve");
+  const fromBoard = await relatedEntitiesFromSameBoard(entity, limit);
+  if (fromBoard.length) return fromBoard;
+
   const payload = await getRankings();
   return payload.items
     .filter((item) => item.id !== entity.id && item.type === entity.type)

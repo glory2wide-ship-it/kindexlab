@@ -72,6 +72,40 @@ export async function resolveBoardEntity(slug: string): Promise<RankingEntity | 
   }
 }
 
+/**
+ * Peers on the same ranking board (economy / culture / travel heatmaps).
+ * Live `getRankings()` rarely carries these board rows, so type-based related
+ * lookups were leaving "같은 섹터 종목" empty on detail pages.
+ */
+export async function relatedEntitiesFromSameBoard(
+  entity: RankingEntity,
+  limit = 8,
+): Promise<RankingEntity[]> {
+  const decoded = decodeRouteSlug(entity.slug);
+  const sep = decoded.indexOf("--");
+  if (sep <= 0) return [];
+  const boardSlug = decoded.slice(0, sep);
+  const def = getBoard(boardSlug);
+  if (!def || def.deskKind) return [];
+  try {
+    const cached = await seedBoardIfMissing(def);
+    const payload = toHeatmapPayload(def, cached);
+    const entities = rankRowsToEntities(payload.ranking ?? [], payload);
+    return entities
+      .filter((item) => {
+        if (item.id === entity.id) return false;
+        if (item.name === entity.name) return false;
+        if (slugsMatch(item.slug, entity.slug)) return false;
+        // boardRowSlug lowercases Latin letters; inbound URLs may keep SK하이닉스 casing.
+        if (item.slug.toLowerCase() === entity.slug.toLowerCase()) return false;
+        return true;
+      })
+      .slice(0, Math.max(1, limit));
+  } catch {
+    return [];
+  }
+}
+
 export async function resolveBoardOrKeywordEntity(
   slug: string,
   fallbackName?: string,
