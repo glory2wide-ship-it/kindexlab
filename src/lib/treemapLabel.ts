@@ -1,9 +1,10 @@
-const MIN_NAME = 18;
+const MIN_NAME = 15;
 const MAX_NAME = 57;
 const MIN_RATE = 15;
 const MAX_RATE = 27;
-const MIN_ARTIST = 15;
+const MIN_ARTIST = 13;
 const MAX_ARTIST = 24;
+const NAME_LINE_HEIGHT = 1.22;
 
 export interface TreemapLabelLayout {
   showName: boolean;
@@ -16,6 +17,7 @@ export interface TreemapLabelLayout {
   rateSize: number;
   typeSize: number;
   metaSize: number;
+  nameLines: number;
   padX: number;
   padY: number;
   nameY: number;
@@ -47,9 +49,24 @@ export function measureTextWidth(text: string, fontSize: number): number {
   return units * fontSize;
 }
 
+function wrapLineCount(text: string, fontSize: number, maxWidth: number): number {
+  const width = measureTextWidth(text, fontSize);
+  if (width <= maxWidth) return 1;
+  return Math.ceil(width / Math.max(8, maxWidth));
+}
+
 function fitSizeToWidth(text: string, size: number, maxWidth: number, min: number): number {
   let next = size;
   while (next > min && measureTextWidth(text, next) > maxWidth) {
+    next -= 0.35;
+  }
+  return next;
+}
+
+/** Pick the largest size that still wraps onto `maxLines` in the tile. */
+function fitWrappedSize(text: string, start: number, maxWidth: number, min: number, maxLines: number): number {
+  let next = start;
+  while (next > min && wrapLineCount(text, next, maxWidth) > maxLines) {
     next -= 0.35;
   }
   return next;
@@ -65,9 +82,18 @@ function ellipsize(text: string, fontSize: number, maxWidth: number): string {
   return cut <= 1 ? ellipsis : `${text.slice(0, cut)}${ellipsis}`;
 }
 
+function minReadableName(width: number, height: number): number {
+  if (width >= 100 && height >= 64) return 17;
+  if (width >= 72 && height >= 48) return 15;
+  return MIN_NAME;
+}
+
 /**
- * Centered stack: title, optional artist, then change % (and pt when it fits).
+ * Centered stack: title (up to two wrapped lines), optional artist, then change %.
  * Rank is drawn separately in the tile corner — do not prepend it here.
+ *
+ * Long Korean names used to shrink to a single SVG line, then were cut another 40%.
+ * Wrapping keeps type near the box scale instead of collapsing to ~11px.
  */
 export function layoutTreemapLabel(input: {
   width: number;
@@ -85,16 +111,19 @@ export function layoutTreemapLabel(input: {
   if (w < 28 || h < 18) return null;
 
   const innerW = Math.max(12, w - 16);
-  const innerH = Math.max(12, h - 18);
+  const innerH = Math.max(12, h - 22);
   const areaScale = Math.sqrt(Math.max(1, w * h));
-  let nameSize = clamp(areaScale * 0.195, MIN_NAME, MAX_NAME);
-  nameSize = Math.min(nameSize, innerH * 0.5, innerW * 0.5);
-  nameSize = fitSizeToWidth(name, nameSize, innerW, MIN_NAME);
+  const readableMin = minReadableName(w, h);
+  const maxLines = h >= 44 ? 2 : 1;
 
-  const showArtist = Boolean(artist) && w >= 48 && h >= 32;
+  let nameSize = clamp(areaScale * 0.21, readableMin, MAX_NAME);
+  nameSize = Math.min(nameSize, innerH * (maxLines === 2 ? 0.42 : 0.5), innerW * 0.55);
+  nameSize = fitWrappedSize(name, nameSize, innerW, readableMin, maxLines);
+
+  const showArtist = Boolean(artist) && w >= 48 && h >= 40;
   let artistSize = 0;
   if (showArtist && artist) {
-    artistSize = clamp(nameSize * 0.78, MIN_ARTIST, MAX_ARTIST);
+    artistSize = clamp(nameSize * 0.72, MIN_ARTIST, MAX_ARTIST);
     artistSize = fitSizeToWidth(artist, artistSize, innerW, MIN_ARTIST);
   }
 
@@ -104,31 +133,35 @@ export function layoutTreemapLabel(input: {
   let rateSize = showRate ? clamp(nameSize * 0.68, MIN_RATE, MAX_RATE) : 0;
   if (showRate) rateSize = fitSizeToWidth(rateText, rateSize, innerW, MIN_RATE);
 
-  nameSize *= 0.6;
-  if (showArtist) artistSize *= 0.6;
+  const nameBlockH = (size: number) => {
+    const lines = Math.min(maxLines, wrapLineCount(name, size, innerW));
+    return size * (lines === 1 ? 1 : 1 + (lines - 1) * NAME_LINE_HEIGHT);
+  };
 
-  const gap = Math.max(3, nameSize * 0.14);
-  let stack = nameSize;
+  const gap = Math.max(3, nameSize * 0.12);
+  let stack = nameBlockH(nameSize);
   if (showArtist) stack += gap + artistSize;
   if (showRate) stack += gap + rateSize;
 
   if (stack > innerH) {
     const scale = innerH / stack;
-    nameSize = Math.max(MIN_NAME * 0.6, nameSize * scale);
-    if (showArtist) artistSize = Math.max(MIN_ARTIST * 0.6, artistSize * scale);
+    nameSize = Math.max(readableMin, nameSize * scale);
+    if (showArtist) artistSize = Math.max(MIN_ARTIST, artistSize * scale);
     if (showRate) rateSize = Math.max(MIN_RATE, rateSize * scale);
-    stack = nameSize;
-    if (showArtist) stack += gap + artistSize;
-    if (showRate) stack += gap + rateSize;
   }
 
-  const displayName = ellipsize(name, nameSize, innerW);
+  const nameLines = Math.min(maxLines, wrapLineCount(name, nameSize, innerW));
+  const displayName = nameLines === 1 ? ellipsize(name, nameSize, innerW) : name;
   const displayArtist = showArtist && artist ? ellipsize(artist, artistSize, innerW) : "";
   const displayRate = showRate ? ellipsize(rateText, rateSize, innerW) : "";
   const mid = y + h / 2 + 2;
-  let cursor = mid - stack / 2;
+  const finalNameBlock = nameBlockH(nameSize);
+  let finalStack = finalNameBlock;
+  if (showArtist) finalStack += gap + artistSize;
+  if (showRate) finalStack += gap + rateSize;
+  let cursor = mid - finalStack / 2;
   const nameY = cursor + nameSize * 0.82;
-  cursor += nameSize;
+  cursor += finalNameBlock;
   let artistY = 0;
   if (showArtist) {
     cursor += gap;
@@ -153,6 +186,7 @@ export function layoutTreemapLabel(input: {
     rateSize: Math.round(rateSize * 10) / 10,
     typeSize: Math.round(rateSize * 10) / 10,
     metaSize: Math.round(artistSize * 10) / 10,
+    nameLines,
     padX: 6,
     padY: 4,
     nameY: Math.round(nameY * 10) / 10,
