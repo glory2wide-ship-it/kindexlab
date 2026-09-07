@@ -60,10 +60,10 @@ function groupLabel(entity: RankingEntity): string {
 }
 
 function headlineTitleSize(width: number, height: number): number {
-  if (width >= 220 && height >= 140) return 32;
-  if (width >= 160 && height >= 100) return 27;
-  if (width >= 110 && height >= 72) return 24;
-  return 21;
+  if (width >= 220 && height >= 140) return 19.2;
+  if (width >= 160 && height >= 100) return 16.2;
+  if (width >= 110 && height >= 72) return 14.4;
+  return 12.6;
 }
 
 export function TreemapView({
@@ -302,7 +302,7 @@ export function TreemapView({
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          fontSize: label?.nameSize ?? 20,
+                          fontSize: label?.nameSize ?? 12,
                           lineHeight: 1.25,
                           letterSpacing: "-0.03em",
                           wordBreak: "keep-all",
@@ -381,7 +381,7 @@ export function TreemapView({
                         x={cx}
                         y={nameY}
                         fill={fill}
-                        fontSize={label?.nameSize ?? 14}
+                        fontSize={label?.nameSize ?? 8.4}
                         fontWeight={800}
                         letterSpacing="-0.03em"
                         fontFamily="var(--font-sans)"

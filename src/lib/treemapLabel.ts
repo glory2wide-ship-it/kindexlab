@@ -104,6 +104,9 @@ export function layoutTreemapLabel(input: {
   let rateSize = showRate ? clamp(nameSize * 0.68, MIN_RATE, MAX_RATE) : 0;
   if (showRate) rateSize = fitSizeToWidth(rateText, rateSize, innerW, MIN_RATE);
 
+  nameSize *= 0.6;
+  if (showArtist) artistSize *= 0.6;
+
   const gap = Math.max(3, nameSize * 0.14);
   let stack = nameSize;
   if (showArtist) stack += gap + artistSize;
@@ -111,8 +114,8 @@ export function layoutTreemapLabel(input: {
 
   if (stack > innerH) {
     const scale = innerH / stack;
-    nameSize = Math.max(MIN_NAME, nameSize * scale);
-    if (showArtist) artistSize = Math.max(MIN_ARTIST, artistSize * scale);
+    nameSize = Math.max(MIN_NAME * 0.6, nameSize * scale);
+    if (showArtist) artistSize = Math.max(MIN_ARTIST * 0.6, artistSize * scale);
     if (showRate) rateSize = Math.max(MIN_RATE, rateSize * scale);
     stack = nameSize;
     if (showArtist) stack += gap + artistSize;
