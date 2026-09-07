@@ -4,11 +4,13 @@ import {
 import {
   formatMarketIndexPrice,
   fetchNaverMarketIndexQuotesForNames,
+  peekNaverMarketIndexQuoteForName,
 } from "@/lib/market/naver-market-index";
 import {
   fetchNaverQuotesForNames,
   formatStockPrice,
   NAVER_FINANCE_SOURCE,
+  peekNaverQuoteForName,
 } from "@/lib/market/naver-finance";
 import {
   KOSPI_STOCK_BOARD_SLUG,
@@ -190,4 +192,43 @@ export async function enrichEntityWithKospiQuote(entity: RankingEntity): Promise
     return enriched ?? entity;
   }
   return entity;
+}
+
+/**
+ * Soft-nav critical path: reuse the in-process quote cache warmed by the
+ * heatmap without waiting on Naver. Misses return the entity unchanged so the
+ * detail shell can paint; the client hydrates the live quote afterward.
+ */
+export function enrichEntityWithCachedKospiQuote(entity: RankingEntity): RankingEntity {
+  if (isKospiStockEntity(entity) || isOverseasStockEntity(entity)) {
+    const quote = peekNaverQuoteForName(entity.name);
+    if (!quote) return entity;
+    return withQuote(entity, {
+      price: quote.price,
+      changeRate: quote.changeRate,
+      unit: quote.currency === "USD" ? "USD" : "원",
+      observedAt: quote.observedAt,
+      priceText: formatStockPrice(quote),
+    });
+  }
+  if (isCommoditiesFxEntity(entity)) {
+    const quote = peekNaverMarketIndexQuoteForName(entity.name);
+    if (!quote) return entity;
+    return withQuote(entity, {
+      price: quote.price,
+      changeRate: quote.changeRate,
+      unit: quote.unit === "KRW" ? "원" : quote.unit,
+      observedAt: quote.observedAt,
+      priceText: formatMarketIndexPrice(quote),
+    });
+  }
+  return entity;
+}
+
+export function entityNeedsLiveMarketQuote(entity: RankingEntity): boolean {
+  return (
+    isKospiStockEntity(entity) ||
+    isOverseasStockEntity(entity) ||
+    isCommoditiesFxEntity(entity)
+  );
 }

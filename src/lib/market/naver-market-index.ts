@@ -187,6 +187,19 @@ async function loadListPageQuotes(): Promise<Map<string, MarketIndexQuote>> {
  * Fetch Naver marketindex quotes for FX / energy / metals / ag names.
  * Cached ~3m to match heatmap refresh.
  */
+export function peekNaverMarketIndexQuoteForName(name: string): MarketIndexQuote | undefined {
+  const now = Date.now();
+  const symbol = marketIndexSymbolForName(name);
+  if (symbol) {
+    const hit = quoteCache.get(cacheKey(symbol));
+    if (hit && now - hit.at < QUOTE_TTL_MS) return hit.quote;
+  }
+  if (listCache && now - listCache.at < QUOTE_TTL_MS) {
+    return matchListName(name, listCache.byName);
+  }
+  return undefined;
+}
+
 export async function fetchNaverMarketIndexQuotesForNames(
   names: string[],
 ): Promise<Map<string, MarketIndexQuote>> {

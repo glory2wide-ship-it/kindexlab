@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { scheduleEntityPrefetch } from "@/lib/nav/prefetch";
 import { Sparkline } from "@/components/dashboard/Sparkline";
 import { heatmapNameLines } from "@/lib/musicTitle";
 import { isTwoLineBracketHeatmap } from "@/lib/boards/culture-grants";
@@ -30,6 +31,10 @@ export function RankingTable({
 }) {
   const router = useRouter();
   const [sortKey, setSortKey] = useState<SortKey>("rank");
+
+  useEffect(() => {
+    return scheduleEntityPrefetch(router.prefetch, items);
+  }, [items, router]);
   const [dir, setDir] = useState<"asc" | "desc">("asc");
   const rows = useMemo(() => {
     const mapped = items.map((item) => {
@@ -119,13 +124,14 @@ export function RankingTable({
                 }`}
                 onPointerDown={() => router.prefetch(entityHref(item))}
                 onMouseEnter={() => router.prefetch(entityHref(item))}
-                onClick={() => {
-                  const href = entityHref(item);
+                onClick={(event) => {
                   if (onSelect) {
                     onSelect(item.slug);
                     return;
                   }
-                  router.push(href);
+                  if ((event.target as Element | null)?.closest?.("a")) return;
+                  const link = event.currentTarget.querySelector("a");
+                  link?.click();
                 }}
               >
                 <td className="px-4 py-3 font-sans tabular-nums">
@@ -135,6 +141,7 @@ export function RankingTable({
                 <td className="px-2 py-3">
                   <Link
                     href={entityHref(item)}
+                    prefetch
                     className="hover:text-accent"
                     onClick={(event) => {
                       if (!onSelect) return;
@@ -175,6 +182,7 @@ export function RankingTable({
           <li key={item.id}>
             <Link
               href={entityHref(item)}
+              prefetch
               onClick={(event) => {
                 if (!onSelect) return;
                 if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

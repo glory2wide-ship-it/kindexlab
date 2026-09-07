@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cache } from "react";
+import { Suspense, cache } from "react";
 import { BuzzChart } from "@/components/entity/BuzzChart";
-import { EntityHero } from "@/components/entity/EntityHero";
+import { EntityHeroLive } from "@/components/entity/EntityHeroLive";
 import { MarketPriceChart } from "@/components/entity/MarketPriceChart";
 import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
@@ -14,13 +14,16 @@ import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import { getAllSlugs, getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
 import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import { formatRate } from "@/lib/format";
-import { enrichEntityWithKospiQuote } from "@/lib/market/kospi-quotes";
+import {
+  enrichEntityWithCachedKospiQuote,
+  entityNeedsLiveMarketQuote,
+} from "@/lib/market/kospi-quotes";
 import { resolveMarketChartInstrument } from "@/lib/market/naver-chart";
 import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
 import { SITE } from "@/lib/site";
 import { rankingPath, rankingUrl } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
-import type { EntityType } from "@/lib/types";
+import type { EntityType, RankingEntity } from "@/lib/types";
 
 export const revalidate = 60;
 export const dynamicParams = true;
@@ -31,33 +34,33 @@ export async function generateStaticParams() {
   return slugs.map((slug) => ({ slug }));
 }
 
-/**
- * Builds the whole detail view once per request.
- *
- * `generateMetadata` needs the column's provenance to decide whether the page
- * may be indexed, and the body needs the column itself. Both used to resolve
- * the entity and the rankings payload independently, which also meant two
- * chances to start the analysis pipeline for one slug.
- */
-const loadDetail = cache(async (slug: string, name?: string) => {
+/** Critical path for heatmap clicks: board-cache entity + cached quote only. */
+const loadEntity = cache(async (slug: string, name?: string) => {
   const resolved = await getEntityBySlug(slug, name);
   if (!resolved) return null;
-  const entity = await enrichEntityWithKospiQuote(resolved);
+  return enrichEntityWithCachedKospiQuote(resolved);
+});
 
-  // Related + market share one cached getRankings(); board entities already resolved above.
-  // getRelatedEntities already hits the cached getRankings(); reuse that payload
-  // for analysis instead of awaiting a second named call in the critical path.
-  const [related, market] = await Promise.all([getRelatedEntities(entity), getRankings()]);
+const loadRelated = cache(async (slug: string, name?: string) => {
+  const entity = await loadEntity(slug, name);
+  if (!entity) return [] as RankingEntity[];
+  return getRelatedEntities(entity);
+});
+
+const loadAnalysisArticle = cache(async (slug: string, name?: string) => {
+  const entity = await loadEntity(slug, name);
+  if (!entity) return null;
 
   let article: TodayAnalysisArticle | undefined;
   try {
+    const [related, market] = await Promise.all([loadRelated(slug, name), getRankings()]);
     const analysis = await getOrCreateAnalysis({ entity, market, related });
     if (analysis.entry && isGeminiAnalysis(analysis.entry)) article = analysis.entry.article;
   } catch {
     /* leave the block out; the data sections below stand on their own */
   }
 
-  return { entity, related, article, grounded: Boolean(article) };
+  return { article, name: entity.name };
 });
 
 export async function generateMetadata({
@@ -69,11 +72,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const query = searchParams ? await searchParams : {};
-  const detail = await loadDetail(slug, typeof query.name === "string" ? query.name : undefined);
-  if (!detail) return { title: "종목을 찾을 수 없습니다" };
-  const { entity, grounded } = detail;
+  const entity = await loadEntity(slug, typeof query.name === "string" ? query.name : undefined);
+  if (!entity) return { title: "종목을 찾을 수 없습니다" };
 
-  // Prefer Naver day change in metadata so SERP snippets are not KinDex buzz %.
   const rate = isNaverStockMeasurement(entity.measurement)
     ? entity.measurement.changeRate
     : entity.fluctuationRate;
@@ -83,7 +84,7 @@ export async function generateMetadata({
       ? `${entity.name} 네이버금융 시세와 차트.`
       : entity.summary,
     alternates: { canonical: rankingPath(entity.slug) },
-    robots: grounded ? undefined : { index: false, follow: true },
+    robots: { index: false, follow: true },
     openGraph: {
       title: isNaverStockMeasurement(entity.measurement)
         ? `${entity.name} 시세`
@@ -102,12 +103,15 @@ export default async function RankingDetailPage({
 }) {
   const { slug } = await params;
   const query = searchParams ? await searchParams : {};
-  const detail = await loadDetail(slug, typeof query.name === "string" ? query.name : undefined);
-  if (!detail) notFound();
-  const { entity, related, article: analysisArticle } = detail;
+  const name = typeof query.name === "string" ? query.name : undefined;
+  const entity = await loadEntity(slug, name);
+  if (!entity) notFound();
   const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
   const marketInstrument = resolveMarketChartInstrument(entity);
-  const isMarketQuote = Boolean(marketInstrument && isNaverStockMeasurement(entity.measurement));
+  const hydrateQuote = entityNeedsLiveMarketQuote(entity);
+  const isMarketQuote = Boolean(
+    marketInstrument && (isNaverStockMeasurement(entity.measurement) || hydrateQuote),
+  );
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -135,7 +139,7 @@ export default async function RankingDetailPage({
         <span className="mx-2">/</span>
         {entity.name}
       </p>
-      <EntityHero entity={entity} />
+      <EntityHeroLive entity={entity} hydrateQuote={hydrateQuote} />
       {marketInstrument ? (
         <MarketPriceChart
           entity={entity}
@@ -151,11 +155,40 @@ export default async function RankingDetailPage({
       {entity.type === "politician_support" ? (
         <SupportIndexChart kind="politician" subject={entity.name} />
       ) : null}
-      {analysisArticle ? <TodayAnalysis article={analysisArticle} keyword={entity.name} /> : null}
-      <PollDeskSection entity={entity} related={related} />
-      <RelatedRankingDesk entity={entity} related={related} />
+      <Suspense fallback={null}>
+        <TodayAnalysisSlot slug={slug} name={name} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <PollDeskSlot entity={entity} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <RelatedSlot slug={slug} name={name} entity={entity} />
+      </Suspense>
     </div>
   );
+}
+
+async function TodayAnalysisSlot({ slug, name }: { slug: string; name?: string }) {
+  const analysis = await loadAnalysisArticle(slug, name);
+  if (!analysis?.article) return null;
+  return <TodayAnalysis article={analysis.article} keyword={analysis.name} />;
+}
+
+async function PollDeskSlot({ entity }: { entity: RankingEntity }) {
+  return <PollDeskSection entity={entity} />;
+}
+
+async function RelatedSlot({
+  slug,
+  name,
+  entity,
+}: {
+  slug: string;
+  name?: string;
+  entity: RankingEntity;
+}) {
+  const related = await loadRelated(slug, name);
+  return <RelatedRankingDesk entity={entity} related={related} />;
 }
 
 function schemaType(type: EntityType): string {

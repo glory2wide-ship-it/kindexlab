@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/briefing" },
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 180;
 
 export default async function BriefingHubPage() {
   const featuredChannels = POST_CHANNELS.filter(

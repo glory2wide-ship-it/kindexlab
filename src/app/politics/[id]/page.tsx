@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { cache } from "react";
+import { Suspense, cache } from "react";
 import { BuzzChart } from "@/components/entity/BuzzChart";
 import { EntityHero } from "@/components/entity/EntityHero";
 import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
@@ -16,24 +16,35 @@ import { formatRate } from "@/lib/format";
 import { SITE } from "@/lib/site";
 import { decodeRouteSlug, politicsDetailPath, rankingPath } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
+import type { RankingEntity } from "@/lib/types";
 
 export const revalidate = 60;
 export const dynamicParams = true;
 
 const RESERVED = new Set(["briefing", "archive", "posts", "about"]);
 
-const loadDetail = cache(async (id: string, name?: string) => {
-  const entity = await getEntityBySlug(id, name);
+const loadEntity = cache(async (id: string, name?: string) => {
+  return (await getEntityBySlug(id, name)) ?? null;
+});
+
+const loadRelated = cache(async (id: string, name?: string) => {
+  const entity = await loadEntity(id, name);
+  if (!entity) return [] as RankingEntity[];
+  return getRelatedEntities(entity);
+});
+
+const loadAnalysisArticle = cache(async (id: string, name?: string) => {
+  const entity = await loadEntity(id, name);
   if (!entity) return null;
-  const [related, market] = await Promise.all([getRelatedEntities(entity), getRankings()]);
   let article: TodayAnalysisArticle | undefined;
   try {
+    const [related, market] = await Promise.all([loadRelated(id, name), getRankings()]);
     const analysis = await getOrCreateAnalysis({ entity, market, related });
     if (analysis.entry && isGeminiAnalysis(analysis.entry)) article = analysis.entry.article;
   } catch {
     /* data sections stand alone */
   }
-  return { entity, related, market, article, grounded: Boolean(article) };
+  return { article, name: entity.name };
 });
 
 export async function generateMetadata({
@@ -47,14 +58,13 @@ export async function generateMetadata({
   const id = decodeRouteSlug(raw);
   if (RESERVED.has(id)) return { title: "정치" };
   const query = searchParams ? await searchParams : {};
-  const detail = await loadDetail(id, typeof query.name === "string" ? query.name : undefined);
-  if (!detail) return { title: "종목을 찾을 수 없습니다" };
-  const { entity, grounded } = detail;
+  const entity = await loadEntity(id, typeof query.name === "string" ? query.name : undefined);
+  if (!entity) return { title: "종목을 찾을 수 없습니다" };
   return {
     title: `${entity.name} 지지도 · ${formatRate(entity.fluctuationRate)}`,
     description: entity.summary,
     alternates: { canonical: politicsDetailPath(entity.slug) },
-    robots: grounded ? undefined : { index: false, follow: true },
+    robots: { index: false, follow: true },
     openGraph: {
       title: `${entity.name} 지지도 상세`,
       description: entity.summary,
@@ -78,12 +88,12 @@ export default async function PoliticsSupportDetailPage({
   if (RESERVED.has(id)) notFound();
 
   const query = searchParams ? await searchParams : {};
-  const detail = await loadDetail(id, typeof query.name === "string" ? query.name : undefined);
-  if (!detail) notFound();
-  const { entity, related, market, article: analysisArticle } = detail;
+  const name = typeof query.name === "string" ? query.name : undefined;
+  const entity = await loadEntity(id, name);
+  if (!entity) notFound();
 
   if (entity.type !== "party_support" && entity.type !== "politician_support") {
-    redirect(rankingPath(entity.slug) + (query.name ? `?name=${encodeURIComponent(String(query.name))}` : ""));
+    redirect(rankingPath(entity.slug) + (name ? `?name=${encodeURIComponent(name)}` : ""));
   }
 
   const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
@@ -101,13 +111,38 @@ export default async function PoliticsSupportDetailPage({
       <EntityHero entity={entity} />
       <BuzzChart entity={entity} initialTimeframe={initialTimeframe} />
       <SupportIndexChart kind={kind} subject={entity.name} />
-      {analysisArticle ? <TodayAnalysis article={analysisArticle} keyword={entity.name} /> : null}
-      <PollDeskSection entity={entity} related={related} />
-      <RelatedRankingDesk entity={entity} related={related} />
+      <Suspense fallback={null}>
+        <TodayAnalysisSlot id={id} name={name} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <PollDeskSection entity={entity} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <RelatedSlot id={id} name={name} entity={entity} />
+      </Suspense>
       <p className="text-xs text-muted">
         데이터 출처 · {SITE.name} 정치 데스크 · 리서치 기관별 일봉/주봉/월봉·조사 방식·관련 기사는 이 상세
         페이지에서 확인합니다.
       </p>
     </div>
   );
+}
+
+async function TodayAnalysisSlot({ id, name }: { id: string; name?: string }) {
+  const analysis = await loadAnalysisArticle(id, name);
+  if (!analysis?.article) return null;
+  return <TodayAnalysis article={analysis.article} keyword={analysis.name} />;
+}
+
+async function RelatedSlot({
+  id,
+  name,
+  entity,
+}: {
+  id: string;
+  name?: string;
+  entity: RankingEntity;
+}) {
+  const related = await loadRelated(id, name);
+  return <RelatedRankingDesk entity={entity} related={related} />;
 }

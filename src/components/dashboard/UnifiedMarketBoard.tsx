@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
+import { isNavigating } from "@/lib/nav/progress";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { MarketStatus, RankingEntity } from "@/lib/types";
 
@@ -42,6 +43,10 @@ export function UnifiedMarketBoard({
       const remainingMs = deadlineRef.current - Date.now();
       setRemainingSec(Math.max(0, Math.ceil(remainingMs / 1000)));
       if (remainingMs > 0) return;
+      if (isNavigating()) {
+        deadlineRef.current = Date.now() + intervalMs;
+        return;
+      }
       deadlineRef.current = Date.now() + intervalMs;
       startTransition(() => router.refresh());
     }, 1000);

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { markNavigating } from "@/lib/nav/progress";
 
 /**
  * Thin top progress bar for App Router transitions.
@@ -40,6 +41,7 @@ export function RouteProgress() {
       if (url.pathname === window.location.pathname && url.search === window.location.search) {
         return;
       }
+      markNavigating();
       setActive(true);
       setWidth(12);
       if (timerRef.current) window.clearInterval(timerRef.current);

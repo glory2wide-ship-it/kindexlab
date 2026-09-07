@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Suspense, cache } from "react";
 import { BuzzChart } from "@/components/entity/BuzzChart";
 import { EntityHero } from "@/components/entity/EntityHero";
 import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
@@ -21,13 +22,23 @@ import {
 } from "@/lib/indices";
 import { SITE } from "@/lib/site";
 import { parseTimeframeParam } from "@/lib/timeframes";
+import type { RankingEntity, RankingsPayload } from "@/lib/types";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 export const dynamicParams = true;
 
 export async function generateStaticParams() {
   return listIndexIds().map((id) => ({ id }));
 }
+
+const loadIndexDetail = cache(async (id: string) => {
+  const market = await getRankings();
+  const index = market.indices.find((item) => item.id === id);
+  if (!index) return null;
+  const entity = entityFromIndex(index, market.items);
+  const related = constituentsForIndex(index.id, market.items).slice(0, 8);
+  return { market, index, entity, related };
+});
 
 export async function generateMetadata({
   params,
@@ -36,13 +47,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   if (id === APPROVAL_INDEX_ID) return { title: "대통령 지지도" };
-  const market = await getRankings();
-  const index = market.indices.find((item) => item.id === id);
-  if (!index) return { title: "지수를 찾을 수 없습니다" };
+  const detail = await loadIndexDetail(id);
+  if (!detail) return { title: "지수를 찾을 수 없습니다" };
   return {
-    title: `${index.label} · ${formatRate(index.changeRate)}`,
-    description: index.note,
-    alternates: { canonical: indexPath(index.id) },
+    title: `${detail.index.label} · ${formatRate(detail.index.changeRate)}`,
+    description: detail.index.note,
+    alternates: { canonical: indexPath(detail.index.id) },
   };
 }
 
@@ -56,20 +66,11 @@ export default async function IndexDetailPage({
   const { id } = await params;
   if (id === APPROVAL_INDEX_ID) redirect(APPROVAL_PATH);
   const query = searchParams ? await searchParams : {};
-  const market = await getRankings();
-  const index = market.indices.find((item) => item.id === id);
-  if (!index) notFound();
-  const entity = entityFromIndex(index, market.items);
-  const related = constituentsForIndex(index.id, market.items).slice(0, 8);
+  const detail = await loadIndexDetail(id);
+  if (!detail) notFound();
+  const { index, entity, related } = detail;
   const pollLead = related[0] ?? entity;
   const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
-  let analysisArticle: TodayAnalysisArticle | undefined;
-  try {
-    const analysis = await getOrCreateAnalysis({ entity, market, related });
-    if (analysis.entry && isGeminiAnalysis(analysis.entry)) analysisArticle = analysis.entry.article;
-  } catch {
-    /* charts and constituents stand alone until Gemini fills the column */
-  }
 
   return (
     <div className="space-y-8">
@@ -82,14 +83,42 @@ export default async function IndexDetailPage({
       </p>
       <EntityHero entity={entity} kicker={`섹터 지수 · ${index.note}`} />
       <BuzzChart entity={entity} initialTimeframe={initialTimeframe} />
-      {analysisArticle ? (
-        <TodayAnalysis article={analysisArticle} entityHref={`${indexPath(index.id)}#chart`} />
-      ) : null}
-      <PollDeskSection entity={pollLead} related={related} />
+      <Suspense fallback={null}>
+        <IndexAnalysisSlot id={id} entity={entity} related={related} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <PollDeskSection entity={pollLead} related={related} />
+      </Suspense>
       {related.length ? (
         <RelatedRankingDesk entity={entity} related={related} heading="구성 종목" />
       ) : null}
       <p className="sr-only">{SITE.name} 섹터 지수 상세</p>
     </div>
   );
+}
+
+async function IndexAnalysisSlot({
+  id,
+  entity,
+  related,
+}: {
+  id: string;
+  entity: RankingEntity;
+  related: RankingEntity[];
+}) {
+  const detail = await loadIndexDetail(id);
+  if (!detail) return null;
+  let analysisArticle: TodayAnalysisArticle | undefined;
+  try {
+    const analysis = await getOrCreateAnalysis({
+      entity,
+      market: detail.market as RankingsPayload,
+      related,
+    });
+    if (analysis.entry && isGeminiAnalysis(analysis.entry)) analysisArticle = analysis.entry.article;
+  } catch {
+    /* charts and constituents stand alone until Gemini fills the column */
+  }
+  if (!analysisArticle) return null;
+  return <TodayAnalysis article={analysisArticle} entityHref={`${indexPath(id)}#chart`} />;
 }

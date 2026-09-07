@@ -21,6 +21,7 @@ import { boardUsesRegionFilter, entityMatchesRegion } from "@/lib/boards/regions
 import { channelUsesBoardHeatmap, rankLimitForBoard, rankLimitForChannel } from "@/lib/boards/limits";
 import { HeadlineNewsRanking } from "@/components/politics/HeadlineNewsRanking";
 import { withIndexPoints } from "@/lib/ingestion/composite";
+import { isNavigating } from "@/lib/nav/progress";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { PostChannel } from "@/lib/posts/types";
 import type { MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
@@ -181,10 +182,15 @@ export function ChannelMarketDesk({
     [applyLocal, channel],
   );
 
+  const skipInitialHeatmapFetch = useRef(true);
   useEffect(() => {
     if (deskKind) return;
-    // Keep the previous heatmap painted; fetchHeatmap calls applyLocal first
-    // so the board swaps in place instead of flashing an empty panel.
+    // SSR already painted the default board. Skip the extra /api/heatmap
+    // round-trip on first mount so a tile click is not competing with it.
+    if (skipInitialHeatmapFetch.current) {
+      skipInitialHeatmapFetch.current = false;
+      return;
+    }
     void fetchHeatmap(selectedSlug, gender, age, region);
   }, [selectedSlug, gender, age, region, fetchHeatmap, deskKind]);
 
@@ -229,6 +235,10 @@ export function ChannelMarketDesk({
       const remainingMs = deadlineRef.current - Date.now();
       setRemainingSec(Math.max(0, Math.ceil(remainingMs / 1000)));
       if (remainingMs > 0) return;
+      if (isNavigating()) {
+        deadlineRef.current = Date.now() + intervalMs;
+        return;
+      }
       deadlineRef.current = Date.now() + intervalMs;
       const target = refreshTargetRef.current;
       if (target.deskKind) return;

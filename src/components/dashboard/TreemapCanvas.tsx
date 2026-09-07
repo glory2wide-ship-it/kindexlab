@@ -4,9 +4,11 @@
  * Heatmap canvas entry (dynamic-imported). Kept as a separate module so Turbopack
  * serves a fresh chunk when the layout algorithm changes.
  */
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { HoverCard } from "@/components/dashboard/HoverCard";
+import { scheduleEntityPrefetch } from "@/lib/nav/prefetch";
 import { TYPE_LABEL, formatIndexPoints, formatRate } from "@/lib/format";
 import { heatFill, heatText } from "@/lib/heatmap";
 import { formatHeatmapRank } from "@/lib/boards/limits";
@@ -83,11 +85,8 @@ export function TreemapView({
   const router = useRouter();
 
   useEffect(() => {
-    // Prefetch the first tiles so the common click path is warm before hover.
-    for (const entity of items.slice(0, 8)) {
-      router.prefetch(entityHref(entity));
-    }
-  }, [items, router]);
+    return scheduleEntityPrefetch(router.prefetch, pickHeatmapItems(safeItems));
+  }, [safeItems, router]);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState({ width: 1100, height: 640 });
@@ -231,15 +230,14 @@ export function TreemapView({
           const displayTitle = isHeadline ? summarizeHeadlineTitle(entity.name) : (label?.name ?? lines.title);
           const href = entityHref(entity);
           return (
-            <a
+            <Link
               key={entity.id}
               href={href}
+              prefetch
               className="cursor-pointer"
               aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name}${priceLabel ? ` ${priceLabel}` : ""} ${rate}${priceLabel ? "" : ` ${scoreLabel}`}`}
               data-heatmap-rank={rank}
               onPointerDown={() => {
-                // Mobile has no hover; kick off the RSC flight on press so
-                // router.push below usually hits a warm cache.
                 router.prefetch(href);
               }}
               onMouseEnter={(event) => {
@@ -248,15 +246,12 @@ export function TreemapView({
               }}
               onMouseMove={(event) => moveHover(event, entity, series, change)}
               onClick={(event) => {
+                if (!onSelect) return;
                 if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
                   return;
                 }
                 event.preventDefault();
-                if (onSelect) {
-                  onSelect(entity.slug);
-                  return;
-                }
-                router.push(href);
+                onSelect(entity.slug);
               }}
             >
               <g clipPath={`url(#tm-clip-${entity.id})`}>
@@ -453,7 +448,7 @@ export function TreemapView({
                   </>
                 )}
               </g>
-            </a>
+            </Link>
           );
         })}
       </svg>

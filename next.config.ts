@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
     // Keep recently visited RSC payloads on the client so GNB/subnav hops
     // reuse the last paint instead of refetching every click.
     staleTimes: {
-      dynamic: 30,
+      dynamic: 90,
       static: 180,
     },
   },

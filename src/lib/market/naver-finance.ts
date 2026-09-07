@@ -117,6 +117,15 @@ async function fetchUsQuote(code: string): Promise<StockQuote | null> {
  * Fetch Naver Finance quotes for display names. Cached ~3m so heatmap
  * refreshes stay cheap while still tracking market moves.
  */
+export function peekNaverQuoteForName(name: string): StockQuote | undefined {
+  const symbol = stockSymbolForName(name);
+  if (!symbol) return undefined;
+  const hit = quoteCache.get(cacheKey(symbol));
+  if (!hit) return undefined;
+  if (Date.now() - hit.at >= QUOTE_TTL_MS) return undefined;
+  return hit.quote;
+}
+
 export async function fetchNaverQuotesForNames(names: string[]): Promise<Map<string, StockQuote>> {
   const byName = new Map<string, StockQuote>();
   const now = Date.now();
