@@ -1,6 +1,6 @@
 import type { RankingEntity } from "@/lib/types";
 
-/** Display tags shown in front of 게임 e스포츠 names. */
+/** Display tags shown in front of 게임 names. */
 export type GamePlatformTag =
   | "PC"
   | "모바일"
@@ -112,7 +112,7 @@ export function entityPlatform(entity: Pick<RankingEntity, "name" | "platform" |
   if (entity.platform) return entity.platform;
   const slug = entity.slug ?? "";
   const group = entity.heatmapGroup ?? "";
-  if (slug.startsWith("game-esports-ranking") || group === "게임 e스포츠") {
+  if (slug.startsWith("game-esports-ranking") || group === "게임" || group === "게임 e스포츠") {
     return platformForGame(entity.name);
   }
   return undefined;
@@ -120,7 +120,9 @@ export function entityPlatform(entity: Pick<RankingEntity, "name" | "platform" |
 
 export function formatEntityName(entity: Pick<RankingEntity, "name" | "platform" | "slug" | "heatmapGroup">): string {
   const name =
-    entity.slug?.startsWith("game-esports-ranking") || entity.heatmapGroup === "게임 e스포츠"
+    entity.slug?.startsWith("game-esports-ranking") ||
+    entity.heatmapGroup === "게임" ||
+    entity.heatmapGroup === "게임 e스포츠"
       ? canonicalizeGameEsportsName(entity.name)
       : entity.name;
   const platform = entityPlatform({ ...entity, name });

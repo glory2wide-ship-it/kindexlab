@@ -16,7 +16,7 @@ const MENU_BY_TYPE: Partial<Record<EntityType, string>> = {
   kpop: "K POP",
   tv_rating: "TV 시청률",
   celebrity: "스타",
-  pc_game: "게임 e스포츠",
+  pc_game: "게임",
   influencer: "유튜버",
   shorts: "숏폼 밈",
   webtoon: "웹툰",

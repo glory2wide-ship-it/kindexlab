@@ -34,6 +34,10 @@ import {
   ensureCultureGrantRanking,
   isCultureGrantBoard,
 } from "@/lib/boards/culture-grants";
+import {
+  ensureEntertainmentGrantRanking,
+  isEntertainmentGrantBoard,
+} from "@/lib/boards/entertainment-grants";
 import { entityTypeForBoardSlug } from "@/lib/boards/entity-type";
 import { isHeadlineNewsBoard } from "@/lib/boards/registry";
 import {
@@ -101,8 +105,11 @@ export function withoutHeadlineHeatmapItems<
 function normalizeBoardRanking(def: BoardDefinition, rows: BoardRankEntry[]): BoardRankEntry[] {
   if (def.slug === "political-influencer-power") return ensureInfluencerBoardRanking(rows);
   if (def.slug === "governor-approval-index") return ensureLocalPolicyRanking(rows);
-  if (def.slug === "government-support-fund" || def.slug === "government-subsidy-search" || def.slug === "entertainment-government-grant-ranking") {
+  if (def.slug === "government-support-fund" || def.slug === "government-subsidy-search") {
     return ensureSubsidyRanking(rows);
+  }
+  if (isEntertainmentGrantBoard(def.slug)) {
+    return ensureEntertainmentGrantRanking(rows);
   }
   if (isCultureGrantBoard(def.slug)) return ensureCultureGrantRanking(rows);
   if (isTravelGrantBoard(def.slug)) return ensureTravelGrantRanking(rows);

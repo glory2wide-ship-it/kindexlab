@@ -15,7 +15,7 @@ import {
   TRAVEL_GRANT_SLUG,
   TRAVEL_GRANT_TITLE,
 } from "@/lib/boards/travel-grants";
-import { ENT_GRANT_SLUG, ENT_GRANT_TITLE } from "@/lib/boards/entertainment-grants";
+import { ENT_GRANT_SEEDS, ENT_GRANT_SLUG, ENT_GRANT_TITLE } from "@/lib/boards/entertainment-grants";
 import { regionalSeeds } from "@/lib/boards/regions";
 import {
   EXHIBITION_BOARD_SLUG,
@@ -1205,14 +1205,20 @@ export const BOARDS: BoardDefinition[] = [
     channel: "entertainment",
     title: ENT_GRANT_TITLE,
     shortTitle: ENT_GRANT_TITLE,
-    criteria: "중앙부처·공공기관 주관 지원금·혜택 사업의 검색·신청 관심도",
+    criteria: "콘텐츠·한류·게임·방송·대중음악 등 엔터테인먼트 공공 지원사업의 검색·신청 관심도",
     affiliateCategory: "생필품 핫딜",
-    queries: ["청년도약계좌", "문화누리카드", "근로장려금", "부모급여", "정부 지원금 신청"],
-    focusKeyword: "정부 지원금",
-    supportKeyword: "지원 사업",
-    seeds: [...SUBSIDY_SEEDS],
+    queries: [
+      "콘텐츠 제작지원",
+      "게임콘텐츠 지원",
+      "한류 해외진출",
+      "OTT 제작지원",
+      "엔터 정부지원금",
+    ],
+    focusKeyword: "엔터 정부지원금",
+    supportKeyword: "콘텐츠 지원",
+    seeds: [...ENT_GRANT_SEEDS],
     rankGuidance:
-      "이름은 반드시 '[소관 기관] 사업명' 형식이다. 예: [금융위원회] 청년도약계좌, [중소벤처기업부] 소상공인 전기요금 지원.",
+      "이름은 반드시 '[소관 기관] 사업명' 형식이다. 예: [한국콘텐츠진흥원] 방송영상콘텐츠 제작지원. 근로장려금·청년도약계좌 등 일반 복지 지원금은 넣지 마라.",
     unitLabel: "사업",
   },
   {
@@ -1531,13 +1537,13 @@ export const BOARDS: BoardDefinition[] = [
     id: "ent-5",
     slug: "game-esports-ranking",
     channel: "entertainment",
-    title: "게임/e스포츠 인기 랭킹",
-    shortTitle: "게임 e스포츠",
+    title: "게임",
+    shortTitle: "게임",
     criteria: "PC방 점유율 및 치지직/숲(SOOP) 시청자 수",
     affiliateCategory: "게이밍 기어",
     queries: ["PC방 점유율", "e스포츠 경기 화제", "게임 스트리밍 시청자", "스팀 인기 게임"],
-    focusKeyword: "게임 인기",
-    supportKeyword: "e스포츠 랭킹",
+    focusKeyword: "게임",
+    supportKeyword: "게임 랭킹",
     seeds: [
       "리그 오브 레전드",
       "발로란트",
