@@ -2,7 +2,6 @@ name: Heatmap today's analysis
 
 # Pre-generates 오늘의 분석 for every category heatmap menu tile via Gemini
 # Batch (−50%), then commits cache.json so production serves warm columns.
-# Includes economy 해외 주식 (overseas-stock-index) alongside 주식·원자재·환율.
 # First-click on a cold slug still uses Live API in the Next.js app (immediate).
 #
 # Cron: 05:00 KST (after 04:00 briefings start; before morning traffic).
@@ -18,10 +17,6 @@ on:
         default: false
       channel:
         description: "채널 한정 (entertainment/politics/economy/culture/travel)"
-        required: false
-        default: ""
-      board:
-        description: "보드 한정 (예: overseas-stock-index)"
         required: false
         default: ""
       limit:
@@ -67,7 +62,6 @@ jobs:
           echo "edition=$EDITION" >> "$GITHUB_OUTPUT"
           ARGS="--date=$EDITION"
           if [ -n "${{ inputs.channel }}" ]; then ARGS="$ARGS --channel=${{ inputs.channel }}"; fi
-          if [ -n "${{ inputs.board }}" ]; then ARGS="$ARGS --board=${{ inputs.board }}"; fi
           if [ -n "${{ inputs.limit }}" ]; then ARGS="$ARGS --limit=${{ inputs.limit }}"; fi
           if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
           echo "args=$ARGS"
