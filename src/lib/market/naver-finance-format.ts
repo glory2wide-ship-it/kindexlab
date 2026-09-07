@@ -11,13 +11,14 @@ export function formatStockPrice(quote: { price: number; currency: "KRW" | "USD"
 }
 
 export function isNaverStockMeasurement(
-  measurement: { source?: string; changeRate?: number; value?: number; unit?: string; label?: string } | undefined,
+  measurement: { source?: string; changeRate?: number; value?: number; unit?: string; label?: string; observedAt?: string } | undefined,
 ): measurement is {
   source: string;
   changeRate: number;
   value: number;
   unit: string;
   label: string;
+  observedAt?: string;
 } {
   return Boolean(
     measurement &&

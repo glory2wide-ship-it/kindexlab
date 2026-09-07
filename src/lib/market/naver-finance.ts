@@ -25,7 +25,8 @@ interface CacheEntry {
   quote: StockQuote;
 }
 
-const QUOTE_TTL_MS = 60_000;
+/** Align with heatmap client refresh (DEFAULT_TRENDS_REVALIDATE_SEC = 180). */
+const QUOTE_TTL_MS = 180_000;
 const quoteCache = new Map<string, CacheEntry>();
 
 function cacheKey(symbol: StockSymbol): string {
@@ -44,19 +45,21 @@ async function fetchKrQuotes(codes: string[]): Promise<Map<string, StockQuote>> 
   const unique = [...new Set(codes.filter(Boolean))];
   if (!unique.length) return out;
 
-  const query = unique.map((code) => `SERVICE_ITEM:${code}`).join(",");
-  const url = `https://polling.finance.naver.com/api/realtime?query=${encodeURIComponent(query)}`;
+  // Batch endpoint returns every code; the older `?query=SERVICE_ITEM:…` path
+  // only echoed the first item when several were comma-joined.
+  const url = `https://polling.finance.naver.com/api/realtime/domestic/stock/${unique.join(",")}`;
   const { status, contentType, buffer } = await fetchBuffer(url, {
-    headers: { Accept: "application/json,text/plain,*/*" },
+    headers: {
+      Accept: "application/json,text/plain,*/*",
+      "User-Agent": "Mozilla/5.0",
+    },
   });
   if (status >= 400) return out;
 
-  const text = decodeBody(buffer, contentType || "application/json; charset=euc-kr");
+  const text = decodeBody(buffer, contentType || "application/json; charset=utf-8");
 
   let payload: {
-    result?: {
-      areas?: { datas?: Record<string, unknown>[] }[];
-    };
+    datas?: Record<string, unknown>[];
   };
   try {
     payload = JSON.parse(text) as typeof payload;
@@ -65,22 +68,24 @@ async function fetchKrQuotes(codes: string[]): Promise<Map<string, StockQuote>> 
   }
 
   const observedAt = new Date().toISOString();
-  for (const area of payload.result?.areas ?? []) {
-    for (const row of area.datas ?? []) {
-      const code = String(row.cd ?? "");
-      const price = parseNumber(row.nv);
-      const changeRate = parseNumber(row.cr);
-      if (!code || price == null || changeRate == null) continue;
-      out.set(code, {
-        name: String(row.nm ?? code),
-        market: "kr",
-        code,
-        price,
-        changeRate,
-        currency: "KRW",
-        observedAt,
-      });
-    }
+  for (const row of payload.datas ?? []) {
+    const code = String(row.itemCode ?? row.symbolCode ?? "");
+    const price =
+      parseNumber(row.closePriceRaw) ??
+      parseNumber(row.closePrice) ??
+      parseNumber(row.lastSalePrice);
+    const changeRate =
+      parseNumber(row.fluctuationsRatioRaw) ?? parseNumber(row.fluctuationsRatio);
+    if (!code || price == null || changeRate == null) continue;
+    out.set(code, {
+      name: String(row.stockName ?? code),
+      market: "kr",
+      code,
+      price,
+      changeRate,
+      currency: "KRW",
+      observedAt,
+    });
   }
   return out;
 }
@@ -109,7 +114,7 @@ async function fetchUsQuote(code: string): Promise<StockQuote | null> {
 }
 
 /**
- * Fetch Naver Finance quotes for display names. Cached ~60s so heatmap
+ * Fetch Naver Finance quotes for display names. Cached ~3m so heatmap
  * refreshes stay cheap while still tracking market moves.
  */
 export async function fetchNaverQuotesForNames(names: string[]): Promise<Map<string, StockQuote>> {

@@ -15,6 +15,7 @@ const BY_NAME: Record<string, StockSymbol> = {
   삼성전자: { market: "kr", code: "005930" },
   SK하이닉스: { market: "kr", code: "000660" },
   현대차: { market: "kr", code: "005380" },
+  현대자동차: { market: "kr", code: "005380" },
   기아: { market: "kr", code: "000270" },
   네이버: { market: "kr", code: "035420" },
   NAVER: { market: "kr", code: "035420" },
@@ -31,9 +32,13 @@ const BY_NAME: Record<string, StockSymbol> = {
   에코프로: { market: "kr", code: "086520" },
   알테오젠: { market: "kr", code: "196170" },
   엔비디아: { market: "us", code: "NVDA.O" },
+  NVIDIA: { market: "us", code: "NVDA.O" },
   테슬라: { market: "us", code: "TSLA.O" },
+  Tesla: { market: "us", code: "TSLA.O" },
   애플: { market: "us", code: "AAPL.O" },
-  TSMC: { market: "us", code: "TSM.N" },
+  Apple: { market: "us", code: "AAPL.O" },
+  TSMC: { market: "us", code: "TSM" },
+  대만반도체: { market: "us", code: "TSM" },
 };
 
 /** Normalize board row names before lookup (strip qualifiers / whitespace). */

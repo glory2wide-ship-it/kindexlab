@@ -13,6 +13,7 @@ import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import { getAllSlugs, getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
 import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import { formatRate } from "@/lib/format";
+import { enrichEntityWithKospiQuote } from "@/lib/market/kospi-quotes";
 import { SITE } from "@/lib/site";
 import { rankingPath, rankingUrl } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
@@ -36,8 +37,9 @@ export async function generateStaticParams() {
  * chances to start the analysis pipeline for one slug.
  */
 const loadDetail = cache(async (slug: string, name?: string) => {
-  const entity = await getEntityBySlug(slug, name);
-  if (!entity) return null;
+  const resolved = await getEntityBySlug(slug, name);
+  if (!resolved) return null;
+  const entity = await enrichEntityWithKospiQuote(resolved);
 
   // Related + market share one cached getRankings(); board entities already resolved above.
   // getRelatedEntities already hits the cached getRankings(); reuse that payload
