@@ -373,7 +373,7 @@ function composeDraft(
 }
 
 function getPostChannelLabel(channel: PostChannel): string {
-  if (channel === "entertainment") return "엔터테인먼트";
+  if (channel === "entertainment") return "엔터";
   if (channel === "politics") return "정치";
   if (channel === "economy") return "경제";
   if (channel === "travel") return "여행/맛집";

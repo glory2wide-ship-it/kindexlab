@@ -27,16 +27,16 @@ export const POST_CHANNELS: {
   label: string;
   eyebrow: string;
   /** H1 on the channel board page. Spelled out per channel rather than derived
-   *  from `label`, since 엔터테인먼트 drops the 이슈 qualifier the others carry. */
+   *  from `label`, since 엔터 drops the 이슈 qualifier the others carry. */
   indexTitle: string;
   description: string;
 }[] = [
   {
     id: "entertainment",
     href: "/entertainment",
-    label: "엔터테인먼트",
+    label: "엔터",
     eyebrow: "ENTERTAINMENT",
-    indexTitle: "엔터테인먼트 지수",
+    indexTitle: "엔터 지수",
     description:
       "음원·시청률·웹툰·게임·숏폼·인플루언서 공개 순위를 실시간 지수와 브리핑으로 읽습니다.",
   },
