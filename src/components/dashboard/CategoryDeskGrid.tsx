@@ -67,7 +67,7 @@ export function CategoryDeskGrid({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="desk-grid-heading" className="text-xl font-semibold tracking-tight">
-            LIVE KinDex
+            LIVE 킨덱스 랭킹
           </h2>
         </div>
       </div>
