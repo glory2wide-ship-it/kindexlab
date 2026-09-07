@@ -46,9 +46,9 @@ import type { PremiumArticle } from "@/lib/premium/generate";
 /** Korean 자수: characters with whitespace excluded, the usual editorial unit. */
 export const ANALYSIS_MIN = 800;
 export const ANALYSIS_MAX = 1000;
-/** Today's Analysis Gemini floor for future generations. */
-export const ANALYSIS_BRIEFING_MIN = 850;
-export const ANALYSIS_BRIEFING_MAX = 1800;
+/** Today's Analysis Gemini floor for data-journalist deep dives. */
+export const ANALYSIS_BRIEFING_MIN = 1_500;
+export const ANALYSIS_BRIEFING_MAX = 2_800;
 
 export interface TodayAnalysisSection {
   heading: string;
@@ -585,6 +585,13 @@ export function composePremiumTodayAnalysis(options: {
       paragraphs: section.paragraphs,
     })),
   );
+  if (premium.takeaways?.length) {
+    sections.push({
+      heading: "핵심 요약",
+      headingLevel: 2,
+      paragraphs: premium.takeaways.map((item) => item.trim()).filter(Boolean),
+    });
+  }
   const chars =
     premium.characterCount > 0
       ? premium.characterCount
@@ -598,7 +605,7 @@ export function composePremiumTodayAnalysis(options: {
     entitySlug: entity.slug,
     title: premium.title.includes(focus) || premium.title.includes(entity.name)
       ? premium.title
-      : `${focus}가 지금 화제인 이유, 오늘 ${TYPE_LABEL[entity.type] || entity.type} 입문`,
+      : `${focus} 관심 변화, KinDex 데이터가 보여주는 흐름`,
     excerpt: premium.excerpt,
     editionDate,
     publishedAt: editionDateTime(editionDate),

@@ -90,13 +90,14 @@ async function generate(options: {
     preferredInternalLink: related?.[0]
       ? {
           href: rankingPath(related[0].slug),
-          label: `${related[0].name} 이슈가 지금 화제인 이유`,
+          label: `관련 분석: ${related[0].name}`,
         }
       : null,
     logger,
     timeoutMs: budgetMs(),
     editionDate,
     briefing: true,
+    dataJournalist: true,
     // Today's Analysis prioritizes fill-rate; allow one repair/expand pass.
     skipLengthExpandLlm: false,
     allowBriefingRepairLlm: true,

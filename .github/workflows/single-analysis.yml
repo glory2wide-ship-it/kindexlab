@@ -1,0 +1,75 @@
+name: Single keyword today's analysis
+
+# One-off / on-demand Gemini generation for a heatmap keyword column.
+on:
+  workflow_dispatch:
+    inputs:
+      board:
+        description: "Board slug (economy default: government-subsidy-search)"
+        required: false
+        default: "government-subsidy-search"
+      name:
+        description: "Keyword needle (e.g. 지역사랑상품권)"
+        required: false
+        default: "지역사랑상품권"
+
+concurrency:
+  group: single-analysis-${{ github.event.inputs.board }}-${{ github.event.inputs.name }}
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Require Gemini API key
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "${GEMINI_API_KEY}" ]; then
+            echo "::error::GEMINI_API_KEY GitHub secret is missing."
+            exit 1
+          fi
+
+      - name: Generate Today's Analysis (data journalist)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GEMINI_EDITOR_MODEL: ${{ vars.GEMINI_EDITOR_MODEL }}
+          BRIEFING_LLM_PROVIDER: gemini
+          LLM_PROVIDER: gemini
+          ANALYSIS_LLM_PROVIDER: gemini
+          ANALYSIS_CHAIN_ENABLED: "1"
+          NEWS_RAG_ENABLED: "1"
+          TRENDS_DATA_SOURCE: live
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          BOARD="${{ github.event.inputs.board }}"
+          NAME="${{ github.event.inputs.name }}"
+          if [ "$BOARD" = "government-subsidy-search" ] && [ "$NAME" = "지역사랑상품권" ]; then
+            npx tsx scripts/regenerate-economy-local-love-voucher.ts
+          else
+            npx tsx scripts/regenerate-single-board-analysis.ts --board="$BOARD" --name="$NAME"
+          fi
+
+      - name: Commit and push analysis cache
+        run: |
+          chmod +x scripts/ci-commit-push.sh
+          scripts/ci-commit-push.sh \
+            "chore: publish data-journalist analysis for ${{ github.event.inputs.name }}" \
+            src/data/analysis/cache.json \
+            src/data/boards/cache.json

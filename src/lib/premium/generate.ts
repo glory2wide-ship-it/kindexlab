@@ -22,6 +22,10 @@ import {
   premiumCharCount,
   premiumPromptCacheKey,
 } from "@/lib/premium/prompt";
+import {
+  DATA_JOURNALIST_SYSTEM_PROMPT,
+  buildDataJournalistUserPrompt,
+} from "@/lib/premium/data-journalist-prompt";
 import { describePlacements, injectMonetization, type PremiumPlacement } from "@/lib/premium/widgets";
 import {
   dropRepeatedSentences,
@@ -395,8 +399,11 @@ export async function generatePremiumArticle(input: {
   /** Today's Analysis may use a lower floor than main/dive briefings. */
   minCharsOverride?: number;
   maxCharsOverride?: number;
+  /** Use KinDex data-journalist prompt (오늘의 분석). */
+  dataJournalist?: boolean;
 }): Promise<PremiumResult> {
   const { keyword, slug, logger } = input;
+  const dataJournalist = Boolean(input.dataJournalist);
   const deadline = Date.now() + (input.timeoutMs ?? 150_000);
   const remaining = () => Math.max(0, deadline - Date.now());
 
@@ -426,6 +433,7 @@ export async function generatePremiumArticle(input: {
     newsCount: context.tierCounts.news ?? 0,
     webCount: context.tierCounts.web ?? 0,
     youtubeCount: context.tierCounts.youtube ?? 0,
+    dataJournalist,
   });
   for (const fact of context.signalFacts) {
     logger.detail(`· [signal] ${fact.slice(0, 100)}`);
@@ -464,7 +472,7 @@ export async function generatePremiumArticle(input: {
       editorModel: route.editor,
       relatedRaw: relatedRaw.length,
       relatedFiltered: filteredRelated.length,
-      pipeline: "single-pass",
+      pipeline: dataJournalist ? "data-journalist" : "single-pass",
     });
   }
 
@@ -473,13 +481,28 @@ export async function generatePremiumArticle(input: {
   const maxChars = input.maxCharsOverride ?? BRIEFING_FULL_TARGET_MAX_CHARS;
   const minFaq = input.briefing && mode === "shorts" ? 1 : PREMIUM_FAQ_MIN;
   /** Structured Outputs ARTICLE_JSON_SCHEMA.minItems = 4 */
-  const minSections = 4;
+  const minSections = dataJournalist ? 8 : 4;
 
-  const system = buildCacheableSystemPrompt({ briefing: input.briefing, includeSeo: true });
+  const kindexSignals = [
+    ...(context.signalFacts ?? []),
+    input.entity
+      ? `포커스 현재 순위 ${input.entity.rank}위 · 이전 ${input.entity.previousRank}위 · 지수 ${input.entity.buzzScore} · 등락률 ${input.entity.fluctuationRate}%`
+      : "",
+    ...(input.relatedEntities ?? []).slice(0, 6).map(
+      (item) =>
+        `비교 ${item.name}: ${item.rank}위 · 지수 ${item.buzzScore} · 등락률 ${item.fluctuationRate}%`,
+    ),
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const system = dataJournalist
+    ? DATA_JOURNALIST_SYSTEM_PROMPT
+    : buildCacheableSystemPrompt({ briefing: input.briefing, includeSeo: true });
   const cacheKey = premiumPromptCacheKey({
     briefing: input.briefing,
     channel: input.channel,
-    mode,
+    mode: dataJournalist ? `dj-${mode}` : mode,
   });
   const model = resolveBriefingModel({
     briefing: input.briefing,
@@ -487,25 +510,43 @@ export async function generatePremiumArticle(input: {
     step: "article",
   });
 
-  const user = buildSinglePassUserPrompt({
-    briefing: Boolean(input.briefing),
-    mode,
-    channel: input.channel ?? "entertainment",
-    categoryHint: input.category ?? input.channel ?? "general",
-    focusKeyword: keyword,
-    relatedKeywords: filteredRelated,
-    newsContext: context.block,
-    sparseGuidance: buildSparseEnrichmentPrompt(context, {
-      briefing: input.briefing,
-      minChars,
-      maxChars,
-    }),
-    minChars,
-    maxChars,
-    editionDate,
-  });
+  const user = dataJournalist
+    ? buildDataJournalistUserPrompt({
+        channel: input.channel ?? "economy",
+        categoryHint: input.category ?? input.channel ?? "general",
+        focusKeyword: keyword,
+        relatedKeywords: filteredRelated,
+        newsContext: context.block,
+        editionDate,
+        minChars,
+        maxChars,
+        kindexSignals,
+      })
+    : buildSinglePassUserPrompt({
+        briefing: Boolean(input.briefing),
+        mode,
+        channel: input.channel ?? "entertainment",
+        categoryHint: input.category ?? input.channel ?? "general",
+        focusKeyword: keyword,
+        relatedKeywords: filteredRelated,
+        newsContext: context.block,
+        sparseGuidance: buildSparseEnrichmentPrompt(context, {
+          briefing: input.briefing,
+          minChars,
+          maxChars,
+        }),
+        minChars,
+        maxChars,
+        editionDate,
+      });
 
-  logger.step("premium-single-pass", { model, mode, systemChars: system.length });
+  logger.step("premium-single-pass", {
+    model,
+    mode,
+    systemChars: system.length,
+    dataJournalist,
+    minSections,
+  });
 
   type ArticleRaw = {
     title?: unknown;
@@ -552,7 +593,8 @@ export async function generatePremiumArticle(input: {
   let sections = parseSections(raw.sections);
   let table = parseTable(raw.table);
   let faqText = parseFaq(raw.faq);
-  let takeaways = input.briefing ? [] : stringList(raw.takeaways).slice(0, 4);
+  let takeaways =
+    input.briefing && !dataJournalist ? [] : stringList(raw.takeaways).slice(0, 4);
   let external = parseLink(raw.externalLink);
   let parsedInternal = parseLink(raw.internalLink);
 

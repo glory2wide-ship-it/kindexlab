@@ -68,13 +68,13 @@ export const ARTICLE_JSON_SCHEMA: OpenAiJsonSchemaFormat = {
       sections: {
         type: "array",
         minItems: 4,
-        maxItems: 5,
+        maxItems: 9,
         items: {
           type: "object",
           properties: {
             heading: stringSchema,
             headingLevel: { type: "integer" },
-            paragraphs: { type: "array", items: stringSchema, minItems: 4, maxItems: 5 },
+            paragraphs: { type: "array", items: stringSchema, minItems: 2, maxItems: 5 },
           },
           required: ["heading", "headingLevel", "paragraphs"],
           additionalProperties: false,
