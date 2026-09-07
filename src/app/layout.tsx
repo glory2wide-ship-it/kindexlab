@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Noto_Sans_KR } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
@@ -7,22 +7,9 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
-
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
-  display: "swap",
-});
-
-const notoSansKr = Noto_Sans_KR({
-  variable: "--font-noto-sans-kr",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -87,7 +74,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="ko"
       suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable} ${notoSansKr.variable} h-full`}
+      className={`${jetbrainsMono.variable} h-full`}
     >
       <head>
         {/*
@@ -96,12 +83,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
          * makes that affordable: DNS, TCP and TLS to the CDN start with the
          * document instead of after the parser reaches this tag.
          *
-         * The Noto Sans KR stylesheet that used to sit here was a second blocking
-         * cross-origin request for a face that only ever applied if Pretendard
-         * failed. `system-ui` already resolves to a Korean face on every target
-         * platform (Malgun Gothic, Apple SD Gothic Neo, Noto Sans CJK), so the
-         * family name is kept in the stack for locally installed copies and the
-         * network request is gone.
+         * Extra next/font families (Inter / Noto) were removed — they competed
+         * with Pretendard on first paint while almost never winning the cascade.
          */}
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link

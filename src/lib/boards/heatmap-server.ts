@@ -21,7 +21,7 @@ import type { RankingEntity, RankingsPayload } from "@/lib/types";
 
 /** Process-local board payload memo (survives across RSC requests in `next dev`). */
 const CHANNEL_BOARD_MEMO = new Map<string, { at: number; payloads: HeatmapBoardPayload[] }>();
-const CHANNEL_BOARD_TTL_MS = 60_000;
+const CHANNEL_BOARD_TTL_MS = 180_000;
 
 /**
  * Prefer live ingest chart rows for music / movie boards so heatmaps track crawls.
@@ -110,16 +110,22 @@ export const loadChannelHeatmapPayloads = cache(async (channel: PostChannel): Pr
  * Drops the fields a heatmap tile never reads.
  *
  * `analysis` is a full paragraph and `products` a three-card affiliate shelf,
- * both written for `/ranking/[slug]`. Nothing under `ChannelMarketDesk` touches
- * either — the tiles need name, score, rate and `summary` for the hover card —
- * so on the desks that do ship entities they were pure transfer cost.
+ * both written for `/ranking/[slug]`. Desk tiles only need name, score, rate,
+ * a short summary, and enough sparkline for hover — ship those only.
  */
-export function toTileEntity({
-  analysis: _analysis,
-  products: _products,
-  ...entity
-}: RankingEntity): RankingEntity {
-  return entity;
+export function toTileEntity(entity: RankingEntity): RankingEntity {
+  const metric3m = entity.metrics?.["3m"];
+  return {
+    ...entity,
+    analysis: "",
+    products: [],
+    history: [],
+    sparkline: Array.isArray(entity.sparkline) ? entity.sparkline.slice(-8) : [],
+    summary: entity.summary ? entity.summary.slice(0, 96) : "",
+    metrics: metric3m
+      ? ({ "3m": metric3m } as RankingEntity["metrics"])
+      : undefined,
+  };
 }
 
 /**

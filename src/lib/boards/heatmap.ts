@@ -256,7 +256,7 @@ export function rankRowsToEntities(
 }
 
 /**
- * Drops the segment tables before a payload crosses to the browser.
+ * Drops the segment tables (and long row notes) before a payload crosses to the browser.
  *
  * A board serialises to roughly 3 KB of ranking and 11–47 KB of demographics,
  * so the permutations were about 85% of the weight of every channel page. They
@@ -265,9 +265,19 @@ export function rankRowsToEntities(
  * tables entirely for the default 전체/전체 view that first paint renders. Without
  * them a segment tab paints the unsegmented board for one frame before the API
  * answers, which is what the tab already did on a slow response.
+ *
+ * Notes often embed the full board `criteria` string and were the main reason
+ * culture RSC payloads ballooned past 140 KB.
  */
 export function stripBoardDemographics(boards: HeatmapBoardPayload[]): HeatmapBoardPayload[] {
-  return boards.map(({ demographics: _demographics, ...board }) => board);
+  return boards.map(({ demographics: _demographics, ranking, ...board }) => ({
+    ...board,
+    ranking: (ranking ?? []).map((row) => {
+      const note = row.note?.trim() ?? "";
+      if (note.length <= 64) return { ...row, note };
+      return { ...row, note: `${note.slice(0, 61)}…` };
+    }),
+  }));
 }
 
 const NO_DEMOGRAPHICS: DemographicRanking = {

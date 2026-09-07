@@ -98,7 +98,7 @@ async function channelHeatmapPool(
 /** Uses the same 3m change field as the ticker and channel heatmap. */
 function deskTopItem(item: RankingEntity): RankingEntity {
   const enriched = attachTimeframeMetrics(item);
-  return { ...enriched, fluctuationRate: tickerChangeRate(enriched) };
+  return toTileEntity({ ...enriched, fluctuationRate: tickerChangeRate(enriched) });
 }
 
 /**
@@ -127,7 +127,11 @@ export async function loadUnifiedMarket(market?: RankingsPayload): Promise<Unifi
   const items = interleave(
     loaded.map((entry) => entry.ranked),
     UNIFIED_HEATMAP_TILES,
-  ).map((item, index) => ({ ...item, rank: index + 1, previousRank: index + 1 }));
+  ).map((item, index) => ({
+    ...toTileEntity(item),
+    rank: index + 1,
+    previousRank: index + 1,
+  }));
 
   const desks: ChannelDesk[] = loaded.map(({ meta, ranked }) => ({
     channel: meta.id,

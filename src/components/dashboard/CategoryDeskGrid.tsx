@@ -1,13 +1,12 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { formatRate } from "@/lib/format";
 import { stripRowQualifier } from "@/lib/boards/heatmap";
 import type { ChannelDesk } from "@/lib/boards/composite-desk";
 import { entityHref } from "@/lib/slugs";
 import { changeForEntity } from "@/lib/timeframes";
-import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 
 function rateClass(rate: number): string {
   if (rate > 0.25) return "text-up";
@@ -17,48 +16,21 @@ function rateClass(rate: number): string {
 
 /**
  * Channel desk cards under the unified heatmap — five categories in one row.
- * Polls `/api/unified-desks` on the same 3-minute cadence as the heatmap countdown.
+ * Updates come from the landing `router.refresh()` — no second /api/unified-desks
+ * poll that duplicated getRankings + board loads every 3 minutes.
  */
 export function CategoryDeskGrid({
   desks: initialDesks,
-  refreshIntervalSec = DEFAULT_TRENDS_REVALIDATE_SEC,
 }: {
   desks: ChannelDesk[];
+  /** Kept for call-site compatibility; refresh is owned by UnifiedMarketBoard. */
   refreshIntervalSec?: number;
 }) {
   const [desks, setDesks] = useState(initialDesks);
-  const inFlightRef = useRef(false);
-  const intervalMs = Math.max(1, refreshIntervalSec) * 1000;
-
-  const refresh = useCallback(async () => {
-    if (inFlightRef.current) return;
-    inFlightRef.current = true;
-    try {
-      const response = await fetch(`/api/unified-desks`, {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const payload = (await response.json()) as { desks?: ChannelDesk[] };
-      if (Array.isArray(payload.desks) && payload.desks.length) {
-        setDesks(payload.desks);
-      }
-    } catch {
-      /* keep last good desks */
-    } finally {
-      inFlightRef.current = false;
-    }
-  }, []);
 
   useEffect(() => {
     setDesks(initialDesks);
   }, [initialDesks]);
-
-  useEffect(() => {
-    const tick = window.setInterval(() => {
-      void refresh();
-    }, intervalMs);
-    return () => window.clearInterval(tick);
-  }, [intervalMs, refresh]);
 
   if (!desks.length) return null;
 
@@ -93,6 +65,7 @@ export function CategoryDeskGrid({
                       <li key={item.id}>
                         <Link
                           href={entityHref(item)}
+                          prefetch
                           className="flex items-baseline gap-2 rounded-md px-1 py-1 text-sm hover:bg-board/60"
                         >
                           <span className="font-sans text-[11px] font-semibold tabular-nums text-muted">

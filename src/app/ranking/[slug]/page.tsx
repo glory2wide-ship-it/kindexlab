@@ -53,7 +53,17 @@ const loadAnalysisArticle = cache(async (slug: string, name?: string) => {
 
   let article: TodayAnalysisArticle | undefined;
   try {
-    const [related, market] = await Promise.all([loadRelated(slug, name), getRankings()]);
+    // Board heatmap rows resolve without the live tape — don't block analysis
+    // streaming on getRankings() for the common detail click path.
+    const related = await loadRelated(slug, name);
+    const market = slug.includes("--")
+      ? ({
+          updatedAt: new Date().toISOString(),
+          status: "open" as const,
+          indices: [],
+          items: [],
+        } as Awaited<ReturnType<typeof getRankings>>)
+      : await getRankings();
     const analysis = await getOrCreateAnalysis({ entity, market, related });
     if (analysis.entry && isGeminiAnalysis(analysis.entry)) article = analysis.entry.article;
   } catch {

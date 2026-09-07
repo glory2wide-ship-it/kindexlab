@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { BoardDesk } from "@/components/boards/BoardRankingPanel";
 import { HeadlineNewsRanking } from "@/components/politics/HeadlineNewsRanking";
-import { getOrCreateBoard } from "@/lib/boards/pipeline";
+import { seedBoardIfMissing } from "@/lib/boards/seed";
 import {
   BOARD_SLUG_ALIASES,
   BOARDS,
@@ -18,9 +18,9 @@ import { getPostChannel } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
-export const dynamic = "force-dynamic";
+/** ISR — board rankings refresh on cron; never block the page on LLM. */
+export const revalidate = 180;
 export const dynamicParams = true;
-export const maxDuration = 300;
 
 export function generateStaticParams() {
   return BOARDS.map((board) => ({ slug: board.slug }));
@@ -95,7 +95,7 @@ export default async function BoardDetailPage({ params }: { params: Promise<{ sl
     );
   }
 
-  const { entry } = await getOrCreateBoard(board);
+  const entry = await seedBoardIfMissing(board);
 
   const jsonLd = {
     "@context": "https://schema.org",

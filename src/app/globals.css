@@ -46,10 +46,10 @@
   --color-hts-up: var(--hts-up);
   --color-hts-down: var(--hts-down);
   --color-accent: var(--accent);
-  --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", var(--font-inter),
-    system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-gothic: var(--font-noto-sans-kr), "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo",
-    "Pretendard Variable", Pretendard, sans-serif;
+  --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", "Apple SD Gothic Neo",
+    "Malgun Gothic", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-gothic: "Pretendard Variable", Pretendard, "Noto Sans KR", "Malgun Gothic",
+    "Apple SD Gothic Neo", system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "Cascadia Mono", monospace;
 }
 

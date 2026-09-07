@@ -1,6 +1,7 @@
 import { getChannelBriefingEdition, getRankings, splitChannelEdition } from "@/lib/api";
 import { stripBoardDemographics } from "@/lib/boards/heatmap";
 import { channelLiveMarket, loadChannelHeatmapPayloads } from "@/lib/boards/heatmap-server";
+import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
 import { slimBriefingForCard, slimBriefingsForCards } from "@/lib/briefing/card-dto";
 import type { PostChannel } from "@/lib/posts/types";
 import type { RankingsPayload } from "@/lib/types";
@@ -12,28 +13,40 @@ const EMPTY_MARKET = (): RankingsPayload => ({
   items: [],
 });
 
+function emptyLiveMarket() {
+  return {
+    updatedAt: new Date().toISOString(),
+    status: "open" as const,
+    items: [] as RankingsPayload["items"],
+    indices: [] as RankingsPayload["indices"],
+  };
+}
+
 /**
  * Parallel desk bootstrap for `/{channel}` navigations.
  *
- * Was: rankings → seedMissingBoards (all ~52 boards) → channel boards → briefing.
- * Channel board loading already seeds its own menus, so the global scan was
- * pure latency. Fetching the three real inputs together cuts soft-nav TTFB.
+ * Board-driven channels (엔터·정치·경제·문화·여행) never paint live rankings on
+ * first paint — skip getRankings() so soft-nav is not gated on polls + metrics.
  */
 export async function loadChannelPageData(channel: PostChannel) {
-  const [market, boards, edition] = await Promise.all([
-    getRankings().catch(() => EMPTY_MARKET()),
-    loadChannelHeatmapPayloads(channel),
-    getChannelBriefingEdition(channel).catch(() => undefined),
+  const boardsPromise = loadChannelHeatmapPayloads(channel);
+  const editionPromise = getChannelBriefingEdition(channel).catch(() => undefined);
+
+  const boards = stripBoardDemographics(await boardsPromise);
+  const boardDriven = channelUsesBoardHeatmap(channel) && boards.length > 0;
+
+  const [market, edition] = await Promise.all([
+    boardDriven ? Promise.resolve(EMPTY_MARKET()) : getRankings().catch(() => EMPTY_MARKET()),
+    editionPromise,
   ]);
 
-  const slimBoards = stripBoardDemographics(boards);
   const split = edition
     ? splitChannelEdition(edition)
     : { main: undefined, dives: [] };
 
   return {
-    boards: slimBoards,
-    liveMarket: channelLiveMarket(market, channel, boards),
+    boards,
+    liveMarket: boardDriven ? emptyLiveMarket() : channelLiveMarket(market, channel, boards),
     main: split.main ? slimBriefingForCard(split.main) : undefined,
     dives: slimBriefingsForCards(split.dives ?? []),
   };
@@ -41,12 +54,13 @@ export async function loadChannelPageData(channel: PostChannel) {
 
 /** Desk-only bootstrap when briefing loads in a separate Suspense boundary. */
 export async function loadChannelDeskData(channel: PostChannel) {
-  const [market, boards] = await Promise.all([
-    getRankings().catch(() => EMPTY_MARKET()),
-    loadChannelHeatmapPayloads(channel),
-  ]);
+  const boards = stripBoardDemographics(await loadChannelHeatmapPayloads(channel));
+  if (channelUsesBoardHeatmap(channel) && boards.length > 0) {
+    return { boards, liveMarket: emptyLiveMarket() };
+  }
+  const market = await getRankings().catch(() => EMPTY_MARKET());
   return {
-    boards: stripBoardDemographics(boards),
+    boards,
     liveMarket: channelLiveMarket(market, channel, boards),
   };
 }
