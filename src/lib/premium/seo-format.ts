@@ -7,8 +7,8 @@ export interface SeoSection {
 }
 
 /** Google SEO / AdSense thin-content floor (non-shorts articles). */
-export const SEO_MIN_WORDS = 700;
-export const SEO_MIN_CHARS = 1_800;
+export const SEO_MIN_WORDS = 400;
+export const SEO_MIN_CHARS = 1_000;
 
 const H2_SYMBOLS = ["❶", "❷", "❸", "❹", "❺", "❻", "❼", "❽"] as const;
 

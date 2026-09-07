@@ -207,7 +207,8 @@ export const PREMIUM_BANNED_MARKET_TERMS = [
   "KINDEXLAB 지수",
 ] as const;
 
-export const PREMIUM_MIN_CHARS = 1_800;
+/** Quality-gate floor for all Gemini article pipelines (briefing / 오늘의 분석 / premium). */
+export const PREMIUM_MIN_CHARS = 1_000;
 export const PREMIUM_MAX_CHARS = 2_500;
 export const PREMIUM_KEYWORD_MIN = 5;
 export const PREMIUM_KEYWORD_MAX = 7;
@@ -260,7 +261,7 @@ export function premiumPromptCacheKey(opts: {
   const kind = opts.briefing ? "briefing" : "premium";
   const mode = (opts.mode || "full").toLowerCase();
   // Channel omitted from cache key prefix so the static system prefix shares one machine.
-  return `kindexlab:${kind}:single:${mode}:v13`;
+  return `kindexlab:${kind}:single:${mode}:v14`;
 }
 
 export function wordpressAdsenseGuidelines(includeFullSeo: boolean): string {
