@@ -34,6 +34,11 @@ export function isStockQuoteBoardSlug(slug?: string | null): boolean {
   return isKospiStockBoardSlug(slug) || isOverseasStockBoardSlug(slug);
 }
 
+/** 주식 / 해외 주식 / 원자재·환율 — heatmap must show Naver quotes, not KinDex scores. */
+export function isMarketQuoteBoardSlug(slug?: string | null): boolean {
+  return isStockQuoteBoardSlug(slug) || isCommoditiesFxBoardSlug(slug);
+}
+
 export function isKospiStockEntity(entity: Pick<RankingEntity, "slug" | "heatmapGroup">): boolean {
   return (
     entity.slug.startsWith(`${KOSPI_STOCK_BOARD_SLUG}--`) ||

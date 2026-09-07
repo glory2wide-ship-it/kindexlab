@@ -1,27 +1,78 @@
 import { getChannelBriefingEdition, getRankings, splitChannelEdition } from "@/lib/api";
-import { buildHeatmapItems, stripBoardDemographics } from "@/lib/boards/heatmap";
+import { buildHeatmapItems, stripBoardDemographics, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
 import { channelLiveMarket, loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
 import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
 import { slimBriefingForCard, slimBriefingsForCards } from "@/lib/briefing/card-dto";
-import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
+import { COMMODITIES_FX_BOARD_SLUG } from "@/lib/market/market-index-codes";
+import {
+  attachKospiStockQuotes,
+  isMarketQuoteBoardSlug,
+} from "@/lib/market/kospi-quotes";
+import {
+  KOSPI_STOCK_BOARD_SLUG,
+  OVERSEAS_STOCK_BOARD_SLUG,
+} from "@/lib/market/stock-codes";
 import type { PostChannel } from "@/lib/posts/types";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
 
-/** Default 종합 heatmap rows with Naver quotes attached for stock/FX boards. */
-async function quotedDefaultHeatmapItems(
+/** Boards that must paint Naver quotes on first frame (never KinDex-only). */
+export const MARKET_QUOTE_BOARD_SLUGS = [
+  KOSPI_STOCK_BOARD_SLUG,
+  OVERSEAS_STOCK_BOARD_SLUG,
+  COMMODITIES_FX_BOARD_SLUG,
+] as const;
+
+export { isMarketQuoteBoardSlug };
+
+/** Heatmap rows for one board (or channel 종합) with Naver quotes attached. */
+async function quotedHeatmapItems(
   channel: PostChannel,
-  boards: Awaited<ReturnType<typeof loadChannelHeatmapPayloads>>,
+  boards: HeatmapBoardPayload[],
   liveItems: RankingEntity[],
+  board?: string,
 ): Promise<RankingEntity[]> {
   const boardDriven = channelUsesBoardHeatmap(channel) && boards.length > 0;
   const raw = buildHeatmapItems({
     boards,
     liveItems,
+    board,
     gender: "all",
     age: "all",
-    preferLive: !boardDriven,
+    preferLive: !boardDriven && !board,
   });
-  return (await attachKospiStockQuotes(raw)).map(toTileEntity);
+  return (await attachKospiStockQuotes(raw, board)).map(toTileEntity);
+}
+
+/**
+ * Preload 종합 + 주식/해외/원자재·환율 so tab switches never flash KinDex scores.
+ * Key `""` is the channel composite.
+ */
+async function loadQuotedItemsByBoard(
+  channel: PostChannel,
+  boards: HeatmapBoardPayload[],
+  liveItems: RankingEntity[],
+): Promise<Record<string, RankingEntity[]>> {
+  const quoteBoards = MARKET_QUOTE_BOARD_SLUGS.filter((slug) =>
+    boards.some((board) => board.slug === slug),
+  );
+  if (!quoteBoards.length) {
+    const composite = await quotedHeatmapItems(channel, boards, liveItems);
+    return composite.length ? { "": composite } : {};
+  }
+
+  const entries = await Promise.all([
+    quotedHeatmapItems(channel, boards, liveItems).then((items) => ["", items] as const),
+    ...quoteBoards.map(async (slug) => {
+      const items = await quotedHeatmapItems(channel, boards, liveItems, slug);
+      return [slug, items] as const;
+    }),
+  ]);
+
+  const map: Record<string, RankingEntity[]> = {};
+  for (const [key, items] of entries) {
+    if (items.length) map[key] = items;
+  }
+  return map;
 }
 
 const EMPTY_MARKET = (): RankingsPayload => ({
@@ -65,12 +116,14 @@ export async function loadChannelPageData(channel: PostChannel) {
   const liveMarket = boardDriven
     ? emptyLiveMarket()
     : channelLiveMarket(market, channel, boards);
-  const initialItems = await quotedDefaultHeatmapItems(channel, boards, liveMarket.items);
+  const initialQuotedByBoard = await loadQuotedItemsByBoard(channel, boards, liveMarket.items);
+  const initialItems = initialQuotedByBoard[""] ?? [];
 
   return {
     boards,
     liveMarket,
     initialItems,
+    initialQuotedByBoard,
     main: split.main ? slimBriefingForCard(split.main) : undefined,
     dives: slimBriefingsForCards(split.dives ?? []),
   };
@@ -81,15 +134,21 @@ export async function loadChannelDeskData(channel: PostChannel) {
   const boards = stripBoardDemographics(await loadChannelHeatmapPayloads(channel));
   if (channelUsesBoardHeatmap(channel) && boards.length > 0) {
     const liveMarket = emptyLiveMarket();
-    const initialItems = await quotedDefaultHeatmapItems(channel, boards, liveMarket.items);
-    return { boards, liveMarket, initialItems };
+    const initialQuotedByBoard = await loadQuotedItemsByBoard(channel, boards, liveMarket.items);
+    return {
+      boards,
+      liveMarket,
+      initialItems: initialQuotedByBoard[""] ?? [],
+      initialQuotedByBoard,
+    };
   }
   const market = await getRankings().catch(() => EMPTY_MARKET());
   const liveMarket = channelLiveMarket(market, channel, boards);
-  const initialItems = await quotedDefaultHeatmapItems(channel, boards, liveMarket.items);
+  const initialQuotedByBoard = await loadQuotedItemsByBoard(channel, boards, liveMarket.items);
   return {
     boards,
     liveMarket,
-    initialItems,
+    initialItems: initialQuotedByBoard[""] ?? [],
+    initialQuotedByBoard,
   };
 }

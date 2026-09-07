@@ -43,7 +43,7 @@ export default async function CategoryBoardPage({
 
   // Desk first (boards + rankings). Briefing streams in via Suspense so soft-nav
   // paints the heatmap without waiting on the multi-MB briefing catalog.
-  const { boards, liveMarket, initialItems } = await loadChannelDeskData(category);
+  const { boards, liveMarket, initialItems, initialQuotedByBoard } = await loadChannelDeskData(category);
 
   return (
     <div className="space-y-8">
@@ -52,6 +52,7 @@ export default async function CategoryBoardPage({
         boards={boards}
         liveMarket={liveMarket}
         initialItems={initialItems}
+        initialQuotedByBoard={initialQuotedByBoard}
       />
       <section className="border-t border-line pt-8">
         <Suspense fallback={<BriefingFallback />}>

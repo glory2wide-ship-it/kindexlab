@@ -16,7 +16,7 @@ export async function TravelRegionDeskPage({
   region: RegionSegment;
 }) {
   const meta = TRAVEL_REGION_BOARD_NAV[boardKey];
-  const { boards, liveMarket, initialItems } = await loadChannelDeskData("travel");
+  const { boards, liveMarket, initialItems, initialQuotedByBoard } = await loadChannelDeskData("travel");
 
   return (
     <div className="space-y-4">
@@ -38,6 +38,7 @@ export async function TravelRegionDeskPage({
         boards={boards}
         liveMarket={liveMarket}
         initialItems={initialItems}
+        initialQuotedByBoard={initialQuotedByBoard}
         initialBoardSlug={meta.slug}
         initialRegion={region}
       />
