@@ -12,8 +12,8 @@ import { CULTURE_GRANT_TITLE } from "@/lib/boards/culture-grants";
 import { heatmapSourceCaption, summarizeHeadlineTitle } from "@/lib/news/headline-title";
 import { layoutHeatmapLeaves } from "@/lib/treemapLayout";
 import { TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
+import { heatmapChangeRate, heatmapPriceLabel } from "@/lib/market/kospi-quotes-ui";
 import {
-  changeForEntity,
   getTimeframeSeries,
   scoreForTimeframe,
 } from "@/lib/timeframes";
@@ -186,11 +186,12 @@ export function TreemapView({
         {leaves.map((leaf) => {
           const entity = leaf.entity;
           const series = getTimeframeSeries(entity, timeframe);
-          const change = changeForEntity(entity, timeframe);
+          const change = heatmapChangeRate(entity, timeframe);
           const w = leaf.x1 - leaf.x0;
           const h = leaf.y1 - leaf.y0;
           const rate = formatRate(change);
           const scoreLabel = formatIndexPoints(scoreForTimeframe(entity, timeframe));
+          const priceLabel = heatmapPriceLabel(entity);
           const rank = displayRankById.get(entity.id) ?? leaf.rank ?? entity.rank;
           const rankBadge = formatHeatmapRank(rank);
           const group = groupLabel(entity);
@@ -200,9 +201,9 @@ export function TreemapView({
             height: h,
             y: leaf.y0,
             name: lines.title,
-            artist: lines.artist,
+            artist: priceLabel ?? lines.artist,
             rate,
-            typeLabel: scoreLabel,
+            typeLabel: priceLabel ? "" : scoreLabel,
           });
           const fill = heatText(change);
           const cx = leaf.x0 + w / 2;
@@ -229,7 +230,7 @@ export function TreemapView({
               key={entity.id}
               href={href}
               className="cursor-pointer"
-              aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name} ${rate} ${scoreLabel}`}
+              aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name}${priceLabel ? ` ${priceLabel}` : ""} ${rate}${priceLabel ? "" : ` ${scoreLabel}`}`}
               data-heatmap-rank={rank}
               onPointerDown={() => {
                 // Mobile has no hover; kick off the RSC flight on press so

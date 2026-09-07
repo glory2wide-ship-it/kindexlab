@@ -6,6 +6,7 @@ import { parseRegionQuery } from "@/lib/boards/regions";
 import { buildHeatmapItems, heatmapBoardTitle } from "@/lib/boards/heatmap";
 import { loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
 import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
+import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
 import { itemsForChannel, isPostChannel } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 import type { RankingEntity } from "@/lib/types";
@@ -46,15 +47,20 @@ export async function GET(request: Request) {
     }
   }
 
-  const items = buildHeatmapItems({
-    boards,
-    liveItems,
-    board,
-    gender,
-    age,
-    region,
-    preferLive: false,
-  }).map(toTileEntity);
+  const items = (
+    await attachKospiStockQuotes(
+      buildHeatmapItems({
+        boards,
+        liveItems,
+        board,
+        gender,
+        age,
+        region,
+        preferLive: false,
+      }),
+      board,
+    )
+  ).map(toTileEntity);
   const selected = board ? boards.find((item) => item.slug === board) : undefined;
 
   return NextResponse.json({

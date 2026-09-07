@@ -9,7 +9,8 @@ import { isTwoLineBracketHeatmap } from "@/lib/boards/culture-grants";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, rankDelta, metricLabel } from "@/lib/format";
 import { entityHref } from "@/lib/slugs";
 import { entityPlatform, formatPlatformTag } from "@/lib/boards/game-platforms";
-import { changeForEntity, getTimeframeSeries, scoreForTimeframe, volumeForTimeframe } from "@/lib/timeframes";
+import { heatmapChangeRate, heatmapPriceLabel } from "@/lib/market/kospi-quotes-ui";
+import { getTimeframeSeries, scoreForTimeframe, volumeForTimeframe } from "@/lib/timeframes";
 import type { RankingEntity, Timeframe } from "@/lib/types";
 
 type SortKey = "rank" | "name" | "type" | "buzzScore" | "change" | "volume";
@@ -36,9 +37,10 @@ export function RankingTable({
       return {
         item,
         series,
-        change: changeForEntity(item, timeframe),
+        change: heatmapChangeRate(item, timeframe),
         buzzScore: scoreForTimeframe(item, timeframe),
         volume: volumeForTimeframe(item, timeframe),
+        priceLabel: heatmapPriceLabel(item),
       };
     });
     if (lockOrder) return mapped;
@@ -109,7 +111,7 @@ export function RankingTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ item, series, change, buzzScore, volume }) => (
+            {rows.map(({ item, series, change, buzzScore, volume, priceLabel }) => (
               <tr
                 key={item.id}
                 className={`cursor-pointer border-b border-line/80 font-sans transition-colors hover:bg-board/80 ${
@@ -143,6 +145,11 @@ export function RankingTable({
                   >
                     <PlatformTag entity={item} />
                     <RankName entity={item} />
+                    {priceLabel ? (
+                      <span className="mt-0.5 block font-sans text-xs tabular-nums text-muted">
+                        현재가 {priceLabel}
+                      </span>
+                    ) : null}
                   </Link>
                 </td>
                 <td className="px-2 py-3 text-xs text-muted">
@@ -164,7 +171,7 @@ export function RankingTable({
         </table>
       </div>
       <ul className="divide-y divide-line font-sans md:hidden">
-        {rows.map(({ item, series, change, volume }) => (
+        {rows.map(({ item, series, change, volume, priceLabel }) => (
           <li key={item.id}>
             <Link
               href={entityHref(item)}
@@ -188,9 +195,11 @@ export function RankingTable({
                   <RankName entity={item} />
                 </p>
                 <p className="font-sans text-xs tabular-nums text-muted">
-                  {TYPE_LABEL[item.type] && item.heatmapGroup
-                    ? `${item.heatmapGroup} · ${metricLabel(item.type)} ${formatCompact(volume)}`
-                    : `${TYPE_LABEL[item.type]} · ${metricLabel(item.type)} ${formatCompact(volume)}`}
+                  {priceLabel
+                    ? `현재가 ${priceLabel}`
+                    : TYPE_LABEL[item.type] && item.heatmapGroup
+                      ? `${item.heatmapGroup} · ${metricLabel(item.type)} ${formatCompact(volume)}`
+                      : `${TYPE_LABEL[item.type]} · ${metricLabel(item.type)} ${formatCompact(volume)}`}
                 </p>
               </div>
               <div className="text-right">

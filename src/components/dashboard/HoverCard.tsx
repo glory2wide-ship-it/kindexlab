@@ -1,6 +1,7 @@
 import { TimeframeChart } from "@/components/charts/TimeframeChart";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel } from "@/lib/format";
 import { formatEntityName } from "@/lib/boards/game-platforms";
+import { heatmapPriceLabel } from "@/lib/market/kospi-quotes-ui";
 import { buildTimeframeMetrics, scoreForTimeframe, timeframeLabel, volumeForTimeframe } from "@/lib/timeframes";
 import type { RankingEntity, SeriesPoint, Timeframe } from "@/lib/types";
 
@@ -23,6 +24,7 @@ export function HoverCard({
 }) {
   const up = change > 0;
   const metrics = entity.metrics ?? buildTimeframeMetrics(entity);
+  const priceLabel = heatmapPriceLabel(entity);
 
   return (
     <div
@@ -39,7 +41,9 @@ export function HoverCard({
         </p>
       </div>
       <p className="font-mono text-xs text-muted">
-        {formatScore(scoreForTimeframe(entity, timeframe))} · {metricLabel(entity.type)} {formatCompact(volumeForTimeframe(entity, timeframe))}
+        {priceLabel
+          ? `네이버금융 현재가 ${priceLabel}`
+          : `${formatScore(scoreForTimeframe(entity, timeframe))} · ${metricLabel(entity.type)} ${formatCompact(volumeForTimeframe(entity, timeframe))}`}
       </p>
       <div className="mt-2 grid grid-cols-3 gap-1 font-mono text-[10px]">
         {PREVIEW_FRAMES.map((frame) => {
