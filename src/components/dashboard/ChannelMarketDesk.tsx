@@ -19,6 +19,7 @@ import { boardPath, getBoard } from "@/lib/boards/registry";
 import { filterLabel } from "@/lib/boards/demographics";
 import { boardUsesRegionFilter, entityMatchesRegion } from "@/lib/boards/regions";
 import { channelUsesBoardHeatmap, rankLimitForBoard, rankLimitForChannel } from "@/lib/boards/limits";
+import { isMarketQuoteBoardSlug } from "@/lib/market/kospi-quotes";
 import { HeadlineNewsRanking } from "@/components/politics/HeadlineNewsRanking";
 import { withIndexPoints } from "@/lib/ingestion/composite";
 import { isNavigating } from "@/lib/nav/progress";
@@ -28,6 +29,31 @@ import type { MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
 
 function usesBoardHeatmap(channel: PostChannel): boolean {
   return channelUsesBoardHeatmap(channel);
+}
+
+/** Quote boards + economy 종합 must never optimistic-paint KinDex-only rows. */
+function needsQuotedPaint(channel: PostChannel, board: string): boolean {
+  return isMarketQuoteBoardSlug(board) || (channel === "economy" && !board);
+}
+
+function cacheKeyForBoard(board: string): string {
+  return board || "";
+}
+
+function seedQuoteMap(
+  initialQuotedByBoard?: Record<string, RankingEntity[]>,
+  initialItems?: RankingEntity[],
+): Map<string, RankingEntity[]> {
+  const map = new Map<string, RankingEntity[]>();
+  if (initialQuotedByBoard) {
+    for (const [key, rows] of Object.entries(initialQuotedByBoard)) {
+      if (rows?.length) map.set(key, rows);
+    }
+  }
+  if (!map.has("") && initialItems?.length) {
+    map.set("", initialItems);
+  }
+  return map;
 }
 
 /**
@@ -59,6 +85,7 @@ export function ChannelMarketDesk({
   boards,
   liveMarket,
   initialItems,
+  initialQuotedByBoard,
   initialBoardSlug = "",
   initialRegion = "all",
   onBoardChange,
@@ -68,6 +95,11 @@ export function ChannelMarketDesk({
   liveMarket: ChannelLiveMarket;
   /** SSR rows with Naver quotes already attached for stock/FX tiles. */
   initialItems?: RankingEntity[];
+  /**
+   * Preloaded quoted heatmaps keyed by board slug (`""` = 종합).
+   * Used so 주식/해외/원자재·환율 tabs never flash KinDex scores.
+   */
+  initialQuotedByBoard?: Record<string, RankingEntity[]>;
   /** Pre-select a board tab (e.g. travel region sub-routes). */
   initialBoardSlug?: string;
   /** Pre-select a region tab when the board supports it. */
@@ -83,19 +115,26 @@ export function ChannelMarketDesk({
     boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
   );
   const liveItems = liveMarket.items;
-  const [items, setItems] = useState<RankingEntity[]>(() =>
-    initialItems?.length && !initialBoardSlug
-      ? initialItems
-      : buildHeatmapItems({
-          boards,
-          liveItems,
-          board: initialBoardSlug || undefined,
-          gender: "all",
-          age: "all",
-          region: boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
-          preferLive: !boardHeatmap && !initialBoardSlug,
-        }),
+  const quotedCacheRef = useRef<Map<string, RankingEntity[]>>(
+    seedQuoteMap(initialQuotedByBoard, initialItems),
   );
+
+  const [items, setItems] = useState<RankingEntity[]>(() => {
+    const key = cacheKeyForBoard(initialBoardSlug);
+    const cached =
+      initialQuotedByBoard?.[key] ??
+      (initialItems?.length && !initialBoardSlug ? initialItems : undefined);
+    if (cached?.length) return cached;
+    return buildHeatmapItems({
+      boards,
+      liveItems,
+      board: initialBoardSlug || undefined,
+      gender: "all",
+      age: "all",
+      region: boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
+      preferLive: !boardHeatmap && !initialBoardSlug,
+    });
+  });
   const [title, setTitle] = useState(() => heatmapBoardTitle(boards, initialBoardSlug || undefined));
   const [flashNonce, setFlashNonce] = useState(0);
   const [headlineItems, setHeadlineItems] = useState<RankingEntity[]>([]);
@@ -114,15 +153,6 @@ export function ChannelMarketDesk({
   );
   const [remainingSec, setRemainingSec] = useState(DEFAULT_TRENDS_REVALIDATE_SEC);
   const [refreshing, setRefreshing] = useState(false);
-  const onSelectBoard = useCallback((slug: string) => {
-    setSelectedSlug(slug);
-    setAge((current) => clampAgeForBoard(slug || undefined, current));
-    if (!boardUsesRegionFilter(slug)) setRegion("all");
-    onBoardChange?.(slug);
-  }, [onBoardChange]);
-
-  const selectedDef = selectedSlug ? getBoard(selectedSlug) : undefined;
-  const deskKind = selectedDef?.deskKind;
 
   const applyLocal = useCallback(
     (board: string, nextGender: HeatmapGender, nextAge: HeatmapAge, nextRegion: HeatmapRegion) => {
@@ -142,11 +172,57 @@ export function ChannelMarketDesk({
     [boards, liveItems, boardHeatmap],
   );
 
+  /** Paint quoted SSR/API cache immediately — never KinDex-only for quote boards. */
+  const paintQuotedCache = useCallback(
+    (board: string, nextGender: HeatmapGender, nextAge: HeatmapAge, nextRegion: HeatmapRegion) => {
+      const key = cacheKeyForBoard(board);
+      const defaultFilters =
+        nextGender === "all" &&
+        nextAge === "all" &&
+        (!boardUsesRegionFilter(board) || nextRegion === "all");
+      const cached = defaultFilters ? quotedCacheRef.current.get(key) : undefined;
+      if (cached?.length) {
+        setItems(cached);
+        setTitle(heatmapBoardTitle(boards, board || undefined));
+        setFlashNonce((value) => value + 1);
+        return true;
+      }
+      // Keep previous tiles; only update the title so KinDex rows never flash.
+      setTitle(heatmapBoardTitle(boards, board || undefined));
+      return false;
+    },
+    [boards],
+  );
+
+  const onSelectBoard = useCallback(
+    (slug: string) => {
+      const nextAge = clampAgeForBoard(slug || undefined, age);
+      const nextRegion = boardUsesRegionFilter(slug) ? region : "all";
+      setSelectedSlug(slug);
+      setAge(nextAge);
+      if (!boardUsesRegionFilter(slug)) setRegion("all");
+      if (needsQuotedPaint(channel, slug)) {
+        paintQuotedCache(slug, gender, nextAge, nextRegion);
+      } else {
+        applyLocal(slug, gender, nextAge, nextRegion);
+      }
+      onBoardChange?.(slug);
+    },
+    [age, region, gender, channel, paintQuotedCache, applyLocal, onBoardChange],
+  );
+
+  const selectedDef = selectedSlug ? getBoard(selectedSlug) : undefined;
+  const deskKind = selectedDef?.deskKind;
+
   const heatmapRequestRef = useRef(0);
   const fetchHeatmap = useCallback(
     async (board: string, nextGender: HeatmapGender, nextAge: HeatmapAge, nextRegion: HeatmapRegion) => {
       const requestId = ++heatmapRequestRef.current;
-      applyLocal(board, nextGender, nextAge, nextRegion);
+      if (needsQuotedPaint(channel, board)) {
+        paintQuotedCache(board, nextGender, nextAge, nextRegion);
+      } else {
+        applyLocal(board, nextGender, nextAge, nextRegion);
+      }
       const params = new URLSearchParams({
         category: channel,
         gender: nextGender,
@@ -164,7 +240,9 @@ export function ChannelMarketDesk({
         };
         if (requestId !== heatmapRequestRef.current) return;
         if (board && (payload.board ?? "") !== board) {
-          applyLocal(board, nextGender, nextAge, nextRegion);
+          if (!needsQuotedPaint(channel, board)) {
+            applyLocal(board, nextGender, nextAge, nextRegion);
+          }
           return;
         }
         if (Array.isArray(payload.items) && payload.items.length) {
@@ -176,15 +254,24 @@ export function ChannelMarketDesk({
           if (nextItems.length) {
             setItems(nextItems);
             if (payload.title) setTitle(payload.title);
+            if (
+              nextGender === "all" &&
+              nextAge === "all" &&
+              (!boardUsesRegionFilter(board) || nextRegion === "all")
+            ) {
+              quotedCacheRef.current.set(cacheKeyForBoard(board), nextItems);
+            }
             return;
           }
         }
-        applyLocal(board, nextGender, nextAge, nextRegion);
+        if (!needsQuotedPaint(channel, board)) {
+          applyLocal(board, nextGender, nextAge, nextRegion);
+        }
       } catch {
-        /* local ranking already painted */
+        /* quoted cache or previous tiles already painted */
       }
     },
-    [applyLocal, channel],
+    [applyLocal, paintQuotedCache, channel],
   );
 
   const skipInitialHeatmapFetch = useRef(true);

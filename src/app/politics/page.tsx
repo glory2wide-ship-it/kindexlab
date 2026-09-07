@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PoliticsBoardPage() {
-  const { boards, liveMarket, initialItems } = await loadChannelDeskData("politics");
+  const { boards, liveMarket, initialItems, initialQuotedByBoard } = await loadChannelDeskData("politics");
 
   return (
     <div className="space-y-8">
@@ -33,6 +33,7 @@ export default async function PoliticsBoardPage() {
         boards={boards}
         liveMarket={liveMarket}
         initialItems={initialItems}
+        initialQuotedByBoard={initialQuotedByBoard}
       />
       <section className="border-t border-line pt-8">
         <Suspense

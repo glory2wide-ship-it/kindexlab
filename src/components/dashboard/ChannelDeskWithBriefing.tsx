@@ -19,6 +19,7 @@ export function ChannelDeskWithBriefing({
   boards,
   liveMarket,
   initialItems,
+  initialQuotedByBoard,
   main,
   dives,
   titleLevel = 2,
@@ -27,6 +28,7 @@ export function ChannelDeskWithBriefing({
   boards: HeatmapBoardPayload[];
   liveMarket: ChannelLiveMarket;
   initialItems?: RankingEntity[];
+  initialQuotedByBoard?: Record<string, RankingEntity[]>;
   main?: BriefingArticle;
   dives: BriefingArticle[];
   titleLevel?: 1 | 2;
@@ -40,6 +42,7 @@ export function ChannelDeskWithBriefing({
         boards={boards}
         liveMarket={liveMarket}
         initialItems={initialItems}
+        initialQuotedByBoard={initialQuotedByBoard}
         onBoardChange={setActiveDeskId}
       />
       <section className="border-t border-line pt-8">
