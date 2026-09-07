@@ -114,20 +114,23 @@ function deskTopItem(item: RankingEntity): RankingEntity {
  *
  * 경제·여행 still fall back to boards when the snapshot has no channel rows;
  * synthetic 3m rates rotate each refresh window so desk cards are not frozen.
+ *
+ * Naver quotes attach only to tiles that actually ship (heatmap + desk tops),
+ * not every board row — that cut cold TTFB without changing first paint for
+ * stock/FX cells.
  */
 export async function loadUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMarket> {
   const loaded = await Promise.all(
     POST_CHANNELS.map(async (meta) => {
       // One board load per channel (heatmap + desk used to double-fetch).
       const pool = await channelHeatmapPool(meta.id, market);
-      // 주식·해외 주식·원자재·환율 tiles show Naver quotes (with units), not KinDex scores.
-      const quoted = await attachKospiStockQuotes(pool);
-      const ranked = tagChannel([...quoted].sort(byHeat), meta.id);
+      // Defer quote attach until after ranking/interleave — see below.
+      const ranked = tagChannel([...pool].sort(byHeat), meta.id);
       return { meta, ranked };
     }),
   );
 
-  const items = interleave(
+  const itemsRaw = interleave(
     loaded.map((entry) => entry.ranked),
     UNIFIED_HEATMAP_TILES,
   ).map((item, index) => ({
@@ -136,12 +139,25 @@ export async function loadUnifiedMarket(market?: RankingsPayload): Promise<Unifi
     previousRank: index + 1,
   }));
 
-  const desks: ChannelDesk[] = loaded.map(({ meta, ranked }) => ({
+  const deskTopsRaw = loaded.map(({ ranked }) =>
+    ranked.slice(0, DESK_TOP_N).map(deskTopItem),
+  );
+
+  // One quote pass for every entity the landing actually renders.
+  const quoteTargets = [
+    ...itemsRaw,
+    ...deskTopsRaw.flat(),
+  ];
+  const quoted = await attachKospiStockQuotes(quoteTargets);
+  const byId = new Map(quoted.map((item) => [item.id, item]));
+
+  const items = itemsRaw.map((item) => byId.get(item.id) ?? item);
+  const desks: ChannelDesk[] = loaded.map(({ meta }, index) => ({
     channel: meta.id,
     label: meta.label,
     href: meta.href,
     eyebrow: meta.eyebrow,
-    top: ranked.slice(0, DESK_TOP_N).map(deskTopItem),
+    top: (deskTopsRaw[index] ?? []).map((item) => byId.get(item.id) ?? item),
   }));
 
   return { items, desks };

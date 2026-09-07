@@ -47,6 +47,38 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        /*
+         * Document HTML is primarily controlled by route `revalidate` / ISR
+         * (`s-maxage` from Next). This reinforces CDN reuse for soft navigations
+         * and shared edge hits without forcing private/no-store.
+         */
+        source: "/((?!_next/|api/).*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, s-maxage=180, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        source: "/api/heatmap",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, s-maxage=180, stale-while-revalidate=600",
+          },
+        ],
+      },
+      {
+        source: "/api/unified-desks",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, s-maxage=180, stale-while-revalidate=600",
+          },
+        ],
+      },
+      {
         source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },

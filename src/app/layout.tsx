@@ -11,6 +11,9 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
   display: "swap",
+  // Homepage LCP is Pretendard text — do not preload mono on every document.
+  preload: false,
+  adjustFontFallback: true,
 });
 
 /** Pin serverless execution to Seoul (icn1). Mirrors vercel.json `regions`. */
@@ -71,6 +74,8 @@ export const metadata: Metadata = {
 };
 
 const adsenseClient = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
+const PRETENDARD_CSS =
+  "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -81,24 +86,29 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         {/*
-         * Pretendard is the brand face, so its stylesheet stays render-blocking —
-         * swapping it in late would reflow every heading. The preconnect is what
-         * makes that affordable: DNS, TCP and TLS to the CDN start with the
-         * document instead of after the parser reaches this tag.
-         *
-         * Extra next/font families (Inter / Noto) were removed — they competed
-         * with Pretendard on first paint while almost never winning the cascade.
+         * Pretendard stays the brand face, but a render-blocking CDN stylesheet
+         * owned FCP/LCP. Preconnect + non-blocking load lets system fallbacks
+         * paint first; Pretendard swaps in with font-display from the CSS.
          */}
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+        <link rel="preload" as="style" href={PRETENDARD_CSS} />
+        <link rel="stylesheet" href={PRETENDARD_CSS} media="print" id="font-pretendard" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var l=document.getElementById('font-pretendard');if(!l)return;var apply=function(){l.media='all'};if(l.addEventListener)l.addEventListener('load',apply);l.onload=apply;setTimeout(apply,2500);})();`,
+          }}
+        />
+        <noscript>
+          <link rel="stylesheet" href={PRETENDARD_CSS} />
+        </noscript>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark';var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){}})();`,
+          }}
         />
       </head>
       <body className="flex min-h-full flex-col bg-board font-sans text-ink antialiased">
-        <Script id="theme-boot" strategy="beforeInteractive">
-          {`(function(){try{var t=localStorage.getItem('theme');var d=t==='dark';var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){}})();`}
-        </Script>
         {/*
          * Ads load after the page is idle. `afterInteractive` puts the AdSense
          * bundle in contention with hydration, and it is a large script that
@@ -114,10 +124,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             strategy="lazyOnload"
           />
         ) : null}
-        <Script
-          id="website-jsonld"
+        <script
           type="application/ld+json"
-          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",

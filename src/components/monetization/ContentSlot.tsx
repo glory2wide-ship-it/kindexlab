@@ -28,16 +28,24 @@ export function ContentSlot({
   label?: string;
   adFormat?: "auto" | "in-article" | "fluid";
 }) {
+  // Skip the AdSlot client boundary entirely when ads are unset — homepage
+  // otherwise hydrates three empty client islands for no benefit.
   const reserved = Boolean(process.env.NEXT_PUBLIC_ADSENSE_CLIENT);
+  if (!reserved) {
+    return (
+      <div
+        data-content-slot={placement}
+        data-partner-slot={placement}
+        data-partner-label={label}
+        className="not-prose empty:hidden"
+      />
+    );
+  }
 
   return (
     <div
       data-content-slot={placement}
-      className={`not-prose w-full ${
-        reserved
-          ? `${PLACEMENT_CLASS[placement]} rounded-xl border border-line/60 bg-board/20 px-3 py-4`
-          : ""
-      }`}
+      className={`not-prose w-full ${PLACEMENT_CLASS[placement]} rounded-xl border border-line/60 bg-board/20 px-3 py-4`}
     >
       <AdSlot format={adFormat} />
       <div data-partner-slot={placement} data-partner-label={label} className="empty:hidden" />

@@ -6,7 +6,6 @@ import { DemographicTabs } from "@/components/boards/DemographicTabs";
 import { HeatmapCountdownFallback } from "@/components/dashboard/HeatmapCountdown";
 import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundary";
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
-import { RankingTable } from "@/components/dashboard/RankingTable";
 import { TreemapSkeleton } from "@/components/dashboard/TreemapSkeleton";
 import { TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 
@@ -24,13 +23,20 @@ const HeatmapCountdown = dynamic(
   () => import("@/components/dashboard/HeatmapCountdown").then((mod) => mod.HeatmapCountdown),
   { ssr: false, loading: () => <HeatmapCountdownFallback /> },
 );
+const RankingTable = dynamic(
+  () => import("@/components/dashboard/RankingTable").then((mod) => mod.RankingTable),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-48 animate-pulse rounded-lg border border-line/50 bg-board/40" aria-hidden />
+    ),
+  },
+);
+const MethodologyModal = dynamic(
+  () => import("@/components/methodology/MethodologyModal").then((mod) => mod.MethodologyModal),
+  { ssr: false },
+);
 
-/** Warm the treemap chunk as soon as the workspace mounts so soft-nav does not
- *  wait on a second round-trip after the RSC payload lands. */
-if (typeof window !== "undefined") {
-  void import("@/components/dashboard/TreemapCanvas");
-}
-import { MethodologyModal } from "@/components/methodology/MethodologyModal";
 import { applyDemographicSkew } from "@/lib/boards/entity-skew";
 import { filterKey, filterLabel } from "@/lib/boards/demographics";
 import { CATEGORIES, TIMEFRAMES } from "@/lib/categories";
@@ -93,9 +99,25 @@ export function MarketWorkspace({
   refreshing?: boolean;
 }) {
   useEffect(() => {
-    // Warm the treemap chunk while the desk chrome paints so category
-    // navigations do not sit on an empty skeleton after RSC arrives.
-    void import("@/components/dashboard/TreemapCanvas");
+    // Warm treemap after first paint so LCP bandwidth is not contested.
+    let cancelled = false;
+    const warm = () => {
+      if (!cancelled) void import("@/components/dashboard/TreemapCanvas");
+    };
+    let idleId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(warm, { timeout: 1200 });
+    } else {
+      timeoutId = setTimeout(warm, 400);
+    }
+    return () => {
+      cancelled = true;
+      if (idleId != null && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId != null) clearTimeout(timeoutId);
+    };
   }, []);
 
   const [view, setView] = useState<ViewMode>(initialView);
