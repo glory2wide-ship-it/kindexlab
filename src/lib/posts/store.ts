@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import generatedFile from "@/data/posts/generated.json";
+import { isPublicEditorialContent } from "@/lib/content/public-since";
 import {
   TREND_ANALYSIS_DISCLAIMER,
   ensureSectionsDisclaimer,
@@ -202,6 +203,15 @@ export async function listPosts(): Promise<GeneratedPost[]> {
   const [disk, remote] = await Promise.all([readDisk(), supabaseList()]);
   const bySlug = new Map<string, GeneratedPost>();
   for (const item of [...remote, ...disk, ...memory.values()]) {
+    if (
+      !isPublicEditorialContent({
+        editionDate: item.editionDate,
+        publishedAt: item.publishedAt,
+        updatedAt: item.updatedAt,
+      })
+    ) {
+      continue;
+    }
     const prev = bySlug.get(item.slug);
     const nextStamp = item.updatedAt || item.publishedAt || "";
     const prevStamp = prev?.updatedAt || prev?.publishedAt || "";

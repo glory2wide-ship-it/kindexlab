@@ -3,9 +3,11 @@ import path from "node:path";
 import { AGE_SEGMENTS, applyDemographicWeights, dedupeSegments, isUnusableRankName } from "@/lib/boards/demographics";
 import { rankLimitForBoard, segmentLimitForBoard } from "@/lib/boards/limits";
 import { canonicalizeGameEsportsName } from "@/lib/boards/game-platforms";
+import { emptyBoardReport } from "@/lib/boards/chain/report";
 import { getBoard } from "@/lib/boards/registry";
 import { boardUsesRegionFilter, ensureFoodRestaurantRanking, ensureHousingApartmentRanking, HOUSING_BOARD_SLUG } from "@/lib/boards/regions";
 import type { BoardRankEntry, CachedBoard, DemographicRanking } from "@/lib/boards/types";
+import { isPublicEditorialContent } from "@/lib/content/public-since";
 import { ensureInfluencerBoardRanking } from "@/lib/politics/fail-safe";
 import {
   ensureCultureGrantRanking,
@@ -88,12 +90,18 @@ export function normalizeCachedBoard(entry: CachedBoard): CachedBoard {
     segmentLimit,
   );
   const demographics = def ? applyDemographicWeights(def, ranking, deduped) : deduped;
+  const reportPublic = isPublicEditorialContent({
+    editionDate: entry.editionDate,
+    generatedAt: entry.generatedAt,
+  });
   return {
     ...entry,
     indexValue:
       entry.indexValue > 100 ? Number((entry.indexValue / 10).toFixed(2)) : entry.indexValue,
     ranking,
     demographics,
+    // Keep ranking tiles, but never expose pre-2026-09-04 editorial reports.
+    report: reportPublic ? entry.report : def ? emptyBoardReport(def) : entry.report,
   };
 }
 

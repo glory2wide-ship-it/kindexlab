@@ -5,6 +5,7 @@ import { compareDatesDesc, isLiveEdition, kstDateString } from "@/lib/briefing/d
 import { desksForChannel, resolveBriefingDeskId } from "@/lib/briefing/desks";
 import { isPersistableBriefing } from "@/lib/briefing/quality";
 import { ALL_CATEGORIES } from "@/lib/categories";
+import { PUBLIC_CONTENT_SINCE_DATE } from "@/lib/content/public-since";
 import { isPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 import type { BriefingArticle, CategoryId } from "@/lib/types";
@@ -83,6 +84,8 @@ export async function getBriefingBySlug(slug: string): Promise<BriefingArticle |
   if (persisted && isPersistableBriefing(persisted)) return withBriefingCover(persisted);
 
   const editionDate = slug.slice(0, 10);
+  // Hard block: never compose or surface pre-cutoff editions.
+  if (editionDate < PUBLIC_CONTENT_SINCE_DATE) return undefined;
   const channel = parseChannelFromSlug(slug);
   if (channel && isLiveEdition(editionDate)) {
     const edition = await getChannelBriefingEdition(channel);
@@ -132,6 +135,7 @@ export function searchBriefings(
 }
 
 export async function getBriefingsByDate(date: string): Promise<BriefingArticle[]> {
+  if (date < PUBLIC_CONTENT_SINCE_DATE) return [];
   if (isLiveEdition(date)) return getTodaysBriefings();
   return (await getArchiveBriefings()).filter((item) => item.editionDate === date);
 }

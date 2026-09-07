@@ -23,6 +23,8 @@ export function normalizeWhitespace(text: string): string {
  * Replacements keep meaning without an LLM round-trip.
  */
 const BOILERPLATE_REPLACEMENTS: { test: RegExp; to: string }[] = [
+  { test: /애드센스\s*고품질\s*본문\s*기준\s*충족/g, to: "" },
+  { test: /고품질\s*본문\s*기준\s*충족/g, to: "" },
   { test: /가\s*지금\s*화제인\s*이유/g, to: "관련 핵심 이슈" },
   { test: /이슈가\s*지금\s*화제인\s*배경/g, to: "이슈의 배경" },
   { test: /화제인\s*이유는\s*유행\s*한\s*줄/g, to: "이슈의 요지는" },

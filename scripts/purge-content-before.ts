@@ -1,16 +1,25 @@
 /**
- * Delete 일일 브리핑 / 심층분석 / 이슈칼럼 / 오늘의 분석 generated before a KST cutoff.
+ * Delete 일일 브리핑 / 심층분석 / 이슈칼럼 / 오늘의 분석 / 보드 리포트
+ * generated before a KST cutoff. Default: 2026-09-04 00:00 KST.
  *
  *   npx tsx --env-file=.env.local scripts/purge-content-before.ts
- *   npx tsx scripts/purge-content-before.ts --before=2026-09-04T03:00:00+09:00
+ *   npx tsx scripts/purge-content-before.ts --before=2026-09-04T00:00:00+09:00
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { CachedAnalysis } from "../src/lib/analysis/store";
+import { emptyBoardReport } from "../src/lib/boards/chain/report";
+import { getBoard } from "../src/lib/boards/registry";
+import type { CachedBoard } from "../src/lib/boards/types";
 import type { BriefingArticle } from "../src/lib/types";
 import type { GeneratedPost } from "../src/lib/posts/types";
 
-const DEFAULT_BEFORE = "2026-09-04T03:00:00+09:00";
+/** Visitors must never see content before this instant (KST midnight Sep 4). */
+const DEFAULT_BEFORE = "2026-09-04T00:00:00+09:00";
+const MIN_EDITION_DATE = "2026-09-04";
+
+const ADSENSE_QUALITY_PHRASE =
+  /애드센스\s*고품질\s*본문\s*기준\s*충족|고품질\s*본문\s*기준\s*충족/g;
 
 function flag(name: string): string | undefined {
   const match = process.argv.find((arg) => arg.startsWith(`--${name}=`));
@@ -23,10 +32,36 @@ function stamp(value?: string | null): number | null {
   return Number.isFinite(ms) ? ms : null;
 }
 
-function isBeforeCutoff(ms: number | null, cutoffMs: number): boolean {
+function isBeforeCutoff(
+  ms: number | null,
+  cutoffMs: number,
+  editionDate?: string | null,
+): boolean {
+  if (editionDate && /^\d{4}-\d{2}-\d{2}$/.test(editionDate) && editionDate < MIN_EDITION_DATE) {
+    return true;
+  }
   // Missing timestamps are treated as old (pre-cutoff) and removed.
-  if (ms === null) return true;
+  if (ms === null) return Boolean(editionDate && editionDate < MIN_EDITION_DATE);
   return ms < cutoffMs;
+}
+
+function scrubText(value: string): string {
+  if (!ADSENSE_QUALITY_PHRASE.test(value)) return value;
+  ADSENSE_QUALITY_PHRASE.lastIndex = 0;
+  return value.replace(ADSENSE_QUALITY_PHRASE, "").replace(/[ \t]{2,}/g, " ").trim();
+}
+
+function scrubUnknown(value: unknown): unknown {
+  if (typeof value === "string") return scrubText(value);
+  if (Array.isArray(value)) return value.map(scrubUnknown);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = scrubUnknown(child);
+    }
+    return out;
+  }
+  return value;
 }
 
 function supabaseConfig(): { url: string; key: string } | null {
@@ -42,10 +77,7 @@ async function writeJson(rel: string, payload: unknown): Promise<void> {
   await writeFile(file, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 }
 
-async function supabaseDeleteBySlugs(
-  table: string,
-  slugs: string[],
-): Promise<number> {
+async function supabaseDeleteBySlugs(table: string, slugs: string[]): Promise<number> {
   const config = supabaseConfig();
   if (!config || !slugs.length) return 0;
   let deleted = 0;
@@ -53,17 +85,14 @@ async function supabaseDeleteBySlugs(
   for (let i = 0; i < slugs.length; i += chunkSize) {
     const chunk = slugs.slice(i, i + chunkSize);
     const filter = chunk.map((slug) => `"${slug.replace(/"/g, '\\"')}"`).join(",");
-    const response = await fetch(
-      `${config.url}/rest/v1/${table}?slug=in.(${filter})`,
-      {
-        method: "DELETE",
-        headers: {
-          apikey: config.key,
-          Authorization: `Bearer ${config.key}`,
-          Prefer: "return=minimal",
-        },
+    const response = await fetch(`${config.url}/rest/v1/${table}?slug=in.(${filter})`, {
+      method: "DELETE",
+      headers: {
+        apikey: config.key,
+        Authorization: `Bearer ${config.key}`,
+        Prefer: "return=minimal",
       },
-    );
+    });
     if (response.ok) deleted += chunk.length;
     else {
       console.warn(`[supabase] ${table} delete failed: ${response.status} ${await response.text()}`);
@@ -77,9 +106,9 @@ async function main() {
   const cutoffMs = stamp(beforeRaw);
   if (cutoffMs === null) throw new Error(`invalid --before=${beforeRaw}`);
   const cutoffIso = new Date(cutoffMs).toISOString();
-  console.log(`[cutoff] ${beforeRaw} → ${cutoffIso} (UTC)`);
+  console.log(`[cutoff] ${beforeRaw} → ${cutoffIso} (UTC) · editionDate >= ${MIN_EDITION_DATE}`);
 
-  // --- Briefings (extra.json): mains + deep-dives ---
+  // --- Briefings (extra.json): mains + deep-dives / Update keywords ---
   const briefingRel = path.join("src", "data", "briefings", "extra.json");
   const briefingRaw = JSON.parse(await readFile(path.join(process.cwd(), briefingRel), "utf8")) as {
     articles?: BriefingArticle[];
@@ -89,8 +118,8 @@ async function main() {
   const briefingDrop: BriefingArticle[] = [];
   for (const article of briefingAll) {
     const ms = stamp(article.updatedAt) ?? stamp(article.publishedAt);
-    if (isBeforeCutoff(ms, cutoffMs)) briefingDrop.push(article);
-    else briefingKeep.push(article);
+    if (isBeforeCutoff(ms, cutoffMs, article.editionDate)) briefingDrop.push(article);
+    else briefingKeep.push(scrubUnknown(article) as BriefingArticle);
   }
   await writeJson(briefingRel, { articles: briefingKeep });
   console.log(
@@ -107,8 +136,8 @@ async function main() {
   const postsDrop: GeneratedPost[] = [];
   for (const post of postsAll) {
     const ms = stamp(post.updatedAt) ?? stamp(post.publishedAt);
-    if (isBeforeCutoff(ms, cutoffMs)) postsDrop.push(post);
-    else postsKeep.push(post);
+    if (isBeforeCutoff(ms, cutoffMs, post.editionDate)) postsDrop.push(post);
+    else postsKeep.push(scrubUnknown(post) as GeneratedPost);
   }
   await writeJson(postsRel, { articles: postsKeep });
   console.log(`[posts/이슈칼럼] removed ${postsDrop.length} · kept ${postsKeep.length}`);
@@ -123,13 +152,45 @@ async function main() {
   const analysisDrop: CachedAnalysis[] = [];
   for (const entry of analysisAll) {
     const ms = stamp(entry.generatedAt);
-    if (isBeforeCutoff(ms, cutoffMs)) analysisDrop.push(entry);
-    else analysisKeep.push(entry);
+    const edition = entry.editionDate || entry.article?.editionDate;
+    if (isBeforeCutoff(ms, cutoffMs, edition)) analysisDrop.push(entry);
+    else analysisKeep.push(scrubUnknown(entry) as CachedAnalysis);
   }
   await writeJson(analysisRel, { entries: analysisKeep });
   console.log(`[analysis/오늘의분석] removed ${analysisDrop.length} · kept ${analysisKeep.length}`);
 
-  // --- Seeded archive briefings (published.ts) — all dates are before cutoff ---
+  // --- Board ranking reports: keep rankings, strip pre-cutoff editorial reports ---
+  const boardsRel = path.join("src", "data", "boards", "cache.json");
+  const boardsReportCleared: string[] = [];
+  try {
+    const boardsRaw = JSON.parse(await readFile(path.join(process.cwd(), boardsRel), "utf8")) as
+      | CachedBoard[]
+      | { entries?: CachedBoard[] };
+    const boardsAll = Array.isArray(boardsRaw) ? boardsRaw : (boardsRaw.entries ?? []);
+    const boardsKeep: CachedBoard[] = [];
+    for (const entry of boardsAll) {
+      const ms = stamp(entry.generatedAt);
+      const scrubbed = scrubUnknown(entry) as CachedBoard;
+      if (isBeforeCutoff(ms, cutoffMs, entry.editionDate)) {
+        boardsReportCleared.push(entry.slug);
+        const def = getBoard(entry.slug);
+        boardsKeep.push({
+          ...scrubbed,
+          report: def ? emptyBoardReport(def) : scrubbed.report,
+        });
+      } else {
+        boardsKeep.push(scrubbed);
+      }
+    }
+    await writeJson(boardsRel, Array.isArray(boardsRaw) ? boardsKeep : { entries: boardsKeep });
+    console.log(
+      `[boards] cleared reports on ${boardsReportCleared.length} pre-cutoff rows · kept rankings ${boardsKeep.length}`,
+    );
+  } catch {
+    console.log("[boards] skipped (no cache.json)");
+  }
+
+  // --- Seeded archive briefings (published.ts) ---
   const publishedRel = path.join("src", "data", "briefings", "published.ts");
   const publishedSrc = await readFile(path.join(process.cwd(), publishedRel), "utf8");
   const nextPublished = publishedSrc.replace(
@@ -140,7 +201,7 @@ async function main() {
     console.warn("[published.ts] ARCHIVE_DATES pattern not updated — check file manually");
   } else {
     await writeFile(path.join(process.cwd(), publishedRel), nextPublished, "utf8");
-    console.log("[published.ts] cleared ARCHIVE_DATES (Aug seed briefings removed from catalog)");
+    console.log("[published.ts] cleared ARCHIVE_DATES");
   }
 
   // --- Supabase (if configured) ---
@@ -153,13 +214,15 @@ async function main() {
     analysisDrop.map((item) => item.slug),
   );
   if (supabaseConfig()) {
-    console.log(`[supabase] posts deleted≈${remotePosts} · analysis deleted≈${remoteAnalysis}`);
+    console.log(
+      `[supabase] posts deleted≈${remotePosts} · analysis deleted≈${remoteAnalysis} · board reports cleared locally (rankings retained)`,
+    );
   } else {
     console.log("[supabase] skipped (SUPABASE_URL / SERVICE_ROLE_KEY not set)");
   }
 
   console.log(
-    `[done] total removed≈${briefingDrop.length + postsDrop.length + analysisDrop.length}`,
+    `[done] articles removed≈${briefingDrop.length + postsDrop.length + analysisDrop.length} · board reports cleared≈${boardsReportCleared.length}`,
   );
 }
 

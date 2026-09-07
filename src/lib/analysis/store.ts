@@ -1,6 +1,7 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { TrafficPump } from "@/lib/analysis/chain/pump";
+import { isPublicEditorialContent } from "@/lib/content/public-since";
 import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 
 export type AnalysisSourceKind = "chain" | "template";
@@ -143,9 +144,26 @@ async function supabaseGet(slug: string): Promise<CachedAnalysis | undefined> {
 export async function readAnalysis(slug: string): Promise<CachedAnalysis | undefined> {
   await loadDisk();
   const local = memory.get(slug);
-  if (local) return local;
+  if (local) {
+    return isPublicEditorialContent({
+      editionDate: local.editionDate || local.article?.editionDate,
+      generatedAt: local.generatedAt,
+    })
+      ? local
+      : undefined;
+  }
   const remote = await supabaseGet(slug);
-  if (remote) memory.set(slug, remote);
+  if (remote) {
+    if (
+      !isPublicEditorialContent({
+        editionDate: remote.editionDate || remote.article?.editionDate,
+        generatedAt: remote.generatedAt,
+      })
+    ) {
+      return undefined;
+    }
+    memory.set(slug, remote);
+  }
   return remote;
 }
 
@@ -161,7 +179,14 @@ export async function writeAnalysis(entry: CachedAnalysis): Promise<{
 
 export async function listAnalysis(): Promise<CachedAnalysis[]> {
   await loadDisk();
-  return [...memory.values()].sort((a, b) => b.generatedAt.localeCompare(a.generatedAt));
+  return [...memory.values()]
+    .filter((entry) =>
+      isPublicEditorialContent({
+        editionDate: entry.editionDate || entry.article?.editionDate,
+        generatedAt: entry.generatedAt,
+      }),
+    )
+    .sort((a, b) => b.generatedAt.localeCompare(a.generatedAt));
 }
 
 /**

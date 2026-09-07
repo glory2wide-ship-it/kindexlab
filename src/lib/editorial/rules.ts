@@ -170,7 +170,7 @@ const PADDING_PATTERNS = [
 ];
 
 const METADATA_LEAK =
-  /분\s*읽기|SEO\s*기준|글자\s*수|AdSense|메타데이터|\d{4}-\d{2}-\d{2}\s*·|읽는\s*시간/;
+  /분\s*읽기|SEO\s*기준|글자\s*수|AdSense|애드센스\s*고품질\s*본문\s*기준\s*충족|고품질\s*본문\s*기준\s*충족|메타데이터|\d{4}-\d{2}-\d{2}\s*·|읽는\s*시간/;
 
 /** True when reporting-verb endings repeat in a row (기계적 보도체). */
 export function hasRepetitiveDeclarativeEndings(text: string, maxStreak = 2): boolean {

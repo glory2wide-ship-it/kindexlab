@@ -4,6 +4,7 @@ import { publishedBriefings } from "@/data/briefings/published";
 import { compareDatesDesc, isLiveEdition } from "@/lib/briefing/dates";
 import { withBriefingCover } from "@/lib/briefing/cover";
 import { isPersistableBriefing } from "@/lib/briefing/quality";
+import { isPublicEditorialContent } from "@/lib/content/public-since";
 import type { PostChannel } from "@/lib/posts/types";
 import type { BriefingArticle } from "@/lib/types";
 
@@ -30,11 +31,20 @@ function channelDateKey(channel: PostChannel, editionDate: string): string {
   return `${channel}:${editionDate}`;
 }
 
+function isPublicBriefing(article: BriefingArticle): boolean {
+  return isPublicEditorialContent({
+    editionDate: article.editionDate,
+    publishedAt: article.publishedAt,
+    updatedAt: article.updatedAt,
+  });
+}
+
 /** Every persisted briefing row (extra.json + published seeds). */
 export function listPersisted(): BriefingArticle[] {
   if (persistedCache) return persistedCache;
   const map = new Map<string, BriefingArticle>();
   for (const item of [...publishedBriefings(), ...extras()]) {
+    if (!isPublicBriefing(item)) continue;
     map.set(item.slug, withBriefingCover(item));
   }
   persistedCache = [...map.values()].sort(compareArticles);
