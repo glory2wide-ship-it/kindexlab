@@ -72,13 +72,16 @@ export function LiveMarketBoard({
   useEffect(() => {
     deadlineRef.current = Date.now() + intervalMs;
     setRemainingSec(Math.max(1, Math.round(intervalMs / 1000)));
+    // 1s ticks (was 250ms) — enough for the countdown, far less main-thread
+    // contention during soft-navigation.
     const tick = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
       const remainingMs = deadlineRef.current - Date.now();
       setRemainingSec(Math.max(0, Math.ceil(remainingMs / 1000)));
       if (remainingMs <= 0) {
         void refreshRef.current();
       }
-    }, 250);
+    }, 1000);
     return () => window.clearInterval(tick);
   }, [intervalMs]);
 

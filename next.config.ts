@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
     "**.portless.dev",
     "null",
   ],
+  experimental: {
+    // Keep recently visited RSC payloads on the client so GNB/subnav hops
+    // reuse the last paint instead of refetching every click.
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
+  },
   async headers() {
     return [
       ...(process.env.NODE_ENV === "production"

@@ -24,6 +24,12 @@ const HeatmapCountdown = dynamic(
   () => import("@/components/dashboard/HeatmapCountdown").then((mod) => mod.HeatmapCountdown),
   { ssr: false, loading: () => <HeatmapCountdownFallback /> },
 );
+
+/** Warm the treemap chunk as soon as the workspace mounts so soft-nav does not
+ *  wait on a second round-trip after the RSC payload lands. */
+if (typeof window !== "undefined") {
+  void import("@/components/dashboard/TreemapCanvas");
+}
 import { MethodologyModal } from "@/components/methodology/MethodologyModal";
 import { applyDemographicSkew } from "@/lib/boards/entity-skew";
 import { filterKey, filterLabel } from "@/lib/boards/demographics";

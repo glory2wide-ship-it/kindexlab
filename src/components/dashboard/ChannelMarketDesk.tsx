@@ -222,7 +222,10 @@ export function ChannelMarketDesk({
     const intervalMs = DEFAULT_TRENDS_REVALIDATE_SEC * 1000;
     deadlineRef.current = Date.now() + intervalMs;
     setRemainingSec(DEFAULT_TRENDS_REVALIDATE_SEC);
+    // 1s ticks (was 250ms) — countdown only needs second resolution; fewer
+    // React updates while the user is mid soft-navigation.
     const tick = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
       const remainingMs = deadlineRef.current - Date.now();
       setRemainingSec(Math.max(0, Math.ceil(remainingMs / 1000)));
       if (remainingMs > 0) return;
@@ -233,7 +236,7 @@ export function ChannelMarketDesk({
       void fetchHeatmapRef
         .current(target.selectedSlug, target.gender, target.age, target.region)
         .finally(() => setRefreshing(false));
-    }, 250);
+    }, 1000);
     return () => window.clearInterval(tick);
   }, []);
 

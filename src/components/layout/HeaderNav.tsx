@@ -1,7 +1,8 @@
 "use client";
 
 import Link, { useLinkStatus } from "next/link";
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { POST_CHANNELS } from "@/lib/posts/channels";
 
 function CategoryLabel({ children }: { children: string }) {
@@ -16,6 +17,25 @@ function CategoryLabel({ children }: { children: string }) {
 
 export function HeaderNav() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Idle-prefetch sibling category hubs so the next GNB click hits a warm RSC cache.
+    const idle = window.requestIdleCallback
+      ? window.requestIdleCallback.bind(window)
+      : (cb: IdleRequestCallback) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 200);
+    const cancel = window.cancelIdleCallback
+      ? window.cancelIdleCallback.bind(window)
+      : window.clearTimeout.bind(window);
+
+    const id = idle(() => {
+      for (const item of POST_CHANNELS) {
+        if (pathname === item.href || pathname.startsWith(`${item.href}/`)) continue;
+        router.prefetch(item.href);
+      }
+    });
+    return () => cancel(id);
+  }, [pathname, router]);
 
   return (
     <nav

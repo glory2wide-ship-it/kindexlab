@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { AboutArticle } from "@/components/about/AboutArticle";
 import { channelSectionHref, getPostChannel, isPostChannel } from "@/lib/posts/channels";
 
-export const dynamic = "force-dynamic";
+/** Static copy — long revalidate so GNB/subnav hops stay instant. */
+export const revalidate = 3600;
 
 export async function generateMetadata({
   params,

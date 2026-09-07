@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ChannelDeskWithBriefing } from "@/components/dashboard/ChannelDeskWithBriefing";
-import { loadChannelPageData } from "@/lib/boards/channel-page-data";
+import { Suspense } from "react";
+import { ChannelBriefingPage } from "@/components/briefing/ChannelBriefingPage";
+import { ChannelMarketDesk } from "@/components/dashboard/ChannelMarketDesk";
+import { loadChannelDeskData } from "@/lib/boards/channel-page-data";
 import { getPostChannel, isPostChannel, LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 
 /** ISR: matches the 3-minute live board refresh cadence. */
@@ -22,6 +24,15 @@ export async function generateMetadata({
   };
 }
 
+function BriefingFallback() {
+  return (
+    <div className="space-y-3" aria-hidden>
+      <div className="h-8 w-48 animate-pulse rounded bg-line/70" />
+      <div className="h-40 animate-pulse rounded-2xl bg-line/40" />
+    </div>
+  );
+}
+
 export default async function CategoryBoardPage({
   params,
 }: {
@@ -30,16 +41,18 @@ export default async function CategoryBoardPage({
   const { category } = await params;
   if (!isPostChannel(category)) notFound();
 
-  const { boards, liveMarket, main, dives } = await loadChannelPageData(category);
+  // Desk first (boards + rankings). Briefing streams in via Suspense so soft-nav
+  // paints the heatmap without waiting on the multi-MB briefing catalog.
+  const { boards, liveMarket } = await loadChannelDeskData(category);
 
   return (
-    <ChannelDeskWithBriefing
-      channel={category}
-      boards={boards}
-      liveMarket={liveMarket}
-      main={main}
-      dives={dives}
-      titleLevel={2}
-    />
+    <div className="space-y-8">
+      <ChannelMarketDesk channel={category} boards={boards} liveMarket={liveMarket} />
+      <section className="border-t border-line pt-8">
+        <Suspense fallback={<BriefingFallback />}>
+          <ChannelBriefingPage channel={category} titleLevel={2} />
+        </Suspense>
+      </section>
+    </div>
   );
 }

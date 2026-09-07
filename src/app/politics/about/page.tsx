@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AboutArticle } from "@/components/about/AboutArticle";
 import { channelSectionHref, getPostChannel } from "@/lib/posts/channels";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 const meta = getPostChannel("politics");
 

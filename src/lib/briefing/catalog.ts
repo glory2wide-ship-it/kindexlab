@@ -1,4 +1,5 @@
-import extraFile from "@/data/briefings/extra.json";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { publishedBriefings } from "@/data/briefings/published";
 import { compareDatesDesc, isLiveEdition } from "@/lib/briefing/dates";
 import { withBriefingCover } from "@/lib/briefing/cover";
@@ -6,8 +7,19 @@ import { isPersistableBriefing } from "@/lib/briefing/quality";
 import type { PostChannel } from "@/lib/posts/types";
 import type { BriefingArticle } from "@/lib/types";
 
+/**
+ * Read extra.json from disk on first use instead of a static import.
+ * A static import embeds ~4.6MB into every server chunk that touches the
+ * briefing catalog and slows cold soft-nav / first briefing Suspense paint.
+ */
 function extras(): BriefingArticle[] {
-  return (extraFile as { articles?: BriefingArticle[] }).articles ?? [];
+  try {
+    const file = path.join(process.cwd(), "src", "data", "briefings", "extra.json");
+    const parsed = JSON.parse(readFileSync(file, "utf8")) as { articles?: BriefingArticle[] };
+    return parsed.articles ?? [];
+  } catch {
+    return [];
+  }
 }
 
 /** Process-lifetime index — extra.json is static until the next deploy/restart. */

@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { ChannelBriefingPage } from "@/components/briefing/ChannelBriefingPage";
 import { channelSectionHref, getPostChannel, isPostChannel } from "@/lib/posts/channels";
 
-export const dynamic = "force-dynamic";
+/** ISR — persisted edition; avoid force-dynamic so soft-nav can reuse the cache. */
+export const revalidate = 180;
 
 export async function generateMetadata({
   params,

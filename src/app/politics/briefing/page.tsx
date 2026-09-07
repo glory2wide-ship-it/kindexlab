@@ -3,7 +3,7 @@ import { ChannelBriefingPage } from "@/components/briefing/ChannelBriefingPage";
 import { channelSectionHref } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 180;
 
 export const metadata: Metadata = {
   title: "정치 일일브리핑",
