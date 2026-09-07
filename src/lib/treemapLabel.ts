@@ -1,10 +1,10 @@
 const MIN_NAME = 15;
-const MAX_NAME = 57;
+const MAX_NAME = 64;
 const MIN_RATE = 15;
 const MAX_RATE = 27;
-const MIN_ARTIST = 13;
-const MAX_ARTIST = 24;
-const NAME_LINE_HEIGHT = 1.22;
+const MIN_ARTIST = 12;
+const MAX_ARTIST = 20;
+const NAME_LINE_HEIGHT = 1.2;
 
 export interface TreemapLabelLayout {
   showName: boolean;
@@ -63,15 +63,6 @@ function fitSizeToWidth(text: string, size: number, maxWidth: number, min: numbe
   return next;
 }
 
-/** Pick the largest size that still wraps onto `maxLines` in the tile. */
-function fitWrappedSize(text: string, start: number, maxWidth: number, min: number, maxLines: number): number {
-  let next = start;
-  while (next > min && wrapLineCount(text, next, maxWidth) > maxLines) {
-    next -= 0.35;
-  }
-  return next;
-}
-
 function ellipsize(text: string, fontSize: number, maxWidth: number): string {
   if (measureTextWidth(text, fontSize) <= maxWidth) return text;
   const ellipsis = "…";
@@ -82,18 +73,65 @@ function ellipsize(text: string, fontSize: number, maxWidth: number): string {
   return cut <= 1 ? ellipsis : `${text.slice(0, cut)}${ellipsis}`;
 }
 
+function nameBlockHeight(size: number, lines: number): number {
+  if (lines <= 1) return size;
+  return size * (1 + (lines - 1) * NAME_LINE_HEIGHT);
+}
+
+function maxLinesForTile(width: number, height: number): number {
+  if (height >= 108 && width >= 88) return 3;
+  if (height >= 52 && width >= 56) return 2;
+  return 1;
+}
+
 function minReadableName(width: number, height: number): number {
-  if (width >= 100 && height >= 64) return 17;
-  if (width >= 72 && height >= 48) return 15;
+  const area = width * height;
+  if (area >= 28_000 || (width >= 150 && height >= 110)) return 24;
+  if (area >= 16_000 || (width >= 110 && height >= 80)) return 20;
+  if (width >= 90 && height >= 56) return 17;
   return MIN_NAME;
 }
 
 /**
- * Centered stack: title (up to two wrapped lines), optional artist, then change %.
- * Rank is drawn separately in the tile corner — do not prepend it here.
+ * Largest type that still wraps into `maxLines` and fits `budgetH`.
+ * Top-10 tiles are large enough that long names should grow onto 3 lines
+ * instead of shrinking to stay on 2.
+ */
+function largestNameSize(
+  text: string,
+  maxWidth: number,
+  budgetH: number,
+  maxLines: number,
+  min: number,
+  max: number,
+): { size: number; lines: number } {
+  let lo = min;
+  let hi = Math.max(min, max);
+  let best = min;
+  let bestLines = 1;
+  for (let i = 0; i < 28; i += 1) {
+    const mid = (lo + hi) / 2;
+    const needed = wrapLineCount(text, mid, maxWidth);
+    const lines = Math.min(maxLines, Math.max(1, needed));
+    const fitsWrap = needed <= maxLines;
+    const fitsH = nameBlockHeight(mid, lines) <= budgetH + 0.5;
+    if (fitsWrap && fitsH) {
+      best = mid;
+      bestLines = lines;
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  return { size: Math.round(best * 10) / 10, lines: bestLines };
+}
+
+/**
+ * Centered stack: title (up to three wrapped lines on tall tiles), optional
+ * artist, then change %. Rank sits in the corner and is not part of this stack.
  *
- * Long Korean names used to shrink to a single SVG line, then were cut another 40%.
- * Wrapping keeps type near the box scale instead of collapsing to ~11px.
+ * Name size is chosen to fill the tile. Secondary lines shrink or drop first so
+ * long 10위권 titles do not sit in a large box at ~18px.
  */
 export function layoutTreemapLabel(input: {
   width: number;
@@ -110,52 +148,73 @@ export function layoutTreemapLabel(input: {
   const { width: w, height: h, y, name, rate, typeLabel, artist } = input;
   if (w < 28 || h < 18) return null;
 
-  const innerW = Math.max(12, w - 16);
-  const innerH = Math.max(12, h - 22);
-  const areaScale = Math.sqrt(Math.max(1, w * h));
+  const innerW = Math.max(12, w - 14);
+  const innerH = Math.max(12, h - 24);
   const readableMin = minReadableName(w, h);
-  const maxLines = h >= 44 ? 2 : 1;
+  const maxLines = maxLinesForTile(w, h);
+  const showRate = h >= 28;
+  const combine = Boolean(typeLabel) && w >= 72 && h >= 40;
+  const rateText = combine ? `${rate}  ${typeLabel}` : rate;
+  const rateSizeBase = showRate ? clamp(Math.min(innerW * 0.12, 22), MIN_RATE, MAX_RATE) : 0;
+  const rateSizeFitted = showRate ? fitSizeToWidth(rateText, rateSizeBase, innerW, MIN_RATE) : 0;
+  const gap = 4;
+  const rateReserve = showRate ? rateSizeFitted + gap : 0;
 
-  let nameSize = clamp(areaScale * 0.21, readableMin, MAX_NAME);
-  nameSize = Math.min(nameSize, innerH * (maxLines === 2 ? 0.42 : 0.5), innerW * 0.55);
-  nameSize = fitWrappedSize(name, nameSize, innerW, readableMin, maxLines);
+  const wantArtist = Boolean(artist) && w >= 64 && h >= 56;
+  const artistReserve = wantArtist ? MIN_ARTIST + gap : 0;
 
-  const showArtist = Boolean(artist) && w >= 48 && h >= 40;
+  let nameBudget = Math.max(readableMin, innerH - rateReserve);
+  let showArtist = false;
   let artistSize = 0;
+
+  // Keep the title large; only add the org/artist line when the name still
+  // has a healthy budget (typical on #1–#4 tiles).
+  if (wantArtist && innerH - rateReserve - artistReserve >= readableMin * 1.15) {
+    showArtist = true;
+    nameBudget = Math.max(readableMin, innerH - rateReserve - artistReserve);
+  }
+
+  const fitted = largestNameSize(name, innerW, nameBudget, maxLines, readableMin, MAX_NAME);
+  let nameSize = fitted.size;
+  let nameLines = fitted.lines;
+
   if (showArtist && artist) {
-    artistSize = clamp(nameSize * 0.72, MIN_ARTIST, MAX_ARTIST);
+    artistSize = clamp(Math.min(nameSize * 0.48, 18), MIN_ARTIST, MAX_ARTIST);
     artistSize = fitSizeToWidth(artist, artistSize, innerW, MIN_ARTIST);
   }
 
-  const combine = Boolean(typeLabel) && w >= 72 && h >= 40;
-  const rateText = combine ? `${rate}  ${typeLabel}` : rate;
-  const showRate = h >= 28;
-  let rateSize = showRate ? clamp(nameSize * 0.68, MIN_RATE, MAX_RATE) : 0;
-  if (showRate) rateSize = fitSizeToWidth(rateText, rateSize, innerW, MIN_RATE);
-
-  const nameBlockH = (size: number) => {
-    const lines = Math.min(maxLines, wrapLineCount(name, size, innerW));
-    return size * (lines === 1 ? 1 : 1 + (lines - 1) * NAME_LINE_HEIGHT);
-  };
-
-  const gap = Math.max(3, nameSize * 0.12);
-  let stack = nameBlockH(nameSize);
-  if (showArtist) stack += gap + artistSize;
-  if (showRate) stack += gap + rateSize;
-
-  if (stack > innerH) {
-    const scale = innerH / stack;
-    nameSize = Math.max(readableMin, nameSize * scale);
-    if (showArtist) artistSize = Math.max(MIN_ARTIST, artistSize * scale);
-    if (showRate) rateSize = Math.max(MIN_RATE, rateSize * scale);
+  let rateSize = rateSizeFitted;
+  if (showRate) {
+    rateSize = clamp(Math.min(rateSizeFitted, nameSize * 0.62), MIN_RATE, MAX_RATE);
+    rateSize = fitSizeToWidth(rateText, rateSize, innerW, MIN_RATE);
   }
 
-  const nameLines = Math.min(maxLines, wrapLineCount(name, nameSize, innerW));
+  const stackH = () => {
+    let stack = nameBlockHeight(nameSize, nameLines);
+    if (showArtist) stack += gap + artistSize;
+    if (showRate) stack += gap + rateSize;
+    return stack;
+  };
+
+  if (stackH() > innerH && showArtist) {
+    showArtist = false;
+    artistSize = 0;
+    nameBudget = Math.max(readableMin, innerH - rateReserve);
+    const retry = largestNameSize(name, innerW, nameBudget, maxLines, readableMin, MAX_NAME);
+    nameSize = retry.size;
+    nameLines = retry.lines;
+  }
+
+  if (stackH() > innerH && showRate) {
+    const overflow = stackH() - innerH;
+    rateSize = Math.max(MIN_RATE, rateSize - overflow);
+  }
+
   const displayName = nameLines === 1 ? ellipsize(name, nameSize, innerW) : name;
   const displayArtist = showArtist && artist ? ellipsize(artist, artistSize, innerW) : "";
   const displayRate = showRate ? ellipsize(rateText, rateSize, innerW) : "";
   const mid = y + h / 2 + 2;
-  const finalNameBlock = nameBlockH(nameSize);
+  const finalNameBlock = nameBlockHeight(nameSize, nameLines);
   let finalStack = finalNameBlock;
   if (showArtist) finalStack += gap + artistSize;
   if (showRate) finalStack += gap + rateSize;

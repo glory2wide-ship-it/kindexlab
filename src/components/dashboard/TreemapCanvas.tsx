@@ -294,7 +294,7 @@ export function TreemapView({
                         suppressHydrationWarning
                         style={{
                           display: "-webkit-box",
-                          WebkitLineClamp: 2,
+                          WebkitLineClamp: label?.nameLines ?? 3,
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
