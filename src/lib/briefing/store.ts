@@ -158,7 +158,10 @@ export function groupBriefingsByDate(
   }
   return [...map.entries()]
     .sort((a, b) => compareDatesDesc(a[0], b[0]))
-    .map(([date, grouped]) => ({ date, articles: grouped }));
+    .map(([date, grouped]) => ({
+      date,
+      articles: [...grouped].sort(compareArticles),
+    }));
 }
 
 export function parseScopeParam(raw?: string | string[]): "today" | "archive" | "all" {

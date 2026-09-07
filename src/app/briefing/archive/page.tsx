@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { ArchiveSearchForm } from "@/components/briefing/ArchiveSearchForm";
-import { BriefingCard } from "@/components/briefing/BriefingCard";
 import { BriefingDateGroup } from "@/components/briefing/BriefingDateGroup";
 import {
   getArchiveBriefings,
@@ -30,7 +29,6 @@ export default async function BriefingArchivePage({
   const archive = await getArchiveBriefings();
   const results = searchBriefings(archive, query, category && category !== "all" ? category : undefined);
   const grouped = groupBriefingsByDate(results);
-  const filtered = Boolean(query || (category && category !== "all"));
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -50,7 +48,7 @@ export default async function BriefingArchivePage({
         <DeskEyebrow variant="xs">MAGAZINE ARCHIVE</DeskEyebrow>
         <h1 className="text-3xl font-semibold tracking-tight">브리핑 아카이브</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          어제 이전 에디션이 날짜별로 자동 분류됩니다. 카테고리와 키워드로 과거 수급 해설을
+          어제 이전 에디션을 발행일 기준으로 모았습니다. 카테고리와 키워드로 과거 해설을
           찾고, 각 기사에서 지수(INDEX) 히트맵으로 돌아갈 수 있습니다.
         </p>
         <ArchiveSearchForm query={query} category={category} />
@@ -65,12 +63,6 @@ export default async function BriefingArchivePage({
           조건에 맞는 아카이브 기사가 없습니다. 검색어를 줄이거나 카테고리를 종합으로 바꿔
           보세요.
         </p>
-      ) : filtered ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {results.map((article) => (
-            <BriefingCard key={article.slug} article={article} />
-          ))}
-        </div>
       ) : (
         <div className="space-y-10">
           {grouped.map((group) => (

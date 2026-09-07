@@ -5,8 +5,8 @@ export function kstDateString(date = new Date()): string {
 }
 
 export function formatKoreanDate(editionDate: string): string {
-  const [, month, day] = editionDate.split("-");
-  return `${Number(month)}월 ${Number(day)}일`;
+  const [year, month, day] = editionDate.split("-");
+  return `${year}년 ${Number(month)}월 ${Number(day)}일`;
 }
 
 export function editionDateTime(editionDate: string, hour = 7, minute = 5): string {
