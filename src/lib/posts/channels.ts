@@ -38,7 +38,7 @@ export const POST_CHANNELS: {
     eyebrow: "ENTERTAINMENT",
     indexTitle: "엔터 지수",
     description:
-      "음원·시청률·웹툰·게임·숏폼·인플루언서 공개 순위를 실시간 지수와 브리핑으로 읽습니다.",
+      "K POP·트로트·가요, TV 시청률, 음원, 스타, 영화, 유튜버, 웹툰, 게임을 실시간 지수와 브리핑으로 읽습니다.",
   },
   {
     id: "politics",
@@ -47,7 +47,7 @@ export const POST_CHANNELS: {
     eyebrow: "POLITICS",
     indexTitle: "정치 이슈 지수",
     description:
-      "정당·정치인 지지도, 헤드라인, 평론가·시사 유튜브, 지자체 정책·지원금을 지수로 읽습니다.",
+      "정부 지원금, 정당·정치인 지지도, 지자체 정책, 정치 유튜브·평론가, 이슈 키워드를 지수로 읽습니다.",
   },
   {
     id: "economy",
@@ -56,7 +56,7 @@ export const POST_CHANNELS: {
     eyebrow: "ECONOMY",
     indexTitle: "경제 이슈 지수",
     description:
-      "금리·증시·환율·물가·부동산·정부 지원금·창업·경제 헤드라인을 랭킹 보드로 읽습니다.",
+      "경제 정부지원금, 지역별 부동산, 금융, 주식, 해외 주식, 원자재·환율, 소비자 물가, 창업·프랜차이즈, 이슈 키워드를 보드로 읽습니다.",
   },
   {
     id: "culture",
@@ -65,7 +65,7 @@ export const POST_CHANNELS: {
     eyebrow: "CULTURE & LIVING",
     indexTitle: "문화/생활 이슈 지수",
     description:
-      "공연·전시·웹툰·문화 지원·맛집·생활 트렌드와 문화 헤드라인을 한 데스크에서 읽습니다.",
+      "문화/생활 정부 지원금, 공연, 전시·팝업스토어, 도서·베스트셀러, 건강정보, 요리 레시피, 자동차, 이슈 키워드를 한 데스크에서 읽습니다.",
   },
   {
     id: "travel",
@@ -74,7 +74,7 @@ export const POST_CHANNELS: {
     eyebrow: "TRAVEL & FOOD",
     indexTitle: "여행/맛집 이슈 지수",
     description:
-      "국내 여행·나들이·지역 맛집·숙박·레저 화제를 랭킹 보드와 헤드라인으로 읽습니다.",
+      "여행 정부지원금, 국내 여행, 해외 여행, 지역별 주말 나들이, 지역별 음식/맛집을 랭킹 보드로 읽습니다.",
   },
 ];
 

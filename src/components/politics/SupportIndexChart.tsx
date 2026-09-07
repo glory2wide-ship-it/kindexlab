@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MultiLineChart } from "@/components/charts/MultiLineChart";
-import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import {
   POLL_METHOD_CARD,
   SUPPORT_AGENCIES,
@@ -94,8 +93,7 @@ export function SupportIndexChart({
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <DeskEyebrow variant="xs">KINDEX POLL COMPOSITE · 6M</DeskEyebrow>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight">{title}</h2>
+          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
         </div>
         <p className="text-[12px] text-muted">
           한국갤럽 · 리얼미터 · NBS 전국지표조사 최근 6개월. 굵은 선은 기간 내 단순 평균 통합 지수입니다.

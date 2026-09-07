@@ -1,6 +1,5 @@
 import { pollDelta, formatPollDelta, pollMetricLabels, POLL_LINKS, type PollBoardSnapshot } from "@/lib/politics/polls";
 import { formatCount } from "@/lib/format";
-import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 function tone(value: number): string {
   if (value > 0) return "text-up";
@@ -21,8 +20,7 @@ export function AgencyPollComparisonBoard({ snapshot }: { snapshot: PollBoardSna
     <section id="agency-poll-board" className="index-gothic scroll-mt-36 space-y-3 font-sans">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <DeskEyebrow variant="xs">AGENCY POLL DESK · TOP 10</DeskEyebrow>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight">{title}</h2>
+          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
         </div>
         <p className="text-[12px] text-muted">
           {snapshot.subject} · {snapshot.live ? "뉴스 수집 반영" : "최근 공표 시드"} · 상승 초록 / 하락 빨강
