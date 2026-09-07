@@ -11,7 +11,9 @@ export function SiteFooter() {
     <footer className="mt-8 border-t border-line bg-panel">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:grid-cols-2 md:grid-cols-4">
         <div>
-          <p className="font-semibold">{SITE.name}</p>
+          <Link href="/about" className="font-semibold hover:text-ink">
+            KinDex / 킨덱스 소개
+          </Link>
           <p className="mt-2 text-sm leading-6 text-muted">
             {CATEGORY_LABELS} 등 국내 이슈·화제성을 주식 지수(INDEX)처럼 보여주는 트렌드
             랭킹. {SITE.domain}에서 제공합니다. 데이터는 관측값이며 실제 투자 정보가 아닙니다.
