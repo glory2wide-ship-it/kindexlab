@@ -167,19 +167,7 @@ export function TreemapView({
         suppressHydrationWarning
         aria-label={`${TYPE_LABEL[category] ?? "종합"} 화제 지수 히트맵 섹터 ${visible.length}종목`}
       >
-        <defs>
-          {leaves.map((leaf, index) => (
-            <clipPath key={`clip-${leaf.rank}-${index}`} id={`tm-clip-${leaf.rank}-${index}`}>
-              <rect
-                x={leaf.x0}
-                y={leaf.y0}
-                width={Math.max(leaf.x1 - leaf.x0, 0)}
-                height={Math.max(leaf.y1 - leaf.y0, 0)}
-              />
-            </clipPath>
-          ))}
-        </defs>
-        {leaves.map((leaf, index) => {
+        {leaves.map((leaf) => {
           const entity = leaf.entity;
           const series = getTimeframeSeries(entity, timeframe);
           const change = heatmapChangeRate(entity, timeframe);
@@ -246,7 +234,7 @@ export function TreemapView({
                 onSelect(entity.slug);
               }}
             >
-              <g clipPath={`url(#tm-clip-${rank}-${index})`}>
+              <g>
                 <rect
                   x={leaf.x0}
                   y={leaf.y0}
