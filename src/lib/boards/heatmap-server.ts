@@ -116,15 +116,28 @@ export const loadChannelHeatmapPayloads = cache(async (channel: PostChannel): Pr
 export function toTileEntity(entity: RankingEntity): RankingEntity {
   const metric3m = entity.metrics?.["3m"];
   return {
-    ...entity,
-    analysis: "",
-    products: [],
-    history: [],
+    id: entity.id,
+    slug: entity.slug,
+    name: entity.name,
+    nameEn: entity.nameEn || "",
+    type: entity.type,
+    rank: entity.rank,
+    previousRank: entity.previousRank,
+    buzzScore: entity.buzzScore,
+    openScore: entity.openScore,
+    fluctuationRate: entity.fluctuationRate,
+    volume: entity.volume,
     sparkline: Array.isArray(entity.sparkline) ? entity.sparkline.slice(-8) : [],
+    history: [],
+    tags: Array.isArray(entity.tags) ? entity.tags.slice(0, 4) : [],
     summary: entity.summary ? entity.summary.slice(0, 96) : "",
-    metrics: metric3m
-      ? ({ "3m": metric3m } as RankingEntity["metrics"])
-      : undefined,
+    metrics: metric3m ? ({ "3m": metric3m } as RankingEntity["metrics"]) : undefined,
+    measurement: entity.measurement,
+    href: entity.href,
+    heatmapGroup: entity.heatmapGroup,
+    platform: entity.platform,
+    region: entity.region,
+    sourceChannel: entity.sourceChannel,
   };
 }
 

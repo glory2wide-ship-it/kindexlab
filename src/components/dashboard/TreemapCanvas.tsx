@@ -5,9 +5,9 @@
  * serves a fresh chunk when the layout algorithm changes.
  */
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { HoverCard } from "@/components/dashboard/HoverCard";
 import { uniqueHeatmapTiles } from "@/lib/boards/unique-tiles";
 import { TYPE_LABEL, formatIndexPoints, formatRate } from "@/lib/format";
 import { heatFill, heatText } from "@/lib/heatmap";
@@ -19,15 +19,17 @@ import { heatmapSourceCaption, summarizeHeadlineTitle } from "@/lib/news/headlin
 import { layoutHeatmapLeaves } from "@/lib/treemapLayout";
 import { TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import { heatmapChangeRate, heatmapPriceLabel } from "@/lib/market/kospi-quotes-ui";
-import {
-  getTimeframeSeries,
-  scoreForTimeframe,
-} from "@/lib/timeframes";
+import { scoreForTimeframe } from "@/lib/timeframes";
 import { entityHref } from "@/lib/slugs";
 import { layoutTreemapLabel } from "@/lib/treemapLabel";
-import type { CategoryId, RankingEntity, SeriesPoint, Timeframe } from "@/lib/types";
+import type { CategoryId, RankingEntity, Timeframe } from "@/lib/types";
 
 export { TREEMAP_MAX_ITEMS };
+
+const HoverCard = dynamic(
+  () => import("@/components/dashboard/HoverCard").then((mod) => mod.HoverCard),
+  { ssr: false },
+);
 
 export function heatmapVisibleCount(items: RankingEntity[]): number {
   return Math.min(Array.isArray(items) ? items.length : 0, TREEMAP_MAX_ITEMS);
@@ -35,7 +37,6 @@ export function heatmapVisibleCount(items: RankingEntity[]): number {
 
 interface HoverState {
   entity: RankingEntity;
-  series: SeriesPoint[];
   change: number;
   x: number;
   y: number;
@@ -136,16 +137,10 @@ export function TreemapView({
     }
   }, [height, timeframe, visible, width]);
 
-  function moveHover(
-    event: MouseEvent,
-    entity: RankingEntity,
-    series: SeriesPoint[],
-    change: number,
-  ) {
+  function moveHover(event: MouseEvent, entity: RankingEntity, change: number) {
     const displayRank = displayRankById.get(entity.id) ?? entity.rank;
     setHover({
       entity: { ...entity, rank: displayRank },
-      series,
       change,
       x: Math.min(event.clientX, window.innerWidth - 300),
       y: Math.min(event.clientY, window.innerHeight - 260),
@@ -169,7 +164,6 @@ export function TreemapView({
       >
         {leaves.map((leaf) => {
           const entity = leaf.entity;
-          const series = getTimeframeSeries(entity, timeframe);
           const change = heatmapChangeRate(entity, timeframe);
           const w = leaf.x1 - leaf.x0;
           const h = leaf.y1 - leaf.y0;
@@ -222,9 +216,9 @@ export function TreemapView({
               }}
               onMouseEnter={(event) => {
                 router.prefetch(href);
-                moveHover(event, entity, series, change);
+                moveHover(event, entity, change);
               }}
-              onMouseMove={(event) => moveHover(event, entity, series, change)}
+              onMouseMove={(event) => moveHover(event, entity, change)}
               onClick={(event) => {
                 if (!onSelect) return;
                 if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
@@ -435,7 +429,6 @@ export function TreemapView({
       {hover ? (
         <HoverCard
           entity={hover.entity}
-          series={hover.series}
           change={hover.change}
           timeframe={timeframe}
           x={hover.x}

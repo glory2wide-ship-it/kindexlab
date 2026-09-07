@@ -1,30 +1,37 @@
+"use client";
+
+import { useMemo } from "react";
 import { TimeframeChart } from "@/components/charts/TimeframeChart";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel } from "@/lib/format";
 import { formatEntityName } from "@/lib/boards/game-platforms";
 import { heatmapPriceLabel } from "@/lib/market/kospi-quotes-ui";
 import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
-import { buildTimeframeMetrics, scoreForTimeframe, timeframeLabel, volumeForTimeframe } from "@/lib/timeframes";
-import type { RankingEntity, SeriesPoint, Timeframe } from "@/lib/types";
+import {
+  changeForEntity,
+  getTimeframeSeries,
+  scoreForTimeframe,
+  timeframeLabel,
+  volumeForTimeframe,
+} from "@/lib/timeframes";
+import type { RankingEntity, Timeframe } from "@/lib/types";
 
 const PREVIEW_FRAMES: Timeframe[] = ["3m", "1d", "1w"];
 
 export function HoverCard({
   entity,
-  series,
   change,
   timeframe,
   x,
   y,
 }: {
   entity: RankingEntity;
-  series: SeriesPoint[];
   change: number;
   timeframe: Timeframe;
   x: number;
   y: number;
 }) {
+  const series = useMemo(() => getTimeframeSeries(entity, timeframe), [entity, timeframe]);
   const up = change > 0;
-  const metrics = entity.metrics ?? buildTimeframeMetrics(entity);
   const priceLabel = heatmapPriceLabel(entity);
   const naverQuote = isNaverStockMeasurement(entity.measurement) ? entity.measurement : undefined;
 
@@ -50,7 +57,7 @@ export function HoverCard({
       </p>
       <div className="mt-2 grid grid-cols-3 gap-1 font-mono text-[10px]">
         {PREVIEW_FRAMES.map((frame) => {
-          const rate = naverQuote ? naverQuote.changeRate : metrics[frame].changeRate;
+          const rate = naverQuote ? naverQuote.changeRate : changeForEntity(entity, frame);
           return (
             <div key={frame} className="rounded bg-board/80 px-1.5 py-1">
               <p className="text-muted">{naverQuote ? "전일" : frame.toUpperCase()}</p>

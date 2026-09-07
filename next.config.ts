@@ -22,6 +22,13 @@ const nextConfig: NextConfig = {
       static: 600,
     },
   },
+  outputFileTracingIncludes: {
+    "/ranking/[slug]": ["./src/data/analysis/entries/**/*"],
+    "/api/analysis/[slug]": ["./src/data/analysis/entries/**/*"],
+    "/api/analysis/generate": ["./src/data/analysis/entries/**/*"],
+    "/sitemap.xml": ["./src/data/analysis/cache.json"],
+    "/feed.xml": ["./src/data/analysis/cache.json"],
+  },
   async headers() {
     return [
       ...(process.env.NODE_ENV === "production"

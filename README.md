@@ -36,6 +36,7 @@ git merge github/main
 - 페이지 ISR `revalidate = 180`과 함께, SSR 경로의 외부 fetch는 `next: { revalidate }`를 사용합니다. `cache: "no-store"`를 페이지 렌더에 쓰면 Vercel CDN이 HTML을 캐시하지 않습니다.
 - 라이브 시세·보드 갱신은 3분 캐시, 인제스트/크론은 `no-store`를 유지합니다.
 - 홈(`/`)은 `getRankings()` 워터폴 없이 보드 ISR만 조립하고, H1을 Suspense로 먼저 스트리밍합니다. Pretendard CDN CSS는 비차단 로드입니다.
+- `/ranking/[slug]` 오늘의 분석은 빌드 시 `cache.json`을 slug 샤드로 나눠, 콜드 스타트마다 5MB JSON을 파싱하지 않습니다. 히트맵 호버 차트는 마우스오버 때만 시리즈를 만듭니다.
 
 ## 화면
 

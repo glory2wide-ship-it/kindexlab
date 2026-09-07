@@ -1,4 +1,5 @@
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { TrafficPump } from "@/lib/analysis/chain/pump";
 import { isPublicEditorialContent } from "@/lib/content/public-since";
@@ -30,9 +31,46 @@ export interface CachedAnalysis {
 }
 
 const FILE_REL = path.join("src", "data", "analysis", "cache.json");
+const ENTRIES_REL = path.join("src", "data", "analysis", "entries");
 const memory = new Map<string, CachedAnalysis>();
 /** mtime of the last file we merged, so a write by another module instance is picked up. */
 let loadedMtimeMs = -1;
+
+export function analysisShardFileName(slug: string): string {
+  return `${createHash("sha1").update(slug).digest("hex").slice(0, 20)}.json`;
+}
+
+function shardPath(slug: string): string {
+  return path.join(process.cwd(), ENTRIES_REL, analysisShardFileName(slug));
+}
+
+async function readShard(slug: string): Promise<CachedAnalysis | undefined> {
+  try {
+    const parsed = JSON.parse(await readFile(shardPath(slug), "utf8")) as CachedAnalysis;
+    return parsed?.slug ? slimCachedEntry(parsed) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function writeShard(entry: CachedAnalysis): Promise<void> {
+  if (process.env.VERCEL === "1") return;
+  try {
+    const dir = path.join(process.cwd(), ENTRIES_REL);
+    await mkdir(dir, { recursive: true });
+    await writeFile(shardPath(entry.slug), `${JSON.stringify(slimCachedEntry(entry))}\n`);
+  } catch {
+    /* read-only or missing dir */
+  }
+}
+
+async function removeShard(slug: string): Promise<void> {
+  try {
+    await unlink(shardPath(slug));
+  } catch {
+    /* already gone */
+  }
+}
 
 export function analysisTtlHours(): number {
   const parsed = Number.parseInt(process.env.ANALYSIS_TTL_HOURS ?? "", 10);
@@ -163,16 +201,27 @@ async function supabaseGet(slug: string): Promise<CachedAnalysis | undefined> {
 }
 
 export async function readAnalysis(slug: string): Promise<CachedAnalysis | undefined> {
-  await loadDisk();
-  const local = memory.get(slug);
-  if (local) {
+  const cached = memory.get(slug);
+  if (cached) {
     return isPublicEditorialContent({
-      editionDate: local.editionDate || local.article?.editionDate,
-      generatedAt: local.generatedAt,
+      editionDate: cached.editionDate || cached.article?.editionDate,
+      generatedAt: cached.generatedAt,
     })
-      ? local
+      ? cached
       : undefined;
   }
+
+  const shard = await readShard(slug);
+  if (shard) {
+    memory.set(slug, shard);
+    return isPublicEditorialContent({
+      editionDate: shard.editionDate || shard.article?.editionDate,
+      generatedAt: shard.generatedAt,
+    })
+      ? shard
+      : undefined;
+  }
+
   const remote = await supabaseGet(slug);
   if (remote) {
     if (
@@ -183,9 +232,27 @@ export async function readAnalysis(slug: string): Promise<CachedAnalysis | undef
     ) {
       return undefined;
     }
-    memory.set(slug, remote);
+    const slim = slimCachedEntry(remote);
+    memory.set(slug, slim);
+    return slim;
   }
-  return remote;
+
+  try {
+    await stat(path.join(process.cwd(), ENTRIES_REL, ".stamp"));
+    return undefined;
+  } catch {
+    /* shards not built — fall through to the monolith */
+  }
+
+  await loadDisk();
+  const local = memory.get(slug);
+  if (!local) return undefined;
+  return isPublicEditorialContent({
+    editionDate: local.editionDate || local.article?.editionDate,
+    generatedAt: local.generatedAt,
+  })
+    ? local
+    : undefined;
 }
 
 export async function writeAnalysis(entry: CachedAnalysis): Promise<{
@@ -193,8 +260,9 @@ export async function writeAnalysis(entry: CachedAnalysis): Promise<{
   supabase: boolean;
 }> {
   await loadDisk();
-  memory.set(entry.slug, slimCachedEntry(entry));
-  const [file, supabase] = await Promise.all([writeDisk(), supabaseUpsert(entry)]);
+  const slim = slimCachedEntry(entry);
+  memory.set(entry.slug, slim);
+  const [file, supabase] = await Promise.all([writeDisk(), supabaseUpsert(entry), writeShard(slim)]);
   return { file, supabase };
 }
 
@@ -245,6 +313,7 @@ export async function deleteAnalysis(slug: string): Promise<boolean> {
   await loadDisk();
   const hadLocal = memory.delete(slug);
   if (hadLocal) await writeDisk();
+  await removeShard(slug);
 
   const config = supabaseConfig();
   if (config) {
