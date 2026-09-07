@@ -33,6 +33,67 @@ function formatObservedAt(iso?: string): string | undefined {
   }).format(date);
 }
 
+/**
+ * 주식 / 해외 주식 / 원자재·환율 detail: Naver Finance quote only.
+ * KinDex buzz score, rank tiles, and timeframe index rates are omitted so they
+ * are not confused with the live market change rate.
+ */
+function MarketQuoteHero({
+  entity,
+  quote,
+  kicker,
+}: {
+  entity: RankingEntity;
+  quote: {
+    source: string;
+    changeRate: number;
+    value: number;
+    unit: string;
+    label: string;
+    observedAt?: string;
+  };
+  kicker?: string;
+}) {
+  const change = quote.changeRate;
+  const up = change > 0;
+  const down = change < 0;
+  const tone = up ? "text-up" : down ? "text-down" : "text-muted";
+  const observedLabel = formatObservedAt(quote.observedAt);
+  const boardHint =
+    entity.heatmapGroup === "해외 주식"
+      ? "해외 주식"
+      : entity.heatmapGroup === "원자재·환율"
+        ? "원자재·환율"
+        : entity.heatmapGroup === "주식" || entity.heatmapGroup === "증시·주요 종목"
+          ? "국내 주식"
+          : TYPE_LABEL[entity.type];
+
+  return (
+    <section className="rounded-2xl border border-line bg-panel p-6 md:p-8">
+      <p className="text-xs text-muted">{kicker ?? `${boardHint} · 네이버금융`}</p>
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{entity.name}</h1>
+          {entity.nameEn ? <p className="mt-1 text-sm text-muted">{entity.nameEn}</p> : null}
+        </div>
+        <div className="text-right">
+          <p className="font-sans text-sm text-muted">네이버금융 현재가</p>
+          <p className="font-sans text-4xl font-semibold tabular-nums tracking-tight">
+            {formatMeasurement(quote.value, quote.unit)}
+          </p>
+          <p className={`mt-1 font-sans text-lg font-semibold tabular-nums ${tone}`}>
+            {up ? "▲" : down ? "▼" : "–"} 전일 대비 {formatRate(change)}
+          </p>
+        </div>
+      </div>
+      <p className="mt-6 text-[11px] text-muted">
+        {quote.source} · {quote.label}
+        {observedLabel ? ` · ${observedLabel} 기준` : ""} · 약 3분마다 갱신 · 킨덱스 지수는 표시하지 않습니다
+      </p>
+    </section>
+  );
+}
+
 export function EntityHero({
   entity,
   kicker,
@@ -41,12 +102,15 @@ export function EntityHero({
   kicker?: string;
 }) {
   const stockQuote = isNaverStockMeasurement(entity.measurement) ? entity.measurement : undefined;
-  const change = stockQuote?.changeRate ?? entity.fluctuationRate;
+  if (stockQuote) {
+    return <MarketQuoteHero entity={entity} quote={stockQuote} kicker={kicker} />;
+  }
+
+  const change = entity.fluctuationRate;
   const up = change > 0;
   const down = change < 0;
   const tone = up ? "text-up" : down ? "text-down" : "text-muted";
   const metrics = buildTimeframeMetrics(entity);
-  const observedLabel = formatObservedAt(stockQuote?.observedAt);
 
   return (
     <section className="rounded-2xl border border-line bg-panel p-6 md:p-8">
@@ -61,27 +125,13 @@ export function EntityHero({
         {/* Metrics read in sans with tabular figures: the gothic face is easier
             to scan at a glance and lining digits keep the columns aligned. */}
         <div className="text-right">
-          {stockQuote ? (
-            <>
-              <p className="font-sans text-sm text-muted">네이버금융 현재가</p>
-              <p className="font-sans text-4xl font-semibold tabular-nums tracking-tight">
-                {formatMeasurement(stockQuote.value, stockQuote.unit)}
-              </p>
-              <p className={`mt-1 font-sans text-lg font-semibold tabular-nums ${tone}`}>
-                {up ? "▲" : down ? "▼" : "–"} 전일 대비 {formatRate(change)}
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="font-sans text-sm text-muted">{scoreLabel(entity.type)}</p>
-              <p className="font-sans text-4xl font-semibold tabular-nums tracking-tight">
-                {formatScore(entity.buzzScore)}
-              </p>
-              <p className={`mt-1 font-sans text-lg font-semibold tabular-nums ${tone}`}>
-                {up ? "▲" : down ? "▼" : "–"} {formatRate(entity.fluctuationRate)}
-              </p>
-            </>
-          )}
+          <p className="font-sans text-sm text-muted">{scoreLabel(entity.type)}</p>
+          <p className="font-sans text-4xl font-semibold tabular-nums tracking-tight">
+            {formatScore(entity.buzzScore)}
+          </p>
+          <p className={`mt-1 font-sans text-lg font-semibold tabular-nums ${tone}`}>
+            {up ? "▲" : down ? "▼" : "–"} {formatRate(entity.fluctuationRate)}
+          </p>
         </div>
       </div>
       <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-line pt-4 text-sm sm:grid-cols-4">
@@ -90,10 +140,8 @@ export function EntityHero({
           <dd className="mt-1 font-sans text-lg tabular-nums">{entity.rank}위</dd>
         </div>
         <div>
-          <dt className="text-muted">{stockQuote ? "화제 지수" : "시가(오픈)"}</dt>
-          <dd className="mt-1 font-sans text-lg tabular-nums">
-            {stockQuote ? formatScore(entity.buzzScore) : formatScore(entity.openScore)}
-          </dd>
+          <dt className="text-muted">시가(오픈)</dt>
+          <dd className="mt-1 font-sans text-lg tabular-nums">{formatScore(entity.openScore)}</dd>
         </div>
         <div>
           <dt className="text-muted">{metricLabel(entity.type)}</dt>
@@ -104,24 +152,7 @@ export function EntityHero({
           <dd className="mt-1">{entity.tags.join(" · ")}</dd>
         </div>
       </dl>
-      {/* The one figure on this page that can be quoted as a fact: the source's
-          own number in the source's own unit. Everything above it is derived. */}
-      {stockQuote ? (
-        <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 px-4 py-4">
-          <p className="text-[11px] text-muted">
-            {stockQuote.source} · {stockQuote.label}
-            {observedLabel ? ` · ${observedLabel} 기준` : ""} · 약 3분마다 갱신
-          </p>
-          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-            <p className="font-sans text-3xl font-semibold tabular-nums tracking-tight md:text-4xl">
-              {formatMeasurement(stockQuote.value, stockQuote.unit)}
-            </p>
-            <p className={`font-sans text-xl font-semibold tabular-nums ${tone}`}>
-              {up ? "▲" : down ? "▼" : "–"} 전일 대비 {formatRate(change)}
-            </p>
-          </div>
-        </div>
-      ) : entity.measurement ? (
+      {entity.measurement ? (
         <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3">
           <p className="text-[11px] text-muted">
             {entity.measurement.source} 발표 · {entity.measurement.label}

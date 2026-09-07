@@ -5,7 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { ChartStyle } from "@/components/charts/TradingViewChart";
 import { TIMEFRAMES } from "@/lib/categories";
 import { formatRate } from "@/lib/format";
-import { formatNaverMeasurement } from "@/lib/market/naver-finance-format";
+import {
+  formatNaverMeasurement,
+  isNaverStockMeasurement,
+} from "@/lib/market/naver-finance-format";
 import type { MarketChartInstrument } from "@/lib/market/naver-chart";
 import { candlesWindowOhlc, timeframeLabel } from "@/lib/timeframes";
 import type { CandlePoint, RankingEntity, Timeframe } from "@/lib/types";
@@ -93,8 +96,18 @@ export function MarketPriceChart({
   }, [instrument, timeframe]);
 
   const ohlc = useMemo(() => candlesWindowOhlc(candles), [candles]);
-  const change = ohlc.change;
-  const tone = change > 0 ? "text-up" : change < 0 ? "text-down" : "text-muted";
+  const naverQuote = isNaverStockMeasurement(entity.measurement) ? entity.measurement : undefined;
+  // Prefer Naver day change for the quote panel. Candle-window % (e.g. full 일봉
+  // range) looks like a KinDex/index move and confuses readers next to 전일 대비.
+  const dayChange = naverQuote?.changeRate;
+  const dayTone =
+    dayChange == null
+      ? "text-muted"
+      : dayChange > 0
+        ? "text-up"
+        : dayChange < 0
+          ? "text-down"
+          : "text-muted";
   const linePath = useMemo(() => candles.map((bar) => bar.c), [candles]);
   const isIndex = instrument.kind === "index";
   const subtitle =
@@ -109,7 +122,11 @@ export function MarketPriceChart({
     { label: "고가", value: formatPrice(ohlc.high, unit) },
     { label: "저가", value: formatPrice(ohlc.low, unit) },
     { label: "현재", value: formatPrice(ohlc.close, unit) },
-    { label: "등락", value: formatRate(change), className: tone },
+    {
+      label: "전일 대비",
+      value: dayChange == null ? "—" : formatRate(dayChange),
+      className: dayTone,
+    },
     {
       label: isIndex ? "단위" : "거래량",
       value: isIndex
@@ -132,9 +149,6 @@ export function MarketPriceChart({
               <h2 className="font-sans text-2xl font-semibold tabular-nums tracking-tight">
                 {candles.length ? formatPrice(ohlc.close, unit) : "—"}
               </h2>
-              <p className={`font-sans text-lg font-semibold tabular-nums ${tone}`}>
-                {change > 0 ? "▲" : change < 0 ? "▼" : "–"} {formatRate(change)}
-              </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -190,7 +204,7 @@ export function MarketPriceChart({
                 linePath={linePath}
                 timeframe={timeframe}
                 style={chartStyle}
-                positive={change >= 0}
+                positive={(dayChange ?? ohlc.change) >= 0}
                 pricePrecision={precision}
               />
             ) : (

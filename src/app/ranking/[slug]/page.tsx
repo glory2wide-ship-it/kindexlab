@@ -16,6 +16,7 @@ import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import { formatRate } from "@/lib/format";
 import { enrichEntityWithKospiQuote } from "@/lib/market/kospi-quotes";
 import { resolveMarketChartInstrument } from "@/lib/market/naver-chart";
+import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
 import { SITE } from "@/lib/site";
 import { rankingPath, rankingUrl } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
@@ -72,18 +73,21 @@ export async function generateMetadata({
   if (!detail) return { title: "종목을 찾을 수 없습니다" };
   const { entity, grounded } = detail;
 
+  // Prefer Naver day change in metadata so SERP snippets are not KinDex buzz %.
+  const rate = isNaverStockMeasurement(entity.measurement)
+    ? entity.measurement.changeRate
+    : entity.fluctuationRate;
   return {
-    title: `${entity.name} ${entity.rank}위 · ${formatRate(entity.fluctuationRate)}`,
-    description: entity.summary,
+    title: `${entity.name} · ${formatRate(rate)}`,
+    description: isNaverStockMeasurement(entity.measurement)
+      ? `${entity.name} 네이버금융 시세와 차트.`
+      : entity.summary,
     alternates: { canonical: rankingPath(entity.slug) },
-    // A template column is the same skeleton with the keyword swapped in, so a
-    // few hundred of them read as scaled low-value content no matter how the
-    // individual page looks. Those stay out of the index until the chain finds
-    // enough reporting to ground them; `follow` keeps the board links crawlable
-    // so the columns that are grounded still get discovered through here.
     robots: grounded ? undefined : { index: false, follow: true },
     openGraph: {
-      title: `${entity.name} 버즈 시세`,
+      title: isNaverStockMeasurement(entity.measurement)
+        ? `${entity.name} 시세`
+        : `${entity.name} 버즈 시세`,
       description: entity.summary,
     },
   };
@@ -103,11 +107,12 @@ export default async function RankingDetailPage({
   const { entity, related, article: analysisArticle } = detail;
   const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
   const marketInstrument = resolveMarketChartInstrument(entity);
+  const isMarketQuote = Boolean(marketInstrument && isNaverStockMeasurement(entity.measurement));
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: `${entity.name} 버즈 시세`,
+    name: isMarketQuote ? `${entity.name} 시세` : `${entity.name} 버즈 시세`,
     url: rankingUrl(SITE.url, entity.slug),
     description: entity.summary,
     mainEntity: {
