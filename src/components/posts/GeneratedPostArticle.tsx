@@ -4,6 +4,7 @@ import { ContentSlot } from "@/components/monetization/ContentSlot";
 import { FactTable } from "@/components/article/FactTable";
 import { FaqList } from "@/components/article/FaqList";
 import { SectionHeading } from "@/components/article/SectionHeading";
+import { TrendDisclaimer } from "@/components/article/TrendDisclaimer";
 import { SITE } from "@/lib/site";
 import { channelHref, channelSectionHref, getPostChannel, inferPostChannel } from "@/lib/posts/channels";
 import type { GeneratedPost } from "@/lib/posts/types";
@@ -190,13 +191,7 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
         <ContentSlot placement="footer" label={post.focusKeyword} adFormat="auto" />
       </div>
 
-      <p className="max-w-3xl text-xs leading-6 text-muted">
-        본문은 투자 자문이 아닙니다. 출처: {SITE.name} 이슈 키워드. 면책은{" "}
-        <Link href="/disclaimer" className="underline">
-          면책조항
-        </Link>
-        을 따릅니다.
-      </p>
+      <TrendDisclaimer />
     </article>
   );
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
 import { FactTable } from "@/components/article/FactTable";
 import { SectionHeading } from "@/components/article/SectionHeading";
+import { TrendDisclaimer } from "@/components/article/TrendDisclaimer";
 import { isLiveEdition } from "@/lib/briefing/dates";
 import { categoryLabel, heatmapHref } from "@/lib/briefing/metrics";
 import {
@@ -11,7 +12,6 @@ import {
   resolveInternalLink,
 } from "@/lib/premium/internal-link";
 import { rankingPath } from "@/lib/slugs";
-import { SITE } from "@/lib/site";
 import type { BriefingArticle, RankingEntity } from "@/lib/types";
 
 export function DailyBriefing({
@@ -217,8 +217,9 @@ export function DailyBriefing({
         <Link href={categoryHref} className="text-accent hover:underline">
           {categoryLabel(briefing.category)} 카테고리 보드
         </Link>
-        에서 이어 읽으면 됩니다. 본문은 투자 자문이 아니며 {SITE.name} 관측입니다.
+        에서 이어 읽으면 됩니다.
       </p>
+      <TrendDisclaimer />
     </article>
   );
 }

@@ -1,6 +1,7 @@
 import { chatJson, draftModel } from "@/lib/analysis/chain/llm";
 import { stripCliche } from "@/lib/analysis/chain/editor";
 import type { AnalysisLogger } from "@/lib/analysis/log";
+import { ensureSectionsDisclaimer } from "@/lib/editorial/disclaimer";
 import { tableMarkdown } from "@/lib/editorial/rules";
 import type { TodayAnalysisSection } from "@/lib/editorial/today-analysis";
 import type { PostFaq, PostTable } from "@/lib/posts/types";
@@ -194,9 +195,11 @@ function countChars(report: Omit<BoardReport, "characterCount" | "readingMinutes
 }
 
 function finalize(report: Omit<BoardReport, "characterCount" | "readingMinutes">): BoardReport {
-  const characterCount = countChars(report);
+  const sections = ensureSectionsDisclaimer(report.sections);
+  const withDisclaimer = { ...report, sections };
+  const characterCount = countChars(withDisclaimer);
   return {
-    ...report,
+    ...withDisclaimer,
     characterCount,
     readingMinutes: Math.max(1, Math.round(characterCount / 500)),
   };

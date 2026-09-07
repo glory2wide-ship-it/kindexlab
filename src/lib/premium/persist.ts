@@ -1,4 +1,5 @@
 import { editionDateTime, kstDateString } from "@/lib/briefing/dates";
+import { ensureSectionsDisclaimer } from "@/lib/editorial/disclaimer";
 import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import type { PremiumArticle } from "@/lib/premium/generate";
 import { persistGeneratedPost } from "@/lib/posts/store";
@@ -31,7 +32,7 @@ function toAnalysisArticle(
     readingMinutes: readingMinutes(article.characterCount),
     focusKeyword: article.keyword,
     supportKeyword: article.takeaways[0] ?? article.keyword,
-    sections: article.sections,
+    sections: ensureSectionsDisclaimer(article.sections),
     table: article.table,
     faq: article.faq,
     externalLink: article.externalLink,

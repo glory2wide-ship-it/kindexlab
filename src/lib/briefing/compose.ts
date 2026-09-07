@@ -12,6 +12,7 @@ import {
   type ChannelBriefingDesk,
 } from "@/lib/briefing/desks";
 import { withBriefingCover } from "@/lib/briefing/cover";
+import { ensureSectionsDisclaimer } from "@/lib/editorial/disclaimer";
 import {
   buildIssueCompareTable,
   buildIssueFaq,
@@ -171,12 +172,17 @@ function finalizeBriefing(
     else break;
     words = countWords(article);
   }
+  ensureBriefingDisclaimer(article);
   const wordCount = countWords(article);
   return {
     ...article,
     wordCount,
     readingMinutes: Math.max(4, Math.round(wordCount / 180)),
   };
+}
+
+function ensureBriefingDisclaimer(article: BriefingArticle): void {
+  article.sections = ensureSectionsDisclaimer(article.sections ?? []);
 }
 
 export function ensureBriefingLength(

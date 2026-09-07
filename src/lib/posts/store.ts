@@ -1,6 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import generatedFile from "@/data/posts/generated.json";
+import {
+  TREND_ANALYSIS_DISCLAIMER,
+  ensureSectionsDisclaimer,
+} from "@/lib/editorial/disclaimer";
 import { inferPostChannel } from "@/lib/posts/channels";
 import type { GeneratedPost, PostChannel, PostFaq, PostLink, PostTable } from "@/lib/posts/types";
 import { decodeRouteSlug, slugsMatch } from "@/lib/slugs";
@@ -16,12 +20,29 @@ function tableMarkdown(table: Pick<PostTable, "headers" | "rows">): string {
   return `${head}\n${sep}\n${body}`;
 }
 
+function ensurePostDisclaimer(post: GeneratedPost): GeneratedPost {
+  const sections = [...(post.sections ?? [])];
+  if (!sections.length) {
+    return {
+      ...post,
+      sections: [
+        {
+          heading: "안내",
+          headingLevel: 2,
+          paragraphs: [TREND_ANALYSIS_DISCLAIMER],
+        },
+      ],
+    };
+  }
+  return { ...post, sections: ensureSectionsDisclaimer(sections) };
+}
+
 function normalizePost(post: GeneratedPost): GeneratedPost {
   const table = post.table?.headers?.length
     ? { ...post.table, markdown: post.table.markdown || tableMarkdown(post.table) }
     : EMPTY_TABLE;
   const faq: PostFaq[] = Array.isArray(post.faq) ? post.faq : [];
-  return {
+  return ensurePostDisclaimer({
     ...post,
     wordCount: post.wordCount ?? 0,
     characterCount: post.characterCount ?? 0,
@@ -36,7 +57,7 @@ function normalizePost(post: GeneratedPost): GeneratedPost {
       rel: "noopener noreferrer",
     },
     internalLink: post.internalLink ?? EMPTY_LINK,
-  };
+  });
 }
 
 const fileRel = path.join("src", "data", "posts", "generated.json");

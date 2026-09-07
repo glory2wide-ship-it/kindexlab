@@ -1,4 +1,5 @@
 import { resolveChannelEditorPersona } from "@/lib/premium/briefing-editorial";
+import { TREND_ANALYSIS_DISCLAIMER } from "@/lib/editorial/disclaimer";
 import {
   editionFreshnessRules,
   editorialGroundingRules,
@@ -44,7 +45,8 @@ export const STATIC_SYSTEM_PROMPT = [
 8. takeaways는 브리핑이면 빈 배열 []. 프리미엄 칼럼이면 How에 해당하는 실행 팁 2~4개(목록 패딩이 아닌 구체 행동).`,
   `[출력 포맷 — 절대 준수]
 - 응답은 오직 지정된 JSON 객체 하나만 반환합니다. 코드블록·설명 문장 금지.
-- 스키마: title, excerpt, sections[{heading, headingLevel, paragraphs[]}], table{caption, headers[], rows[][]}, faq[{question, answer}], externalLink{href, label}, internalLink{href, label}, takeaways[]`,
+- 스키마: title, excerpt, sections[{heading, headingLevel, paragraphs[]}], table{caption, headers[], rows[][]}, faq[{question, answer}], externalLink{href, label}, internalLink{href, label}, takeaways[]
+- 본문 마지막 문단은 반드시 다음 문장으로 끝냅니다: ${TREND_ANALYSIS_DISCLAIMER}`,
 ]
   .join("\n\n")
   .trim();
@@ -256,7 +258,7 @@ export function premiumPromptCacheKey(opts: {
   const kind = opts.briefing ? "briefing" : "premium";
   const mode = (opts.mode || "full").toLowerCase();
   // Channel omitted from cache key prefix so the static system prefix shares one machine.
-  return `kindexlab:${kind}:single:${mode}:v11`;
+  return `kindexlab:${kind}:single:${mode}:v12`;
 }
 
 export function wordpressAdsenseGuidelines(includeFullSeo: boolean): string {

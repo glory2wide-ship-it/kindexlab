@@ -1,6 +1,7 @@
 "use client";
 
 import { ContentSlot } from "@/components/monetization/ContentSlot";
+import { TrendDisclaimer } from "@/components/article/TrendDisclaimer";
 import type { CachedBoard } from "@/lib/boards/types";
 
 /**
@@ -120,6 +121,7 @@ export function BoardReportBody({ board }: { board: CachedBoard }) {
       </section>
 
       <ContentSlot placement="footer" />
+      <TrendDisclaimer />
     </article>
   );
 }

@@ -1,5 +1,6 @@
 import type { PostFaq, PostLink, PostTable } from "@/lib/posts/types";
 import type { EntityType } from "@/lib/types";
+import { TREND_ANALYSIS_DISCLAIMER } from "@/lib/editorial/disclaimer";
 import { editorialGroundingRules } from "@/lib/editorial/tense-rules";
 
 export const MIN_WORDS = 700;
@@ -237,7 +238,7 @@ export function editorialSystemPrompt(focus: string, supportKw: string): string 
     `Use focus keyword "${focus}" at least 5 times and support keyword "${supportKw}" at least 5 times, naturally.`,
     "Include one markdown comparison table. Include one official external URL and 내부 링크 추천: [title].",
     "FAQ: exactly 3 items. Each answer must cite a distinct concrete detail (who, what, when) and must not reuse a sentence from the body or from another answer.",
-    "Not investment advice.",
+    `Close the article with this exact sentence as its own final paragraph: ${TREND_ANALYSIS_DISCLAIMER}`,
     "",
     editorialGroundingRules(),
   ].join("\n");

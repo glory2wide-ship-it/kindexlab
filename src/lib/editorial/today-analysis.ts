@@ -17,6 +17,10 @@ import {
 } from "@/lib/editorial/copy";
 import { issueKeywordFromEntity } from "@/lib/editorial/issue-keyword";
 import {
+  TREND_ANALYSIS_DISCLAIMER,
+  ensureSectionsDisclaimer,
+} from "@/lib/editorial/disclaimer";
+import {
   SENT_MAX,
   SENT_MIN,
   charLen,
@@ -231,6 +235,17 @@ function normalizeArticle(article: TodayAnalysisArticle): void {
   });
 }
 
+function ensureAnalysisDisclaimer(article: TodayAnalysisArticle): void {
+  article.sections = ensureSectionsDisclaimer(article.sections);
+  if (!article.sections.length) {
+    article.sections.push({
+      heading: "안내",
+      headingLevel: 2,
+      paragraphs: [TREND_ANALYSIS_DISCLAIMER],
+    });
+  }
+}
+
 function ensureKeywords(article: TodayAnalysisArticle): void {
   const text = analysisPlainText(article);
   const extra: string[] = [];
@@ -402,6 +417,7 @@ function reviewUntilReady(
   // Korean reading speed sits near 500 characters a minute.
   article.readingMinutes = Math.max(2, Math.round(article.characterCount / 500));
   article.reviewed = report.ok;
+  ensureAnalysisDisclaimer(article);
   return article;
 }
 

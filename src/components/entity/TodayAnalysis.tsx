@@ -4,6 +4,7 @@ import { ContentSlot } from "@/components/monetization/ContentSlot";
 import { FactTable } from "@/components/article/FactTable";
 import { FaqList } from "@/components/article/FaqList";
 import { SectionHeading } from "@/components/article/SectionHeading";
+import { TrendDisclaimer } from "@/components/article/TrendDisclaimer";
 import { stripRowQualifier } from "@/lib/boards/heatmap";
 import { rankingPath } from "@/lib/slugs";
 import { SITE } from "@/lib/site";
@@ -143,6 +144,7 @@ export function TodayAnalysis({
 
         <ContentSlot placement="footer" label={article.focusKeyword} adFormat="auto" />
       </div>
+      <TrendDisclaimer />
     </article>
   );
 }
