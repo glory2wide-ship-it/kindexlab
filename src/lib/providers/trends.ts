@@ -124,12 +124,19 @@ async function loadLiveRankings(options?: { refresh?: boolean }): Promise<Rankin
     return ingestFreshRankings();
   }
   if (snapshot?.items.length) {
-    if (stale) {
+    // Background ingest uses cache:no-store fetches. Starting it during an ISR
+    // page render opts the whole route into dynamic and kills CDN HTML caching.
+    // On Vercel, cron /admin rebuild owns refresh — serve the snapshot as-is.
+    if (stale && process.env.VERCEL !== "1" && !isNextProductionBuild()) {
       void ingestFreshRankings().catch((error) => {
         console.error("[kindexlab:ingest] background refresh failed", error);
       });
     }
     return snapshotToPayload(snapshot);
+  }
+  // Empty snapshot on Vercel: do not scrape mid-request (dynamic + slow TTFB).
+  if (process.env.VERCEL === "1" || isNextProductionBuild()) {
+    return loadMockRankings();
   }
   return ingestFreshRankings();
 }

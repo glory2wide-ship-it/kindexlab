@@ -29,7 +29,12 @@ git merge github/main
 - Next.js App Router + TypeScript
 - Tailwind CSS v4
 - d3-hierarchy (트리맵)
-- Vercel 배포 (`npm run build`)
+- Vercel 배포 (`npm run build`) — 서버리스 리전은 서울(`icn1`)로 고정 (`vercel.json` + `preferredRegion`)
+
+## 성능 메모
+
+- 페이지 ISR `revalidate = 180`과 함께, SSR 경로의 외부 fetch는 `next: { revalidate }`를 사용합니다. `cache: "no-store"`를 페이지 렌더에 쓰면 Vercel CDN이 HTML을 캐시하지 않습니다.
+- 라이브 시세·보드 갱신은 3분 캐시, 인제스트/크론은 `no-store`를 유지합니다.
 
 ## 화면
 

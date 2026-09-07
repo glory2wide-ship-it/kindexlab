@@ -33,17 +33,33 @@ function headers(extra?: HeadersInit): Headers {
   return result;
 }
 
+/**
+ * Default `cache: "no-store"` keeps ingest/cron paths fresh.
+ * Callers that run on ISR page renders must pass `next: { revalidate }` (or an
+ * explicit `cache`) — otherwise Next opts the whole route into dynamic and the
+ * CDN never serves HTML (`Cache-Control: private, no-store`).
+ */
 async function request(url: string, init?: RequestInit, attempt = 0): Promise<Response> {
-  await throttle(url);
+  const { cache: initCache, next: initNext, headers: initHeaders, signal: _signal, ...rest } =
+    (init ?? {}) as RequestInit & { next?: { revalidate?: number | false } };
+  const allowDataCache = Boolean(initNext) || (initCache != null && initCache !== "no-store");
+  // Ingest stays polite (450ms/host). ISR quote/board reads skip the long gap so
+  // parallel Naver calls do not serialize into multi-second TTFB.
+  await throttle(url, allowDataCache ? 40 : 450);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 14_000);
   try {
     const response = await fetch(url, {
-      ...init,
+      ...rest,
       signal: controller.signal,
-      headers: headers(init?.headers),
+      headers: headers(initHeaders),
       redirect: "follow",
-      cache: "no-store",
+      ...(allowDataCache
+        ? {
+            ...(initCache != null ? { cache: initCache } : {}),
+            ...(initNext != null ? { next: initNext } : {}),
+          }
+        : { cache: "no-store" }),
     });
     if ((response.status === 429 || response.status >= 500) && attempt < 2) {
       await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));

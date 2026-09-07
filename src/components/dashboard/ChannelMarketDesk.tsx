@@ -231,7 +231,8 @@ export function ChannelMarketDesk({
       if (board) params.set("board", board);
       params.set("region", boardUsesRegionFilter(board) ? nextRegion : "all");
       try {
-        const response = await fetch(`/api/heatmap?${params.toString()}`, { cache: "no-store" });
+        // Default fetch honors `/api/heatmap` Cache-Control (s-maxage=180).
+        const response = await fetch(`/api/heatmap?${params.toString()}`);
         if (!response.ok || requestId !== heatmapRequestRef.current) return;
         const payload = (await response.json()) as {
           items?: RankingEntity[];

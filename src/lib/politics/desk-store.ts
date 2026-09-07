@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { getPresidentialPolls } from "@/lib/politics/polls";
+import { getPresidentialPollsLive } from "@/lib/politics/polls";
 
 /**
  * Presidential approval desk — poll comparison data only.
@@ -8,10 +8,10 @@ import { getPresidentialPolls } from "@/lib/politics/polls";
  */
 const cachedPoliticsDeskCopy = unstable_cache(
   async () => {
-    const polls = await getPresidentialPolls();
+    const polls = await getPresidentialPollsLive();
     return { polls };
   },
-  ["politics-desk-copy-v21"],
+  ["politics-desk-copy-v22"],
   { revalidate: 3600 },
 );
 
@@ -19,6 +19,6 @@ export async function loadPoliticsDeskCopy() {
   try {
     return await cachedPoliticsDeskCopy();
   } catch {
-    return { polls: await getPresidentialPolls() };
+    return { polls: await getPresidentialPollsLive() };
   }
 }

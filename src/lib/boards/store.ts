@@ -244,7 +244,8 @@ async function supabaseGet(slug: string): Promise<CachedBoard | undefined> {
       `${config.url}/rest/v1/board_cache?slug=eq.${encodeURIComponent(slug)}&select=body&limit=1`,
       {
         headers: { apikey: config.key, Authorization: `Bearer ${config.key}` },
-        cache: "no-store",
+        // ISR pages call this during render — no-store would disable the CDN HTML cache.
+        next: { revalidate: 180 },
       },
     );
     if (!response.ok) return undefined;

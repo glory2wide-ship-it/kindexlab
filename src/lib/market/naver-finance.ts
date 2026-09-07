@@ -1,5 +1,6 @@
 import { decodeBody } from "@/lib/ingestion/decode";
 import { fetchBuffer, fetchJson } from "@/lib/ingestion/http";
+import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import {
   stockSymbolForName,
   type StockMarket,
@@ -7,6 +8,9 @@ import {
 } from "@/lib/market/stock-codes";
 
 export { formatStockPrice, isNaverStockMeasurement, NAVER_FINANCE_SOURCE } from "@/lib/market/naver-finance-format";
+
+/** ISR-safe fetch — must not use no-store on page renders. */
+const QUOTE_FETCH = { next: { revalidate: DEFAULT_TRENDS_REVALIDATE_SEC } } as const;
 
 export interface StockQuote {
   name: string;
@@ -49,6 +53,7 @@ async function fetchKrQuotes(codes: string[]): Promise<Map<string, StockQuote>> 
   // only echoed the first item when several were comma-joined.
   const url = `https://polling.finance.naver.com/api/realtime/domestic/stock/${unique.join(",")}`;
   const { status, contentType, buffer } = await fetchBuffer(url, {
+    ...QUOTE_FETCH,
     headers: {
       Accept: "application/json,text/plain,*/*",
       "User-Agent": "Mozilla/5.0",
@@ -94,6 +99,7 @@ async function fetchUsQuote(code: string): Promise<StockQuote | null> {
   const url = `https://api.stock.naver.com/stock/${encodeURIComponent(code)}/basic`;
   try {
     const data = await fetchJson<Record<string, unknown>>(url, {
+      ...QUOTE_FETCH,
       headers: { Accept: "application/json" },
     });
     const price = parseNumber(data.closePrice);

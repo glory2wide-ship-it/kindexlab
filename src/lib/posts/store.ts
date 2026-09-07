@@ -133,7 +133,7 @@ async function supabaseList(): Promise<GeneratedPost[]> {
       `${config.url}/rest/v1/posts?select=body&order=published_at.desc&limit=50`,
       {
         headers: { apikey: config.key, Authorization: `Bearer ${config.key}` },
-        cache: "no-store",
+        next: { revalidate: 180 },
       },
     );
     if (!response.ok) return [];

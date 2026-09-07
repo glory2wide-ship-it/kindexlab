@@ -5,6 +5,10 @@ import {
   type MarketIndexSymbol,
 } from "@/lib/market/market-index-codes";
 import { NAVER_FINANCE_SOURCE } from "@/lib/market/naver-finance-format";
+import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
+
+/** ISR-safe fetch — must not use no-store on page renders. */
+const QUOTE_FETCH = { next: { revalidate: DEFAULT_TRENDS_REVALIDATE_SEC } } as const;
 
 export interface MarketIndexQuote {
   name: string;
@@ -55,6 +59,7 @@ function pickInfo(payload: Record<string, unknown>): Record<string, unknown> | n
 async function fetchMarketIndexQuote(symbol: MarketIndexSymbol): Promise<MarketIndexQuote | null> {
   const url = `https://api.stock.naver.com/marketindex/${symbol.category}/${encodeURIComponent(symbol.code)}`;
   const { status, contentType, buffer } = await fetchBuffer(url, {
+    ...QUOTE_FETCH,
     headers: {
       Accept: "application/json",
       "User-Agent": "Mozilla/5.0",
@@ -143,6 +148,7 @@ async function loadListPageQuotes(): Promise<Map<string, MarketIndexQuote>> {
   await Promise.all(
     LIST_PAGE_URLS.map(async (url) => {
       const { status, contentType, buffer } = await fetchBuffer(url, {
+        ...QUOTE_FETCH,
         headers: { Accept: "text/html", "User-Agent": "Mozilla/5.0" },
       });
       if (status >= 400) return;

@@ -516,6 +516,7 @@ function mergePoll(
 async function fetchFeed(url: string): Promise<{ title: string; link?: string; pubDate?: string; description?: string }[]> {
   const xml = await fetchText(url, {
     headers: { Accept: "application/rss+xml,application/xml,text/xml" },
+    next: { revalidate: 3600 },
   });
   return parseRssItems(xml);
 }
@@ -566,17 +567,8 @@ async function crawlPresidentialPolls(): Promise<PollBoardSnapshot> {
 }
 
 async function loadPresidentialPolls(): Promise<PollBoardSnapshot> {
-  // Never block rankings/RSC on a long RSS crawl — seed within 120ms, warm cache async.
   try {
-    const crawl = crawlPresidentialPolls();
-    const seeded = await Promise.race([
-      crawl,
-      new Promise<PollBoardSnapshot>((resolve) => {
-        setTimeout(() => resolve(seedPresidentialPolls()), 120);
-      }),
-    ]);
-    void crawl.catch(() => undefined);
-    return seeded;
+    return await crawlPresidentialPolls();
   } catch (error) {
     console.warn("[kindexlab:polls] crawl failed, using seed", error);
     return seedPresidentialPolls();
@@ -587,15 +579,20 @@ const cachedPresidentialPolls = unstable_cache(loadPresidentialPolls, ["agency-p
   revalidate: 3600,
 });
 
+/**
+ * Rankings / ISR page path — seed only.
+ * Starting an RSS crawl (even behind Promise.race) still fires network during
+ * the request and historically forced `cache: no-store` dynamic HTML.
+ * Live crawl is exposed via `getPresidentialPollsLive` for API routes.
+ */
 export async function getPresidentialPolls(): Promise<PollBoardSnapshot> {
-  // Prefer seed instantly on the request path; unstable_cache can still wait on a cold crawl.
+  return seedPresidentialPolls();
+}
+
+/** Hour-cached live crawl for `/api/politics/polls` and admin rebuilds. */
+export async function getPresidentialPollsLive(): Promise<PollBoardSnapshot> {
   try {
-    return await Promise.race([
-      cachedPresidentialPolls(),
-      new Promise<PollBoardSnapshot>((resolve) => {
-        setTimeout(() => resolve(seedPresidentialPolls()), 80);
-      }),
-    ]);
+    return await cachedPresidentialPolls();
   } catch {
     return seedPresidentialPolls();
   }

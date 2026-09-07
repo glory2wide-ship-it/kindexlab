@@ -17,8 +17,8 @@ const nextConfig: NextConfig = {
     // Keep recently visited RSC payloads on the client so GNB/subnav hops
     // reuse the last paint instead of refetching every click.
     staleTimes: {
-      dynamic: 90,
-      static: 180,
+      dynamic: 120,
+      static: 300,
     },
   },
   async headers() {
@@ -51,7 +51,6 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "X-Debug-Marker", value: "probe-9f81" },
         ],
       },
     ];

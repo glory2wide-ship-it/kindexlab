@@ -12,7 +12,9 @@ import type { PostChannel } from "@/lib/posts/types";
 import type { RankingEntity } from "@/lib/types";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const preferredRegion = "icn1";
+/** Allow CDN caching — matches desk ISR and client refresh cadence. */
+export const revalidate = 180;
 
 function parseChannel(raw: string | null): PostChannel | undefined {
   if (!raw) return undefined;
@@ -63,16 +65,23 @@ export async function GET(request: Request) {
   ).map(toTileEntity);
   const selected = board ? boards.find((item) => item.slug === board) : undefined;
 
-  return NextResponse.json({
-    ok: true,
-    category,
-    gender,
-    age,
-    region,
-    board: selected?.slug ?? null,
-    title: heatmapBoardTitle(boards, board),
-    source: selected || boards.length ? "demographic_ranking" : "live",
-    count: items.length,
-    items,
-  });
+  return NextResponse.json(
+    {
+      ok: true,
+      category,
+      gender,
+      age,
+      region,
+      board: selected?.slug ?? null,
+      title: heatmapBoardTitle(boards, board),
+      source: selected || boards.length ? "demographic_ranking" : "live",
+      count: items.length,
+      items,
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=180, stale-while-revalidate=600",
+      },
+    },
+  );
 }

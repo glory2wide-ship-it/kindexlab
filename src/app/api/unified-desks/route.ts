@@ -4,7 +4,8 @@ import { loadUnifiedMarket } from "@/lib/boards/composite-desk";
 import { trendsRevalidateSec } from "@/lib/refresh";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const preferredRegion = "icn1";
+export const revalidate = 180;
 
 /** Landing “LIVE 킨덱스 랭킹” client poll — mirrors loadUnifiedMarket desks. */
 export async function GET() {

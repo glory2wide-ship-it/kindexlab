@@ -13,6 +13,9 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+/** Pin serverless execution to Seoul (icn1). Mirrors vercel.json `regions`. */
+export const preferredRegion = "icn1";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: {
