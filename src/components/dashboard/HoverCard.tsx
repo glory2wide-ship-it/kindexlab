@@ -42,7 +42,7 @@ export function HoverCard({
     >
       <p className="text-[10px] uppercase tracking-wider text-muted">
         {entity.heatmapGroup ?? TYPE_LABEL[entity.type]}
-        {naverQuote ? " · 네이버금융" : ` · ${timeframeLabel(timeframe)}`} · {entity.rank}위
+        {` · ${timeframeLabel(timeframe)}`} · {entity.rank}위
       </p>
       <div className="mt-1 flex items-baseline justify-between gap-2">
         <p className="font-semibold">{formatEntityName(entity)}</p>

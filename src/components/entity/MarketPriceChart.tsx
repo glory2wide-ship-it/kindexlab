@@ -118,9 +118,9 @@ export function MarketPriceChart({
   const subtitle =
     instrument.kind === "stock"
       ? instrument.market === "us"
-        ? "해외 주식 · 네이버금융 시세"
-        : "국내 주식 · 네이버금융 시세"
-      : `원자재·환율 · 네이버금융 (${unit})`;
+        ? "해외 주식 시세"
+        : "국내 주식 시세"
+      : `원자재·환율 (${unit})`;
 
   const quote = [
     { label: "시가", value: formatPrice(ohlc.open, unit) },
@@ -201,7 +201,7 @@ export function MarketPriceChart({
           <div className="px-3 py-3 md:px-5">
             {loading ? (
               <div className="flex h-[400px] items-center justify-center rounded-lg border border-line/60 bg-panel text-xs text-muted">
-                네이버금융 시세 불러오는 중…
+                시세 불러오는 중…
               </div>
             ) : candles.length >= 2 ? (
               <TradingViewChart
@@ -216,7 +216,7 @@ export function MarketPriceChart({
             ) : (
               <div className="flex h-[400px] flex-col items-center justify-center gap-2 rounded-lg border border-line/60 bg-panel px-6 text-center text-sm text-muted">
                 <p>{error || "이 종목의 시세 차트를 아직 불러오지 못했습니다."}</p>
-                <p className="text-xs">네이버금융에 공개된 시계열이 없는 항목일 수 있습니다.</p>
+                <p className="text-xs">공개된 시계열이 없는 항목일 수 있습니다.</p>
               </div>
             )}
           </div>
@@ -234,7 +234,7 @@ export function MarketPriceChart({
           </dl>
         </div>
         <p className="border-t border-line px-5 py-3 text-[11px] leading-5 text-muted md:px-7">
-          TradingView Lightweight Charts · 네이버금융 실제 시세(단위: {unit}). 차트를 좌우로 끌어
+          TradingView Lightweight Charts · 실제 시세(단위: {unit}). 차트를 좌우로 끌어
           이전 시간대도 확인할 수 있습니다. 분봉은 국내 주식은 분 단위 체결을 집계하고, 해외
           주식·원자재·환율은 제공 범위에 따라 일봉으로 대체될 수 있습니다.
         </p>

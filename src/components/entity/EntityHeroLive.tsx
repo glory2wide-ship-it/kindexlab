@@ -83,14 +83,14 @@ function MarketQuotePendingHero({
 
   return (
     <section className="rounded-2xl border border-line bg-panel p-6 md:p-8">
-      <p className="text-xs text-muted">{kicker ?? `${boardHint} · 네이버금융`}</p>
+      <p className="text-xs text-muted">{kicker ?? boardHint}</p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{entity.name}</h1>
           {entity.nameEn ? <p className="mt-1 text-sm text-muted">{entity.nameEn}</p> : null}
         </div>
         <div className="text-right">
-          <p className="font-sans text-sm text-muted">네이버금융 현재가</p>
+          <p className="font-sans text-sm text-muted">현재가</p>
           <p className="mt-2 font-sans text-sm text-muted">시세 불러오는 중…</p>
         </div>
       </div>

@@ -37,7 +37,7 @@ export function UnifiedMarketBoard({
         initialView="treemap"
         hideCategoryTabs
         title={HEATMAP_PANEL_TITLE}
-        subtitle="등락률·시세·버즈를 히트맵과 리스트로 읽습니다. 주식·해외 주식·원자재·환율 타일은 네이버금융 현재가(단위)를 표시합니다."
+        subtitle="등락률·시세·버즈를 히트맵과 리스트로 읽습니다. 주식·해외 주식·원자재·환율 타일은 현재가(단위)를 표시합니다."
         refreshIntervalSec={refreshIntervalSec}
         refreshing={pending}
         onRefresh={() => startTransition(() => router.refresh())}

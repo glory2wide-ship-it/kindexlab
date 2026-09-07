@@ -91,7 +91,7 @@ export async function generateMetadata({
   return {
     title: `${entity.name} · ${formatRate(rate)}`,
     description: isNaverStockMeasurement(entity.measurement)
-      ? `${entity.name} 네이버금융 시세와 차트.`
+      ? `${entity.name} 시세와 차트.`
       : entity.summary,
     alternates: { canonical: rankingPath(entity.slug) },
     robots: { index: false, follow: true },

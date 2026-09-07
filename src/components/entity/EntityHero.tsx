@@ -70,14 +70,14 @@ function MarketQuoteHero({
 
   return (
     <section className="rounded-2xl border border-line bg-panel p-6 md:p-8">
-      <p className="text-xs text-muted">{kicker ?? `${boardHint} · 네이버금융`}</p>
+      <p className="text-xs text-muted">{kicker ?? boardHint}</p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{entity.name}</h1>
           {entity.nameEn ? <p className="mt-1 text-sm text-muted">{entity.nameEn}</p> : null}
         </div>
         <div className="text-right">
-          <p className="font-sans text-sm text-muted">네이버금융 현재가</p>
+          <p className="font-sans text-sm text-muted">현재가</p>
           <p className="font-sans text-4xl font-semibold tabular-nums tracking-tight">
             {formatMeasurement(quote.value, quote.unit)}
           </p>
@@ -87,7 +87,7 @@ function MarketQuoteHero({
         </div>
       </div>
       <p className="mt-6 text-[11px] text-muted">
-        {quote.source} · {quote.label}
+        {quote.label}
         {observedLabel ? ` · ${observedLabel} 기준` : ""} · 약 3분마다 갱신 · 킨덱스 지수는 표시하지 않습니다
       </p>
     </section>
