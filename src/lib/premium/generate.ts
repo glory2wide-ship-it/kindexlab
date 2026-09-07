@@ -504,7 +504,7 @@ export async function generatePremiumArticle(input: {
   const cacheKey = premiumPromptCacheKey({
     briefing: input.briefing,
     channel: input.channel,
-    mode: dataJournalist ? `hybrid80-reader-h2-${mode}` : mode,
+    mode: dataJournalist ? `hybrid80-num-h2-${mode}` : mode,
   });
   const model = resolveBriefingModel({
     briefing: input.briefing,
