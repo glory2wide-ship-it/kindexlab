@@ -83,8 +83,6 @@ async function main() {
   // Optional one-off focus (safe for overnight cron — requires --focus or ANALYSIS_FOCUS=1):
   // scripts/.analysis-focus → government-subsidy-search|지역사랑상품권
   let focused = all;
-  const focusEnabled =
-    process.argv.includes("--focus") || process.env.ANALYSIS_FOCUS === "1";
   if (focusEnabled) {
     try {
       const { readFile } = await import("node:fs/promises");

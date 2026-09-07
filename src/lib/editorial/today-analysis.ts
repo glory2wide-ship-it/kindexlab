@@ -577,15 +577,19 @@ export function composePremiumTodayAnalysis(options: {
     entity,
     peers.map((item) => ({ name: item.name, slug: item.slug })),
   );
-  const { focus, supportKw } = pickKeywords(keyword);
-  const sections = normalizeOverrideSections(
-    premium.sections.map((section) => ({
-      heading: section.heading,
-      headingLevel: section.headingLevel,
-      paragraphs: section.paragraphs,
-    })),
-  );
-  if (premium.takeaways?.length) {
+  const picked = pickKeywords(keyword);
+  // Prefer the live heatmap row name (e.g. 지역사랑상품권) over generic "이슈" labels.
+  const focusFromName = entity.name.replace(/^\[[^\]]+\]\s*/, "").trim();
+  const focus =
+    focusFromName && !/이슈$/.test(focusFromName) ? focusFromName : picked.focus;
+  const supportKw = picked.supportKw;
+  // Keep Gemini section headings intact — do NOT slice/renumber (legacy ❶~❺ trim).
+  const sections: TodayAnalysisSection[] = premium.sections.map((section) => ({
+    heading: section.heading.replace(/^[❶❷❸❹❺❻❼❽❾]\s*/, "").replace(/\.$/, "").trim() || section.heading,
+    headingLevel: 2 as const,
+    paragraphs: [...section.paragraphs],
+  }));
+  if (premium.takeaways?.length && !sections.some((section) => section.heading.includes("핵심 요약"))) {
     sections.push({
       heading: "핵심 요약",
       headingLevel: 2,
@@ -599,13 +603,18 @@ export function composePremiumTodayAnalysis(options: {
           .join(" ")
           .replace(/\s+/g, "").length;
 
+  const title =
+    premium.title.includes(focus) ||
+    premium.title.includes(entity.name) ||
+    premium.title.includes(focusFromName)
+      ? premium.title
+      : `${focus} 관심 변화, KinDex 데이터가 보여주는 흐름`;
+
   return {
     id: `today-${editionDate}-${entity.slug}`,
     slug: `${editionDate}-${entity.slug}-today`,
     entitySlug: entity.slug,
-    title: premium.title.includes(focus) || premium.title.includes(entity.name)
-      ? premium.title
-      : `${focus} 관심 변화, KinDex 데이터가 보여주는 흐름`,
+    title,
     excerpt: premium.excerpt,
     editionDate,
     publishedAt: editionDateTime(editionDate),

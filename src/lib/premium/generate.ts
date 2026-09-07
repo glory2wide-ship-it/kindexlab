@@ -52,7 +52,7 @@ import { describeSmartRoute, resolveBriefingModel } from "@/lib/premium/smart-ro
 import { cleanLlmField } from "@/lib/premium/clean";
 import { expandBriefingLength, patchDraftViolations, type QualityViolation } from "@/lib/premium/error-patch";
 import { autoCorrectArticleFields, padArticleLengthLocally, scrubBannedPhraseStems } from "@/lib/premium/postprocess";
-import { ARTICLE_JSON_SCHEMA, REWRITE_LIST_JSON_SCHEMA, hasRequiredKeys } from "@/lib/premium/schemas";
+import { ARTICLE_JSON_SCHEMA, DATA_JOURNALIST_ARTICLE_JSON_SCHEMA, REWRITE_LIST_JSON_SCHEMA, hasRequiredKeys } from "@/lib/premium/schemas";
 import {
   applySeoHeadingStructure,
   articleWordCount,
@@ -571,7 +571,7 @@ export async function generatePremiumArticle(input: {
       provider: BRIEFING_LLM.provider,
       model,
       promptCacheKey: cacheKey,
-      jsonSchema: ARTICLE_JSON_SCHEMA,
+      jsonSchema: dataJournalist ? DATA_JOURNALIST_ARTICLE_JSON_SCHEMA : ARTICLE_JSON_SCHEMA,
     });
 
   let raw = await requestArticle(user, "premium-article");

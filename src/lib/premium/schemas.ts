@@ -56,6 +56,55 @@ const faqItemSchema: JsonSchemaObject = {
   additionalProperties: false,
 };
 
+/** Data-journalist Today's Analysis — requires the full 8-section outline. */
+export const DATA_JOURNALIST_ARTICLE_JSON_SCHEMA: OpenAiJsonSchemaFormat = {
+  name: "data_journalist_article",
+  strict: true,
+  schema: {
+    type: "object",
+    properties: {
+      title: stringSchema,
+      excerpt: stringSchema,
+      sections: {
+        type: "array",
+        minItems: 8,
+        maxItems: 9,
+        items: {
+          type: "object",
+          properties: {
+            heading: stringSchema,
+            headingLevel: { type: "integer" },
+            paragraphs: { type: "array", items: stringSchema, minItems: 2, maxItems: 5 },
+          },
+          required: ["heading", "headingLevel", "paragraphs"],
+          additionalProperties: false,
+        },
+      },
+      table: tableSchema,
+      faq: {
+        type: "array",
+        items: faqItemSchema,
+        minItems: 3,
+        maxItems: 6,
+      },
+      externalLink: linkSchema,
+      internalLink: linkSchema,
+      takeaways: { type: "array", items: stringSchema, minItems: 3, maxItems: 5 },
+    },
+    required: [
+      "title",
+      "excerpt",
+      "sections",
+      "table",
+      "faq",
+      "externalLink",
+      "internalLink",
+      "takeaways",
+    ],
+    additionalProperties: false,
+  },
+};
+
 /** Single-pass full article (title → FAQ) in one Structured Outputs call. */
 export const ARTICLE_JSON_SCHEMA: OpenAiJsonSchemaFormat = {
   name: "premium_article",
