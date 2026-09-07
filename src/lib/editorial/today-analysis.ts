@@ -46,8 +46,8 @@ import type { PremiumArticle } from "@/lib/premium/generate";
 /** Korean 자수: characters with whitespace excluded, the usual editorial unit. */
 export const ANALYSIS_MIN = 800;
 export const ANALYSIS_MAX = 1000;
-/** Today's Analysis Gemini floor for data-journalist deep dives. */
-export const ANALYSIS_BRIEFING_MIN = 1_500;
+/** Today's Analysis Gemini floor for AdSense×data-journalist hybrid. */
+export const ANALYSIS_BRIEFING_MIN = 1_800;
 export const ANALYSIS_BRIEFING_MAX = 2_800;
 
 export interface TodayAnalysisSection {

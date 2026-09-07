@@ -67,14 +67,14 @@ export const DATA_JOURNALIST_ARTICLE_JSON_SCHEMA: OpenAiJsonSchemaFormat = {
       excerpt: stringSchema,
       sections: {
         type: "array",
-        minItems: 8,
+        minItems: 7,
         maxItems: 9,
         items: {
           type: "object",
           properties: {
             heading: stringSchema,
             headingLevel: { type: "integer" },
-            paragraphs: { type: "array", items: stringSchema, minItems: 2, maxItems: 5 },
+            paragraphs: { type: "array", items: stringSchema, minItems: 3, maxItems: 5 },
           },
           required: ["heading", "headingLevel", "paragraphs"],
           additionalProperties: false,

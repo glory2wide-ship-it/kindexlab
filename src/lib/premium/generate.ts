@@ -23,7 +23,7 @@ import {
   premiumPromptCacheKey,
 } from "@/lib/premium/prompt";
 import {
-  DATA_JOURNALIST_SYSTEM_PROMPT,
+  buildHybridAnalysisSystemPrompt,
   buildDataJournalistUserPrompt,
 } from "@/lib/premium/data-journalist-prompt";
 import { describePlacements, injectMonetization, type PremiumPlacement } from "@/lib/premium/widgets";
@@ -158,11 +158,13 @@ function focusKeywordCores(keyword: string): string[] {
   const raw = keyword.trim();
   if (!raw) return [];
   const withoutIssue = raw.replace(/\s*이슈\s*$/u, "").trim();
+  const withoutBracket = withoutIssue.replace(/^\[[^\]]+\]\s*/, "").trim();
   const paren = withoutIssue.match(/\(([^)]+)\)/u)?.[1]?.trim();
   const outside = withoutIssue.replace(/\([^)]*\)/gu, " ").replace(/\s+/g, " ").trim();
+  const outsideNoBracket = outside.replace(/^\[[^\]]+\]\s*/, "").trim();
   return [
     ...new Set(
-      [raw, withoutIssue, paren, outside].filter(
+      [raw, withoutIssue, withoutBracket, paren, outside, outsideNoBracket].filter(
         (item): item is string => Boolean(item && item.length >= 2),
       ),
     ),
@@ -481,7 +483,7 @@ export async function generatePremiumArticle(input: {
   const maxChars = input.maxCharsOverride ?? BRIEFING_FULL_TARGET_MAX_CHARS;
   const minFaq = input.briefing && mode === "shorts" ? 1 : PREMIUM_FAQ_MIN;
   /** Structured Outputs ARTICLE_JSON_SCHEMA.minItems = 4 */
-  const minSections = dataJournalist ? 8 : 4;
+  const minSections = dataJournalist ? 7 : 4;
 
   const kindexSignals = [
     ...(context.signalFacts ?? []),
@@ -497,7 +499,7 @@ export async function generatePremiumArticle(input: {
     .join("\n");
 
   const system = dataJournalist
-    ? DATA_JOURNALIST_SYSTEM_PROMPT
+    ? buildHybridAnalysisSystemPrompt(input.channel)
     : buildCacheableSystemPrompt({ briefing: input.briefing, includeSeo: true });
   const cacheKey = premiumPromptCacheKey({
     briefing: input.briefing,
@@ -652,7 +654,13 @@ export async function generatePremiumArticle(input: {
     title = `${keyword} 핵심 이슈 브리핑`;
   }
 
-  sections = applySeoHeadingStructure(sections) as PremiumSection[];
+  sections = dataJournalist
+    ? sections.map((section) => ({
+        ...section,
+        headingLevel: 2 as const,
+        heading: section.heading.replace(/^[❶❷❸❹❺❻❼❽❾]\s*/, "").replace(/\.$/, "").trim() || section.heading,
+      }))
+    : (applySeoHeadingStructure(sections) as PremiumSection[]);
 
   const chars = premiumCharCount(
     lengthPlain(input.briefing, { title, excerpt: excerptText, sections, faq: faqText, takeaways, table }),
@@ -664,8 +672,10 @@ export async function generatePremiumArticle(input: {
   });
 
   if (chars < minChars && remaining() > 20_000) {
-    if (input.skipLengthExpandLlm) {
-      logger.warn("premium-length-pad-local", { chars, minChars });
+    // Data-journalist outline must stay 8 H2s — LLM length-expand often collapses
+    // back to the legacy 4-section AdSense template, so prefer local densify.
+    if (input.skipLengthExpandLlm || dataJournalist) {
+      logger.warn("premium-length-pad-local", { chars, minChars, dataJournalist });
       const seedLines = [
         ...context.signalFacts,
         ...context.sources.flatMap((source) =>
@@ -686,7 +696,9 @@ export async function generatePremiumArticle(input: {
       excerptText = padded.excerpt;
       sections = padded.sections as PremiumSection[];
       faqText = padded.faq;
-      sections = applySeoHeadingStructure(sections) as PremiumSection[];
+      if (!dataJournalist) {
+        sections = applySeoHeadingStructure(sections) as PremiumSection[];
+      }
       const paddedChars = premiumCharCount(
         lengthPlain(input.briefing, {
           title,
@@ -798,12 +810,29 @@ export async function generatePremiumArticle(input: {
       timeoutMs: Math.min(90_000, remaining()),
     });
     if (patched) {
-      title = patched.title;
-      excerptText = patched.excerpt;
-      sections = patched.sections as PremiumSection[];
-      faqText = patched.faq;
-      sections = applySeoHeadingStructure(sections) as PremiumSection[];
-      violations = collectViolations();
+      const nextSections = patched.sections as PremiumSection[];
+      // Hybrid analysis must keep the 8-section outline; reject collapsing patches.
+      if (dataJournalist && nextSections.length < minSections) {
+        logger.warn("premium-quality-patch-rejected", {
+          reason: "section-collapse",
+          got: nextSections.length,
+          need: minSections,
+        });
+      } else {
+        title = patched.title;
+        excerptText = patched.excerpt;
+        sections = dataJournalist
+          ? nextSections.map((section) => ({
+              ...section,
+              headingLevel: 2 as const,
+              heading:
+                section.heading.replace(/^[❶❷❸❹❺❻❼❽❾]\s*/, "").replace(/\.$/, "").trim() ||
+                section.heading,
+            }))
+          : (applySeoHeadingStructure(nextSections) as PremiumSection[]);
+        faqText = patched.faq;
+        violations = collectViolations();
+      }
     }
   }
 
@@ -862,7 +891,16 @@ export async function generatePremiumArticle(input: {
     labelHint: parsedInternal?.label || input.preferredInternalLink?.label,
   });
 
-  const keywordCount = countOccurrences(bodyPlainText(sections), keyword);
+  const keywordScanText = [
+    title,
+    excerptText,
+    bodyPlainText(sections),
+    ...faqText.flatMap((item) => [item.question, item.answer]),
+  ].join(" ");
+  const keywordCount = Math.max(
+    0,
+    ...focusKeywordCores(keyword).map((core) => countOccurrences(keywordScanText, core)),
+  );
   if (keywordCount > PREMIUM_KEYWORD_HARD_MAX) {
     return {
       ok: false,
