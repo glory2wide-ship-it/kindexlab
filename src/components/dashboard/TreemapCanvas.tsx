@@ -60,10 +60,10 @@ function groupLabel(entity: RankingEntity): string {
 }
 
 function headlineTitleSize(width: number, height: number): number {
-  if (width >= 220 && height >= 140) return 23;
-  if (width >= 160 && height >= 100) return 19.5;
-  if (width >= 110 && height >= 72) return 17;
-  return 15;
+  if (width >= 220 && height >= 140) return 17;
+  if (width >= 160 && height >= 100) return 15.5;
+  if (width >= 110 && height >= 72) return 14;
+  return 12.5;
 }
 
 export function TreemapView({
@@ -294,14 +294,14 @@ export function TreemapView({
                         suppressHydrationWarning
                         style={{
                           display: "-webkit-box",
-                          WebkitLineClamp: label?.nameLines ?? 3,
+                          WebkitLineClamp: label?.nameLines ?? 2,
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           fontSize: label?.nameSize ?? 16,
-                          lineHeight: 1.25,
+                          lineHeight: 1.22,
                           letterSpacing: "-0.03em",
-                          wordBreak: "keep-all",
+                          wordBreak: "break-all",
                         }}
                       >
                         {lines.title}
@@ -353,9 +353,9 @@ export function TreemapView({
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           fontSize: headlineTitleSize(w, h),
-                          lineHeight: 1.3,
+                          lineHeight: 1.25,
                           letterSpacing: "-0.03em",
-                          wordBreak: "keep-all",
+                          wordBreak: "break-all",
                         }}
                       >
                         {displayTitle}
@@ -372,10 +372,10 @@ export function TreemapView({
                   </foreignObject>
                 ) : (
                   <foreignObject
-                    x={leaf.x0 + 4}
-                    y={leaf.y0 + (showRank ? 26 : 4)}
-                    width={Math.max(w - 8, 0)}
-                    height={Math.max(h - (showRank ? 32 : 8), 0)}
+                    x={leaf.x0 + 6}
+                    y={leaf.y0 + (showRank ? 26 : 6)}
+                    width={Math.max(w - 12, 0)}
+                    height={Math.max(h - (showRank ? 34 : 12), 0)}
                   >
                     <div
                       className="pointer-events-none flex h-full w-full flex-col items-center justify-center px-0.5 text-center"
@@ -394,7 +394,7 @@ export function TreemapView({
                             fontSize: label?.nameSize ?? 16,
                             lineHeight: 1.22,
                             letterSpacing: "-0.03em",
-                            wordBreak: "keep-all",
+                            wordBreak: "break-all",
                           }}
                         >
                           {label?.name ?? lines.title}
