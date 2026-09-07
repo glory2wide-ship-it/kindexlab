@@ -555,7 +555,7 @@ export function composeTodayAnalysis(options: {
 /**
  * Maps a briefing single-pass `PremiumArticle` into Today's Analysis without
  * re-running the legacy 800~1,000자 pad/trim path (that band conflicts with
- * the shared 1,000~1,800자 briefing rules).
+ * the shared 1,000자+ briefing / premium floors).
  */
 export function composePremiumTodayAnalysis(options: {
   entity: RankingEntity;
