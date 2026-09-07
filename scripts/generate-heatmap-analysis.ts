@@ -53,6 +53,33 @@ async function main() {
   const batchSize = num("batch", ANALYSIS_OVERNIGHT_BATCH_SIZE) || ANALYSIS_OVERNIGHT_BATCH_SIZE;
   resetGeminiUsage(process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash");
 
+  // If focus file asks for 지역사랑상품권, ensure it is on the economy board first
+  // (board cache is gitignored, so CI must inject at runtime).
+  try {
+    const { readFile } = await import("node:fs/promises");
+    const path = await import("node:path");
+    const focusFile = path.join(process.cwd(), "scripts", ".analysis-focus");
+    const line = (await readFile(focusFile, "utf8")).trim().split("\n")[0]?.trim() ?? "";
+    if (line.includes("지역사랑상품권")) {
+      const { spawnSync } = await import("node:child_process");
+      const injected = spawnSync(
+        process.execPath,
+        ["--import", "tsx", "scripts/inject-local-love-voucher-board.ts"],
+        { stdio: "inherit", env: process.env },
+      );
+      if (injected.status !== 0) {
+        // Fallback: run via npx tsx
+        const viaNpx = spawnSync("npx", ["tsx", "scripts/inject-local-love-voucher-board.ts"], {
+          stdio: "inherit",
+          env: process.env,
+        });
+        if (viaNpx.status !== 0) throw new Error("inject-local-love-voucher-board failed");
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("inject-local-love")) throw error;
+  }
+
   const all = await listHeatmapAnalysisTargets({ channel, boardSlug });
   assertRequiredHeatmapBoards(all, { channel, boardSlug });
 
