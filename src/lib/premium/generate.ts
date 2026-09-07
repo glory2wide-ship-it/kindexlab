@@ -489,10 +489,10 @@ export async function generatePremiumArticle(input: {
   const kindexSignals = [
     ...(context.signalFacts ?? []),
     input.entity
-      ? `포커스 관심 순위 참고 ${input.entity.rank}위(이전 ${input.entity.previousRank}위) — 본문에 점수·등락률·산출 해설 금지`
+      ? `포커스 관심 순위 참고 ${input.entity.rank}위(이전 ${input.entity.previousRank}위) — 산출 강의 금지, 숫자가 보여주는 관심 트렌드만 해석`
       : "",
     ...(input.relatedEntities ?? []).slice(0, 6).map(
-      (item) => `비교 관심 참고 ${item.name}: 순위 ${item.rank}위 — 점수 나열·지수 해설 금지`,
+      (item) => `비교 관심 참고 ${item.name}: 순위 ${item.rank}위 — 산출 강의 금지, 상대 관심 트렌드로 해석`,
     ),
   ]
     .filter(Boolean)

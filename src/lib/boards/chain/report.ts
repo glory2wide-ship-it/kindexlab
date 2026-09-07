@@ -7,6 +7,7 @@ import type { TodayAnalysisSection } from "@/lib/editorial/today-analysis";
 import type { PostFaq, PostTable } from "@/lib/posts/types";
 import type { BoardDefinition, BoardRankEntry, BoardReport, DemographicRanking } from "@/lib/boards/types";
 import { AGE_LABEL, GENDER_LABEL } from "@/lib/boards/demographics";
+import { kindexDataTrendInterpretationRules } from "@/lib/editorial/tense-rules";
 
 const MIN_CHARS = 1_000;
 const NUMBERING = ["❶", "❷", "❸", "❹", "❺"];
@@ -32,10 +33,11 @@ const SYSTEM = [
   "'결론적으로', '주목받고 있다', '귀추가 주목된다', '다양한 관점이 있다', '요약하자면', '긍정적인 반응을 보였다', '생일을 축하하며', '긍정과 부정을 나란히 읽으면' 같은 기계적 상투어를 절대 쓰지 않는다.",
   "같은 사실이나 반응을 문단마다 반복하지 않는다. 각 문장은 새로운 근거를 보탠다.",
   "FAQ 답변은 순위표의 항목명과 지수를 인용한다. 감정 평가나 상투적 감탄문은 쓰지 않는다.",
-  "순위와 지수 수치를 본문에 직접 인용해 근거로 삼는다.",
+  "순위와 지수 수치를 본문에 직접 인용해 근거로 삼는다. 산출 공식 강의는 하지 말고, 숫자가 의미하는 관심·화제 트렌드를 해석한다.",
   "광고 문구나 상품 추천 문장은 쓰지 않는다.",
   "반드시 지정된 JSON 스키마만 반환한다.",
-].join(" ");
+  kindexDataTrendInterpretationRules(),
+].join("\n");
 
 function cleanText(value: unknown): string {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";

@@ -50,6 +50,21 @@ export function sentencePeriodRules(): string {
   ].join("\n");
 }
 
+/**
+ * 모든 글 생성 프롬프트에 넣는 KinDex 숫자 해석 지침.
+ * 산출 공식이 아니라, 숫자가 가리키는 관심·화제 트렌드를 해석한다.
+ */
+export function kindexDataTrendInterpretationRules(): string {
+  return [
+    "KinDex 데이터가 보여주는 특징",
+    "[숫자가 의미하는 트렌드 해석]",
+    "- 입력에 순위·변동·관심 점수·열기(히트)가 있으면 산출 공식을 설명하지 말고, 그 숫자가 가리키는 관심·화제 트렌드를 해석한다.",
+    "- 상승·하락·급등·정체·상대적 관심 쏠림처럼 ‘방향과 속도, 다른 이슈 대비 위치’를 문장으로 풀어 쓴다.",
+    "- 점수 산식·100점 만점·999 스케일 강의는 하지 않는다. 숫자는 관심의 세기와 움직임을 읽는 신호로만 쓴다.",
+    "- 입력에 없는 수치를 지어내지 않는다. 있는 숫자만 트렌드로 해석한다.",
+  ].join("\n");
+}
+
 /** Shared blocks injected into system/user prompts for briefing and analysis. */
 export function editorialGroundingRules(): string {
   return [
@@ -60,5 +75,7 @@ export function editorialGroundingRules(): string {
     prefixNoisePreventionRules(),
     "",
     sentencePeriodRules(),
+    "",
+    kindexDataTrendInterpretationRules(),
   ].join("\n");
 }

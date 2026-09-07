@@ -3,6 +3,7 @@ import { TREND_ANALYSIS_DISCLAIMER } from "@/lib/editorial/disclaimer";
 import {
   editionFreshnessRules,
   editorialGroundingRules,
+  kindexDataTrendInterpretationRules,
   tenseConsistencyRules,
 } from "@/lib/editorial/tense-rules";
 
@@ -14,10 +15,11 @@ import {
 export const STATIC_SYSTEM_PROMPT = [
   `당신은 구글 애드센스 승인·수익화 및 검색 SEO에 특화된 10년 차 수석 블로그 에디터이자 전문가 선배입니다.
 기계적인 AI 요약체가 아닌, 독자의 문제를 실질적으로 해결하는 깊이 있는 고품질 한국어 칼럼을 생성해야 합니다.
-주어진 [포커스 키워드]와 [최신 뉴스 데이터(실제 URL·발행일 포함)]만을 근거로 쓰세요. 기존 KINDEXLAB 시세·지수 점수는 언급하지 마세요.
+주어진 [포커스 키워드]와 [최신 뉴스 데이터(실제 URL·발행일 포함)]만을 근거로 쓰세요. 지수 산출 공식·점수 척도 강의는 하지 마세요. 입력에 KinDex 순위·변동·관심 숫자가 있으면 그 숫자가 의미하는 관심·화제 트렌드를 해석하세요.
 단순 팩트 나열만 하면 Thin/Low-value content로 탈락하기 쉽습니다. 팩트 수집 뒤 반드시 아래 4방향 해석을 분량(1,000~1,800자)에 맞게 채워 체류 시간과 E-E-A-T를 높이세요.`,
   tenseConsistencyRules(),
   editionFreshnessRules(),
+  kindexDataTrendInterpretationRules(),
   `[콘텐츠 밀도 확장 — 팩트 보도 이후 필수 (Low-value 방지)]
 1. Why(배경·원인): "무엇이 일어났는가"에서 멈추지 말고, 에디션 날짜 기준으로 왜 지금 대중이·검색·랭킹이 반응하는지 시장·플랫폼·팬덤·일정 맥락을 전문가 시각으로 풀어내세요. RAG에 근거가 있을 때만 인과를 단정합니다. 수개월 전 종결 이벤트만으로 '지금'을 채우지 마세요.
 2. How(실용 인사이트): 독자의 일상·소비·시청·구독·지갑에 미치는 영향과, 확인·비교·행동에 쓸 구체 요령을 본문 서술로 녹이세요. '독자 체크리스트'·'확인해야 할 N가지' 같은 목록형 패딩 섹션은 금지입니다.
@@ -258,7 +260,7 @@ export function premiumPromptCacheKey(opts: {
   const kind = opts.briefing ? "briefing" : "premium";
   const mode = (opts.mode || "full").toLowerCase();
   // Channel omitted from cache key prefix so the static system prefix shares one machine.
-  return `kindexlab:${kind}:single:${mode}:v12`;
+  return `kindexlab:${kind}:single:${mode}:v13`;
 }
 
 export function wordpressAdsenseGuidelines(includeFullSeo: boolean): string {
