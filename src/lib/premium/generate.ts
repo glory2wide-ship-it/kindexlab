@@ -562,7 +562,7 @@ export async function generatePremiumArticle(input: {
   }
 
   // Briefing: dedupe only within each paragraph so cross-section fact reuse
-  // (same date/name) does not collapse the 1,400자 floor. Premium columns keep
+  // (same date/name) does not collapse the 1,000자 floor. Premium columns keep
   // article-wide dedupe.
   if (input.briefing) {
     for (const section of sections) {

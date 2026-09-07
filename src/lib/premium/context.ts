@@ -64,7 +64,7 @@ export function buildSparseEnrichmentPrompt(
   options?: { briefing?: boolean; minChars?: number; maxChars?: number },
 ): string {
   if (!isSparseContext(ctx)) return "";
-  const minChars = options?.minChars ?? 1400;
+  const minChars = options?.minChars ?? 1000;
   const maxChars = options?.maxChars ?? 1800;
   if (options?.briefing) {
     return [

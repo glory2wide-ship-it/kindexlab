@@ -14,8 +14,8 @@ import type {
   NewsSourceId,
 } from "@/lib/news/types";
 
-const DEFAULT_LIMIT = 8;
-const DEFAULT_LOOKBACK_HOURS = 72;
+const DEFAULT_LIMIT = 14;
+const DEFAULT_LOOKBACK_HOURS = 168;
 
 /**
  * Retrieves recent coverage for one issue keyword across every provider the

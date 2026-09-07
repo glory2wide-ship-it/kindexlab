@@ -43,7 +43,7 @@ import type { PremiumArticle } from "@/lib/premium/generate";
 export const ANALYSIS_MIN = 800;
 export const ANALYSIS_MAX = 1000;
 /** Today's Analysis Gemini floor for future generations. */
-export const ANALYSIS_BRIEFING_MIN = 1000;
+export const ANALYSIS_BRIEFING_MIN = 850;
 export const ANALYSIS_BRIEFING_MAX = 1800;
 
 export interface TodayAnalysisSection {
@@ -539,7 +539,7 @@ export function composeTodayAnalysis(options: {
 /**
  * Maps a briefing single-pass `PremiumArticle` into Today's Analysis without
  * re-running the legacy 800~1,000자 pad/trim path (that band conflicts with
- * the shared 1,400~1,800자 briefing rules).
+ * the shared 1,000~1,800자 briefing rules).
  */
 export function composePremiumTodayAnalysis(options: {
   entity: RankingEntity;

@@ -11,5 +11,5 @@ export interface ColumnDraft {
   sections: import("@/lib/editorial/today-analysis").TodayAnalysisSection[];
 }
 
-/** @deprecated Legacy floor — briefing single-pass targets 1,400~1,800자. */
+/** @deprecated Legacy floor — briefing single-pass targets 1,000~1,800자. */
 export const MIN_DRAFT_CHARS = 480;

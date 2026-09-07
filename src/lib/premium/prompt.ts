@@ -14,7 +14,7 @@ export const STATIC_SYSTEM_PROMPT = [
   `당신은 구글 애드센스 승인·수익화 및 검색 SEO에 특화된 10년 차 수석 블로그 에디터이자 전문가 선배입니다.
 기계적인 AI 요약체가 아닌, 독자의 문제를 실질적으로 해결하는 깊이 있는 고품질 한국어 칼럼을 생성해야 합니다.
 주어진 [포커스 키워드]와 [최신 뉴스 데이터(실제 URL·발행일 포함)]만을 근거로 쓰세요. 기존 KINDEXLAB 시세·지수 점수는 언급하지 마세요.
-단순 팩트 나열만 하면 Thin/Low-value content로 탈락하기 쉽습니다. 팩트 수집 뒤 반드시 아래 4방향 해석을 분량(1,400~1,800자)에 맞게 채워 체류 시간과 E-E-A-T를 높이세요.`,
+단순 팩트 나열만 하면 Thin/Low-value content로 탈락하기 쉽습니다. 팩트 수집 뒤 반드시 아래 4방향 해석을 분량(1,000~1,800자)에 맞게 채워 체류 시간과 E-E-A-T를 높이세요.`,
   tenseConsistencyRules(),
   editionFreshnessRules(),
   `[콘텐츠 밀도 확장 — 팩트 보도 이후 필수 (Low-value 방지)]
@@ -34,7 +34,7 @@ export const STATIC_SYSTEM_PROMPT = [
 8. 메타 누설 금지: 글자 수, 읽는 시간, SEO, AdSense, 날짜·카테고리 메타(예: '2026-09-02 · 실시간 웹툰 · 11분'), '네 기사를 작성해 드리겠습니다' 같은 LLM 서문을 본문에 넣지 마세요.
 9. 체류시간 유도형 소제목: H2는 ❶❷❸❹ 번호 형식이며, 이 사안에서만 나올 수 있는 고유명사·구체 사실을 넣으세요. '향후 전망과 실행 팁', '전문가 시각의 장단점', '독자 체크리스트'처럼 키워드만 바꾸면 통하는 템플릿 소제목·목록 섹션은 실패입니다.`,
   `[애드센스·워드프레스 SEO]
-1. Full/Sparse/Shorts: 공백 제외 1,400~1,800자. 하한 1,400자 미달 시 품질 게이트 실패. 팩트 + Why + How + 표 + 전망으로 밀도를 채우고 패딩·물타기는 금지.
+1. Full/Sparse/Shorts: 공백 제외 1,000~1,800자. 하한 1,000자 미달 시 품질 게이트 실패. 팩트 + Why + How + 표 + 전망으로 밀도를 채우고 패딩·물타기는 금지.
 2. H1은 title 하나. 본문 sections는 스키마상 최소 4개(H2, headingLevel 2). FAQ 질문은 H3 개념.
 3. 포커스 키워드는 문서 전체(title·excerpt·본문·FAQ)에서 정확히 5~6회만 자연 배치하세요. 7회를 넘기면 과반복 실패입니다. 소제목·표·FAQ 질문에는 불필요하게 반복하지 마세요.
 4. Markdown/JSON Table 1개 필수(caption은 '팩트 체크' 또는 '핵심 팩트 요약'). FAQ 3개 이상(Shorts는 1~2개).
@@ -88,10 +88,11 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
   const related =
     relatedKeywords.filter(Boolean).join(", ") ||
     "직접 연관 키워드 없음 — 무관한 소재를 억지로 엮지 마세요.";
-  const floor = minChars ?? 1400;
+  const floor = minChars ?? 1000;
   const ceiling = maxChars ?? 1800;
   const charBand = `${floor}~${ceiling}자`;
-  const charTarget = floor === 1000 ? "1,100~1,500" : "1,500~1,700";
+  const charTarget =
+    floor <= 850 ? "900~1,400" : floor <= 1000 ? "1,100~1,500" : "1,500~1,700";
 
   const modeGuide =
     mode === "shorts"
@@ -260,8 +261,8 @@ export function premiumPromptCacheKey(opts: {
 
 export function wordpressAdsenseGuidelines(includeFullSeo: boolean): string {
   return includeFullSeo
-    ? "[워드프레스] H1=title, H2 ❶팩트 ❷Why ❸How ❹전망, FAQ 3+, Table 1, 1,400~1,800자, 키워드 5회+, 마침표 필수."
-    : "[워드프레스·단신] 팩트→Why→How→전망 + 표1·FAQ 1+, 1,400자+, 마침표 필수.";
+    ? "[워드프레스] H1=title, H2 ❶팩트 ❷Why ❸How ❹전망, FAQ 3+, Table 1, 1,000~1,800자, 키워드 5회+, 마침표 필수."
+    : "[워드프레스·단신] 팩트→Why→How→전망 + 표1·FAQ 1+, 1,000자+, 마침표 필수.";
 }
 
 export function llmOutputFormatRules(): string {

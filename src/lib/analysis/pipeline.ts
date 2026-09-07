@@ -13,6 +13,8 @@ import {
 import { kstDateString } from "@/lib/briefing/dates";
 import {
   composePremiumTodayAnalysis,
+  ANALYSIS_BRIEFING_MAX,
+  ANALYSIS_BRIEFING_MIN,
   type TodayAnalysisArticle,
 } from "@/lib/editorial/today-analysis";
 import { TYPE_LABEL } from "@/lib/format";
@@ -98,8 +100,8 @@ async function generate(options: {
     // Today's Analysis prioritizes fill-rate; allow one repair/expand pass.
     skipLengthExpandLlm: false,
     allowBriefingRepairLlm: true,
-    minCharsOverride: 1_000,
-    maxCharsOverride: 1_800,
+    minCharsOverride: ANALYSIS_BRIEFING_MIN,
+    maxCharsOverride: ANALYSIS_BRIEFING_MAX,
   });
 
   if (!result.ok) {

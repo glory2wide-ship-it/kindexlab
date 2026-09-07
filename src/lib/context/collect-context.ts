@@ -15,8 +15,9 @@ import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
 import { isGoogleNewsUrl, publisherFromUrl, unwrapNewsUrls } from "@/lib/news/unwrap";
 import type { RankingEntity } from "@/lib/types";
 
-const DEFAULT_LIMIT = 8;
-const LOOKBACK_LADDER_HOURS = [96, 336, 720] as const;
+const DEFAULT_LIMIT = 14;
+/** Widen lookback so thin local/niche keywords still find citable coverage. */
+const LOOKBACK_LADDER_HOURS = [168, 336, 720, 1440, 2160] as const;
 
 function usableUrl(link: string | undefined): link is string {
   if (!link) return false;
@@ -118,7 +119,7 @@ async function newsSourcesFromRetrieval(
   let providers: string[] = [];
   let sources: ContextSource[] = [];
   let unwrapped = { resolved: 0, failed: 0 };
-  let lookbackHours = ladder[0] ?? 96;
+  let lookbackHours = ladder[0] ?? 168;
 
   for (const hours of ladder) {
     const retrieval = await retrieveNewsForKeyword(keyword, {
@@ -219,8 +220,8 @@ export interface CollectContextOptions {
  * 4-Tier hybrid collector for 오늘의 분석 / premium columns.
  *
  * Tier 0: Signal Brief (entity, board note, RSS match)
- * Tier 1: News RSS/API with lookback ladder
- * Tier 2: Serper web + YouTube (when news ≤ 2)
+ * Tier 1: News RSS/API with widened lookback ladder (+ related-name queries)
+ * Tier 2: Serper/Naver/CSE web + YouTube (when news is thin or missing)
  * Tier 3: Intent hints (structure only)
  */
 export async function collectArticleContext(
@@ -241,12 +242,42 @@ export async function collectArticleContext(
 
   let newsCount = countNewsSources(sources);
   const providers = [...news.providers];
+  let unwrapped = news.unwrapped;
+  let lookbackHours = news.lookbackHours;
 
-  if (newsCount <= NEWS_FALLBACK_THRESHOLD) {
+  // When the focus keyword is too niche, widen with related names / entity aliases.
+  if (sources.length === 0 || newsCount <= NEWS_FALLBACK_THRESHOLD) {
+    const extraQueries = [
+      ...relatedKeywords.slice(0, 3),
+      ...related.map((item) => item.name).slice(0, 3),
+      entity?.nameEn?.trim(),
+    ]
+      .map((item) => item?.trim())
+      .filter((item): item is string => Boolean(item && item !== keyword));
+    for (const query of [...new Set(extraQueries)].slice(0, 3)) {
+      const extra = await newsSourcesFromRetrieval(query, {
+        limit: DEFAULT_LIMIT,
+        lookbackHours: options.lookbackHours,
+      });
+      if (extra.sources.length) {
+        sources = mergeSources(sources, extra.sources);
+        providers.push(...extra.providers.map((provider) => `${provider}+${query}`));
+        unwrapped = {
+          resolved: unwrapped.resolved + extra.unwrapped.resolved,
+          failed: unwrapped.failed + extra.unwrapped.failed,
+        };
+        lookbackHours = Math.max(lookbackHours, extra.lookbackHours);
+      }
+      newsCount = countNewsSources(sources);
+      if (sources.length >= 4 && newsCount > NEWS_FALLBACK_THRESHOLD) break;
+    }
+  }
+
+  if (newsCount <= NEWS_FALLBACK_THRESHOLD || sources.length < 3) {
     const [naverWeb, serperWeb, googleCse] = await Promise.all([
-      fetchNaverWebFallback(keyword, 5),
-      fetchSerperWeb(keyword, 5),
-      fetchGoogleCustomSearch(keyword, 5),
+      fetchNaverWebFallback(keyword, 10),
+      fetchSerperWeb(keyword, 10),
+      fetchGoogleCustomSearch(keyword, 8),
     ]);
     if (naverWeb.length) providers.push("naver-web");
     if (serperWeb.length) providers.push("serper-web");
@@ -257,8 +288,11 @@ export async function collectArticleContext(
 
   const webCount = sources.filter((source) => source.tier === "web").length;
   const snippetCharsAfterWeb = sourceSnippetChars(sources);
-  if (newsCount <= NEWS_FALLBACK_THRESHOLD && (webCount <= 2 || snippetCharsAfterWeb < 260)) {
-    const videos = await fetchYoutubeFallback(keyword, 3);
+  if (
+    sources.length === 0 ||
+    (newsCount <= NEWS_FALLBACK_THRESHOLD && (webCount <= 3 || snippetCharsAfterWeb < 320))
+  ) {
+    const videos = await fetchYoutubeFallback(keyword, 5);
     if (videos.length) providers.push("youtube-fallback");
     sources = mergeSources(sources, videos);
   }
@@ -288,8 +322,8 @@ export async function collectArticleContext(
     signalFacts: signal.facts,
     providers,
     block: "",
-    unwrapped: news.unwrapped,
-    lookbackHours: news.lookbackHours,
+    unwrapped,
+    lookbackHours,
     score,
     intentHints,
     sourceTextChars: sourceSnippetChars(sources),

@@ -3,11 +3,11 @@ import { entityTypeForBoardSlug } from "@/lib/boards/entity-type";
 import type { PostChannel } from "@/lib/posts/types";
 import type { BriefingArticle } from "@/lib/types";
 
-/** Briefing single-pass targets: dense facts in the 1,400~1,800 band (no padding). */
-export const BRIEFING_SHORTS_MIN_CHARS = 1_400;
-export const BRIEFING_SPARSE_MIN_CHARS = 1_400;
-/** Quality-gate floor for full main/deep-dive — prompt aims ≤1,800 dense chars. */
-export const BRIEFING_FULL_MIN_CHARS = 1_400;
+/** Briefing single-pass targets: dense facts in the 1,000~1,800 band (no padding). */
+export const BRIEFING_SHORTS_MIN_CHARS = 1_000;
+export const BRIEFING_SPARSE_MIN_CHARS = 1_000;
+/** Quality-gate floor for full main/Update 키워드 — prompt aims ≤1,800 dense chars. */
+export const BRIEFING_FULL_MIN_CHARS = 1_000;
 export const BRIEFING_FULL_TARGET_MAX_CHARS = 1_800;
 export const BRIEFING_SECTION_TARGET_SHORTS = 4;
 export const BRIEFING_SECTION_TARGET_SPARSE = 4;
@@ -157,7 +157,7 @@ export function buildShortsModePrompt(): string {
     "- 확인된 사실만 쓰고, 추측·일반론·체크리스트·인사말·마무리 요약은 금지입니다.",
     "- 연관성이 떨어지는 소재는 억지로 엮지 말고 독립 단락으로 분리하세요.",
     "- 뼈대는 유지: 팩트 → Why(왜 지금) → How(독자 활용) → 전망·파급 + 비교 표.",
-    "- 분량 목표: 공백 제외 1,400~1,800자. 패딩·물타기 금지.",
+    "- 분량 목표: 공백 제외 1,000~1,800자. 패딩·물타기 금지.",
     "",
     "[시제·시의성·노이즈·마침표] 에디션 날짜가 '오늘'. 뉴스 발행일·시의성 라벨 기준 과거형은 과거형만. 에디션보다 이전 일정에 '예정' 금지. 오래된 배경만으로 오늘의 Update 키워드 금지. 연도가 다르면 시간순. 'FLOAT' 등 다의어로 이종 산업 기사를 한 인과로 묶지 말고 독립 단락만. 모든 문장 끝 마침표(.) 필수.",
   ].join("\n");
@@ -172,7 +172,7 @@ export function buildBriefingSparsePrompt(): string {
     "- '독자 체크리스트', '확인해야 할 N가지' 같은 목록형 패딩 섹션은 쓰지 마세요.",
     "- H2 뼈대: 팩트 → Why(왜 검색·랭킹에 올랐는지) → How(독자가 확인할 포인트) → 전망·파급.",
     "- 표로 신호·일정·비교를 정리하고, 확인되지 않은 수치·날짜·기관명은 '확인되지 않았다'고 적으세요.",
-    "- 분량은 패딩 없이 밀도 있는 1,400~1,800자. 빈 문장으로 늘리지 마세요.",
+    "- 분량은 패딩 없이 밀도 있는 1,000~1,800자. 빈 문장으로 늘리지 마세요.",
     "",
     "[시제·시의성·노이즈·마침표] 에디션 날짜가 '오늘'. 뉴스 발행일·시의성 라벨 기준 과거형은 과거형만. 에디션보다 이전 일정에 '예정' 금지. 오래된 배경만으로 오늘의 Update 키워드 금지. 연도가 다르면 시간순. 'FLOAT' 등 다의어로 이종 산업 기사를 한 인과로 묶지 말고 독립 단락만. 모든 문장 끝 마침표(.) 필수.",
   ].join("\n");

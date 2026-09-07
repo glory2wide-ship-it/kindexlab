@@ -66,7 +66,7 @@ export async function patchDraftViolations(input: {
       "아래 원고는 이미 작성된 초고입니다. 전체를 다시 쓰지 마세요.",
       "품질 게이트에서 걸린 위반만 최소 수정으로 고친 뒤, 같은 JSON 스키마로 반환하세요.",
       "사실을 새로 만들지 마세요. 금지 표현·템플릿 문형·시제 오류·마침표 누락만 교정하세요.",
-      "too-short 위반이면: 기존 고유명사·날짜·수치만으로 각 섹션에 문장 1~2개·FAQ 답을 보강해 공백 제외 1,400~1,800자에 맞추세요. 패딩·체크리스트 금지.",
+      "too-short 위반이면: 기존 고유명사·날짜·수치만으로 각 섹션에 문장 1~2개·FAQ 답을 보강해 공백 제외 1,000~1,800자에 맞추세요. 패딩·체크리스트 금지.",
       "keyword-stuffing 위반이면: 포커스 키워드를 문서 전체에서 정확히 5~6회만 남기고 줄이세요. title 1회 이하, excerpt 1회, 본문 2~3회, FAQ 전체 1회 이하로 배분하세요.",
       "소제목·표·FAQ 질문에서 포커스 키워드를 반복하지 말고, 사건명·공연명·앨범명·차트명·가수·이번 공연·해당 무대 같은 확인 가능한 대체 표현으로 바꾸세요.",
       "",
@@ -149,7 +149,7 @@ export async function patchDraftViolations(input: {
 }
 
 /**
- * One-shot length expand for briefing floors (1,400~1,800). Uses the editor
+ * One-shot length expand for briefing floors (1,000~1,800). Uses the editor
  * model + RAG so the draft can grow without a full article regenerate.
  */
 export async function expandBriefingLength(input: {

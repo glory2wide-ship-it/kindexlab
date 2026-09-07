@@ -47,6 +47,9 @@ export function canGenerateContext(ctx: {
     return true;
   }
   // Multi-source fallback mode: enough citable web/video evidence plus usable text.
+  if (newsCount === 0 && webLike.length >= 2 && citable.length >= 2 && snippetChars >= 180) {
+    return true;
+  }
   if (newsCount === 0 && webLike.length >= 3 && citable.length >= 3 && snippetChars >= 240) {
     return true;
   }
