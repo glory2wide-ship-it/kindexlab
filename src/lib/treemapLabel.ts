@@ -103,11 +103,13 @@ export function layoutTreemapLabel(input: {
   rate: string;
   typeLabel: string;
   rank?: string;
+  /** Display rank on the heatmap (1-based). Ranks 8–15 use 20% smaller names. */
+  heatmapRank?: number;
   artist?: string;
   metaLabel?: string;
   forceType?: boolean;
 }): TreemapLabelLayout | null {
-  const { width: w, height: h, y, name, rate, typeLabel, artist } = input;
+  const { width: w, height: h, y, name, rate, typeLabel, artist, heatmapRank } = input;
   if (w < 28 || h < 18) return null;
 
   const innerW = Math.max(12, w - 20);
@@ -156,6 +158,10 @@ export function layoutTreemapLabel(input: {
       rateSize = Math.min(rateSize, leftover);
       stack = nameH() + gap + rateSize;
     }
+  }
+
+  if (heatmapRank != null && heatmapRank >= 8 && heatmapRank <= 15) {
+    nameSize *= 0.8;
   }
 
   const fittedLines = Math.min(maxLines, wrapLineCount(name, nameSize, innerW));

@@ -39,3 +39,13 @@ for (const item of cases) {
   );
 }
 if (failed) process.exit(1);
+
+const same = { width: 140, height: 90, y: 0, name: "김치찌개", rate: "-1%", typeLabel: "80" };
+const top = layoutTreemapLabel({ ...same, heatmapRank: 3 })?.nameSize ?? 0;
+const lower = layoutTreemapLabel({ ...same, heatmapRank: 10 })?.nameSize ?? 0;
+const ratio = lower / top;
+console.log(`rank10/rank3 ${ratio.toFixed(3)} (${lower.toFixed(1)}/${top.toFixed(1)})`);
+if (Math.abs(ratio - 0.8) > 0.02) {
+  console.error("8–15위 names should be 20% smaller");
+  process.exit(1);
+}

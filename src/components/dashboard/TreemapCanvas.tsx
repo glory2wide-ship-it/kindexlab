@@ -182,6 +182,7 @@ export function TreemapView({
             artist: priceLabel ?? lines.artist,
             rate,
             typeLabel: priceLabel ? "" : scoreLabel,
+            heatmapRank: rank,
           });
           const fill = heatText(change);
           const rankSize = w >= 120 && h >= 56 ? 16.5 : 13.5;
@@ -352,7 +353,7 @@ export function TreemapView({
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          fontSize: headlineTitleSize(w, h),
+                          fontSize: headlineTitleSize(w, h) * (rank >= 8 && rank <= 15 ? 0.8 : 1),
                           lineHeight: 1.25,
                           letterSpacing: "-0.03em",
                           wordBreak: "break-all",
