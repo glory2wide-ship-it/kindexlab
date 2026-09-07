@@ -156,12 +156,18 @@ function ensureSeededRanking(rows: BoardRankEntry[], seeds: readonly string[]): 
     const key = subjectKey(seed);
     if (seen.has(key)) continue;
     seen.add(key);
+    // Keep 지역사랑상품권 inside the visible heatmap band when seed-filled.
+    const loveVoucher = seed.includes("지역사랑상품권");
     unique.push({
       rank: unique.length + 1,
       name: seed,
-      score: Number((88 - unique.length * 1.1).toFixed(2)),
-      changeRate: Number((((unique.length % 5) - 2) * 1.15).toFixed(2)),
-      note: "씨드 보완 · 화제 정책·사업 유지",
+      score: loveVoucher
+        ? 72.4
+        : Number((88 - unique.length * 1.1).toFixed(2)),
+      changeRate: loveVoucher
+        ? 5.2
+        : Number((((unique.length % 5) - 2) * 1.15).toFixed(2)),
+      note: loveVoucher ? "지역화폐·상품권 관심" : "씨드 보완 · 화제 정책·사업 유지",
     });
   }
   return unique
