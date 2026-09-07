@@ -583,9 +583,9 @@ export function composePremiumTodayAnalysis(options: {
   const focus =
     focusFromName && !/이슈$/.test(focusFromName) ? focusFromName : picked.focus;
   const supportKw = picked.supportKw;
-  // Keep Gemini section headings intact — do NOT slice/renumber (legacy ❶~❺ trim).
+  // Preserve hybrid/legacy ❶❷❸❹ numbering from the premium draft.
   const sections: TodayAnalysisSection[] = premium.sections.map((section) => ({
-    heading: section.heading.replace(/^[❶❷❸❹❺❻❼❽❾]\s*/, "").replace(/\.$/, "").trim() || section.heading,
+    heading: section.heading.replace(/\.$/, "").trim() || section.heading,
     headingLevel: 2 as const,
     paragraphs: [...section.paragraphs],
   }));
