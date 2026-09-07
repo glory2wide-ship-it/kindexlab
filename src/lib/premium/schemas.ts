@@ -56,7 +56,10 @@ const faqItemSchema: JsonSchemaObject = {
   additionalProperties: false,
 };
 
-/** Data-journalist Today's Analysis — requires the full 8-section outline. */
+/**
+ * Hybrid Today's Analysis (≈80% legacy AdSense / ≈20% light originality).
+ * Matches the legacy 4-section Fact→Why→How→Outlook outline — not the old 8-section KinDex outline.
+ */
 export const DATA_JOURNALIST_ARTICLE_JSON_SCHEMA: OpenAiJsonSchemaFormat = {
   name: "data_journalist_article",
   strict: true,
@@ -67,8 +70,8 @@ export const DATA_JOURNALIST_ARTICLE_JSON_SCHEMA: OpenAiJsonSchemaFormat = {
       excerpt: stringSchema,
       sections: {
         type: "array",
-        minItems: 7,
-        maxItems: 9,
+        minItems: 4,
+        maxItems: 5,
         items: {
           type: "object",
           properties: {

@@ -482,17 +482,16 @@ export async function generatePremiumArticle(input: {
     input.minCharsOverride ?? (input.briefing ? briefingMinChars(mode) : PREMIUM_MIN_CHARS);
   const maxChars = input.maxCharsOverride ?? BRIEFING_FULL_TARGET_MAX_CHARS;
   const minFaq = input.briefing && mode === "shorts" ? 1 : PREMIUM_FAQ_MIN;
-  /** Structured Outputs ARTICLE_JSON_SCHEMA.minItems = 4 */
-  const minSections = dataJournalist ? 7 : 4;
+  /** Hybrid Today's Analysis uses the legacy 4-section AdSense outline. */
+  const minSections = 4;
 
   const kindexSignals = [
     ...(context.signalFacts ?? []),
     input.entity
-      ? `포커스 현재 순위 ${input.entity.rank}위 · 이전 ${input.entity.previousRank}위 · 지수 ${input.entity.buzzScore} · 등락률 ${input.entity.fluctuationRate}%`
+      ? `포커스 관심 순위 참고 ${input.entity.rank}위(이전 ${input.entity.previousRank}위) — 본문에 점수·등락률·산출 해설 금지`
       : "",
     ...(input.relatedEntities ?? []).slice(0, 6).map(
-      (item) =>
-        `비교 ${item.name}: ${item.rank}위 · 지수 ${item.buzzScore} · 등락률 ${item.fluctuationRate}%`,
+      (item) => `비교 관심 참고 ${item.name}: 순위 ${item.rank}위 — 점수 나열·지수 해설 금지`,
     ),
   ]
     .filter(Boolean)
@@ -504,7 +503,7 @@ export async function generatePremiumArticle(input: {
   const cacheKey = premiumPromptCacheKey({
     briefing: input.briefing,
     channel: input.channel,
-    mode: dataJournalist ? `dj-${mode}` : mode,
+    mode: dataJournalist ? `hybrid80-${mode}` : mode,
   });
   const model = resolveBriefingModel({
     briefing: input.briefing,
@@ -654,13 +653,7 @@ export async function generatePremiumArticle(input: {
     title = `${keyword} 핵심 이슈 브리핑`;
   }
 
-  sections = dataJournalist
-    ? sections.map((section) => ({
-        ...section,
-        headingLevel: 2 as const,
-        heading: section.heading.replace(/^[❶❷❸❹❺❻❼❽❾]\s*/, "").replace(/\.$/, "").trim() || section.heading,
-      }))
-    : (applySeoHeadingStructure(sections) as PremiumSection[]);
+  sections = applySeoHeadingStructure(sections) as PremiumSection[];
 
   const chars = premiumCharCount(
     lengthPlain(input.briefing, { title, excerpt: excerptText, sections, faq: faqText, takeaways, table }),
@@ -672,10 +665,8 @@ export async function generatePremiumArticle(input: {
   });
 
   if (chars < minChars && remaining() > 20_000) {
-    // Data-journalist outline must stay 8 H2s — LLM length-expand often collapses
-    // back to the legacy 4-section AdSense template, so prefer local densify.
-    if (input.skipLengthExpandLlm || dataJournalist) {
-      logger.warn("premium-length-pad-local", { chars, minChars, dataJournalist });
+    const runLocalPad = (reason: string) => {
+      logger.warn("premium-length-pad-local", { chars, minChars, dataJournalist, reason });
       const seedLines = [
         ...context.signalFacts,
         ...context.sources.flatMap((source) =>
@@ -694,11 +685,8 @@ export async function generatePremiumArticle(input: {
       });
       title = padded.title;
       excerptText = padded.excerpt;
-      sections = padded.sections as PremiumSection[];
+      sections = applySeoHeadingStructure(padded.sections as PremiumSection[]) as PremiumSection[];
       faqText = padded.faq;
-      if (!dataJournalist) {
-        sections = applySeoHeadingStructure(sections) as PremiumSection[];
-      }
       const paddedChars = premiumCharCount(
         lengthPlain(input.briefing, {
           title,
@@ -713,7 +701,14 @@ export async function generatePremiumArticle(input: {
         sections: sections.length,
         chars: paddedChars,
         added: padded.added,
+        reason,
       });
+    };
+
+    // Prefer local densify when asked. Hybrid Today's Analysis also pads locally
+    // after a failed LLM expand — expand often hits token/JSON limits.
+    if (input.skipLengthExpandLlm) {
+      runLocalPad("skip-llm");
     } else {
       logger.warn("premium-length-patch", { chars, minChars });
       const expanded = await expandBriefingLength({
@@ -730,9 +725,8 @@ export async function generatePremiumArticle(input: {
       if (expanded) {
         title = expanded.title;
         excerptText = expanded.excerpt;
-        sections = expanded.sections as PremiumSection[];
+        sections = applySeoHeadingStructure(expanded.sections as PremiumSection[]) as PremiumSection[];
         faqText = expanded.faq;
-        sections = applySeoHeadingStructure(sections) as PremiumSection[];
         const expandedChars = premiumCharCount(
           lengthPlain(input.briefing, {
             title,
@@ -747,6 +741,19 @@ export async function generatePremiumArticle(input: {
           sections: sections.length,
           chars: expandedChars,
         });
+      }
+      const afterExpand = premiumCharCount(
+        lengthPlain(input.briefing, {
+          title,
+          excerpt: excerptText,
+          sections,
+          faq: faqText,
+          takeaways,
+          table,
+        }),
+      );
+      if (afterExpand < minChars) {
+        runLocalPad(expanded ? "after-expand-still-short" : "expand-failed");
       }
     }
   }
@@ -811,8 +818,7 @@ export async function generatePremiumArticle(input: {
     });
     if (patched) {
       const nextSections = patched.sections as PremiumSection[];
-      // Hybrid analysis must keep the 8-section outline; reject collapsing patches.
-      if (dataJournalist && nextSections.length < minSections) {
+      if (nextSections.length < minSections) {
         logger.warn("premium-quality-patch-rejected", {
           reason: "section-collapse",
           got: nextSections.length,
@@ -821,15 +827,7 @@ export async function generatePremiumArticle(input: {
       } else {
         title = patched.title;
         excerptText = patched.excerpt;
-        sections = dataJournalist
-          ? nextSections.map((section) => ({
-              ...section,
-              headingLevel: 2 as const,
-              heading:
-                section.heading.replace(/^[❶❷❸❹❺❻❼❽❾]\s*/, "").replace(/\.$/, "").trim() ||
-                section.heading,
-            }))
-          : (applySeoHeadingStructure(nextSections) as PremiumSection[]);
+        sections = applySeoHeadingStructure(nextSections) as PremiumSection[];
         faqText = patched.faq;
         violations = collectViolations();
       }

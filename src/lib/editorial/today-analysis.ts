@@ -608,7 +608,7 @@ export function composePremiumTodayAnalysis(options: {
     premium.title.includes(entity.name) ||
     premium.title.includes(focusFromName)
       ? premium.title
-      : `${focus} 관심 변화, KinDex 데이터가 보여주는 흐름`;
+      : `${focus} 관심 변화와 오늘 확인된 핵심 흐름`;
 
   return {
     id: `today-${editionDate}-${entity.slug}`,
