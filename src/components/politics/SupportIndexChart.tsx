@@ -87,8 +87,8 @@ export function SupportIndexChart({
   const title = lockedSubject
     ? `${lockedSubject} ${kind === "party" ? "정당 지지도" : "정치인 지지도"}`
     : kind === "party"
-      ? "정당 지지도 랭킹"
-      : "정치인 지지도 랭킹";
+      ? "정당 지지도"
+      : "정치인 지지도";
 
   return (
     <section className="space-y-4">

@@ -2,15 +2,15 @@ import { POLITICS_CATEGORIES, POLITICS_TYPE_ORDER } from "@/lib/politics/types";
 import type { CategoryId, EntityType, RankingEntity, TimeframeOption } from "@/lib/types";
 
 export const CATEGORIES: { id: CategoryId; label: string }[] = [
-  { id: "all", label: "종합" },
-  { id: "kpop", label: "K-POP 아이돌" },
-  { id: "celebrity", label: "스타 지수 랭킹" },
+  { id: "all", label: "종합 랭킹" },
+  { id: "kpop", label: "K POP" },
+  { id: "celebrity", label: "스타" },
   { id: "tv_show", label: "방송" },
-  { id: "influencer", label: "유튜버 랭킹" },
-  { id: "music_chart", label: "음원 랭킹지수" },
-  { id: "tv_rating", label: "TV 시청률 순위" },
-  { id: "movie", label: "영화 랭킹지수" },
-  { id: "webtoon", label: "웹툰 랭킹" },
+  { id: "influencer", label: "유튜버" },
+  { id: "music_chart", label: "음원" },
+  { id: "tv_rating", label: "TV 시청률" },
+  { id: "movie", label: "영화" },
+  { id: "webtoon", label: "웹툰" },
   { id: "shorts", label: "숏폼/SNS" },
   { id: "mobile_game", label: "모바일 게임" },
   { id: "pc_game", label: "PC 게임" },

@@ -33,7 +33,7 @@ export const POLITICS_TYPE_LABEL: Record<PoliticsEntityType, string> = {
 };
 
 export const POLITICS_CATEGORIES: { id: CategoryId; label: string }[] = [
-  { id: "all", label: "종합" },
+  { id: "all", label: "종합 랭킹" },
   ...POLITICS_TYPE_ORDER.filter((id) => id !== "headline_news").map((id) => ({
     id,
     label: POLITICS_TYPE_LABEL[id],

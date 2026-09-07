@@ -1,5 +1,5 @@
 /**
- * Display-name → Naver Finance symbol for 증시·주요 종목 heatmap quotes.
+ * Display-name → Naver Finance symbol for 주식 heatmap quotes.
  * Theme keywords (코스피, 이차전지 …) are intentionally omitted.
  */
 

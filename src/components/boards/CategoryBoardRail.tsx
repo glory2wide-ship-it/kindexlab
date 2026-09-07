@@ -43,7 +43,7 @@ export function CategoryBoardRail({
         onClick={() => onSelect("")}
         className={`inline-block rounded-md border px-3 py-1.5 text-xs ${compositeClass}`}
       >
-        종합
+        종합 랭킹
       </button>
     </li>
   ) : (
@@ -52,7 +52,7 @@ export function CategoryBoardRail({
         href={`/${channel}`}
         className="inline-block rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:text-ink"
       >
-        종합
+        종합 랭킹
       </Link>
     </li>
   );

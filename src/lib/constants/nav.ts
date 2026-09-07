@@ -15,14 +15,14 @@ export const POLITICS_HEATMAP_BOARD_NAV: Record<
 > = {
   "party-support-chart": {
     slug: "party-support-chart",
-    title: "정당 지지도 랭킹",
-    shortTitle: "정당 지지도 랭킹",
+    title: "정당 지지도",
+    shortTitle: "정당 지지도",
     heatmapLimit: 15,
   },
   "politician-support-chart": {
     slug: "politician-support-chart",
-    title: "정치인 지지도 랭킹",
-    shortTitle: "정치인 지지도 랭킹",
+    title: "정치인 지지도",
+    shortTitle: "정치인 지지도",
     heatmapLimit: 15,
   },
 };
@@ -69,22 +69,22 @@ export const TRAVEL_REGION_BOARD_NAV: Record<
 > = {
   domestic: {
     slug: "domestic-travel-ranking",
-    title: "국내 여행 랭킹",
-    shortTitle: "국내 여행 랭킹",
+    title: "국내 여행",
+    shortTitle: "국내 여행",
     routePrefix: "/travel/domestic",
     regions: REGION_SEGMENTS,
   },
   outing: {
     slug: "weekend-outing-ranking",
-    title: "주말 나들이 랭킹",
-    shortTitle: "주말 나들이 랭킹",
+    title: "지역별 주말 나들이",
+    shortTitle: "지역별 주말 나들이",
     routePrefix: "/travel/outing",
     regions: REGION_SEGMENTS,
   },
   food: {
     slug: "food-restaurant-ranking",
-    title: "음식/맛집 랭킹",
-    shortTitle: "음식/맛집 랭킹",
+    title: "지역별 음식/맛집",
+    shortTitle: "지역별 음식/맛집",
     routePrefix: "/travel/food",
     regions: REGION_SEGMENTS,
   },
