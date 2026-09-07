@@ -272,11 +272,8 @@ export function rankRowsToEntities(
 export function stripBoardDemographics(boards: HeatmapBoardPayload[]): HeatmapBoardPayload[] {
   return boards.map(({ demographics: _demographics, ranking, ...board }) => ({
     ...board,
-    ranking: (ranking ?? []).map((row) => {
-      const note = row.note?.trim() ?? "";
-      if (note.length <= 64) return { ...row, note };
-      return { ...row, note: `${note.slice(0, 61)}…` };
-    }),
+    // Desk heatmaps rebuild summaries client-side; long LLM notes were pure weight.
+    ranking: (ranking ?? []).map(({ note: _note, ...row }) => ({ ...row, note: "" })),
   }));
 }
 
