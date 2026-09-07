@@ -53,55 +53,56 @@ async function main() {
   const batchSize = num("batch", ANALYSIS_OVERNIGHT_BATCH_SIZE) || ANALYSIS_OVERNIGHT_BATCH_SIZE;
   resetGeminiUsage(process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash");
 
-  // If focus file asks for 지역사랑상품권, ensure it is on the economy board first
+  const focusEnabled =
+    process.argv.includes("--focus") || process.env.ANALYSIS_FOCUS === "1";
+
+  // If focus asks for 지역사랑상품권, ensure it is on the economy board first
   // (board cache is gitignored, so CI must inject at runtime).
-  try {
-    const { readFile } = await import("node:fs/promises");
-    const path = await import("node:path");
-    const focusFile = path.join(process.cwd(), "scripts", ".analysis-focus");
-    const line = (await readFile(focusFile, "utf8")).trim().split("\n")[0]?.trim() ?? "";
-    if (line.includes("지역사랑상품권")) {
+  if (focusEnabled) {
+    try {
+      const { readFile } = await import("node:fs/promises");
+      const path = await import("node:path");
       const { spawnSync } = await import("node:child_process");
-      const injected = spawnSync(
-        process.execPath,
-        ["--import", "tsx", "scripts/inject-local-love-voucher-board.ts"],
-        { stdio: "inherit", env: process.env },
-      );
-      if (injected.status !== 0) {
-        // Fallback: run via npx tsx
+      const focusFile = path.join(process.cwd(), "scripts", ".analysis-focus");
+      const line = (await readFile(focusFile, "utf8")).trim().split("\n")[0]?.trim() ?? "";
+      if (line.includes("지역사랑상품권")) {
         const viaNpx = spawnSync("npx", ["tsx", "scripts/inject-local-love-voucher-board.ts"], {
           stdio: "inherit",
           env: process.env,
         });
         if (viaNpx.status !== 0) throw new Error("inject-local-love-voucher-board failed");
       }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("inject-local-love")) throw error;
     }
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("inject-local-love")) throw error;
   }
 
   const all = await listHeatmapAnalysisTargets({ channel, boardSlug });
   assertRequiredHeatmapBoards(all, { channel, boardSlug });
 
-  // Optional one-off focus file (no workflow change required):
+  // Optional one-off focus (safe for overnight cron — requires --focus or ANALYSIS_FOCUS=1):
   // scripts/.analysis-focus → government-subsidy-search|지역사랑상품권
   let focused = all;
-  try {
-    const { readFile } = await import("node:fs/promises");
-    const path = await import("node:path");
-    const focusFile = path.join(process.cwd(), "scripts", ".analysis-focus");
-    const line = (await readFile(focusFile, "utf8")).trim().split("\n")[0]?.trim();
-    if (line && !line.startsWith("#")) {
-      const [focusBoard, focusName] = line.split("|").map((part) => part.trim());
-      focused = all.filter((target) => {
-        const boardOk = !focusBoard || target.boardSlug === focusBoard;
-        const nameOk = !focusName || target.entity.name.includes(focusName);
-        return boardOk && nameOk;
-      });
-      console.log(`[focus] ${line} → ${focused.length} target(s)`);
+  const focusEnabled =
+    process.argv.includes("--focus") || process.env.ANALYSIS_FOCUS === "1";
+  if (focusEnabled) {
+    try {
+      const { readFile } = await import("node:fs/promises");
+      const path = await import("node:path");
+      const focusFile = path.join(process.cwd(), "scripts", ".analysis-focus");
+      const line = (await readFile(focusFile, "utf8")).trim().split("\n")[0]?.trim();
+      if (line && !line.startsWith("#")) {
+        const [focusBoard, focusName] = line.split("|").map((part) => part.trim());
+        focused = all.filter((target) => {
+          const boardOk = !focusBoard || target.boardSlug === focusBoard;
+          const nameOk = !focusName || target.entity.name.includes(focusName);
+          return boardOk && nameOk;
+        });
+        console.log(`[focus] ${line} → ${focused.length} target(s)`);
+      }
+    } catch {
+      // no focus file
     }
-  } catch {
-    // no focus file
   }
 
   const byBoard = new Map<string, number>();
