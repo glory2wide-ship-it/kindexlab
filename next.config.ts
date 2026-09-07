@@ -68,11 +68,6 @@ const nextConfig: NextConfig = {
         destination: "/board/culture-leisure-grant-ranking",
         permanent: true,
       },
-      {
-        source: "/ranking/entertainment-government-grant-ranking--:rest*",
-        destination: "/ranking/culture-leisure-grant-ranking--:rest*",
-        permanent: true,
-      },
       // 이슈칼럼(premium columns) retired — keep old URLs from 404ing.
       {
         source: "/posts",

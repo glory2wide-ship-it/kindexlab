@@ -64,8 +64,13 @@ export async function resolveBoardEntity(slug: string): Promise<RankingEntity | 
     const payload = toHeatmapPayload(def, cached);
     const rows = payload.ranking ?? [];
     const entities = rankRowsToEntities(rows, payload);
+    // Aliased board slugs (e.g. retired 엔터 정부지원금 → 문화/생활) keep the
+    // old URL prefix; match by name when the full slug no longer lines up.
     return entities.find(
-      (item) => slugsMatch(item.slug, decoded) || slugifyName(item.name) === nameKey,
+      (item) =>
+        slugsMatch(item.slug, decoded) ||
+        slugifyName(item.name) === nameKey ||
+        item.slug.endsWith(`--${nameKey}`),
     );
   } catch {
     return undefined;
