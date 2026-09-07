@@ -1,4 +1,5 @@
 import { isHeadlineFeed, rankHeadlineFeed } from "@/lib/news/headline-rank";
+import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
 import { changeForEntity, rankItemsForTimeframe, scoreForTimeframe } from "@/lib/timeframes";
 import type { RankingEntity, Timeframe } from "@/lib/types";
 
@@ -15,6 +16,9 @@ export function rankForTicker(items: RankingEntity[]): RankingEntity[] {
 }
 
 export function tickerChangeRate(entity: RankingEntity): number {
+  if (isNaverStockMeasurement(entity.measurement)) {
+    return entity.measurement.changeRate;
+  }
   return changeForEntity(entity, TICKER_TIMEFRAME);
 }
 

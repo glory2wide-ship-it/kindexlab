@@ -58,6 +58,7 @@ export function ChannelMarketDesk({
   channel,
   boards,
   liveMarket,
+  initialItems,
   initialBoardSlug = "",
   initialRegion = "all",
   onBoardChange,
@@ -65,6 +66,8 @@ export function ChannelMarketDesk({
   channel: PostChannel;
   boards: HeatmapBoardPayload[];
   liveMarket: ChannelLiveMarket;
+  /** SSR rows with Naver quotes already attached for stock/FX tiles. */
+  initialItems?: RankingEntity[];
   /** Pre-select a board tab (e.g. travel region sub-routes). */
   initialBoardSlug?: string;
   /** Pre-select a region tab when the board supports it. */
@@ -81,15 +84,17 @@ export function ChannelMarketDesk({
   );
   const liveItems = liveMarket.items;
   const [items, setItems] = useState<RankingEntity[]>(() =>
-    buildHeatmapItems({
-      boards,
-      liveItems,
-      board: initialBoardSlug || undefined,
-      gender: "all",
-      age: "all",
-      region: boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
-      preferLive: !boardHeatmap && !initialBoardSlug,
-    }),
+    initialItems?.length && !initialBoardSlug
+      ? initialItems
+      : buildHeatmapItems({
+          boards,
+          liveItems,
+          board: initialBoardSlug || undefined,
+          gender: "all",
+          age: "all",
+          region: boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
+          preferLive: !boardHeatmap && !initialBoardSlug,
+        }),
   );
   const [title, setTitle] = useState(() => heatmapBoardTitle(boards, initialBoardSlug || undefined));
   const [flashNonce, setFlashNonce] = useState(0);
@@ -312,7 +317,9 @@ export function ChannelMarketDesk({
                 ? `${demo === "전체" ? "전체" : demo} 순위 · 네이버금융 환율·원자재 시세·등락률을 히트맵에 표시합니다. 약 3분마다 갱신됩니다.`
               : selectedBoard
                 ? `${demo === "전체" ? "전체" : demo} 순위 · 100점 척도. 분봉 필터와 성별·연령${showRegion ? "·지역" : ""} 탭이 함께 적용됩니다.`
-                : `${demo === "전체" ? "채널 종합" : demo} · 상단 보드 주제와 1:1로 묶인 히트맵입니다.`
+                : channel === "economy"
+                  ? `${demo === "전체" ? "채널 종합" : demo} · 주식·해외 주식·원자재·환율 타일은 네이버금융 현재가(단위)로 표시됩니다.`
+                  : `${demo === "전체" ? "채널 종합" : demo} · 상단 보드 주제와 1:1로 묶인 히트맵입니다.`
           }
         />
       ) : null}

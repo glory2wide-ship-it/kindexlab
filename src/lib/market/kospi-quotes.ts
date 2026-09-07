@@ -75,6 +75,18 @@ function stripQuoteSuffix(summary: string): string {
     .trim();
 }
 
+/** Approximate intraday path ending at the live quote (heatmap hover / sparkline). */
+function priceSparkline(price: number, changeRate: number): number[] {
+  const open =
+    changeRate <= -99.9 ? price : Number((price / (1 + changeRate / 100)).toFixed(6));
+  const delta = price - open;
+  return Array.from({ length: 12 }, (_, step) => {
+    const t = step / 11;
+    const wobble = Math.sin(step * 1.15) * Math.abs(delta) * 0.06;
+    return Number((open + delta * t + wobble).toFixed(4));
+  });
+}
+
 function withQuote(entity: RankingEntity, quote: LiveQuote): RankingEntity {
   const metrics = entity.metrics
     ? (Object.fromEntries(
@@ -87,11 +99,14 @@ function withQuote(entity: RankingEntity, quote: LiveQuote): RankingEntity {
 
   const signed = `${quote.changeRate >= 0 ? "+" : ""}${quote.changeRate.toFixed(2)}%`;
   const baseSummary = stripQuoteSuffix(entity.summary);
+  const spark = priceSparkline(quote.price, quote.changeRate);
 
   return {
     ...entity,
     fluctuationRate: quote.changeRate,
     metrics,
+    sparkline: spark,
+    history: spark.map((v, step) => ({ t: String(step), v })),
     measurement: {
       value: quote.price,
       unit: quote.unit,

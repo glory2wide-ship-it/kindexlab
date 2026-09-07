@@ -1,6 +1,7 @@
 import { buildHeatmapItems, withoutHeadlineHeatmapItems, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
 import { loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
 import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
+import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
 import { itemsForChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 import { attachTimeframeMetrics } from "@/lib/timeframes";
@@ -119,7 +120,9 @@ export async function loadUnifiedMarket(market?: RankingsPayload): Promise<Unifi
     POST_CHANNELS.map(async (meta) => {
       // One board load per channel (heatmap + desk used to double-fetch).
       const pool = await channelHeatmapPool(meta.id, market);
-      const ranked = tagChannel([...pool].sort(byHeat), meta.id);
+      // 주식·해외 주식·원자재·환율 tiles show Naver quotes (with units), not KinDex scores.
+      const quoted = await attachKospiStockQuotes(pool);
+      const ranked = tagChannel([...quoted].sort(byHeat), meta.id);
       return { meta, ranked };
     }),
   );

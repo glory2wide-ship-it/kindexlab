@@ -2,6 +2,7 @@ import { TimeframeChart } from "@/components/charts/TimeframeChart";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel } from "@/lib/format";
 import { formatEntityName } from "@/lib/boards/game-platforms";
 import { heatmapPriceLabel } from "@/lib/market/kospi-quotes-ui";
+import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
 import { buildTimeframeMetrics, scoreForTimeframe, timeframeLabel, volumeForTimeframe } from "@/lib/timeframes";
 import type { RankingEntity, SeriesPoint, Timeframe } from "@/lib/types";
 
@@ -25,6 +26,7 @@ export function HoverCard({
   const up = change > 0;
   const metrics = entity.metrics ?? buildTimeframeMetrics(entity);
   const priceLabel = heatmapPriceLabel(entity);
+  const naverQuote = isNaverStockMeasurement(entity.measurement) ? entity.measurement : undefined;
 
   return (
     <div
@@ -32,7 +34,8 @@ export function HoverCard({
       style={{ left: x, top: y }}
     >
       <p className="text-[10px] uppercase tracking-wider text-muted">
-        {entity.heatmapGroup ?? TYPE_LABEL[entity.type]} · {timeframeLabel(timeframe)} · {entity.rank}위
+        {entity.heatmapGroup ?? TYPE_LABEL[entity.type]}
+        {naverQuote ? " · 네이버금융" : ` · ${timeframeLabel(timeframe)}`} · {entity.rank}위
       </p>
       <div className="mt-1 flex items-baseline justify-between gap-2">
         <p className="font-semibold">{formatEntityName(entity)}</p>
@@ -42,15 +45,15 @@ export function HoverCard({
       </div>
       <p className="font-mono text-xs text-muted">
         {priceLabel
-          ? `네이버금융 현재가 ${priceLabel}`
+          ? `현재가 ${priceLabel}`
           : `${formatScore(scoreForTimeframe(entity, timeframe))} · ${metricLabel(entity.type)} ${formatCompact(volumeForTimeframe(entity, timeframe))}`}
       </p>
       <div className="mt-2 grid grid-cols-3 gap-1 font-mono text-[10px]">
         {PREVIEW_FRAMES.map((frame) => {
-          const rate = metrics[frame].changeRate;
+          const rate = naverQuote ? naverQuote.changeRate : metrics[frame].changeRate;
           return (
             <div key={frame} className="rounded bg-board/80 px-1.5 py-1">
-              <p className="text-muted">{frame.toUpperCase()}</p>
+              <p className="text-muted">{naverQuote ? "전일" : frame.toUpperCase()}</p>
               <p className={rate > 0 ? "text-up" : rate < 0 ? "text-down" : "text-muted"}>
                 {formatRate(rate)}
               </p>

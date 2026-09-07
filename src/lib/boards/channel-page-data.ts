@@ -1,10 +1,28 @@
 import { getChannelBriefingEdition, getRankings, splitChannelEdition } from "@/lib/api";
-import { stripBoardDemographics } from "@/lib/boards/heatmap";
-import { channelLiveMarket, loadChannelHeatmapPayloads } from "@/lib/boards/heatmap-server";
+import { buildHeatmapItems, stripBoardDemographics } from "@/lib/boards/heatmap";
+import { channelLiveMarket, loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
 import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
 import { slimBriefingForCard, slimBriefingsForCards } from "@/lib/briefing/card-dto";
+import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
 import type { PostChannel } from "@/lib/posts/types";
-import type { RankingsPayload } from "@/lib/types";
+import type { RankingEntity, RankingsPayload } from "@/lib/types";
+
+/** Default 종합 heatmap rows with Naver quotes attached for stock/FX boards. */
+async function quotedDefaultHeatmapItems(
+  channel: PostChannel,
+  boards: Awaited<ReturnType<typeof loadChannelHeatmapPayloads>>,
+  liveItems: RankingEntity[],
+): Promise<RankingEntity[]> {
+  const boardDriven = channelUsesBoardHeatmap(channel) && boards.length > 0;
+  const raw = buildHeatmapItems({
+    boards,
+    liveItems,
+    gender: "all",
+    age: "all",
+    preferLive: !boardDriven,
+  });
+  return (await attachKospiStockQuotes(raw)).map(toTileEntity);
+}
 
 const EMPTY_MARKET = (): RankingsPayload => ({
   updatedAt: new Date().toISOString(),
@@ -44,9 +62,15 @@ export async function loadChannelPageData(channel: PostChannel) {
     ? splitChannelEdition(edition)
     : { main: undefined, dives: [] };
 
+  const liveMarket = boardDriven
+    ? emptyLiveMarket()
+    : channelLiveMarket(market, channel, boards);
+  const initialItems = await quotedDefaultHeatmapItems(channel, boards, liveMarket.items);
+
   return {
     boards,
-    liveMarket: boardDriven ? emptyLiveMarket() : channelLiveMarket(market, channel, boards),
+    liveMarket,
+    initialItems,
     main: split.main ? slimBriefingForCard(split.main) : undefined,
     dives: slimBriefingsForCards(split.dives ?? []),
   };
@@ -56,11 +80,16 @@ export async function loadChannelPageData(channel: PostChannel) {
 export async function loadChannelDeskData(channel: PostChannel) {
   const boards = stripBoardDemographics(await loadChannelHeatmapPayloads(channel));
   if (channelUsesBoardHeatmap(channel) && boards.length > 0) {
-    return { boards, liveMarket: emptyLiveMarket() };
+    const liveMarket = emptyLiveMarket();
+    const initialItems = await quotedDefaultHeatmapItems(channel, boards, liveMarket.items);
+    return { boards, liveMarket, initialItems };
   }
   const market = await getRankings().catch(() => EMPTY_MARKET());
+  const liveMarket = channelLiveMarket(market, channel, boards);
+  const initialItems = await quotedDefaultHeatmapItems(channel, boards, liveMarket.items);
   return {
     boards,
-    liveMarket: channelLiveMarket(market, channel, boards),
+    liveMarket,
+    initialItems,
   };
 }

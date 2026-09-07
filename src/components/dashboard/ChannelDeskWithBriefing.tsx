@@ -8,7 +8,7 @@ import {
 } from "@/components/dashboard/ChannelMarketDesk";
 import type { HeatmapBoardPayload } from "@/lib/boards/heatmap";
 import type { PostChannel } from "@/lib/posts/types";
-import type { BriefingArticle } from "@/lib/types";
+import type { BriefingArticle, RankingEntity } from "@/lib/types";
 
 /**
  * Shares ranking-board tab selection with the deep-dive grid so the lower menu
@@ -18,6 +18,7 @@ export function ChannelDeskWithBriefing({
   channel,
   boards,
   liveMarket,
+  initialItems,
   main,
   dives,
   titleLevel = 2,
@@ -25,6 +26,7 @@ export function ChannelDeskWithBriefing({
   channel: PostChannel;
   boards: HeatmapBoardPayload[];
   liveMarket: ChannelLiveMarket;
+  initialItems?: RankingEntity[];
   main?: BriefingArticle;
   dives: BriefingArticle[];
   titleLevel?: 1 | 2;
@@ -37,6 +39,7 @@ export function ChannelDeskWithBriefing({
         channel={channel}
         boards={boards}
         liveMarket={liveMarket}
+        initialItems={initialItems}
         onBoardChange={setActiveDeskId}
       />
       <section className="border-t border-line pt-8">

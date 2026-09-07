@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatRate } from "@/lib/format";
+import { heatmapPriceLabel } from "@/lib/market/kospi-quotes-ui";
 import { entityHref } from "@/lib/slugs";
 import { rankForTicker, tickerBuzzScore, tickerChangeRate } from "@/lib/ticker/rank";
 import type { RankingEntity } from "@/lib/types";
@@ -21,6 +22,7 @@ export function TickerTape({ items }: { items: RankingEntity[] }) {
           const up = change > 0;
           const down = change < 0;
           const tone = up ? "text-up" : down ? "text-down" : "text-muted";
+          const priceLabel = heatmapPriceLabel(item);
           return (
             <Link
               key={`${item.id}-${index}`}
@@ -33,7 +35,9 @@ export function TickerTape({ items }: { items: RankingEntity[] }) {
               <span className={tone}>
                 {up ? "▲" : down ? "▼" : "–"} {formatRate(change)}
               </span>
-              <span className="text-muted">{tickerBuzzScore(item).toFixed(1)}</span>
+              <span className="text-muted">
+                {priceLabel ?? tickerBuzzScore(item).toFixed(1)}
+              </span>
             </Link>
           );
         })}

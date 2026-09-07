@@ -162,7 +162,9 @@ export function RankingTable({
                 <td className="px-2 py-3 text-xs text-muted">
                   {item.heatmapGroup ?? TYPE_LABEL[item.type]}
                 </td>
-                <td className="px-2 py-3 text-right font-sans tabular-nums">{formatScore(buzzScore)}</td>
+                <td className="px-2 py-3 text-right font-sans tabular-nums">
+                  {priceLabel ?? formatScore(buzzScore)}
+                </td>
                 <td className="px-2 py-3 text-right">
                   <ChangeCell rate={change} />
                 </td>
