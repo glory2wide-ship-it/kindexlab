@@ -504,7 +504,7 @@ export async function generatePremiumArticle(input: {
   const cacheKey = premiumPromptCacheKey({
     briefing: input.briefing,
     channel: input.channel,
-    mode: dataJournalist ? `hybrid80-outline4-${mode}` : mode,
+    mode: dataJournalist ? `hybrid80-reader-h2-${mode}` : mode,
   });
   const model = resolveBriefingModel({
     briefing: input.briefing,
@@ -656,7 +656,11 @@ export async function generatePremiumArticle(input: {
 
   const finalizeSections = (next: PremiumSection[]): PremiumSection[] =>
     dataJournalist
-      ? (applyHybridAnalysisHeadings(next) as PremiumSection[])
+      ? (applyHybridAnalysisHeadings(next, {
+          channel: input.channel,
+          categoryHint: input.category ?? input.channel,
+          focusKeyword: keyword,
+        }) as PremiumSection[])
       : (applySeoHeadingStructure(next) as PremiumSection[]);
 
   sections = finalizeSections(sections);
