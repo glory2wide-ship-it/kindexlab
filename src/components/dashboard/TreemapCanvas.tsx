@@ -175,7 +175,7 @@ export function TreemapView({
                 y={leaf.y0}
                 width={Math.max(leaf.x1 - leaf.x0, 0)}
                 height={Math.max(leaf.y1 - leaf.y0, 0)}
-              </rect>
+              />
             </clipPath>
           ))}
         </defs>
