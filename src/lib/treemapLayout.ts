@@ -131,10 +131,12 @@ export function rank1Rectangle(
 
 function rowWorstAspect(row: PanelNode[], rowValue: number, shortSide: number): number {
   if (rowValue <= 0 || shortSide <= 0) return Number.POSITIVE_INFINITY;
+  const thickness = rowValue / shortSide;
+  if (thickness <= 0) return Number.POSITIVE_INFINITY;
   let worst = 0;
   for (const node of row) {
-    const along = shortSide * (node.value / rowValue);
-    const aspect = along > shortSide ? along / shortSide : shortSide / Math.max(along, 1e-9);
+    const along = node.value / thickness;
+    const aspect = along > thickness ? along / thickness : thickness / Math.max(along, 1e-9);
     if (aspect > worst) worst = aspect;
   }
   return worst;
@@ -192,8 +194,8 @@ function layoutStrip(
 
 /**
  * Squarify that always emits one box per node and paints every pixel of the
- * panel (minus 1px gutters). d3-hierarchy's `.round(true)` dropped small
- * leaves and left a grey hole where rank 12 belonged.
+ * panel (minus gutters). Rows are packed against the shorter side so tiles
+ * stay near 1:1 instead of full-height strips.
  */
 function squarifyPanel(
   nodes: PanelNode[],
@@ -215,16 +217,14 @@ function squarifyPanel(
   }
 
   const total = nodes.reduce((sum, node) => sum + Math.max(node.value, 0), 0) || nodes.length;
-  const weighted = nodes.map((node) => ({
+  const area = Math.max(w * h, 1);
+  const scaled = nodes.map((node) => ({
     ...node,
-    value: Math.max(node.value, total / (nodes.length * 8)),
+    value: (Math.max(node.value, total / (nodes.length * 6)) / total) * area,
   }));
-  const area = w * h;
-  const scaled = weighted.map((node) => ({
-    ...node,
-    value: (node.value / weighted.reduce((sum, item) => sum + item.value, 0)) * area,
-  }));
-  return squarifyFill(scaled, x0, y0, x1, y1, gap);
+  const scaleTotal = scaled.reduce((sum, node) => sum + node.value, 0) || 1;
+  const normalized = scaled.map((node) => ({ ...node, value: (node.value / scaleTotal) * area }));
+  return squarifyFill(normalized, x0, y0, x1, y1, gap);
 }
 
 function squarifyFill(
@@ -266,16 +266,15 @@ function squarifyFill(
   }
 
   const rowArea = row.reduce((sum, node) => sum + node.value, 0);
-  const minRest = rest.length ? Math.min(32, Math.max(8, rest.length * 4)) : 0;
   if (w >= h) {
-    const stripW = Math.min(w - minRest, Math.max(2, (rowArea / total) * w));
+    const stripW = Math.min(w - 8, Math.max(8, rowArea / total * w));
     const cut = x0 + stripW;
     return [
       ...layoutStrip(row, x0, y0, cut, y1, gap, true),
       ...squarifyFill(rest, Math.min(cut + gap, x1), y0, x1, y1, gap),
     ];
   }
-  const stripH = Math.min(h - minRest, Math.max(2, (rowArea / total) * h));
+  const stripH = Math.min(h - 8, Math.max(8, rowArea / total * h));
   const cut = y0 + stripH;
   return [
     ...layoutStrip(row, x0, y0, x1, cut, gap, false),
@@ -284,46 +283,9 @@ function squarifyFill(
 }
 
 /**
- * Rank-1 pixel box: exactly ~15% of map area, forced near 1:1 (square).
- * Never stretches into a full-height column.
- */
-function rank1SquareBox(
-  width: number,
-  height: number,
-): { x0: number; y0: number; x1: number; y1: number } {
-  const mapArea = Math.max(width, 1) * Math.max(height, 1);
-  const targetArea = mapArea * RANK_1_AREA_RATIO;
-  let side = Math.round(Math.sqrt(targetArea));
-
-  // Leave room for the L-shaped remainder; keep aspect within ~1:1.15.
-  const maxSide = Math.min(width - 64, height - 64, Math.round(Math.min(width, height) * 0.72));
-  const minSide = Math.max(48, Math.round(Math.min(width, height) * 0.22));
-  side = Math.max(minSide, Math.min(maxSide, side));
-
-  let leadW = side;
-  let leadH = Math.round(targetArea / Math.max(leadW, 1));
-  if (leadH > side * 1.12) {
-    leadH = Math.round(side * 1.12);
-    leadW = Math.round(targetArea / Math.max(leadH, 1));
-  } else if (leadH < side / 1.12) {
-    leadH = Math.round(side / 1.12);
-    leadW = Math.round(targetArea / Math.max(leadH, 1));
-  }
-  leadW = Math.max(minSide, Math.min(leadW, width - 48));
-  leadH = Math.max(minSide, Math.min(leadH, height - 48));
-  // Re-pin area after clamping so painted share stays near 15%.
-  const area = leadW * leadH;
-  if (area > 0 && Math.abs(area - targetArea) / targetArea > 0.04) {
-    const scale = Math.sqrt(targetArea / area);
-    leadW = Math.max(minSide, Math.min(width - 48, Math.round(leadW * scale)));
-    leadH = Math.max(minSide, Math.min(height - 48, Math.round(targetArea / Math.max(leadW, 1))));
-  }
-  return { x0: 0, y0: 0, x1: leadW, y1: leadH };
-}
-
-/**
- * Rank 1 top-left (~15% area, near-square). Rank 2 directly under it (same
- * column width). Ranks 3+ fill the full-height panel to the right.
+ * Squarified treemap over the full canvas. Rank 1 is still the largest tile;
+ * packing against the shorter side keeps neighbors close to squares instead of
+ * stretching #2 into a leftover column and #3+ into full-height strips.
  */
 export function layoutHeatmapLeaves(
   items: HeatmapSizeInput[],
@@ -338,56 +300,12 @@ export function layoutHeatmapLeaves(
   }
 
   const allocation = calculateHeatmapSizeRatios(items);
-  const gutter = Math.max(1, padding);
-  const lead = rank1SquareBox(width, height);
-  const colW = lead.x1;
-  const rank1H = lead.y1;
-
-  const boxes: TreemapBox[] = [
-    {
-      id: items[0].id,
-      rank: items[0].rank ?? 1,
-      x0: 0,
-      y0: 0,
-      x1: colW,
-      y1: rank1H,
-    },
-  ];
-
-  const rank2 = items[1];
-  const rank2Y0 = Math.min(rank1H + gutter, height - 1);
-  // Stretch rank 2 to the bottom edge so no empty gap sits under the left column.
-  const rank2Y1 = height;
-
-  boxes.push({
-    id: rank2.id,
-    rank: rank2.rank ?? 2,
-    x0: 0,
-    y0: rank2Y0,
-    x1: colW,
-    y1: rank2Y1,
-  });
-
-  const extra = items.slice(2);
-  if (!extra.length) return boxes;
-
-  const rightX = Math.min(colW + gutter, width);
-  const rightNodes: PanelNode[] = extra.map((item, index) => ({
+  const nodes: PanelNode[] = items.map((item, index) => ({
     id: item.id,
-    rank: item.rank ?? index + 3,
+    rank: item.rank ?? index + 1,
     value: Math.max(allocation.ratios.get(item.id) ?? 0, 1e-6),
   }));
-
-  if (width - rightX >= 8) {
-    boxes.push(...squarifyPanel(rightNodes, rightX, 0, width, height, padding));
-    return boxes;
-  }
-
-  // Narrow canvas: keep every rank by stacking the leftover names under #2.
-  const splitY = Math.min(height - 8, Math.max(rank2Y0 + 24, height * 0.55));
-  boxes[1] = { ...boxes[1]!, y1: splitY };
-  boxes.push(...squarifyPanel(rightNodes, 0, splitY + gutter, width, height, padding));
-  return boxes;
+  return squarifyPanel(nodes, 0, 0, width, height, padding);
 }
 
 function fillRestPool(leaderShare: number, rest: number[], pool: number): number[] {
@@ -422,8 +340,8 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
   ratios.set(items[0].id, RANK_1_AREA_RATIO);
   const rest = items.slice(1);
   const packed = items.length >= 20;
-  const exponent = packed ? 1.12 : 1.28;
-  const cap = packed ? Math.min(0.11, RANK_BELOW_CAP) : RANK_1_AREA_RATIO * 0.82;
+  const exponent = packed ? 1.02 : 1.08;
+  const cap = packed ? Math.min(0.12, RANK_BELOW_CAP) : RANK_1_AREA_RATIO * 0.88;
   const peak = Math.max(...rest.map((item) => safeScore(item.score)), 1);
   const weights = rest.map((item, index) =>
     rankScoreWeight(item.rank ?? index + 2, item.score, peak, exponent),

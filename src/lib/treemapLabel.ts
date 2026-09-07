@@ -1,9 +1,9 @@
-const MIN_NAME = 12;
-const MAX_NAME = 38;
-const MIN_RATE = 10;
-const MAX_RATE = 18;
-const MIN_ARTIST = 10;
-const MAX_ARTIST = 16;
+const MIN_NAME = 18;
+const MAX_NAME = 57;
+const MIN_RATE = 15;
+const MAX_RATE = 27;
+const MIN_ARTIST = 15;
+const MAX_ARTIST = 24;
 
 export interface TreemapLabelLayout {
   showName: boolean;
@@ -87,8 +87,8 @@ export function layoutTreemapLabel(input: {
   const innerW = Math.max(12, w - 16);
   const innerH = Math.max(12, h - 18);
   const areaScale = Math.sqrt(Math.max(1, w * h));
-  let nameSize = clamp(areaScale * 0.13, MIN_NAME, MAX_NAME);
-  nameSize = Math.min(nameSize, innerH * 0.42, innerW * 0.42);
+  let nameSize = clamp(areaScale * 0.195, MIN_NAME, MAX_NAME);
+  nameSize = Math.min(nameSize, innerH * 0.5, innerW * 0.5);
   nameSize = fitSizeToWidth(name, nameSize, innerW, MIN_NAME);
 
   const showArtist = Boolean(artist) && w >= 48 && h >= 32;

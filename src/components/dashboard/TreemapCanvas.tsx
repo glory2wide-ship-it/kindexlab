@@ -60,10 +60,10 @@ function groupLabel(entity: RankingEntity): string {
 }
 
 function headlineTitleSize(width: number, height: number): number {
-  if (width >= 220 && height >= 140) return 21;
-  if (width >= 160 && height >= 100) return 18;
-  if (width >= 110 && height >= 72) return 16;
-  return 14;
+  if (width >= 220 && height >= 140) return 32;
+  if (width >= 160 && height >= 100) return 27;
+  if (width >= 110 && height >= 72) return 24;
+  return 21;
 }
 
 export function TreemapView({
@@ -188,7 +188,7 @@ export function TreemapView({
           const nameY = label?.nameY ?? leaf.y0 + h / 2 - 4;
           const artistY = label?.metaY ?? nameY + 14;
           const rateY = label?.rateY ?? leaf.y0 + h / 2 + 12;
-          const rankSize = w >= 120 && h >= 56 ? 11 : 9;
+          const rankSize = w >= 120 && h >= 56 ? 16.5 : 13.5;
           const showRank = w >= 36 && h >= 20;
           // Desk tag rides on the rank line so the tile keeps its label height.
           const channelTag = entity.sourceChannel
@@ -239,10 +239,10 @@ export function TreemapView({
                 />
                 {showRank ? (
                   <foreignObject
-                    x={Math.max(leaf.x0, leaf.x1 - 132)}
+                    x={Math.max(leaf.x0, leaf.x1 - 168)}
                     y={leaf.y0 + 3}
-                    width={Math.min(128, w - 4)}
-                    height={showSource ? 48 : 18}
+                    width={Math.min(164, w - 4)}
+                    height={showSource ? 64 : 28}
                   >
                     <div
                       className="pointer-events-none flex h-full w-full flex-col items-end justify-start pr-1"
@@ -285,9 +285,9 @@ export function TreemapView({
                 {isGrantTwoLine ? (
                   <foreignObject
                     x={leaf.x0 + 4}
-                    y={leaf.y0 + (showRank ? 22 : 6)}
+                    y={leaf.y0 + (showRank ? 32 : 6)}
                     width={Math.max(w - 8, 0)}
-                    height={Math.max(h - (showRank ? 28 : 10), 0)}
+                    height={Math.max(h - (showRank ? 40 : 10), 0)}
                   >
                     <div
                       className="pointer-events-none flex h-full w-full flex-col items-center justify-center px-0.5 text-center"
@@ -302,7 +302,7 @@ export function TreemapView({
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          fontSize: label?.nameSize ?? 13,
+                          fontSize: label?.nameSize ?? 20,
                           lineHeight: 1.25,
                           letterSpacing: "-0.03em",
                           wordBreak: "keep-all",
@@ -317,7 +317,7 @@ export function TreemapView({
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
-                          fontSize: Math.max(8, (label?.metaSize ?? 10) * 0.95),
+                          fontSize: Math.max(12, (label?.metaSize ?? 15) * 0.95),
                           lineHeight: 1.2,
                           letterSpacing: "-0.02em",
                           opacity: 0.92,
@@ -329,7 +329,7 @@ export function TreemapView({
                       {h >= 48 ? (
                         <p
                           className="mt-1 font-bold tabular-nums"
-                          style={{ fontSize: label?.rateSize ?? 11 }}
+                          style={{ fontSize: label?.rateSize ?? 16.5 }}
                         >
                           {label?.rate ?? rate}
                         </p>
@@ -339,9 +339,9 @@ export function TreemapView({
                 ) : isHeadline ? (
                   <foreignObject
                     x={leaf.x0 + 4}
-                    y={leaf.y0 + (showRank ? 22 : 6)}
+                    y={leaf.y0 + (showRank ? 32 : 6)}
                     width={Math.max(w - 8, 0)}
-                    height={Math.max(h - (showRank ? 28 : 10), 0)}
+                    height={Math.max(h - (showRank ? 40 : 10), 0)}
                   >
                     <div
                       className="pointer-events-none flex h-full w-full flex-col items-center justify-center px-0.5 text-center"
@@ -367,7 +367,7 @@ export function TreemapView({
                       {h >= 48 ? (
                         <p
                           className="mt-1 font-bold tabular-nums"
-                          style={{ fontSize: label?.rateSize ?? 11 }}
+                          style={{ fontSize: label?.rateSize ?? 16.5 }}
                         >
                           {label?.rate ?? rate}
                         </p>
