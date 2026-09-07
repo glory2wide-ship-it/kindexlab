@@ -7,15 +7,20 @@
  * Usage:
  *   npx tsx scripts/generate-heatmap-analysis.ts
  *   npx tsx scripts/generate-heatmap-analysis.ts --channel=economy --limit=10
+ *   npx tsx scripts/generate-heatmap-analysis.ts --board=overseas-stock-index
  *   npx tsx scripts/generate-heatmap-analysis.ts --force --dry
  */
-import { listHeatmapAnalysisTargets } from "../src/lib/analysis/heatmap-inventory";
+import {
+  assertRequiredHeatmapBoards,
+  listHeatmapAnalysisTargets,
+} from "../src/lib/analysis/heatmap-inventory";
 import {
   ANALYSIS_OVERNIGHT_BATCH_SIZE,
   runHeatmapAnalysisOvernight,
 } from "../src/lib/analysis/overnight-batch";
 import { kstDateString } from "../src/lib/briefing/dates";
 import { getRankings } from "../src/lib/api";
+import { OVERSEAS_STOCK_BOARD_SLUG } from "../src/lib/market/stock-codes";
 import { deliverGenerationReport } from "../src/lib/ops/generation-report";
 import { formatKrw, resetGeminiUsage, snapshotGeminiUsage } from "../src/lib/ops/gemini-usage";
 import { POST_CHANNELS } from "../src/lib/posts/channels";
@@ -40,6 +45,7 @@ function parseChannel(): PostChannel | undefined {
 async function main() {
   const startedAt = Date.now();
   const channel = parseChannel();
+  const boardSlug = flag("board");
   const editionDate = flag("date") ?? kstDateString();
   const offset = num("offset", 0);
   const force = process.argv.includes("--force");
@@ -47,13 +53,32 @@ async function main() {
   const batchSize = num("batch", ANALYSIS_OVERNIGHT_BATCH_SIZE) || ANALYSIS_OVERNIGHT_BATCH_SIZE;
   resetGeminiUsage(process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash");
 
-  const all = await listHeatmapAnalysisTargets({ channel });
+  const all = await listHeatmapAnalysisTargets({ channel, boardSlug });
+  assertRequiredHeatmapBoards(all, { channel, boardSlug });
+
+  const byBoard = new Map<string, number>();
+  for (const target of all) {
+    byBoard.set(target.boardSlug, (byBoard.get(target.boardSlug) ?? 0) + 1);
+  }
+  const overseasCount = byBoard.get(OVERSEAS_STOCK_BOARD_SLUG) ?? 0;
+  console.log(
+    `[inventory] ${all.length}건 · edition=${editionDate} · force=${force}` +
+      (channel ? ` · channel=${channel}` : "") +
+      (boardSlug ? ` · board=${boardSlug}` : ""),
+  );
+  console.log(
+    `[inventory] boards=${[...byBoard.entries()]
+      .map(([slug, count]) => `${slug}:${count}`)
+      .join(", ")}`,
+  );
+  if (!boardSlug && (!channel || channel === "economy")) {
+    console.log(`[inventory] 해외 주식(${OVERSEAS_STOCK_BOARD_SLUG})=${overseasCount}건`);
+  }
+
   const limit = num("limit", all.length);
   const targets = all.slice(offset, offset + limit);
 
-  console.log(
-    `[inventory] ${targets.length}건 / 전체 ${all.length}건 · edition=${editionDate} · force=${force}`,
-  );
+  console.log(`[run] ${targets.length}건 / 전체 ${all.length}건 (offset=${offset})`);
 
   if (dryRun) {
     for (const [index, target] of targets.entries()) {
@@ -82,6 +107,14 @@ async function main() {
   console.log(
     `[done] generated=${run.generated} skipped=${run.skipped} failed=${run.failed} batches=${run.batches} geminiBatch=${run.geminiBatch} ${seconds}s`,
   );
+
+  const overseasItems = run.items.filter((item) => item.boardSlug === OVERSEAS_STOCK_BOARD_SLUG);
+  if (overseasItems.length) {
+    const ok = overseasItems.filter((item) => item.ok && !item.skipped).length;
+    const skip = overseasItems.filter((item) => item.skipped).length;
+    const fail = overseasItems.filter((item) => !item.ok).length;
+    console.log(`[overseas-stock] generated=${ok} skipped=${skip} failed=${fail}`);
+  }
 
   const delivery = await deliverGenerationReport(
     {
@@ -112,9 +145,12 @@ async function main() {
         `skipped=${run.skipped}`,
         `failed=${run.failed}`,
         `geminiBatch=${run.geminiBatch}`,
+        overseasItems.length
+          ? `overseas-stock=${overseasItems.filter((i) => i.ok && !i.skipped).length}/${overseasItems.length}`
+          : undefined,
         `${seconds}s`,
         `API 추정 ${formatKrw(snapshotGeminiUsage().estimatedKrw)}`,
-      ],
+      ].filter((note): note is string => Boolean(note)),
     },
     `heatmap-analysis-${editionDate}`,
   );
