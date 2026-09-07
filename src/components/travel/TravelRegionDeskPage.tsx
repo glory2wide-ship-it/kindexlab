@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ChannelMarketDesk } from "@/components/dashboard/ChannelMarketDesk";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import { loadChannelDeskData } from "@/lib/boards/channel-page-data";
@@ -8,6 +9,39 @@ import {
   type TravelRegionBoardKey,
 } from "@/lib/constants/nav";
 
+function TravelDeskFallback() {
+  return (
+    <div
+      className="h-[460px] animate-pulse rounded-2xl border border-line/60 bg-panel md:h-[640px]"
+      aria-hidden
+    />
+  );
+}
+
+async function TravelDeskBody({
+  boardKey,
+  region,
+}: {
+  boardKey: Extract<TravelRegionBoardKey, "domestic" | "outing">;
+  region: RegionSegment;
+}) {
+  const meta = TRAVEL_REGION_BOARD_NAV[boardKey];
+  const { boards, liveMarket, initialItems, initialQuotedByBoard } =
+    await loadChannelDeskData("travel");
+
+  return (
+    <ChannelMarketDesk
+      channel="travel"
+      boards={boards}
+      liveMarket={liveMarket}
+      initialItems={initialItems}
+      initialQuotedByBoard={initialQuotedByBoard}
+      initialBoardSlug={meta.slug}
+      initialRegion={region}
+    />
+  );
+}
+
 export async function TravelRegionDeskPage({
   boardKey,
   region,
@@ -16,7 +50,6 @@ export async function TravelRegionDeskPage({
   region: RegionSegment;
 }) {
   const meta = TRAVEL_REGION_BOARD_NAV[boardKey];
-  const { boards, liveMarket, initialItems, initialQuotedByBoard } = await loadChannelDeskData("travel");
 
   return (
     <div className="space-y-4">
@@ -33,15 +66,9 @@ export async function TravelRegionDeskPage({
           있습니다.
         </p>
       </header>
-      <ChannelMarketDesk
-        channel="travel"
-        boards={boards}
-        liveMarket={liveMarket}
-        initialItems={initialItems}
-        initialQuotedByBoard={initialQuotedByBoard}
-        initialBoardSlug={meta.slug}
-        initialRegion={region}
-      />
+      <Suspense fallback={<TravelDeskFallback />}>
+        <TravelDeskBody boardKey={boardKey} region={region} />
+      </Suspense>
     </div>
   );
 }

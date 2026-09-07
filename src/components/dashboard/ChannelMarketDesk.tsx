@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CategoryBoardRail } from "@/components/boards/CategoryBoardRail";
 import { MarketOverview } from "@/components/dashboard/MarketOverview";
@@ -20,12 +21,22 @@ import { filterLabel } from "@/lib/boards/demographics";
 import { boardUsesRegionFilter, entityMatchesRegion } from "@/lib/boards/regions";
 import { channelUsesBoardHeatmap, rankLimitForBoard, rankLimitForChannel } from "@/lib/boards/limits";
 import { isMarketQuoteBoardSlug } from "@/lib/market/kospi-quotes";
-import { HeadlineNewsRanking } from "@/components/politics/HeadlineNewsRanking";
 import { withIndexPoints } from "@/lib/ingestion/composite";
 import { isNavigating } from "@/lib/nav/progress";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { PostChannel } from "@/lib/posts/types";
 import type { MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
+
+const HeadlineNewsRanking = dynamic(
+  () =>
+    import("@/components/politics/HeadlineNewsRanking").then((mod) => mod.HeadlineNewsRanking),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[420px] animate-pulse rounded-2xl border border-line/60 bg-panel" aria-hidden />
+    ),
+  },
+);
 
 function usesBoardHeatmap(channel: PostChannel): boolean {
   return channelUsesBoardHeatmap(channel);

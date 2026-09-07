@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
-import { ChannelBriefingPage } from "@/components/briefing/ChannelBriefingPage";
-import { ChannelMarketDesk } from "@/components/dashboard/ChannelMarketDesk";
-import { loadChannelDeskData } from "@/lib/boards/channel-page-data";
+import { ChannelBoardPageBody } from "@/components/dashboard/ChannelBoardPageBody";
 import { getPostChannel, LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 
@@ -23,30 +20,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function PoliticsBoardPage() {
-  const { boards, liveMarket, initialItems, initialQuotedByBoard } = await loadChannelDeskData("politics");
-
-  return (
-    <div className="space-y-8">
-      <ChannelMarketDesk
-        channel="politics"
-        boards={boards}
-        liveMarket={liveMarket}
-        initialItems={initialItems}
-        initialQuotedByBoard={initialQuotedByBoard}
-      />
-      <section className="border-t border-line pt-8">
-        <Suspense
-          fallback={
-            <div className="space-y-3" aria-hidden>
-              <div className="h-8 w-48 animate-pulse rounded bg-line/70" />
-              <div className="h-40 animate-pulse rounded-2xl bg-line/40" />
-            </div>
-          }
-        >
-          <ChannelBriefingPage channel="politics" titleLevel={2} />
-        </Suspense>
-      </section>
-    </div>
-  );
+export default function PoliticsBoardPage() {
+  return <ChannelBoardPageBody channel="politics" />;
 }

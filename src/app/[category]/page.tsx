@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
-import { ChannelBriefingPage } from "@/components/briefing/ChannelBriefingPage";
-import { ChannelMarketDesk } from "@/components/dashboard/ChannelMarketDesk";
-import { loadChannelDeskData } from "@/lib/boards/channel-page-data";
+import { ChannelBoardPageBody } from "@/components/dashboard/ChannelBoardPageBody";
 import { getPostChannel, isPostChannel, LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 
 /** ISR: matches the 3-minute live board refresh cadence. */
@@ -24,15 +21,6 @@ export async function generateMetadata({
   };
 }
 
-function BriefingFallback() {
-  return (
-    <div className="space-y-3" aria-hidden>
-      <div className="h-8 w-48 animate-pulse rounded bg-line/70" />
-      <div className="h-40 animate-pulse rounded-2xl bg-line/40" />
-    </div>
-  );
-}
-
 export default async function CategoryBoardPage({
   params,
 }: {
@@ -40,25 +28,7 @@ export default async function CategoryBoardPage({
 }) {
   const { category } = await params;
   if (!isPostChannel(category)) notFound();
-
-  // Desk first (boards + rankings). Briefing streams in via Suspense so soft-nav
-  // paints the heatmap without waiting on the multi-MB briefing catalog.
-  const { boards, liveMarket, initialItems, initialQuotedByBoard } = await loadChannelDeskData(category);
-
-  return (
-    <div className="space-y-8">
-      <ChannelMarketDesk
-        channel={category}
-        boards={boards}
-        liveMarket={liveMarket}
-        initialItems={initialItems}
-        initialQuotedByBoard={initialQuotedByBoard}
-      />
-      <section className="border-t border-line pt-8">
-        <Suspense fallback={<BriefingFallback />}>
-          <ChannelBriefingPage channel={category} titleLevel={2} />
-        </Suspense>
-      </section>
-    </div>
-  );
+  // Resolve the channel id only — desk/briefing stream in Suspense so
+  // CategoryChrome's H1 paints without waiting on board/quote work.
+  return <ChannelBoardPageBody channel={category} />;
 }

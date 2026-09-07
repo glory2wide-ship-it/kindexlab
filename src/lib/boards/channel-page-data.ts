@@ -24,15 +24,15 @@ export const MARKET_QUOTE_BOARD_SLUGS = [
 
 export { isMarketQuoteBoardSlug };
 
-/** Heatmap rows for one board (or channel 종합) with Naver quotes attached. */
-async function quotedHeatmapItems(
+/** Heatmap rows for one board (or channel 종합) — quotes applied in a later batch. */
+function rawHeatmapItems(
   channel: PostChannel,
   boards: HeatmapBoardPayload[],
   liveItems: RankingEntity[],
   board?: string,
-): Promise<RankingEntity[]> {
+): RankingEntity[] {
   const boardDriven = channelUsesBoardHeatmap(channel) && boards.length > 0;
-  const raw = buildHeatmapItems({
+  return buildHeatmapItems({
     boards,
     liveItems,
     board,
@@ -40,12 +40,14 @@ async function quotedHeatmapItems(
     age: "all",
     preferLive: !boardDriven && !board,
   });
-  return (await attachKospiStockQuotes(raw, board)).map(toTileEntity);
 }
 
 /**
  * Preload 종합 + 주식/해외/원자재·환율 so tab switches never flash KinDex scores.
  * Key `""` is the channel composite.
+ *
+ * Builds every board's rows first, then one Naver quote pass over unique
+ * entities — avoids N parallel quote crawls that serialized on the finance host.
  */
 async function loadQuotedItemsByBoard(
   channel: PostChannel,
@@ -55,22 +57,22 @@ async function loadQuotedItemsByBoard(
   const quoteBoards = MARKET_QUOTE_BOARD_SLUGS.filter((slug) =>
     boards.some((board) => board.slug === slug),
   );
-  if (!quoteBoards.length) {
-    const composite = await quotedHeatmapItems(channel, boards, liveItems);
-    return composite.length ? { "": composite } : {};
-  }
+  const keys = quoteBoards.length ? (["", ...quoteBoards] as string[]) : [""];
+  const rawEntries = keys.map((key) => {
+    const rows = rawHeatmapItems(channel, boards, liveItems, key || undefined);
+    return [key, rows] as const;
+  });
 
-  const entries = await Promise.all([
-    quotedHeatmapItems(channel, boards, liveItems).then((items) => ["", items] as const),
-    ...quoteBoards.map(async (slug) => {
-      const items = await quotedHeatmapItems(channel, boards, liveItems, slug);
-      return [slug, items] as const;
-    }),
-  ]);
+  const unique = [
+    ...new Map(rawEntries.flatMap(([, rows]) => rows).map((row) => [row.id, row])).values(),
+  ];
+  const quoted = unique.length ? await attachKospiStockQuotes(unique) : [];
+  const byId = new Map(quoted.map((row) => [row.id, row]));
 
   const map: Record<string, RankingEntity[]> = {};
-  for (const [key, items] of entries) {
-    if (items.length) map[key] = items;
+  for (const [key, rows] of rawEntries) {
+    if (!rows.length) continue;
+    map[key] = rows.map((row) => toTileEntity(byId.get(row.id) ?? row));
   }
   return map;
 }
