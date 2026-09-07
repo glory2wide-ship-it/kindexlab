@@ -361,13 +361,27 @@ export function selectHeatmapRows(
 /** Round-robin merge so 종합 heatmaps don't let one board crowd out the menu. */
 function interleaveHeatmapPools(pools: RankingEntity[][], limit: number): RankingEntity[] {
   const merged: RankingEntity[] = [];
+  const seen = new Set<string>();
+  const used = (item: RankingEntity) => {
+    const keys = [item.id, item.slug, (item.name ?? "").replace(/\s+/g, "").toLowerCase()].filter(Boolean);
+    if (keys.some((key) => seen.has(key))) return true;
+    for (const key of keys) seen.add(key);
+    return false;
+  };
   const cursors = new Array(pools.length).fill(0);
   while (merged.length < limit) {
     let advanced = false;
     for (let i = 0; i < pools.length && merged.length < limit; i += 1) {
       const pool = pools[i];
-      const cursor = cursors[i] as number;
-      if (!pool || cursor >= pool.length) continue;
+      let cursor = cursors[i] as number;
+      while (pool && cursor < pool.length && used(pool[cursor]!)) {
+        cursor += 1;
+        advanced = true;
+      }
+      if (!pool || cursor >= pool.length) {
+        cursors[i] = cursor;
+        continue;
+      }
       merged.push(pool[cursor]!);
       cursors[i] = cursor + 1;
       advanced = true;

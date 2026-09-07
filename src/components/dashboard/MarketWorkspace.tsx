@@ -10,7 +10,7 @@ import { TreemapSkeleton } from "@/components/dashboard/TreemapSkeleton";
 import { TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 
 /**
- * Heatmap + d3-hierarchy load as their own chunk. SSR is off so a stale
+ * Heatmap + layout load as their own chunk. SSR is off so a stale
  * client bundle cannot hydrate against a newer server tree (the overlay
  * that kept firing after layout/search edits). The skeleton keeps height
  * stable until the chunk arrives.
@@ -38,6 +38,7 @@ const MethodologyModal = dynamic(
 );
 
 import { applyDemographicSkew } from "@/lib/boards/entity-skew";
+import { uniqueHeatmapTiles } from "@/lib/boards/unique-tiles";
 import { filterKey, filterLabel } from "@/lib/boards/demographics";
 import { CATEGORIES, TIMEFRAMES } from "@/lib/categories";
 import type { AgeSegment, GenderSegment, RegionSegment } from "@/lib/boards/types";
@@ -156,7 +157,9 @@ export function MarketWorkspace({
         showRegion && region !== "all"
           ? ordered.filter((item) => entityMatchesRegion(item, region))
           : ordered;
-      const sliced = regionLocked.slice(0, cap).map((item, index) => ({ ...item, rank: index + 1 }));
+      const sliced = uniqueHeatmapTiles(regionLocked)
+        .slice(0, cap)
+        .map((item, index) => ({ ...item, rank: index + 1 }));
       if (sliced.length) return sliced;
     } catch {
       /* keep tiles from the region-locked payload so a bad combo never mixes 시/도 */
@@ -165,7 +168,9 @@ export function MarketWorkspace({
       showRegion && region !== "all"
         ? filtered.filter((item) => entityMatchesRegion(item, region))
         : filtered;
-    return fallback.slice(0, cap).map((item, index) => ({ ...item, rank: index + 1 }));
+    return uniqueHeatmapTiles(fallback)
+      .slice(0, cap)
+      .map((item, index) => ({ ...item, rank: index + 1 }));
   }, [filtered, timeframe, gender, age, region, showRegion, skipDemographicSkew, maxItems]);
   const demoKey = filterKey(gender, age, region);
   const demoActive = gender !== "all" || age !== "all" || region !== "all";

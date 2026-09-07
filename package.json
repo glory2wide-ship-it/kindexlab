@@ -31,7 +31,6 @@
         "premium:render": "node scripts/verify-premium-render.mjs"
     },
     "dependencies": {
-        "d3-hierarchy": "^3.1.2",
         "iconv-lite": "^0.6.3",
         "lightweight-charts": "^5.2.1",
         "lucide-react": "^1.39.0",
@@ -43,7 +42,6 @@
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4",
-        "@types/d3-hierarchy": "^3.1.7",
         "@types/node": "^20",
         "@types/react": "^19",
         "@types/react-dom": "^19",

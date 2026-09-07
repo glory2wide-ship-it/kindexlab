@@ -1,5 +1,3 @@
-import { hierarchy, treemap, treemapSquarify, type HierarchyRectangularNode } from "d3-hierarchy";
-
 export interface RankedTile {
   id: string;
   rank: number;
@@ -33,7 +31,7 @@ export interface HeatmapSizeInput {
 export interface HeatmapSizeAllocation {
   /** id → area share of the full treemap (sums to ≤ 1). */
   ratios: Map<string, number>;
-  /** Unassigned share after the rank-1 pin and rank-2+ caps; rendered as empty gap. */
+  /** Unassigned share after caps. Layout never paints this as a hole — leftover is redistributed. */
   leftover: number;
 }
 
@@ -117,10 +115,9 @@ function allocatePool(weights: number[], pool = REMAINING_AREA_RATIO, cap = RANK
 }
 
 interface PanelNode {
-  id?: string;
-  rank?: number;
-  value?: number;
-  children?: PanelNode[];
+  id: string;
+  rank: number;
+  value: number;
 }
 
 /** Pixel box for rank 1: a full-height left column of exactly 15% of the map. */
@@ -132,6 +129,72 @@ export function rank1Rectangle(
   return { x0: 0, y0: 0, x1: Math.min(w, width), y1: height };
 }
 
+function rowWorstAspect(row: PanelNode[], rowValue: number, shortSide: number): number {
+  if (rowValue <= 0 || shortSide <= 0) return Number.POSITIVE_INFINITY;
+  let worst = 0;
+  for (const node of row) {
+    const along = shortSide * (node.value / rowValue);
+    const aspect = along > shortSide ? along / shortSide : shortSide / Math.max(along, 1e-9);
+    if (aspect > worst) worst = aspect;
+  }
+  return worst;
+}
+
+/** Last cell in a strip always reaches the far edge so rounding cannot leave a hole. */
+function layoutStrip(
+  row: PanelNode[],
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  gap: number,
+  splitAlongY: boolean,
+): TreemapBox[] {
+  const sum = row.reduce((total, node) => total + node.value, 0) || row.length;
+  const boxes: TreemapBox[] = [];
+  if (splitAlongY) {
+    let y = y0;
+    const span = y1 - y0;
+    row.forEach((node, index) => {
+      const last = index === row.length - 1;
+      const share = span * (node.value / sum);
+      const next = last ? y1 : y + share;
+      boxes.push({
+        id: node.id,
+        rank: node.rank,
+        x0,
+        y0: y,
+        x1,
+        y1: last ? y1 : Math.max(y + 1, next - gap),
+      });
+      y = next;
+    });
+    return boxes;
+  }
+  let x = x0;
+  const span = x1 - x0;
+  row.forEach((node, index) => {
+    const last = index === row.length - 1;
+    const share = span * (node.value / sum);
+    const next = last ? x1 : x + share;
+    boxes.push({
+      id: node.id,
+      rank: node.rank,
+      x0: x,
+      y0,
+      x1: last ? x1 : Math.max(x + 1, next - gap),
+      y1,
+    });
+    x = next;
+  });
+  return boxes;
+}
+
+/**
+ * Squarify that always emits one box per node and paints every pixel of the
+ * panel (minus 1px gutters). d3-hierarchy's `.round(true)` dropped small
+ * leaves and left a grey hole where rank 12 belonged.
+ */
 function squarifyPanel(
   nodes: PanelNode[],
   x0: number,
@@ -142,32 +205,82 @@ function squarifyPanel(
 ): TreemapBox[] {
   const w = x1 - x0;
   const h = y1 - y0;
-  if (w < 2 || h < 2 || !nodes.length) return [];
-  const root = hierarchy<PanelNode>({ children: nodes }).sum((node) =>
-    node.children?.length ? 0 : Math.max(node.value ?? 0, 0),
-  );
-  root.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
-  const laid: HierarchyRectangularNode<PanelNode> = treemap<PanelNode>()
-    .size([w, h])
-    .tile(treemapSquarify.ratio(1.15))
-    .paddingInner(padding)
-    .paddingOuter(0)
-    .round(true)(root);
+  const gap = Math.max(0, padding);
+  if (!nodes.length) return [];
+  if (w < 1 || h < 1) {
+    return nodes.map((node) => ({ id: node.id, rank: node.rank, x0, y0, x1, y1 }));
+  }
+  if (nodes.length === 1) {
+    return [{ id: nodes[0].id, rank: nodes[0].rank, x0, y0, x1, y1 }];
+  }
 
-  return laid.leaves().flatMap((leaf) => {
-    const id = leaf.data.id;
-    if (!id) return [];
+  const total = nodes.reduce((sum, node) => sum + Math.max(node.value, 0), 0) || nodes.length;
+  const weighted = nodes.map((node) => ({
+    ...node,
+    value: Math.max(node.value, total / (nodes.length * 8)),
+  }));
+  const area = w * h;
+  const scaled = weighted.map((node) => ({
+    ...node,
+    value: (node.value / weighted.reduce((sum, item) => sum + item.value, 0)) * area,
+  }));
+  return squarifyFill(scaled, x0, y0, x1, y1, gap);
+}
+
+function squarifyFill(
+  nodes: PanelNode[],
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  gap: number,
+): TreemapBox[] {
+  if (!nodes.length) return [];
+  if (nodes.length === 1) {
+    return [{ id: nodes[0].id, rank: nodes[0].rank, x0, y0, x1, y1 }];
+  }
+  const w = x1 - x0;
+  const h = y1 - y0;
+  if (w < 2 || h < 2) {
+    return layoutStrip(nodes, x0, y0, x1, y1, 0, h >= w);
+  }
+
+  const total = nodes.reduce((sum, node) => sum + node.value, 0) || 1;
+  const short = Math.min(w, h);
+  const row: PanelNode[] = [];
+  let rowValue = 0;
+  let take = 0;
+  while (take < nodes.length) {
+    const trial = row.concat(nodes[take]!);
+    const trialValue = rowValue + nodes[take]!.value;
+    const nextWorst = rowWorstAspect(trial, trialValue, short);
+    const currentWorst = row.length ? rowWorstAspect(row, rowValue, short) : Number.POSITIVE_INFINITY;
+    if (row.length && nextWorst > currentWorst) break;
+    row.push(nodes[take]!);
+    rowValue = trialValue;
+    take += 1;
+  }
+  const rest = nodes.slice(take);
+  if (!rest.length) {
+    return layoutStrip(row, x0, y0, x1, y1, gap, w >= h);
+  }
+
+  const rowArea = row.reduce((sum, node) => sum + node.value, 0);
+  const minRest = rest.length ? Math.min(32, Math.max(8, rest.length * 4)) : 0;
+  if (w >= h) {
+    const stripW = Math.min(w - minRest, Math.max(2, (rowArea / total) * w));
+    const cut = x0 + stripW;
     return [
-      {
-        id,
-        rank: leaf.data.rank ?? 0,
-        x0: leaf.x0 + x0,
-        y0: leaf.y0 + y0,
-        x1: leaf.x1 + x0,
-        y1: leaf.y1 + y0,
-      },
+      ...layoutStrip(row, x0, y0, cut, y1, gap, true),
+      ...squarifyFill(rest, Math.min(cut + gap, x1), y0, x1, y1, gap),
     ];
-  });
+  }
+  const stripH = Math.min(h - minRest, Math.max(2, (rowArea / total) * h));
+  const cut = y0 + stripH;
+  return [
+    ...layoutStrip(row, x0, y0, x1, cut, gap, false),
+    ...squarifyFill(rest, x0, Math.min(cut + gap, y1), x1, y1, gap),
+  ];
 }
 
 /**
@@ -255,19 +368,25 @@ export function layoutHeatmapLeaves(
     y1: rank2Y1,
   });
 
-  const rightItems = items.slice(2);
-  if (!rightItems.length) return boxes;
+  const extra = items.slice(2);
+  if (!extra.length) return boxes;
 
   const rightX = Math.min(colW + gutter, width);
-  if (width - rightX < 8) return boxes;
-
-  const rightNodes: PanelNode[] = rightItems.map((item, index) => ({
+  const rightNodes: PanelNode[] = extra.map((item, index) => ({
     id: item.id,
     rank: item.rank ?? index + 3,
     value: Math.max(allocation.ratios.get(item.id) ?? 0, 1e-6),
   }));
 
-  boxes.push(...squarifyPanel(rightNodes, rightX, 0, width, height, padding));
+  if (width - rightX >= 8) {
+    boxes.push(...squarifyPanel(rightNodes, rightX, 0, width, height, padding));
+    return boxes;
+  }
+
+  // Narrow canvas: keep every rank by stacking the leftover names under #2.
+  const splitY = Math.min(height - 8, Math.max(rank2Y0 + 24, height * 0.55));
+  boxes[1] = { ...boxes[1]!, y1: splitY };
+  boxes.push(...squarifyPanel(rightNodes, 0, splitY + gutter, width, height, padding));
   return boxes;
 }
 

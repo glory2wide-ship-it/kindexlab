@@ -28,7 +28,7 @@ git merge github/main
 
 - Next.js App Router + TypeScript
 - Tailwind CSS v4
-- d3-hierarchy (트리맵)
+- 트리맵 레이아웃 (1위 좌측 정사각, 2위 하단, 나머지 squarify)
 - Vercel 배포 (`npm run build`) — 서버리스 리전은 서울(`icn1`)로 고정 (`vercel.json` + `preferredRegion`)
 
 ## 성능 메모

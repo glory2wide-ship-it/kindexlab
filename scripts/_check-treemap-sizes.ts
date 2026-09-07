@@ -58,7 +58,30 @@ async function main() {
   if (!(r3.x0 >= r1.x1 - 1)) {
     throw new Error("rank 3+ must start to the right of the rank 1/2 column");
   }
-  console.log("geometry OK: #2 under #1, #3+ on the right");
+
+  const fifteen = layoutHeatmapLeaves(
+    Array.from({ length: 15 }, (_, i) => ({
+      id: `board:demo:tile-${i + 1}`,
+      rank: i + 1,
+      score: i < 10 ? 999 : 800 - i * 12,
+    })),
+    1100,
+    640,
+  );
+  const missing = Array.from({ length: 15 }, (_, i) => i + 1).filter(
+    (rank) => !fifteen.some((box) => box.rank === rank && box.x1 - box.x0 >= 8 && box.y1 - box.y0 >= 8),
+  );
+  if (fifteen.length !== 15 || missing.length) {
+    throw new Error(`heatmap dropped tiles: count=${fifteen.length} missing=${missing.join(",")}`);
+  }
+  const paintedArea = fifteen.reduce(
+    (sum, box) => sum + Math.max(0, box.x1 - box.x0) * Math.max(0, box.y1 - box.y0),
+    0,
+  );
+  if (paintedArea / (1100 * 640) < 0.96) {
+    throw new Error(`heatmap coverage ${paintedArea / (1100 * 640)} is too low — empty cells`);
+  }
+  console.log("geometry OK: #2 under #1, #3+ on the right, 15/15 tiles, no holes");
 }
 
 void main();

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { HoverCard } from "@/components/dashboard/HoverCard";
-import { scheduleEntityPrefetch } from "@/lib/nav/prefetch";
+import { uniqueHeatmapTiles } from "@/lib/boards/unique-tiles";
 import { TYPE_LABEL, formatIndexPoints, formatRate } from "@/lib/format";
 import { heatFill, heatText } from "@/lib/heatmap";
 import { formatHeatmapRank } from "@/lib/boards/limits";
@@ -51,7 +51,7 @@ interface HeatmapLeaf {
 }
 
 function pickHeatmapItems(items: RankingEntity[]): RankingEntity[] {
-  return items.slice(0, TREEMAP_MAX_ITEMS);
+  return uniqueHeatmapTiles(items).slice(0, TREEMAP_MAX_ITEMS);
 }
 
 function groupLabel(entity: RankingEntity): string {
@@ -83,10 +83,6 @@ export function TreemapView({
 }) {
   const safeItems = Array.isArray(items) ? items : [];
   const router = useRouter();
-
-  useEffect(() => {
-    return scheduleEntityPrefetch(router.prefetch, pickHeatmapItems(safeItems));
-  }, [safeItems, router]);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState({ width: 1100, height: 640 });
@@ -172,22 +168,18 @@ export function TreemapView({
         aria-label={`${TYPE_LABEL[category] ?? "종합"} 화제 지수 히트맵 섹터 ${visible.length}종목`}
       >
         <defs>
-          {leaves.map((leaf) => {
-            const entity = leaf.entity;
-            if (!entity) return null;
-            return (
-              <clipPath key={entity.id} id={`tm-clip-${entity.id}`}>
-                <rect
-                  x={leaf.x0}
-                  y={leaf.y0}
-                  width={Math.max(leaf.x1 - leaf.x0, 0)}
-                  height={Math.max(leaf.y1 - leaf.y0, 0)}
-                />
-              </clipPath>
-            );
-          })}
+          {leaves.map((leaf, index) => (
+            <clipPath key={`clip-${leaf.rank}-${index}`} id={`tm-clip-${leaf.rank}-${index}`}>
+              <rect
+                x={leaf.x0}
+                y={leaf.y0}
+                width={Math.max(leaf.x1 - leaf.x0, 0)}
+                height={Math.max(leaf.y1 - leaf.y0, 0)}
+              </rect>
+            </clipPath>
+          ))}
         </defs>
-        {leaves.map((leaf) => {
+        {leaves.map((leaf, index) => {
           const entity = leaf.entity;
           const series = getTimeframeSeries(entity, timeframe);
           const change = heatmapChangeRate(entity, timeframe);
@@ -231,7 +223,7 @@ export function TreemapView({
           const href = entityHref(entity);
           return (
             <Link
-              key={entity.id}
+              key={`${entity.id}-${rank}`}
               href={href}
               prefetch={false}
               className="cursor-pointer"
@@ -254,7 +246,7 @@ export function TreemapView({
                 onSelect(entity.slug);
               }}
             >
-              <g clipPath={`url(#tm-clip-${entity.id})`}>
+              <g clipPath={`url(#tm-clip-${rank}-${index})`}>
                 <rect
                   x={leaf.x0}
                   y={leaf.y0}
