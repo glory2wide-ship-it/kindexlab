@@ -17,10 +17,6 @@ import {
   isCultureGrantBoard,
 } from "@/lib/boards/culture-grants";
 import {
-  ensureEntertainmentGrantRanking,
-  isEntertainmentGrantBoard,
-} from "@/lib/boards/entertainment-grants";
-import {
   ensureTravelGrantRanking,
   isTravelGrantBoard,
 } from "@/lib/boards/travel-grants";
@@ -174,9 +170,6 @@ function ensureSpecialRanking(board: BoardDefinition, rows: BoardRankEntry[]): B
   if (board.slug === "governor-approval-index") return ensureLocalPolicyRanking(rows);
   if (board.slug === "government-support-fund" || board.slug === "government-subsidy-search") {
     return ensureSubsidyRanking(rows);
-  }
-  if (isEntertainmentGrantBoard(board.slug)) {
-    return ensureEntertainmentGrantRanking(rows);
   }
   if (isCultureGrantBoard(board.slug)) return ensureCultureGrantRanking(rows);
   if (isTravelGrantBoard(board.slug)) return ensureTravelGrantRanking(rows);

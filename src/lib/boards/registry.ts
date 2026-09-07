@@ -5,17 +5,13 @@ import {
   POLITICS_HEATMAP_BOARD_NAV,
   TRAVEL_REGION_BOARD_NAV,
 } from "@/lib/constants/nav";
-import {
-  CULTURE_GRANT_SEEDS,
-  CULTURE_GRANT_SLUG,
-  CULTURE_GRANT_TITLE,
-} from "@/lib/boards/culture-grants";
+import { CULTURE_GRANT_SEEDS, CULTURE_GRANT_SLUG, CULTURE_GRANT_TITLE } from "@/lib/boards/culture-grants";
 import {
   TRAVEL_GRANT_SEEDS,
   TRAVEL_GRANT_SLUG,
   TRAVEL_GRANT_TITLE,
 } from "@/lib/boards/travel-grants";
-import { ENT_GRANT_SEEDS, ENT_GRANT_SLUG, ENT_GRANT_TITLE } from "@/lib/boards/entertainment-grants";
+import { ENT_GRANT_SLUG } from "@/lib/boards/entertainment-grants";
 import { regionalSeeds } from "@/lib/boards/regions";
 import {
   EXHIBITION_BOARD_SLUG,
@@ -1200,28 +1196,6 @@ export const BOARDS: BoardDefinition[] = [
     unitLabel: "기사",
   },
   {
-    id: "ent-grant",
-    slug: ENT_GRANT_SLUG,
-    channel: "entertainment",
-    title: ENT_GRANT_TITLE,
-    shortTitle: ENT_GRANT_TITLE,
-    criteria: "콘텐츠·한류·게임·방송·대중음악 등 엔터테인먼트 공공 지원사업의 검색·신청 관심도",
-    affiliateCategory: "생필품 핫딜",
-    queries: [
-      "콘텐츠 제작지원",
-      "게임콘텐츠 지원",
-      "한류 해외진출",
-      "OTT 제작지원",
-      "엔터 정부지원금",
-    ],
-    focusKeyword: "엔터 정부지원금",
-    supportKeyword: "콘텐츠 지원",
-    seeds: [...ENT_GRANT_SEEDS],
-    rankGuidance:
-      "이름은 반드시 '[소관 기관] 사업명' 형식이다. 예: [한국콘텐츠진흥원] 방송영상콘텐츠 제작지원. 근로장려금·청년도약계좌 등 일반 복지 지원금은 넣지 마라.",
-    unitLabel: "사업",
-  },
-  {
     id: "ent-2",
     slug: "realtime-music-chart",
     channel: "entertainment",
@@ -1834,6 +1808,8 @@ export const BOARD_SLUG_ALIASES: Record<string, string> = {
   "variety-hot-minute": "realtime-tv-ratings",
   "ticketing-competition": "performance-ticket-ranking",
   "travel-destination-index": "overseas-travel-ranking",
+  // Retired 엔터 정부지원금 → 문화/생활 정부 지원금
+  [ENT_GRANT_SLUG]: CULTURE_GRANT_SLUG,
 };
 
 /** Where the 종합 tab sits among rail boards. Culture and others lead with 종합. */
@@ -1869,9 +1845,9 @@ const POLITICS_MENU_ORDER = [
   "policy-controversy-index",
 ] as const;
 
-/** Entertainment rail — 정부 지원금이 첫 보드; 음원 sits right of 시청률. */
+/** Entertainment rail — 문화/생활 정부 지원금 first (shared board); 음원 sits right of 시청률. */
 const ENTERTAINMENT_MENU_ORDER = [
-  ENT_GRANT_SLUG,
+  CULTURE_GRANT_SLUG,
   "kpop-fandom-power",
   "trot-kayo-fandom-power",
   "realtime-tv-ratings",
@@ -1923,7 +1899,16 @@ export function menuBoardsForChannel(channel: PostChannel): BoardDefinition[] {
     .filter(isRailBoard)
     .filter((board) => !isRetiredPoliticsBoard(board.slug))
     .filter((board) => board.deskKind !== "headlines" && !isHeadlineNewsBoard(board.slug));
-  if (channel === "entertainment") return sortMenusByOrder(boards, ENTERTAINMENT_MENU_ORDER);
+  if (channel === "entertainment") {
+    // Share the culture/living grant board in the slot that used to be 엔터 정부지원금.
+    const cultureGrant = getBoard(CULTURE_GRANT_SLUG);
+    const withoutGrant = boards.filter((board) => board.slug !== CULTURE_GRANT_SLUG);
+    const ordered = sortMenusByOrder(
+      cultureGrant ? [cultureGrant, ...withoutGrant] : withoutGrant,
+      ENTERTAINMENT_MENU_ORDER,
+    );
+    return ordered;
+  }
   if (channel === "travel") return sortMenusByOrder(boards, TRAVEL_MENU_ORDER);
   if (channel === "politics") return sortMenusByOrder(boards, POLITICS_MENU_ORDER);
   return boards;

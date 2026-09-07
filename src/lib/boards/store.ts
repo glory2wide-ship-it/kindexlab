@@ -12,10 +12,6 @@ import {
   isCultureGrantBoard,
 } from "@/lib/boards/culture-grants";
 import {
-  ensureEntertainmentGrantRanking,
-  isEntertainmentGrantBoard,
-} from "@/lib/boards/entertainment-grants";
-import {
   ensureTravelGrantRanking,
   isTravelGrantBoard,
 } from "@/lib/boards/travel-grants";
@@ -113,9 +109,6 @@ function padRankingFromSeeds(ranking: BoardRankEntry[], slug: string): BoardRank
   }
   if (slug === "government-support-fund" || slug === "government-subsidy-search") {
     return enforceScoreOrder(ensureSubsidyRanking(ranking).slice(0, limit));
-  }
-  if (isEntertainmentGrantBoard(slug)) {
-    return enforceScoreOrder(ensureEntertainmentGrantRanking(ranking).slice(0, limit));
   }
   if (isCultureGrantBoard(slug)) {
     return enforceScoreOrder(ensureCultureGrantRanking(ranking).slice(0, limit));

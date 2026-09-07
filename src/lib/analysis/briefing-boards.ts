@@ -15,7 +15,6 @@ export const BRIEFING_PROMPT_BOARD_SLUGS = [
   "government-subsidy-search",
   "culture-leisure-grant-ranking",
   "travel-government-grant-ranking",
-  "entertainment-government-grant-ranking",
 ] as const;
 
 export type BriefingPromptBoardSlug = (typeof BRIEFING_PROMPT_BOARD_SLUGS)[number];
