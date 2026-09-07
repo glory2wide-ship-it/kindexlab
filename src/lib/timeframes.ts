@@ -1,5 +1,6 @@
 import type { CandlePoint, RankingEntity, SeriesPoint, Timeframe, TimeframeMetrics } from "@/lib/types";
 import { ALL_TIMEFRAMES, TIMEFRAMES } from "@/lib/categories";
+import { heatmapChannelHeatScale, lightHorizonFloorMin } from "@/lib/heatmap-channel-scale";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 
 /** Compressed trading-day length in synthetic 1-minute bars (divisible by 3…120). */
@@ -517,7 +518,8 @@ export function scoreForTimeframe(entity: RankingEntity, _timeframe: Timeframe):
 export function heatForTimeframe(entity: RankingEntity, timeframe: Timeframe): number {
   const change = changeForEntity(entity, timeframe);
   const volume = volumeForTimeframe(entity, timeframe);
-  return Math.abs(change) * Math.sqrt(Math.max(volume, 1));
+  const raw = Math.abs(change) * Math.sqrt(Math.max(volume, 1));
+  return raw * heatmapChannelHeatScale(entity);
 }
 
 /**
@@ -663,7 +665,7 @@ function lightHorizonChange(entity: RankingEntity, timeframe: Timeframe): number
   const wave = Math.sin(
     entity.rank * 0.41 + (hash(`${entity.id}:${bucket}`) % 360) * (Math.PI / 180) + rand() * 0.15,
   );
-  const floor = Math.max(Math.abs(base), 3.2);
+  const floor = Math.max(Math.abs(base), lightHorizonFloorMin(entity));
   const value = base * scale * 0.4 + floor * scale * wave * 0.55 + jitter;
   return Number(Math.max(-89, Math.min(89, value)).toFixed(2));
 }

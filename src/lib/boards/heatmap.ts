@@ -1,6 +1,7 @@
 import { rankingPath } from "@/lib/slugs";
 import { LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import { computeBoardIndex, toneRankEntry } from "@/lib/boards/board-index";
+import { volumePerScoreForBoard } from "@/lib/heatmap-channel-scale";
 import { dropNamesForFilter, deriveDemographics, selectRanking } from "@/lib/boards/demographics";
 import {
   compositePerBoard,
@@ -240,7 +241,7 @@ export function rankRowsToEntities(
       buzzScore: Number((score * 10).toFixed(2)),
       openScore: Number((score * 10).toFixed(2)),
       fluctuationRate: change,
-      volume: Math.max(1, Math.round(score * 80)),
+          volume: Math.max(1, Math.round(score * volumePerScoreForBoard(board.slug))),
       sparkline: spark,
       history: spark.map((v, step) => ({ t: String(step), v })),
       tags,

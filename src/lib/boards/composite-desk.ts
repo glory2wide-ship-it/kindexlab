@@ -4,7 +4,7 @@ import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
 import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
 import { itemsForChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
-import { attachTimeframeMetrics } from "@/lib/timeframes";
+import { attachTimeframeMetrics, heatForTimeframe } from "@/lib/timeframes";
 import { tickerChangeRate } from "@/lib/ticker/rank";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
 
@@ -32,6 +32,8 @@ export interface UnifiedMarket {
  * Prefer absolute 3m move so politics·economy cards show movers, not score ties at 999.
  */
 function byHeat(a: RankingEntity, b: RankingEntity): number {
+  const heat = heatForTimeframe(b, "3m") - heatForTimeframe(a, "3m");
+  if (heat !== 0) return heat;
   const move = Math.abs(tickerChangeRate(b)) - Math.abs(tickerChangeRate(a));
   if (move !== 0) return move;
   if (b.buzzScore !== a.buzzScore) return b.buzzScore - a.buzzScore;

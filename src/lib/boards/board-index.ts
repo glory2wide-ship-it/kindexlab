@@ -1,4 +1,8 @@
 import type { BoardRankEntry } from "@/lib/boards/types";
+import {
+  isTravelLeisureBoardSlug,
+  travelLeisureChangeClamp,
+} from "@/lib/heatmap-channel-scale";
 
 /** Rows from a board ranking or live heatmap tiles. */
 export type BoardIndexSource = {
@@ -63,11 +67,13 @@ export function toneRankEntry(row: BoardRankEntry, slug: string): BoardRankEntry
   const rank = Number.isFinite(row.rank) && (row.rank ?? 0) > 0 ? Number(row.rank) : 1;
   const wobble = Math.sin(rank * tone.wave + boardSeedUnit(slug) * Math.PI * 2) * 3.6;
   const score = clamp(sourceScore(row) * tone.multiplier + wobble, 8, 99.9);
-  const changeScale = 0.62 + boardSeedUnit(slug, "chg") * 0.9;
+  const leisure = isTravelLeisureBoardSlug(slug);
+  const changeScale = (0.62 + boardSeedUnit(slug, "chg") * 0.9) * (leisure ? 0.52 : 1);
+  const bound = leisure ? travelLeisureChangeClamp() : 15;
   const change = clamp(
     sourceChange(row) * changeScale + tone.changeBias * Math.max(0.35, 1 - (rank - 1) * 0.028),
-    -15,
-    15,
+    -bound,
+    bound,
   );
   return {
     ...row,
