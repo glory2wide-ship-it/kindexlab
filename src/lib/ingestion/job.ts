@@ -1,4 +1,3 @@
-import snapshotFile from "@/data/ingestion/snapshot.json";
 import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { composeLiveSnapshot, snapshotToPayload } from "@/lib/ingestion/compose";
@@ -34,10 +33,8 @@ function readDiskSnapshot(): IngestSnapshot | undefined {
       return snapshot;
     }
   } catch {
-    // Fall through to the bundled copy when the file is missing at runtime.
+    // Snapshot missing at runtime — rankings fall back to mock/empty.
   }
-  const bundled = snapshotFile as IngestSnapshot;
-  if (bundled?.items?.length) return bundled;
   return undefined;
 }
 

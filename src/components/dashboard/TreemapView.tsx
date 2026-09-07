@@ -78,12 +78,6 @@ export function TreemapView({
   const safeItems = Array.isArray(items) ? items : [];
   const router = useRouter();
 
-  useEffect(() => {
-    for (const entity of items.slice(0, 8)) {
-      router.prefetch(entityHref(entity));
-    }
-  }, [items, router]);
-
   const wrapRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState({ width: 1100, height: 640 });
   const [hover, setHover] = useState<HoverState | null>(null);

@@ -1,7 +1,6 @@
 "use client";
 
 import Link, { useLinkStatus } from "next/link";
-import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { POST_CHANNELS } from "@/lib/posts/channels";
 
@@ -19,24 +18,6 @@ export function HeaderNav() {
   const pathname = usePathname();
   const router = useRouter();
 
-  useEffect(() => {
-    // Idle-prefetch sibling category hubs so the next GNB click hits a warm RSC cache.
-    const idle = window.requestIdleCallback
-      ? window.requestIdleCallback.bind(window)
-      : (cb: IdleRequestCallback) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 200);
-    const cancel = window.cancelIdleCallback
-      ? window.cancelIdleCallback.bind(window)
-      : window.clearTimeout.bind(window);
-
-    const id = idle(() => {
-      for (const item of POST_CHANNELS) {
-        if (pathname === item.href || pathname.startsWith(`${item.href}/`)) continue;
-        router.prefetch(item.href);
-      }
-    });
-    return () => cancel(id);
-  }, [pathname, router]);
-
   return (
     <nav
       className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-x-auto text-[12px] sm:text-sm md:justify-center"
@@ -48,7 +29,10 @@ export function HeaderNav() {
           <Link
             key={item.id}
             href={item.href}
-            prefetch
+            prefetch={false}
+            onPointerEnter={() => {
+              if (!active) router.prefetch(item.href);
+            }}
             className={
               active
                 ? "shrink-0 whitespace-nowrap rounded-md bg-panel px-2 py-1.5 font-medium text-ink md:px-3"

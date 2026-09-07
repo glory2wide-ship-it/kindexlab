@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
-import { isNavigating } from "@/lib/nav/progress";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { MarketStatus, RankingEntity } from "@/lib/types";
 
@@ -13,11 +12,8 @@ const HEATMAP_PANEL_TITLE = "실시간 지수";
 /**
  * Landing board for the cross-category heatmap.
  *
- * The channel boards refresh themselves from `/api/heatmap`, which answers for
- * one channel at a time and so cannot serve a merged view. Rather than add a
- * second merge path on the client, the countdown re-runs the server component
- * that assembled the tiles — one source of truth for the merge, and the desk
- * cards below refresh in step with the heatmap above them.
+ * Countdown lives inside HeatmapCountdown so this tree does not re-render
+ * every second. Expire triggers a cheap ISR refresh of the landing RSC.
  */
 export function UnifiedMarketBoard({
   items,
@@ -29,29 +25,7 @@ export function UnifiedMarketBoard({
   refreshIntervalSec?: number;
 }) {
   const router = useRouter();
-  const [remainingSec, setRemainingSec] = useState(refreshIntervalSec);
   const [pending, startTransition] = useTransition();
-  const deadlineRef = useRef(0);
-
-  useEffect(() => {
-    const intervalMs = Math.max(1, refreshIntervalSec) * 1000;
-    deadlineRef.current = Date.now() + intervalMs;
-    // 1s ticks (was 250ms) — enough for the countdown, far less main-thread
-    // contention while the user is mid soft-navigation to a category/entity.
-    const tick = window.setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      const remainingMs = deadlineRef.current - Date.now();
-      setRemainingSec(Math.max(0, Math.ceil(remainingMs / 1000)));
-      if (remainingMs > 0) return;
-      if (isNavigating()) {
-        deadlineRef.current = Date.now() + intervalMs;
-        return;
-      }
-      deadlineRef.current = Date.now() + intervalMs;
-      startTransition(() => router.refresh());
-    }, 1000);
-    return () => window.clearInterval(tick);
-  }, [refreshIntervalSec, router]);
 
   return (
     <div className="space-y-3">
@@ -64,8 +38,9 @@ export function UnifiedMarketBoard({
         hideCategoryTabs
         title={HEATMAP_PANEL_TITLE}
         subtitle="등락률·시세·버즈를 히트맵과 리스트로 읽습니다. 주식·해외 주식·원자재·환율 타일은 네이버금융 현재가(단위)를 표시합니다."
-        remainingSec={remainingSec}
+        refreshIntervalSec={refreshIntervalSec}
         refreshing={pending}
+        onRefresh={() => startTransition(() => router.refresh())}
       />
     </div>
   );

@@ -1,6 +1,8 @@
 "use client";
 
-import { formatRefreshCountdown } from "@/lib/refresh";
+import { useEffect, useRef, useState } from "react";
+import { isNavigating } from "@/lib/nav/progress";
+import { DEFAULT_TRENDS_REVALIDATE_SEC, formatRefreshCountdown } from "@/lib/refresh";
 
 /** Keep the same outer box as the neighboring "시세 산출 방식" control (30px). */
 const SHELL_CLASS =
@@ -18,13 +20,43 @@ export function HeatmapCountdownFallback() {
   );
 }
 
+/**
+ * Owns the 1s countdown locally so parent heatmaps do not re-render (and
+ * re-layout d3) every second. Optional `onExpire` fires about every interval.
+ */
 export function HeatmapCountdown({
-  remainingSec,
+  intervalSec = DEFAULT_TRENDS_REVALIDATE_SEC,
   refreshing = false,
+  onExpire,
 }: {
-  remainingSec: number;
+  intervalSec?: number;
   refreshing?: boolean;
+  onExpire?: () => void;
 }) {
+  const [remainingSec, setRemainingSec] = useState(intervalSec);
+  const deadlineRef = useRef(0);
+  const onExpireRef = useRef(onExpire);
+  onExpireRef.current = onExpire;
+
+  useEffect(() => {
+    const intervalMs = Math.max(1, intervalSec) * 1000;
+    deadlineRef.current = Date.now() + intervalMs;
+    setRemainingSec(intervalSec);
+    const tick = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      const remainingMs = deadlineRef.current - Date.now();
+      setRemainingSec(Math.max(0, Math.ceil(remainingMs / 1000)));
+      if (remainingMs > 0) return;
+      if (isNavigating()) {
+        deadlineRef.current = Date.now() + intervalMs;
+        return;
+      }
+      deadlineRef.current = Date.now() + intervalMs;
+      onExpireRef.current?.();
+    }, 1000);
+    return () => window.clearInterval(tick);
+  }, [intervalSec]);
+
   const label = refreshing ? "Updating…" : formatRefreshCountdown(remainingSec);
 
   return (

@@ -161,6 +161,7 @@ const FILE_REL = path.join("src", "data", "boards", "cache.json");
 const memory = new Map<string, CachedBoard>();
 /** mtime of the last file we merged, so a write by another module instance is seen. */
 let loadedMtimeMs = -1;
+let boardLoadPromise: Promise<void> | null = null;
 
 export function boardTtlHours(): number {
   const parsed = Number.parseInt(process.env.BOARDS_TTL_HOURS ?? "", 10);
@@ -179,20 +180,26 @@ function supabaseConfig(): { url: string; key: string } | null {
 }
 
 async function loadDisk(): Promise<void> {
-  const file = path.join(process.cwd(), FILE_REL);
-  try {
-    const info = await stat(file);
-    if (info.mtimeMs === loadedMtimeMs) return;
-    const raw = await readFile(file, "utf8");
-    const parsed = JSON.parse(raw) as { entries?: CachedBoard[] };
-    memory.clear();
-    for (const entry of parsed.entries ?? []) {
-      if (entry?.slug) memory.set(entry.slug, normalizeCachedBoard(entry));
+  if (boardLoadPromise) return boardLoadPromise;
+  boardLoadPromise = (async () => {
+    const file = path.join(process.cwd(), FILE_REL);
+    try {
+      const info = await stat(file);
+      if (info.mtimeMs === loadedMtimeMs) return;
+      const raw = await readFile(file, "utf8");
+      const parsed = JSON.parse(raw) as { entries?: CachedBoard[] };
+      memory.clear();
+      for (const entry of parsed.entries ?? []) {
+        if (entry?.slug) memory.set(entry.slug, normalizeCachedBoard(entry));
+      }
+      loadedMtimeMs = info.mtimeMs;
+    } catch {
+      // No cache file yet; the store starts empty.
     }
-    loadedMtimeMs = info.mtimeMs;
-  } catch {
-    // No cache file yet; the store starts empty.
-  }
+  })().finally(() => {
+    boardLoadPromise = null;
+  });
+  return boardLoadPromise;
 }
 
 async function writeDisk(): Promise<boolean> {
@@ -201,7 +208,7 @@ async function writeDisk(): Promise<boolean> {
     const file = path.join(process.cwd(), FILE_REL);
     await mkdir(path.dirname(file), { recursive: true });
     const entries = [...memory.values()].sort((a, b) => a.slug.localeCompare(b.slug));
-    await writeFile(file, `${JSON.stringify({ entries }, null, 2)}\n`, "utf8");
+    await writeFile(file, `${JSON.stringify({ entries })}\n`, "utf8");
     loadedMtimeMs = (await stat(file)).mtimeMs;
     return true;
   } catch {

@@ -181,7 +181,8 @@ export default async function RankingDetailPage({
 async function TodayAnalysisSlot({ slug, name }: { slug: string; name?: string }) {
   const analysis = await loadAnalysisArticle(slug, name);
   if (!analysis?.article) return null;
-  return <TodayAnalysis article={analysis.article} keyword={analysis.name} />;
+  const { bodyMarkdown: _md, jsonLd: _ld, ...article } = analysis.article;
+  return <TodayAnalysis article={article} keyword={analysis.name} />;
 }
 
 async function PollDeskSlot({ entity }: { entity: RankingEntity }) {

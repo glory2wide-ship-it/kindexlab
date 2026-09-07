@@ -14,11 +14,12 @@ const nextConfig: NextConfig = {
     "null",
   ],
   experimental: {
+    optimizePackageImports: ["lucide-react"],
     // Keep recently visited RSC payloads on the client so GNB/subnav hops
     // reuse the last paint instead of refetching every click.
     staleTimes: {
-      dynamic: 120,
-      static: 300,
+      dynamic: 180,
+      static: 600,
     },
   },
   async headers() {

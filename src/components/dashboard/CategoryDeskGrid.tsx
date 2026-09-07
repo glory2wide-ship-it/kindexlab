@@ -52,7 +52,7 @@ export function CategoryDeskGrid({
               className="flex min-w-0 flex-1 basis-0 flex-col rounded-2xl border border-line bg-panel p-4 transition-colors hover:border-accent/50"
             >
               <h3 className="text-sm font-semibold leading-6 tracking-tight">
-                <Link href={desk.href} prefetch className="hover:text-accent">
+                <Link href={desk.href} prefetch={false} className="hover:text-accent">
                   {desk.label}
                 </Link>
               </h3>
@@ -65,7 +65,7 @@ export function CategoryDeskGrid({
                       <li key={item.id}>
                         <Link
                           href={entityHref(item)}
-                          prefetch
+                          prefetch={false}
                           className="flex items-baseline gap-2 rounded-md px-1 py-1 text-sm hover:bg-board/60"
                         >
                           <span className="font-sans text-[11px] font-semibold tabular-nums text-muted">
@@ -90,7 +90,7 @@ export function CategoryDeskGrid({
 
               <Link
                 href={desk.href}
-                prefetch
+                prefetch={false}
                 className="mt-4 inline-flex items-center justify-center rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink transition-colors hover:border-accent hover:text-accent"
               >
                 {desk.label} 지수 바로가기 →

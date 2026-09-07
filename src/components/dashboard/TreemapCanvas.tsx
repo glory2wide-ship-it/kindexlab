@@ -233,7 +233,7 @@ export function TreemapView({
             <Link
               key={entity.id}
               href={href}
-              prefetch
+              prefetch={false}
               className="cursor-pointer"
               aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name}${priceLabel ? ` ${priceLabel}` : ""} ${rate}${priceLabel ? "" : ` ${scoreLabel}`}`}
               data-heatmap-rank={rank}

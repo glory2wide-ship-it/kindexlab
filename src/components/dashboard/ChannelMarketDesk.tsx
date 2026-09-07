@@ -22,7 +22,6 @@ import { boardUsesRegionFilter, entityMatchesRegion } from "@/lib/boards/regions
 import { channelUsesBoardHeatmap, rankLimitForBoard, rankLimitForChannel } from "@/lib/boards/limits";
 import { isMarketQuoteBoardSlug } from "@/lib/market/kospi-quotes";
 import { withIndexPoints } from "@/lib/ingestion/composite";
-import { isNavigating } from "@/lib/nav/progress";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { PostChannel } from "@/lib/posts/types";
 import type { MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
@@ -162,7 +161,6 @@ export function ChannelMarketDesk({
       });
     }),
   );
-  const [remainingSec, setRemainingSec] = useState(DEFAULT_TRENDS_REVALIDATE_SEC);
   const [refreshing, setRefreshing] = useState(false);
 
   const applyLocal = useCallback(
@@ -326,32 +324,14 @@ export function ChannelMarketDesk({
   fetchHeatmapRef.current = fetchHeatmap;
   const refreshTargetRef = useRef({ selectedSlug, gender, age, region, deskKind });
   refreshTargetRef.current = { selectedSlug, gender, age, region, deskKind };
-  const deadlineRef = useRef(0);
 
-  useEffect(() => {
-    const intervalMs = DEFAULT_TRENDS_REVALIDATE_SEC * 1000;
-    deadlineRef.current = Date.now() + intervalMs;
-    setRemainingSec(DEFAULT_TRENDS_REVALIDATE_SEC);
-    // 1s ticks (was 250ms) — countdown only needs second resolution; fewer
-    // React updates while the user is mid soft-navigation.
-    const tick = window.setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      const remainingMs = deadlineRef.current - Date.now();
-      setRemainingSec(Math.max(0, Math.ceil(remainingMs / 1000)));
-      if (remainingMs > 0) return;
-      if (isNavigating()) {
-        deadlineRef.current = Date.now() + intervalMs;
-        return;
-      }
-      deadlineRef.current = Date.now() + intervalMs;
-      const target = refreshTargetRef.current;
-      if (target.deskKind) return;
-      setRefreshing(true);
-      void fetchHeatmapRef
-        .current(target.selectedSlug, target.gender, target.age, target.region)
-        .finally(() => setRefreshing(false));
-    }, 1000);
-    return () => window.clearInterval(tick);
+  const onHeatmapRefresh = useCallback(() => {
+    const target = refreshTargetRef.current;
+    if (target.deskKind) return;
+    setRefreshing(true);
+    void fetchHeatmapRef
+      .current(target.selectedSlug, target.gender, target.age, target.region)
+      .finally(() => setRefreshing(false));
   }, []);
 
   const liveIndices = liveMarket.indices;
@@ -405,8 +385,9 @@ export function ChannelMarketDesk({
           boardSlug={selectedSlug || undefined}
           channel={channel}
           maxItems={heatmapMaxItems(channel, selectedSlug, region)}
-          remainingSec={remainingSec}
+          refreshIntervalSec={DEFAULT_TRENDS_REVALIDATE_SEC}
           refreshing={refreshing}
+          onRefresh={onHeatmapRefresh}
           title={selectedBoard ? selectedBoard.title : title}
           subtitle={
             selectedBoard?.slug === "kospi-fomo-index" ||

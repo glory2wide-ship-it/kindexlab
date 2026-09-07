@@ -141,7 +141,7 @@ export function RankingTable({
                 <td className="px-2 py-3">
                   <Link
                     href={entityHref(item)}
-                    prefetch
+                    prefetch={false}
                     className="hover:text-accent"
                     onClick={(event) => {
                       if (!onSelect) return;
@@ -184,7 +184,7 @@ export function RankingTable({
           <li key={item.id}>
             <Link
               href={entityHref(item)}
-              prefetch
+              prefetch={false}
               onClick={(event) => {
                 if (!onSelect) return;
                 if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

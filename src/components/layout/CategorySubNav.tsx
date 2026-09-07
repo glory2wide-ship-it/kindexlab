@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
 import { useRouter, useSelectedLayoutSegment } from "next/navigation";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import {
@@ -18,24 +17,6 @@ export function CategorySubNav({ channel }: { channel: PostChannel }) {
   const meta = getPostChannel(channel);
   const router = useRouter();
 
-  useEffect(() => {
-    const idle = window.requestIdleCallback
-      ? window.requestIdleCallback.bind(window)
-      : (cb: IdleRequestCallback) =>
-          window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 200);
-    const cancel = window.cancelIdleCallback
-      ? window.cancelIdleCallback.bind(window)
-      : window.clearTimeout.bind(window);
-
-    const id = idle(() => {
-      for (const item of CHANNEL_SECTIONS) {
-        if (item.id === active) continue;
-        router.prefetch(channelSectionHref(channel, item.id));
-      }
-    });
-    return () => cancel(id);
-  }, [active, channel, router]);
-
   return (
     <div className="sticky top-14 z-30 -mx-4 border-b border-line bg-board/95 px-4 backdrop-blur-md">
       <div className="category-sub-nav-bar mx-auto max-w-7xl py-2">
@@ -50,7 +31,10 @@ export function CategorySubNav({ channel }: { channel: PostChannel }) {
               <Link
                 key={item.id}
                 href={href}
-                prefetch
+                prefetch={false}
+                onPointerEnter={() => {
+                  if (!isActive) router.prefetch(href);
+                }}
                 title={item.description}
                 className={
                   isActive

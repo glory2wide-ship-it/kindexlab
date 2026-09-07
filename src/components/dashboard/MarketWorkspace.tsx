@@ -69,8 +69,10 @@ export function MarketWorkspace({
   boardSlug,
   showRegion = false,
   maxItems = TREEMAP_MAX_ITEMS,
-  remainingSec = DEFAULT_TRENDS_REVALIDATE_SEC,
+  remainingSec: _remainingSec = DEFAULT_TRENDS_REVALIDATE_SEC,
   refreshing = false,
+  refreshIntervalSec = DEFAULT_TRENDS_REVALIDATE_SEC,
+  onRefresh,
   channel,
 }: {
   items: RankingEntity[];
@@ -97,6 +99,8 @@ export function MarketWorkspace({
   maxItems?: number;
   remainingSec?: number;
   refreshing?: boolean;
+  refreshIntervalSec?: number;
+  onRefresh?: () => void;
 }) {
   useEffect(() => {
     // Warm treemap after first paint so LCP bandwidth is not contested.
@@ -203,7 +207,11 @@ export function MarketWorkspace({
             >
               시세 산출 방식
             </button>
-            <HeatmapCountdown remainingSec={remainingSec} refreshing={refreshing} />
+            <HeatmapCountdown
+              intervalSec={refreshIntervalSec}
+              refreshing={refreshing}
+              onExpire={onRefresh}
+            />
           </div>
         </div>
 

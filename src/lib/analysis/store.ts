@@ -51,6 +51,21 @@ function supabaseConfig(): { url: string; key: string } | null {
   return { url, key };
 }
 
+function slimCachedArticle(article: TodayAnalysisArticle): TodayAnalysisArticle {
+  const { bodyMarkdown: _md, jsonLd: _ld, ...rest } = article;
+  return rest;
+}
+
+function slimCachedEntry(entry: CachedAnalysis): CachedAnalysis {
+  const { pump: _pump, ...rest } = entry;
+  return {
+    ...rest,
+    article: slimCachedArticle(entry.article),
+  };
+}
+
+let loadPromise: Promise<void> | null = null;
+
 /**
  * Merges the on-disk cache into memory when the file has changed. Next builds
  * route handlers and server components into separate module graphs, so each
@@ -58,22 +73,26 @@ function supabaseConfig(): { url: string; key: string } | null {
  * would disagree about what is cached.
  */
 async function loadDisk(): Promise<void> {
-  const file = path.join(process.cwd(), FILE_REL);
-  try {
-    const info = await stat(file);
-    if (info.mtimeMs === loadedMtimeMs) return;
-    const raw = await readFile(file, "utf8");
-    const parsed = JSON.parse(raw) as { entries?: CachedAnalysis[] };
-    // Replace rather than merge: a writer always persists its whole map, so the
-    // file is authoritative and a reset propagates instead of being re-merged.
-    memory.clear();
-    for (const entry of parsed.entries ?? []) {
-      if (entry?.slug) memory.set(entry.slug, entry);
+  if (loadPromise) return loadPromise;
+  loadPromise = (async () => {
+    const file = path.join(process.cwd(), FILE_REL);
+    try {
+      const info = await stat(file);
+      if (info.mtimeMs === loadedMtimeMs) return;
+      const raw = await readFile(file, "utf8");
+      const parsed = JSON.parse(raw) as { entries?: CachedAnalysis[] };
+      memory.clear();
+      for (const entry of parsed.entries ?? []) {
+        if (entry?.slug) memory.set(entry.slug, slimCachedEntry(entry));
+      }
+      loadedMtimeMs = info.mtimeMs;
+    } catch {
+      // No cache file yet; the store simply starts empty.
     }
-    loadedMtimeMs = info.mtimeMs;
-  } catch {
-    // No cache file yet; the store simply starts empty.
-  }
+  })().finally(() => {
+    loadPromise = null;
+  });
+  return loadPromise;
 }
 
 async function writeDisk(): Promise<boolean> {
@@ -82,8 +101,10 @@ async function writeDisk(): Promise<boolean> {
   try {
     const file = path.join(process.cwd(), FILE_REL);
     await mkdir(path.dirname(file), { recursive: true });
-    const entries = [...memory.values()].sort((a, b) => b.generatedAt.localeCompare(a.generatedAt));
-    await writeFile(file, `${JSON.stringify({ entries }, null, 2)}\n`, "utf8");
+    const entries = [...memory.values()]
+      .map(slimCachedEntry)
+      .sort((a, b) => b.generatedAt.localeCompare(a.generatedAt));
+    await writeFile(file, `${JSON.stringify({ entries })}\n`, "utf8");
     // Adopt our own write so the next read does not re-merge what we just wrote.
     loadedMtimeMs = (await stat(file)).mtimeMs;
     return true;
@@ -172,7 +193,7 @@ export async function writeAnalysis(entry: CachedAnalysis): Promise<{
   supabase: boolean;
 }> {
   await loadDisk();
-  memory.set(entry.slug, entry);
+  memory.set(entry.slug, slimCachedEntry(entry));
   const [file, supabase] = await Promise.all([writeDisk(), supabaseUpsert(entry)]);
   return { file, supabase };
 }

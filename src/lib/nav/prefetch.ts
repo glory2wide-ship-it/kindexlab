@@ -3,32 +3,31 @@ import { entityHref } from "@/lib/slugs";
 type Prefetchable = { slug: string; name?: string; type?: string };
 
 /**
- * Warm Next.js RSC cache for heatmap / ranking rows during idle time so the
- * next tile click does not start a cold flight.
+ * Hover/focus-only prefetch. Idle-prefetching every heatmap tile used to fire
+ * dozens of `/ranking/[slug]` RSC renders at once; each cold serverless
+ * instance parsed the full analysis cache and starved the click the user
+ * actually made.
  */
 export function scheduleEntityPrefetch(
-  prefetch: (href: string) => void,
-  items: Prefetchable[],
+  _prefetch: (href: string) => void,
+  _items: Prefetchable[],
 ): () => void {
-  let cancelled = false;
-  const run = () => {
-    if (cancelled) return;
-    for (const item of items) {
-      prefetch(entityHref(item));
-    }
-  };
+  return () => undefined;
+}
 
-  if (typeof requestIdleCallback === "function") {
-    const id = requestIdleCallback(run, { timeout: 700 });
-    return () => {
-      cancelled = true;
-      cancelIdleCallback(id);
-    };
-  }
-
-  const timer = window.setTimeout(run, 0);
-  return () => {
-    cancelled = true;
-    window.clearTimeout(timer);
+export function hoverPrefetchHandlers(
+  prefetch: (href: string) => void,
+  href: string,
+): {
+  onPointerEnter: () => void;
+  onFocus: () => void;
+} {
+  return {
+    onPointerEnter: () => prefetch(href),
+    onFocus: () => prefetch(href),
   };
+}
+
+export function entityPrefetchHref(item: Prefetchable): string {
+  return entityHref(item);
 }
