@@ -180,7 +180,9 @@ async function fetchKrMinutes(code: string, count = 400): Promise<CandlePoint[]>
 }
 
 async function fetchKrFchart(code: string, timeframe: "day" | "week" | "month"): Promise<CandlePoint[]> {
-  const url = `https://fchart.stock.naver.com/siseJson.naver?symbol=${encodeURIComponent(code)}&requestType=0&timeframe=${timeframe}&count=120&startTime=&endTime=`;
+  // Ask Naver for a deep history so the chart can pan left past the first screen.
+  const count = timeframe === "day" ? 500 : timeframe === "week" ? 260 : 120;
+  const url = `https://fchart.stock.naver.com/siseJson.naver?symbol=${encodeURIComponent(code)}&requestType=0&timeframe=${timeframe}&count=${count}&startTime=&endTime=`;
   const { status, contentType, buffer } = await fetchBuffer(url, {
     headers: { Accept: "text/plain,*/*", "User-Agent": "Mozilla/5.0" },
   });
@@ -189,7 +191,7 @@ async function fetchKrFchart(code: string, timeframe: "day" | "week" | "month"):
   return parseFchart(text);
 }
 
-async function fetchUsDailyPages(code: string, pages = 4, pageSize = 40): Promise<CandlePoint[]> {
+async function fetchUsDailyPages(code: string, pages = 8, pageSize = 40): Promise<CandlePoint[]> {
   const out: CandlePoint[] = [];
   for (let page = 1; page <= pages; page += 1) {
     const url = `https://api.stock.naver.com/stock/${encodeURIComponent(code)}/price?page=${page}&pageSize=${pageSize}`;
@@ -373,7 +375,7 @@ async function candlesForStock(
 
   if (instrument.market === "kr") {
     if (bucket != null) {
-      const minutes = await fetchKrMinutes(instrument.code, Math.min(480, bucket * 120));
+      const minutes = await fetchKrMinutes(instrument.code, Math.min(900, bucket * 200));
       return resampleMinutes(minutes, bucket);
     }
     if (timeframe === "1d") return fetchKrFchart(instrument.code, "day");
@@ -384,12 +386,12 @@ async function candlesForStock(
 
   // US / overseas
   if (bucket != null) {
-    const minutes = await fetchUsMinutes(instrument.code, Math.min(400, bucket * 100));
+    const minutes = await fetchUsMinutes(instrument.code, Math.min(780, bucket * 160));
     if (minutes.length >= 8) return resampleMinutes(minutes, bucket);
     // Outside US hours the minute feed is often empty — fall back to daily.
-    return fetchUsDailyPages(instrument.code, 3, 40);
+    return fetchUsDailyPages(instrument.code, 6, 40);
   }
-  const daily = await fetchUsDailyPages(instrument.code, timeframe === "1mo" ? 8 : 5, 40);
+  const daily = await fetchUsDailyPages(instrument.code, timeframe === "1mo" ? 12 : 10, 40);
   if (timeframe === "1w") return aggregateDaily(daily, 5);
   if (timeframe === "1mo") return aggregateDaily(daily, 21);
   return daily;
@@ -401,7 +403,7 @@ async function candlesForIndex(
 ): Promise<CandlePoint[]> {
   const history = await fetchIndexHistory(
     { category: instrument.category, code: instrument.code },
-    timeframe === "1mo" ? 180 : 120,
+    timeframe === "1mo" ? 360 : 240,
   );
   if (!history.length) return [];
   if (timeframe === "1w") return aggregateDaily(history, 5);
@@ -418,7 +420,7 @@ export async function fetchMarketChartCandles(
     instrument.kind === "stock"
       ? await candlesForStock(instrument, timeframe)
       : await candlesForIndex(instrument, timeframe);
-  return ensureAscending(candles).slice(-180);
+  return ensureAscending(candles).slice(-500);
 }
 
 export function chartPricePrecision(unit: string): number {

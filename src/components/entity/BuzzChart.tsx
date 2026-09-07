@@ -7,6 +7,7 @@ import { TIMEFRAMES } from "@/lib/categories";
 import { formatCompact, formatRate, formatScore, metricLabel } from "@/lib/format";
 import {
   candlesWindowOhlc,
+  chartDisplayBarCount,
   getTimeframeCandles,
   getTimeframeLinePath,
   timeframeLabel,
@@ -35,19 +36,26 @@ export function BuzzChart({
 }) {
   const [timeframe, setTimeframe] = useState<Timeframe>(initialTimeframe);
   const [chartStyle, setChartStyle] = useState<ChartStyle>("line");
+  // Full scrollable history — the chart shows a recent window first, then
+  // earlier bars appear when the user pans left.
   const candles = useMemo(
     () => getTimeframeCandles(entity, timeframe),
     [entity, timeframe],
   );
+  const quoteCandles = useMemo(() => {
+    const count = chartDisplayBarCount(timeframe);
+    return candles.length > count ? candles.slice(-count) : candles;
+  }, [candles, timeframe]);
   const linePath = useMemo(
     () => getTimeframeLinePath(entity, timeframe),
     [entity, timeframe],
   );
-  const ohlc = useMemo(() => candlesWindowOhlc(candles), [candles]);
+  const ohlc = useMemo(() => candlesWindowOhlc(quoteCandles), [quoteCandles]);
   const score = ohlc.close;
   const change = ohlc.change;
   const volume = volumeForTimeframe(entity, timeframe);
   const tone = change > 0 ? "text-up" : change < 0 ? "text-down" : "text-muted";
+  const initialVisibleBars = chartDisplayBarCount(timeframe);
 
   const quote = [
     { label: "시가", value: formatScore(ohlc.open) },
@@ -122,6 +130,7 @@ export function BuzzChart({
               timeframe={timeframe}
               style={chartStyle}
               positive={change >= 0}
+              initialVisibleBars={initialVisibleBars}
             />
           </div>
           <dl className="grid grid-cols-2 gap-px border-t border-line bg-line lg:grid-cols-1 lg:border-l lg:border-t-0">
@@ -139,8 +148,8 @@ export function BuzzChart({
         </div>
         <p className="border-t border-line px-5 py-3 text-[11px] leading-5 text-muted md:px-7">
           TradingView Lightweight Charts 기반 · 라인은 종가 곡선(그라데이션·현재가 점), 캔들은
-          미국식(상승 초록 / 하락 빨강)입니다. 거래량 수치는 우측 시세란을 참고하세요. 실측 시세
-          이력은 아닙니다.
+          미국식(상승 초록 / 하락 빨강)입니다. 차트를 좌우로 끌어 이전 시간대도 볼 수 있습니다.
+          거래량 수치는 우측 시세란을 참고하세요. 실측 시세 이력은 아닙니다.
         </p>
       </div>
     </section>

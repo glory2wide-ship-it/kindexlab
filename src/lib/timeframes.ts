@@ -7,7 +7,10 @@ const MINS_PER_DAY = 120;
 /** Daily history depth — enough for 26 weeks (×5) and 12 months (×20). */
 const HISTORY_DAYS = 260;
 
-/** Bars shown per timeframe (intraday derived from WINDOW_HOURS). */
+/**
+ * Bars shown in the initial chart viewport (HTS-style recent window).
+ * Older history stays loaded so the user can pan left to earlier times.
+ */
 const DISPLAY_COUNTS: Record<Timeframe, number> = {
   "1m": 360,
   "3m": 240,
@@ -22,7 +25,24 @@ const DISPLAY_COUNTS: Record<Timeframe, number> = {
 };
 
 /**
- * Wall-clock hours covered by the intraday chart.
+ * How much history the chart keeps beyond the initial viewport so dragging
+ * left reveals earlier bars instead of empty space.
+ */
+const CHART_HISTORY_COUNTS: Record<Timeframe, number> = {
+  "1m": 720,
+  "3m": 720,
+  "5m": 720,
+  "10m": 720,
+  "30m": 480,
+  "60m": 480,
+  "120m": 360,
+  "1d": 180,
+  "1w": 104,
+  "1mo": 36,
+};
+
+/**
+ * Wall-clock hours covered by the initial intraday viewport.
  * 3m → 12h; higher minute bars stretch the window further.
  */
 const WINDOW_HOURS: Partial<Record<Timeframe, number>> = {
@@ -34,6 +54,22 @@ const WINDOW_HOURS: Partial<Record<Timeframe, number>> = {
   "60m": 10 * 24,
   "120m": 20 * 24,
 };
+
+/** Extra intraday hours kept for left-pan history. */
+const HISTORY_WINDOW_HOURS: Partial<Record<Timeframe, number>> = {
+  "1m": 24,
+  "3m": 48,
+  "5m": 72,
+  "10m": 7 * 24,
+  "30m": 20 * 24,
+  "60m": 40 * 24,
+  "120m": 60 * 24,
+};
+
+/** Initial viewport bar count for TradingViewChart / quote panels. */
+export function chartDisplayBarCount(timeframe: Timeframe): number {
+  return DISPLAY_COUNTS[timeframe] ?? 60;
+}
 
 const VOLUME_SCALE: Record<Timeframe, number> = {
   "1m": 0.03,
@@ -402,29 +438,32 @@ function candlesForTimeframe(
   let raw: Array<Omit<CandlePoint, "t">>;
 
   if (step) {
-    const hours = WINDOW_HOURS[timeframe] ?? 12;
-    const windowMins = hours * 60;
-    const display = Math.max(1, Math.round(windowMins / step));
+    const hours = HISTORY_WINDOW_HOURS[timeframe] ?? WINDOW_HOURS[timeframe] ?? 12;
+    const windowMins = Math.min(minutes.length, hours * 60);
+    const history = CHART_HISTORY_COUNTS[timeframe];
     const slice = minutes.slice(-windowMins);
     const approxBars = Math.max(1, Math.ceil(slice.length / step));
     const barBase = windowVolume / approxBars;
-    raw = takeLastCandles(bucketCandles(slice, step, `${volumeSeed}:${timeframe}`, barBase), display);
+    raw = takeLastCandles(
+      bucketCandles(slice, step, `${volumeSeed}:${timeframe}`, barBase),
+      history,
+    );
   } else {
-    const display = DISPLAY_COUNTS[timeframe];
+    const history = CHART_HISTORY_COUNTS[timeframe];
     const daily = bucketCandles(minutes, MINS_PER_DAY, `${volumeSeed}:daily`, windowVolume / HISTORY_DAYS);
     if (timeframe === "1d") {
-      raw = takeLastCandles(daily, display);
+      raw = takeLastCandles(daily, history);
     } else if (timeframe === "1w") {
       const weekVol = windowVolume / Math.max(1, Math.ceil(daily.length / WEEK_DAYS));
       raw = takeLastCandles(
         bucketFromCandles(daily, WEEK_DAYS, `${volumeSeed}:1w-ohlc`, weekVol),
-        display,
+        history,
       );
     } else {
       const monthVol = windowVolume / Math.max(1, Math.ceil(daily.length / MONTH_DAYS));
       raw = takeLastCandles(
         bucketFromCandles(daily, MONTH_DAYS, `${volumeSeed}:1mo-ohlc`, monthVol),
-        display,
+        history,
       );
     }
   }

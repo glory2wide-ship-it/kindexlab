@@ -56,6 +56,8 @@ export function TradingViewChart({
   positive = true,
   height = 420,
   pricePrecision = 2,
+  /** Recent bars shown first; older loaded bars appear when panning left. */
+  initialVisibleBars,
 }: {
   candles: CandlePoint[];
   linePath?: number[];
@@ -65,6 +67,7 @@ export function TradingViewChart({
   height?: number;
   /** Decimal places on the right price scale (stocks/FX/commodities). */
   pricePrecision?: number;
+  initialVisibleBars?: number;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -131,7 +134,11 @@ export function TradingViewChart({
         secondsVisible: false,
         rightOffset: 4,
         barSpacing: 8,
-        minBarSpacing: 3,
+        minBarSpacing: 2,
+        fixLeftEdge: false,
+        fixRightEdge: false,
+        lockVisibleTimeRangeOnResize: false,
+        shiftVisibleRangeOnNewBar: true,
         tickMarkFormatter: (time: Time) => formatLwcTime(time, labelsRef.current),
       },
     });
@@ -182,7 +189,10 @@ export function TradingViewChart({
     const panel = readCssVar("--panel", "#fffdf8");
 
     chart.timeScale().applyOptions({
-      barSpacing: style === "candle" ? Math.max(2.5, Math.min(7, 720 / Math.max(ohlc.length, 1))) : 4.5,
+      barSpacing: style === "candle" ? Math.max(3, Math.min(9, 720 / Math.max(Math.min(ohlc.length, 80), 1))) : 5,
+      rightOffset: 4,
+      fixLeftEdge: false,
+      fixRightEdge: false,
     });
 
     if (style === "candle") {
@@ -261,9 +271,24 @@ export function TradingViewChart({
       }
     }
 
-    chart.timeScale().fitContent();
+    // Show a recent window first so the user can drag right (pan left) into
+    // earlier history instead of fitting every loaded bar into one screen.
+    const total = ohlc.length;
+    const preferred =
+      typeof initialVisibleBars === "number" && initialVisibleBars > 0
+        ? initialVisibleBars
+        : Math.min(80, total);
+    const visible = Math.max(12, Math.min(total, preferred));
+    if (total > visible + 2) {
+      chart.timeScale().setVisibleLogicalRange({
+        from: total - visible,
+        to: total - 1 + 3,
+      });
+    } else {
+      chart.timeScale().fitContent();
+    }
 
-    // fitContent can reset price scale — re-lock after it.
+    // fitContent / setVisibleLogicalRange can reset price scale — re-lock after it.
     if (priceRef.current) {
       if (style === "line") {
         const values =
@@ -275,7 +300,7 @@ export function TradingViewChart({
         lockPriceScale(priceRef.current, priceMin, priceMax);
       }
     }
-  }, [candles, linePath, timeframe, style, positive, height, pricePrecision]);
+  }, [candles, linePath, timeframe, style, positive, height, pricePrecision, initialVisibleBars]);
 
   return (
     <div className="relative w-full overflow-hidden rounded-lg border border-line/50 bg-panel">

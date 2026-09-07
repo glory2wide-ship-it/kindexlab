@@ -10,7 +10,7 @@ import {
   isNaverStockMeasurement,
 } from "@/lib/market/naver-finance-format";
 import type { MarketChartInstrument } from "@/lib/market/naver-chart";
-import { candlesWindowOhlc, timeframeLabel } from "@/lib/timeframes";
+import { candlesWindowOhlc, chartDisplayBarCount, timeframeLabel } from "@/lib/timeframes";
 import type { CandlePoint, RankingEntity, Timeframe } from "@/lib/types";
 
 const TradingViewChart = dynamic(
@@ -95,7 +95,11 @@ export function MarketPriceChart({
     };
   }, [instrument, timeframe]);
 
-  const ohlc = useMemo(() => candlesWindowOhlc(candles), [candles]);
+  const ohlc = useMemo(() => {
+    const count = chartDisplayBarCount(timeframe === "3m" ? "1d" : timeframe);
+    const window = candles.length > count ? candles.slice(-count) : candles;
+    return candlesWindowOhlc(window);
+  }, [candles, timeframe]);
   const naverQuote = isNaverStockMeasurement(entity.measurement) ? entity.measurement : undefined;
   // Prefer Naver day change for the quote panel. Candle-window % (e.g. full 일봉
   // range) looks like a KinDex/index move and confuses readers next to 전일 대비.
@@ -109,6 +113,7 @@ export function MarketPriceChart({
           ? "text-down"
           : "text-muted";
   const linePath = useMemo(() => candles.map((bar) => bar.c), [candles]);
+  const initialVisibleBars = chartDisplayBarCount(timeframe === "3m" ? "1d" : timeframe);
   const isIndex = instrument.kind === "index";
   const subtitle =
     instrument.kind === "stock"
@@ -206,6 +211,7 @@ export function MarketPriceChart({
                 style={chartStyle}
                 positive={(dayChange ?? ohlc.change) >= 0}
                 pricePrecision={precision}
+                initialVisibleBars={initialVisibleBars}
               />
             ) : (
               <div className="flex h-[400px] flex-col items-center justify-center gap-2 rounded-lg border border-line/60 bg-panel px-6 text-center text-sm text-muted">
@@ -228,9 +234,9 @@ export function MarketPriceChart({
           </dl>
         </div>
         <p className="border-t border-line px-5 py-3 text-[11px] leading-5 text-muted md:px-7">
-          TradingView Lightweight Charts · 네이버금융 실제 시세(단위: {unit}). 분봉은 국내 주식은
-          분 단위 체결을 집계하고, 해외 주식·원자재·환율은 제공 범위에 따라 일봉으로 대체될 수
-          있습니다.
+          TradingView Lightweight Charts · 네이버금융 실제 시세(단위: {unit}). 차트를 좌우로 끌어
+          이전 시간대도 확인할 수 있습니다. 분봉은 국내 주식은 분 단위 체결을 집계하고, 해외
+          주식·원자재·환율은 제공 범위에 따라 일봉으로 대체될 수 있습니다.
         </p>
       </div>
     </section>
