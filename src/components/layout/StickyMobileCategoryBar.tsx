@@ -8,7 +8,7 @@ import type { PostChannel } from "@/lib/posts/types";
 export function StickyMobileCategoryBar({ activeId }: { activeId?: PostChannel }) {
   return (
     <div
-      className="sticky top-14 z-30 -mx-4 border-b border-line bg-board/95 px-4 py-2 backdrop-blur-md md:hidden"
+      className="sticky top-14 z-30 -mx-4 border-b border-line bg-board/95 px-4 py-1.5 backdrop-blur-md md:hidden"
       data-sticky-mobile-categories
     >
       <MobileCategoryBar activeId={activeId} />

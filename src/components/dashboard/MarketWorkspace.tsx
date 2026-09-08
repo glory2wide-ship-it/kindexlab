@@ -244,7 +244,6 @@ export function MarketWorkspace({
       >
         {tabs.map(([id, label]) => {
           const selected = view === id;
-          const heatmapEmphasis = compact && id === "treemap" && selected;
           return (
             <button
               key={id}
@@ -253,11 +252,9 @@ export function MarketWorkspace({
               aria-selected={selected}
               onClick={() => pickView(id)}
               className={`inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none md:px-3 md:text-xs ${
-                heatmapEmphasis
+                selected
                   ? "bg-[#dc2626] text-white"
-                  : selected
-                    ? "bg-accent text-black"
-                    : "text-muted hover:text-ink"
+                  : "border border-[#dc2626]/70 text-[#dc2626] hover:bg-[#dc2626]/10"
               }`}
             >
               {label}

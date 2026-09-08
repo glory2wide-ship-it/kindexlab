@@ -114,7 +114,7 @@ export function CategoryBoardRail({
   ];
 
   return (
-    <section className="rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3 max-md:py-3">
+    <section className="rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3 max-md:py-2.5">
       <div className="mb-3 hidden flex-wrap items-baseline justify-between gap-2 md:flex">
         <div>
           <h2 className="text-sm font-semibold">랭킹·지수 보드</h2>

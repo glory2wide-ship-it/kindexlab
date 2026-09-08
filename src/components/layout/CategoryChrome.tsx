@@ -13,7 +13,7 @@ export function CategoryChrome({
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 md:gap-4">
       {/* Outside flex-order stack so sticky survives full-page scroll. */}
       <StickyMobileCategoryBar activeId={channel} />
       {/*
