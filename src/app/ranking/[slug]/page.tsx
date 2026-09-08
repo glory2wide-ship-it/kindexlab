@@ -7,6 +7,7 @@ import { EntityHeroLive } from "@/components/entity/EntityHeroLive";
 import { MarketPriceChart } from "@/components/entity/MarketPriceChart";
 import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
+import { StickyMobileCategoryBar } from "@/components/layout/StickyMobileCategoryBar";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
 import { SupportIndexChart } from "@/components/politics/SupportIndexChart";
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
@@ -20,6 +21,7 @@ import {
 } from "@/lib/market/kospi-quotes";
 import { resolveMarketChartInstrument } from "@/lib/market/naver-chart";
 import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
+import { channelFromLead } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 import { rankingPath, rankingUrl } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
@@ -137,7 +139,11 @@ export default async function RankingDetailPage({
   };
 
   return (
-    <div className="space-y-8">
+    <>
+      <StickyMobileCategoryBar
+        activeId={entity.sourceChannel ?? channelFromLead(entity, entity.slug)}
+      />
+      <div className="mt-3 space-y-8 md:mt-0">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -174,7 +180,8 @@ export default async function RankingDetailPage({
       <Suspense fallback={null}>
         <RelatedSlot slug={slug} name={name} entity={entity} />
       </Suspense>
-    </div>
+      </div>
+    </>
   );
 }
 

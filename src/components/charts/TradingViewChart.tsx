@@ -116,6 +116,7 @@ export function TradingViewChart({
   });
   const fitRafRef = useRef<number | null>(null);
   const [resolvedHeight, setResolvedHeight] = useState(height);
+  const [chartEpoch, setChartEpoch] = useState(0);
 
   // Mobile chart height is 25% shorter; desktop keeps the requested height.
   useEffect(() => {
@@ -195,6 +196,7 @@ export function TradingViewChart({
     });
 
     chartRef.current = chart;
+    setChartEpoch((value) => value + 1);
 
     const scheduleFit = (logical?: LogicalRange | null) => {
       if (fitRafRef.current != null) window.cancelAnimationFrame(fitRafRef.current);
@@ -227,7 +229,16 @@ export function TradingViewChart({
       chartRef.current = null;
       priceRef.current = null;
     };
-  }, [resolvedHeight, pricePrecision]);
+    // Recreate only when price format changes — height updates via applyOptions
+    // so mobile 3m charts keep their series after the 25% height shrink.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resolvedHeight applied below
+  }, [pricePrecision]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    chart.applyOptions({ height: resolvedHeight });
+  }, [resolvedHeight]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -364,7 +375,7 @@ export function TradingViewChart({
     if (priceRef.current) {
       fitPriceToVisibleRange(chart, priceRef.current, style, ohlc, lineValues);
     }
-  }, [candles, linePath, timeframe, style, positive, pricePrecision, initialVisibleBars]);
+  }, [candles, linePath, timeframe, style, positive, pricePrecision, initialVisibleBars, chartEpoch]);
 
   return (
     <div className="relative w-full overflow-hidden rounded-lg border border-line/50 bg-panel">
