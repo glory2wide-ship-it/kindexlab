@@ -10,6 +10,7 @@ import {
   menuBoardsForChannel,
 } from "@/lib/boards/registry";
 import { MOBILE_COMPOSITE_TAB_LABEL, mobileBoardTabLabel } from "@/lib/boards/mobile-tab-label";
+import { mobileBoardTabWidth } from "@/lib/boards/mobile-tab-width";
 import type { BoardDefinition } from "@/lib/boards/types";
 import type { PostChannel } from "@/lib/posts/types";
 
@@ -39,6 +40,17 @@ export function CategoryBoardRail({
 
   const tabShell =
     "inline-flex w-full items-center justify-center rounded-md border px-1 py-1.5 text-center text-[10px] leading-none whitespace-nowrap md:inline-block md:w-auto md:px-3 md:text-xs md:leading-normal md:whitespace-normal";
+
+  const orderedKeys = [
+    ...boards.slice(0, insertAt).map((board) => board.slug),
+    "composite",
+    ...boards.slice(insertAt).map((board) => board.slug),
+  ];
+  const mobileCols = Math.max(2, Math.ceil(orderedKeys.length / 2));
+  const colWeights = Array.from({ length: mobileCols }, (_, col) =>
+    mobileBoardTabWidth(orderedKeys[col] ?? ""),
+  );
+  const gridTemplateColumns = colWeights.map((w) => `minmax(0, ${w}fr)`).join(" ");
 
   const compositeTab = onSelect ? (
     <li key="composite" className="min-w-0">
@@ -100,8 +112,6 @@ export function CategoryBoardRail({
     compositeTab,
     ...boards.slice(insertAt).map(boardTab),
   ];
-  /** Mobile: force exactly two rows (ceil(n/2) columns). Desktop: wrap freely. */
-  const mobileCols = Math.max(2, Math.ceil(tabs.length / 2));
 
   return (
     <section className="rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3 max-md:py-3">
@@ -127,7 +137,7 @@ export function CategoryBoardRail({
       </div>
       <ul
         className="grid gap-1.5 md:flex md:flex-wrap md:gap-2"
-        style={{ gridTemplateColumns: `repeat(${mobileCols}, minmax(0, 1fr))` }}
+        style={{ gridTemplateColumns }}
       >
         {tabs}
       </ul>

@@ -57,9 +57,14 @@ export function HeaderRefreshCountdown({
       aria-label={
         pending ? "대시보드 갱신 중" : `다음 갱신 ${Math.max(0, Math.floor(remainingSec))}초`
       }
-      className="inline-flex h-[25.5px] min-w-[2.75rem] shrink-0 items-center justify-center rounded-md border border-line bg-accent px-1.5 font-sans text-[11px] font-semibold tabular-nums text-black"
+      className="inline-flex h-[25.5px] shrink-0 items-center justify-center gap-1 rounded-md border border-line bg-accent px-1.5 font-sans font-semibold text-black"
     >
-      {pending ? "…" : formatRefreshClock(remainingSec)}
+      <span className="text-[9px] font-bold leading-none tracking-tight whitespace-nowrap">
+        LIVE Update
+      </span>
+      <span className="text-[11px] tabular-nums leading-none">
+        {pending ? "…" : formatRefreshClock(remainingSec)}
+      </span>
     </div>
   );
 }

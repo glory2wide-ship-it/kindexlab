@@ -6,6 +6,7 @@ import { DemographicTabs } from "@/components/boards/DemographicTabs";
 import { HeatmapCountdownFallback } from "@/components/dashboard/HeatmapCountdown";
 import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundary";
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
+import { MobileHeatmapDials } from "@/components/dashboard/MobileHeatmapDials";
 import { TreemapSkeleton } from "@/components/dashboard/TreemapSkeleton";
 import { TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import { HeaderRefreshCountdown } from "@/components/layout/HeaderRefreshCountdown";
@@ -187,12 +188,7 @@ export function MarketWorkspace({
     return () => mq.removeEventListener("change", sync);
   }, []);
 
-  const timeframeLabel = TIMEFRAMES.find((option) => option.id === timeframe)?.label ?? timeframe;
-  const genderLabel = gender === "all" ? "전체" : filterLabel(gender, "all", "all");
-  const ageLabel = age === "all" ? "전체" : filterLabel("all", age, "all");
-  const filterButtonSummary = [hideTimeframes ? null : timeframeLabel, genderLabel, ageLabel]
-    .filter(Boolean)
-    .join(" / ");
+  const needsExtraFilterSheet = showRegion || !hideCategoryTabs;
 
   const CONTROL_H = 25.5;
 
@@ -235,7 +231,7 @@ export function MarketWorkspace({
   return (
     <section id="heatmap" className="scroll-mt-36 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm">
       <div className="flex flex-col gap-3 border-b border-line px-4 py-3">
-        {/* Mobile: row1 view+clock · row2 filter (no title / no "필터" label) */}
+        {/* Mobile: row1 view+clock · row2 dial filters */}
         <div className="flex flex-col gap-1.5 md:hidden">
           <div className="flex items-center gap-1.5">
             {viewToggle(true)}
@@ -243,20 +239,31 @@ export function MarketWorkspace({
               <HeaderRefreshCountdown intervalSec={refreshIntervalSec} />
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setFilterOpen(true)}
-            aria-label={`필터 ${filterButtonSummary}`}
-            className="inline-flex w-full items-center justify-between rounded-md border border-line bg-board px-3 text-left text-ink"
-            style={{ height: CONTROL_H }}
-          >
-            <span className="truncate text-[11px] font-medium leading-none tabular-nums">
-              {filterButtonSummary}
-            </span>
-            <span className="shrink-0 text-[10px] text-muted" aria-hidden>
-              설정
-            </span>
-          </button>
+          <div className="flex items-stretch gap-1.5">
+            <div className="min-w-0 flex-1">
+              <MobileHeatmapDials
+                timeframe={timeframe}
+                onTimeframe={setTimeframe}
+                gender={gender}
+                onGender={setGender}
+                age={age}
+                onAge={setAge}
+                boardSlug={boardSlug}
+                hideTimeframes={hideTimeframes}
+              />
+            </div>
+            {needsExtraFilterSheet ? (
+              <button
+                type="button"
+                onClick={() => setFilterOpen(true)}
+                aria-label="추가 필터"
+                className="inline-flex shrink-0 items-center justify-center rounded-md border border-line bg-board px-2 text-[10px] font-medium text-muted"
+                style={{ height: 28 }}
+              >
+                설정
+              </button>
+            ) : null}
+          </div>
         </div>
 
         {/* Desktop header — unchanged structure */}
