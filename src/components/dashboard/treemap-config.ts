@@ -4,3 +4,13 @@
  * bundle. The view is loaded as its own chunk.
  */
 export const TREEMAP_MAX_ITEMS = 20;
+
+/** Mobile-only denser/readable heatmap. Desktop keeps `TREEMAP_MAX_ITEMS`. */
+export const MOBILE_TREEMAP_MAX_ITEMS = 12;
+
+/**
+ * Shared frame for treemap + skeletons.
+ * Mobile: portrait ~3:4 with a height cap. Desktop: fixed 640px (unchanged).
+ */
+export const TREEMAP_FRAME_CLASS =
+  "relative w-full min-h-0 overflow-hidden bg-line aspect-[3/4] max-h-[620px] md:aspect-auto md:h-[640px] md:max-h-none";

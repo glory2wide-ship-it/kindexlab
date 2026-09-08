@@ -8,7 +8,7 @@ import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundar
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
 import { MobileHeatmapDials } from "@/components/dashboard/MobileHeatmapDials";
 import { TreemapSkeleton } from "@/components/dashboard/TreemapSkeleton";
-import { TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
+import { TREEMAP_MAX_ITEMS, MOBILE_TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import { HeaderRefreshCountdown } from "@/components/layout/HeaderRefreshCountdown";
 import { MobileBottomSheet } from "@/components/layout/MobileBottomSheet";
 
@@ -153,9 +153,24 @@ export function MarketWorkspace({
     () => (category === "all" ? items : items.filter((item) => item.type === category)),
     [category, items],
   );
+
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const sync = () => setIsMobileViewport(!mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   /** Single source of truth: treemap + list both render this exact array. */
   const sortedItems = useMemo(() => {
-    const cap = Math.max(1, Math.min(maxItems, TREEMAP_MAX_ITEMS));
+    const desktopCap = Math.max(1, Math.min(maxItems, TREEMAP_MAX_ITEMS));
+    const cap = isMobileViewport
+      ? Math.max(1, Math.min(desktopCap, MOBILE_TREEMAP_MAX_ITEMS))
+      : desktopCap;
     try {
       if (isHeadlineFeed(filtered)) {
         return rankHeadlineFeed(filtered, { timeframe, gender, age }).slice(0, cap);
@@ -180,20 +195,19 @@ export function MarketWorkspace({
     return uniqueHeatmapTiles(fallback)
       .slice(0, cap)
       .map((item, index) => ({ ...item, rank: index + 1 }));
-  }, [filtered, timeframe, gender, age, region, showRegion, skipDemographicSkew, maxItems]);
+  }, [
+    filtered,
+    timeframe,
+    gender,
+    age,
+    region,
+    showRegion,
+    skipDemographicSkew,
+    maxItems,
+    isMobileViewport,
+  ]);
   const demoKey = filterKey(gender, age, region);
   const demoActive = gender !== "all" || age !== "all" || region !== "all";
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    const sync = () => setIsMobileViewport(!mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-
   const needsExtraFilterSheet = showRegion || !hideCategoryTabs;
 
   const CONTROL_H = 25.5;

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { ChannelMarketDesk } from "@/components/dashboard/ChannelMarketDesk";
+import { TREEMAP_FRAME_CLASS } from "@/components/dashboard/treemap-config";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import { loadChannelDeskData } from "@/lib/boards/channel-page-data";
 import type { RegionSegment } from "@/lib/boards/types";
@@ -12,7 +13,7 @@ import {
 function TravelDeskFallback() {
   return (
     <div
-      className="h-[460px] animate-pulse rounded-2xl border border-line/60 bg-panel md:h-[640px]"
+      className={`${TREEMAP_FRAME_CLASS} animate-pulse rounded-2xl border border-line/60 bg-panel`}
       aria-hidden
     />
   );

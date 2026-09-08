@@ -1,3 +1,4 @@
+import { TREEMAP_FRAME_CLASS } from "@/components/dashboard/treemap-config";
 import { Suspense } from "react";
 import { ChannelBriefingPage } from "@/components/briefing/ChannelBriefingPage";
 import { ChannelMarketDesk } from "@/components/dashboard/ChannelMarketDesk";
@@ -9,7 +10,7 @@ function DeskFallback() {
     <div className="space-y-3" aria-hidden>
       <div className="h-10 animate-pulse rounded bg-line/50" />
       <div className="h-12 animate-pulse rounded-lg bg-line/40" />
-      <div className="h-[460px] animate-pulse rounded-2xl border border-line/60 bg-panel md:h-[640px]" />
+      <div className={`${TREEMAP_FRAME_CLASS} animate-pulse rounded-2xl border border-line/60 bg-panel`} />
     </div>
   );
 }

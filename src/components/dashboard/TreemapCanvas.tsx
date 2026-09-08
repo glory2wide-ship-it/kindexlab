@@ -17,22 +17,22 @@ import { CHANNEL_SHORT_LABEL } from "@/lib/posts/channels";
 import { CULTURE_GRANT_TITLE } from "@/lib/boards/culture-grants";
 import { heatmapSourceCaption, summarizeHeadlineTitle } from "@/lib/news/headline-title";
 import { layoutHeatmapLeaves } from "@/lib/treemapLayout";
-import { TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
+import { TREEMAP_FRAME_CLASS, TREEMAP_MAX_ITEMS, MOBILE_TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import { heatmapChangeRate, heatmapPriceLabel } from "@/lib/market/kospi-quotes-ui";
 import { scoreForTimeframe } from "@/lib/timeframes";
 import { entityHref } from "@/lib/slugs";
 import { layoutTreemapLabel } from "@/lib/treemapLabel";
 import type { CategoryId, RankingEntity, Timeframe } from "@/lib/types";
 
-export { TREEMAP_MAX_ITEMS };
+export { TREEMAP_MAX_ITEMS, MOBILE_TREEMAP_MAX_ITEMS };
 
 const HoverCard = dynamic(
   () => import("@/components/dashboard/HoverCard").then((mod) => mod.HoverCard),
   { ssr: false },
 );
 
-export function heatmapVisibleCount(items: RankingEntity[]): number {
-  return Math.min(Array.isArray(items) ? items.length : 0, TREEMAP_MAX_ITEMS);
+export function heatmapVisibleCount(items: RankingEntity[], maxItems = TREEMAP_MAX_ITEMS): number {
+  return Math.min(Array.isArray(items) ? items.length : 0, maxItems);
 }
 
 interface HoverState {
@@ -51,8 +51,8 @@ interface HeatmapLeaf {
   y1: number;
 }
 
-function pickHeatmapItems(items: RankingEntity[]): RankingEntity[] {
-  return uniqueHeatmapTiles(items).slice(0, TREEMAP_MAX_ITEMS);
+function pickHeatmapItems(items: RankingEntity[], maxItems: number): RankingEntity[] {
+  return uniqueHeatmapTiles(items).slice(0, maxItems);
 }
 
 function groupLabel(entity: RankingEntity): string {
@@ -88,9 +88,19 @@ export function TreemapView({
   const wrapRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState({ width: 1100, height: 640 });
   const [hover, setHover] = useState<HoverState | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const { width, height } = bounds;
 
-  const visible = useMemo(() => pickHeatmapItems(safeItems), [safeItems]);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const sync = () => setIsMobileViewport(!mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  const tileCap = isMobileViewport ? MOBILE_TREEMAP_MAX_ITEMS : TREEMAP_MAX_ITEMS;
+  const visible = useMemo(() => pickHeatmapItems(safeItems, tileCap), [safeItems, tileCap]);
   const displayRankById = useMemo(() => {
     const ranks = new Map<string, number>();
     visible.forEach((item, index) => ranks.set(item.id, index + 1));
@@ -150,7 +160,7 @@ export function TreemapView({
   return (
     <div
       ref={wrapRef}
-      className="relative flex h-[460px] min-h-0 w-full flex-1 flex-col items-stretch overflow-hidden bg-line md:h-[640px]"
+      className={`${TREEMAP_FRAME_CLASS} flex flex-1 flex-col items-stretch`}
       onMouseLeave={() => setHover(null)}
     >
       <svg
