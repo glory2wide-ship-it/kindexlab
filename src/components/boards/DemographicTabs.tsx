@@ -10,7 +10,7 @@ import { REGION_LABEL, REGION_SEGMENTS } from "@/lib/boards/regions";
 import type { AgeSegment, GenderSegment, RegionSegment } from "@/lib/boards/types";
 
 const TAB_BASE =
-  "rounded-md px-3 py-1.5 text-xs font-medium transition-[color,background-color,transform] duration-200 ease-out";
+  "rounded-md px-3 py-1.5 text-[13.2px] font-medium transition-[color,background-color,transform] duration-200 ease-out";
 const GENDER_ON = "bg-accent text-black scale-[1.03]";
 const GENDER_OFF = "text-muted hover:text-ink";
 const AGE_ON = "bg-ink text-board scale-[1.03]";

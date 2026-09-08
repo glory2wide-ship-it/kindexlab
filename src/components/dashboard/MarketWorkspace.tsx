@@ -251,7 +251,7 @@ export function MarketWorkspace({
               role="tab"
               aria-selected={selected}
               onClick={() => pickView(id)}
-              className={`inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none md:px-3 md:text-xs ${
+              className={`inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none md:px-3 md:text-[13.2px] ${
                 selected
                   ? "bg-[#dc2626] text-white"
                   : "text-muted hover:text-ink"
@@ -318,7 +318,7 @@ export function MarketWorkspace({
             <button
               type="button"
               onClick={() => setMethodOpen(true)}
-              className="inline-flex items-center rounded-md border border-line px-3 text-xs text-muted hover:text-ink"
+              className="inline-flex items-center rounded-md border border-line px-3 text-[13.2px] text-muted hover:text-ink"
               style={{ height: 30, boxSizing: "border-box" }}
             >
               랭킹 산출 방식
@@ -357,7 +357,7 @@ export function MarketWorkspace({
                   key={option.id}
                   type="button"
                   onClick={() => setTimeframe(option.id)}
-                  className={`rounded-md px-3 py-1.5 font-sans text-xs font-medium ${
+                  className={`rounded-md px-3 py-1.5 font-sans text-[13.2px] font-medium ${
                     timeframe === option.id
                       ? "bg-ink text-board"
                       : "text-muted hover:bg-panel hover:text-ink"
