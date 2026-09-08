@@ -29,6 +29,9 @@ export const POST_CHANNELS: {
   /** H1 on the channel board page (desktop). Mobile hides this heading. */
   indexTitle: string;
   description: string;
+  /** Optional desktop-only visible H1/subcopy; mobile keeps indexTitle (sr-only). */
+  indexTitleDesktop?: string;
+  descriptionDesktop?: string;
 }[] = [
   {
     id: "entertainment",
@@ -38,6 +41,9 @@ export const POST_CHANNELS: {
     indexTitle: "엔터테인먼트",
     description:
       "K POP·트로트·가요, TV 시청률, 음원, 스타, 영화, 유튜버, 웹툰, 게임을 실시간 랭킹과 브리핑으로 읽습니다.",
+    indexTitleDesktop: "K-컬처와 팬덤 화제성의 현재가, 엔터테인먼트 지수",
+    descriptionDesktop:
+      "음원, 영화, 방송, 웹툰까지 대중을 움직이는 실시간 데이터로 읽는 대중문화 트렌드의 흐름.",
   },
   {
     id: "politics",

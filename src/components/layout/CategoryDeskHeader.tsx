@@ -9,13 +9,18 @@ import type { PostChannel } from "@/lib/posts/types";
  */
 export function CategoryDeskHeader({ channel }: { channel: PostChannel }) {
   const meta = getPostChannel(channel);
+  const desktopTitle = meta.indexTitleDesktop ?? meta.indexTitle;
+  const desktopDescription = meta.descriptionDesktop ?? meta.description;
 
   return (
     <header className="space-y-2 font-gothic">
-      <h1 className="max-md:sr-only text-2xl font-semibold tracking-tight md:text-3xl">
-        {meta.indexTitle}
+      <h1 className="sr-only md:hidden">{meta.indexTitle}</h1>
+      <h1 className="hidden text-2xl font-semibold tracking-tight md:block md:text-3xl">
+        {desktopTitle}
       </h1>
-      <p className="hidden max-w-2xl text-sm leading-6 text-muted md:block">{meta.description}</p>
+      <p className="hidden max-w-3xl text-sm leading-6 text-muted md:block">
+        {desktopDescription}
+      </p>
       <div className="md:hidden">
         <CategorySubNav channel={channel} embedded />
       </div>
