@@ -44,7 +44,6 @@ export default async function BriefingArchivePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <header className="space-y-3">
-        <DeskEyebrow variant="xs">MAGAZINE ARCHIVE</DeskEyebrow>
         <h1 className="text-3xl font-semibold tracking-tight">브리핑 아카이브</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
           어제 이전 에디션을 발행일 기준으로 모았습니다. 카테고리와 키워드로 과거 해설을

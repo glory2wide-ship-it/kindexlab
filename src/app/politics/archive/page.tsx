@@ -48,7 +48,6 @@ export default async function PoliticsArchivePage() {
   return (
     <div className="space-y-8">
       <header className="space-y-3">
-        <DeskEyebrow variant="xs">MAGAZINE ARCHIVE</DeskEyebrow>
         <h1 className="text-3xl font-semibold tracking-tight">정치 아카이브</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
           정치 데스크에서 발행한 종합 브리핑과 Update 키워드를 날짜별로 모았습니다.
