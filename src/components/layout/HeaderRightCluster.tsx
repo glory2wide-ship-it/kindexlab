@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import { HeaderRefreshCountdown } from "@/components/layout/HeaderRefreshCountdown";
 import { KstClock } from "@/components/layout/KstClock";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import {
@@ -117,7 +116,7 @@ function HeaderClockSlot() {
 
 /**
  * Desktop (md+): search + clock + LIVE + theme (unchanged).
- * Mobile: search + LIVE + MM:SS countdown + theme.
+ * Mobile: LIVE + theme + search (far right). Countdown lives on the heatmap panel.
  */
 export function HeaderRightCluster() {
   return (
@@ -125,11 +124,13 @@ export function HeaderRightCluster() {
       data-header-right
       className="flex min-w-0 shrink-0 items-center overflow-visible md:ml-auto md:min-w-[26rem]"
     >
-      <HeaderSearch />
+      {/* Search last on mobile (order-last); first on desktop */}
+      <div className="order-last md:order-none">
+        <HeaderSearch />
+      </div>
       <HeaderClockSlot />
       <div className="flex shrink-0 items-center gap-1 md:gap-2.5">
         <LiveBadge />
-        <HeaderRefreshCountdown />
         <ThemeToggle />
       </div>
     </div>

@@ -6,7 +6,7 @@ import { isNavigating } from "@/lib/nav/progress";
 import { DEFAULT_TRENDS_REVALIDATE_SEC, formatRefreshClock } from "@/lib/refresh";
 
 /**
- * Mobile header countdown (md+ unused / inactive).
+ * Mobile heatmap countdown (md+ unused / inactive).
  * Shows MM:SS and triggers router.refresh() when the interval elapses.
  */
 export function HeaderRefreshCountdown({

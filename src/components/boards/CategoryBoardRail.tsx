@@ -36,21 +36,24 @@ export function CategoryBoardRail({
     ? "border-accent bg-accent text-black"
     : "border-line text-muted hover:text-ink";
 
+  const tabShell =
+    "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[11px] leading-tight md:inline-block md:w-auto md:px-3 md:text-xs md:leading-normal";
+
   const compositeTab = onSelect ? (
-    <li key="composite">
+    <li key="composite" className="min-w-0">
       <button
         type="button"
         onClick={() => onSelect("")}
-        className={`inline-block rounded-md border px-3 py-1.5 text-xs ${compositeClass}`}
+        className={`${tabShell} ${compositeClass}`}
       >
         종합 랭킹
       </button>
     </li>
   ) : (
-    <li key="composite">
+    <li key="composite" className="min-w-0">
       <Link
         href={`/${channel}`}
-        className="inline-block rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:text-ink"
+        className={`${tabShell} border-line text-muted hover:text-ink`}
       >
         종합 랭킹
       </Link>
@@ -61,11 +64,11 @@ export function CategoryBoardRail({
     const active = selectedSlug === board.slug;
     if (onSelect) {
       return (
-        <li key={board.slug}>
+        <li key={board.slug} className="min-w-0">
           <button
             type="button"
             onClick={() => onSelect(board.slug)}
-            className={`inline-block rounded-md border px-3 py-1.5 text-xs ${
+            className={`${tabShell} ${
               active ? "border-accent bg-accent text-black" : "border-line text-muted hover:text-ink"
             }`}
           >
@@ -75,10 +78,10 @@ export function CategoryBoardRail({
       );
     }
     return (
-      <li key={board.slug}>
+      <li key={board.slug} className="min-w-0">
         <Link
           href={boardPath(board.slug)}
-          className="inline-block rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:text-ink"
+          className={`${tabShell} border-line text-muted hover:text-ink`}
         >
           {board.shortTitle}
         </Link>
@@ -91,6 +94,8 @@ export function CategoryBoardRail({
     compositeTab,
     ...boards.slice(insertAt).map(boardTab),
   ];
+  /** Mobile: force exactly two rows (ceil(n/2) columns). Desktop: wrap freely. */
+  const mobileCols = Math.max(2, Math.ceil(tabs.length / 2));
 
   return (
     <section className="rounded-2xl border border-line bg-panel px-5 py-4">
@@ -114,7 +119,12 @@ export function CategoryBoardRail({
           전체 보기 →
         </Link>
       </div>
-      <ul className="flex flex-wrap gap-2">{tabs}</ul>
+      <ul
+        className="grid gap-1.5 md:flex md:flex-wrap md:gap-2"
+        style={{ gridTemplateColumns: `repeat(${mobileCols}, minmax(0, 1fr))` }}
+      >
+        {tabs}
+      </ul>
       {selected && !isDeskBoard(selected) ? (
         <p className="mt-2 text-[11px] text-muted">
           <Link href={boardPath(selected.slug)} className="text-accent hover:underline">

@@ -1,10 +1,11 @@
 import { CategorySubNav } from "@/components/layout/CategorySubNav";
+import { MobileCategoryBar } from "@/components/layout/MobileCategoryBar";
 import { getPostChannel } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 
 /**
  * Category board hero.
- * Mobile: title only + submenu moves into the freed description space.
+ * Mobile: title + submenu + shared 5-category bar.
  * Desktop: title + description (submenu stays in CategorySubNav sticky bar).
  */
 export function CategoryDeskHeader({ channel }: { channel: PostChannel }) {
@@ -17,6 +18,7 @@ export function CategoryDeskHeader({ channel }: { channel: PostChannel }) {
       <div className="md:hidden">
         <CategorySubNav channel={channel} embedded />
       </div>
+      <MobileCategoryBar activeId={channel} />
     </header>
   );
 }

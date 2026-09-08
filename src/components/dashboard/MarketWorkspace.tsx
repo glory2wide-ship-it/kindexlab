@@ -8,6 +8,7 @@ import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundar
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
 import { TreemapSkeleton } from "@/components/dashboard/TreemapSkeleton";
 import { TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
+import { HeaderRefreshCountdown } from "@/components/layout/HeaderRefreshCountdown";
 import { MobileBottomSheet } from "@/components/layout/MobileBottomSheet";
 
 /**
@@ -187,93 +188,81 @@ export function MarketWorkspace({
   }, []);
 
   const timeframeLabel = TIMEFRAMES.find((option) => option.id === timeframe)?.label ?? timeframe;
-  const categoryLabel = categories.find((item) => item.id === category)?.label ?? "종합";
   const genderLabel = gender === "all" ? "전체" : filterLabel(gender, "all", "all");
   const ageLabel = age === "all" ? "전체" : filterLabel("all", age, "all");
-  const filterSummaryParts = [
-    hideTimeframes ? null : timeframeLabel,
-    hideCategoryTabs || category === "all" ? null : categoryLabel,
-    demoActive ? filterLabel(gender, age, region) : null,
-  ].filter(Boolean) as string[];
-  const filterButtonSummary = [
-    hideTimeframes ? null : timeframeLabel,
-    genderLabel,
-    ageLabel,
-  ]
+  const filterButtonSummary = [hideTimeframes ? null : timeframeLabel, genderLabel, ageLabel]
     .filter(Boolean)
     .join(" / ");
+
+  const viewToggle = (
+    <div className="flex rounded-lg bg-board p-0.5 md:p-1" role="tablist" aria-label="보기 전환">
+      {(
+        [
+          ["treemap", "히트맵"],
+          ["list", "리스트"],
+        ] as const
+      ).map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          aria-selected={view === id}
+          onClick={() => setView(id)}
+          className={`min-h-9 rounded-md px-2.5 py-1 text-[11px] font-medium md:min-h-10 md:px-3 md:py-1.5 md:text-xs ${
+            view === id ? "bg-accent text-black" : "text-muted hover:text-ink"
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 
   // Board tiles link straight to /ranking/[slug]; the analysis column lives there.
   return (
     <section id="heatmap" className="scroll-mt-36 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm">
       <div className="flex flex-col gap-3 border-b border-line px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Mobile: filter (B) left · title + view tabs (A) + countdown right */}
+        <div className="flex items-center gap-2 md:hidden">
+          <button
+            type="button"
+            onClick={() => setFilterOpen(true)}
+            className="inline-flex min-h-9 min-w-0 shrink items-center rounded-lg border border-line bg-board px-2.5 py-1 text-left text-ink"
+          >
+            <span className="truncate text-[11px] font-semibold leading-tight">
+              필터 · {filterButtonSummary}
+            </span>
+          </button>
+          <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1.5">
+            <h1 className="shrink-0 text-sm font-semibold">{title}</h1>
+            {viewToggle}
+            <HeaderRefreshCountdown intervalSec={refreshIntervalSec} />
+          </div>
+        </div>
+
+        {/* Desktop header — unchanged structure */}
+        <div className="hidden flex-wrap items-center justify-between gap-3 md:flex">
           <div className="min-w-0">
             <h1 className="text-base font-semibold">{title}</h1>
-            <p className="hidden text-xs text-muted md:block">{subtitle}</p>
+            <p className="text-xs text-muted">{subtitle}</p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <div className="flex rounded-lg bg-board p-1">
-              {(
-                [
-                  ["treemap", "히트맵"],
-                  ["list", "리스트"],
-                ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setView(id)}
-                  className={`min-h-10 rounded-md px-3 py-1.5 text-xs font-medium md:min-h-0 ${
-                    view === id ? "bg-accent text-black" : "text-muted hover:text-ink"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            {viewToggle}
             <button
               type="button"
               onClick={() => setMethodOpen(true)}
-              className="hidden items-center rounded-md border border-line px-3 text-xs text-muted hover:text-ink md:inline-flex"
+              className="inline-flex items-center rounded-md border border-line px-3 text-xs text-muted hover:text-ink"
               style={{ height: 30, boxSizing: "border-box" }}
             >
               시세 산출 방식
             </button>
-            <div className="hidden md:inline-flex">
-              <HeatmapCountdown
-                intervalSec={refreshIntervalSec}
-                refreshing={refreshing}
-                onExpire={isMobileViewport ? undefined : onRefresh}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => setFilterOpen(true)}
-              className="inline-flex min-h-10 max-w-[11.5rem] flex-col items-start justify-center rounded-md border border-line px-2.5 py-1 text-left text-ink md:hidden"
-            >
-              <span className="text-[11px] font-semibold leading-tight">필터 · {filterButtonSummary}</span>
-              <span className="text-[9px] leading-tight text-muted">
-                3분·5분·일봉 / 남성·여성 / 10대·20대·30대
-              </span>
-            </button>
+            <HeatmapCountdown
+              intervalSec={refreshIntervalSec}
+              refreshing={refreshing}
+              onExpire={isMobileViewport ? undefined : onRefresh}
+            />
           </div>
         </div>
-
-        {filterSummaryParts.length ? (
-          <div className="flex flex-wrap gap-1.5 md:hidden">
-            {filterSummaryParts.map((part) => (
-              <button
-                key={part}
-                type="button"
-                onClick={() => setFilterOpen(true)}
-                className="rounded-full border border-line bg-board px-2.5 py-1 text-[11px] font-medium text-muted"
-              >
-                {part}
-              </button>
-            ))}
-          </div>
-        ) : null}
 
         {/* Desktop toolbar — unchanged structure */}
         <div className="hidden flex-col gap-3 md:flex">
