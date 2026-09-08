@@ -197,13 +197,14 @@ export function MarketWorkspace({
   const needsExtraFilterSheet = showRegion || !hideCategoryTabs;
 
   const CONTROL_H = 25.5;
+  const DESKTOP_CONTROL_H = 30;
 
   const viewToggle = (compact: boolean) => (
     <div
-      className="flex rounded-md bg-board p-0.5 md:rounded-lg md:p-1"
+      className="flex rounded-md bg-board p-0.5"
       role="tablist"
       aria-label="보기 전환"
-      style={compact ? { height: CONTROL_H } : undefined}
+      style={{ height: compact ? CONTROL_H : DESKTOP_CONTROL_H }}
     >
       {(
         [
@@ -217,15 +218,9 @@ export function MarketWorkspace({
           role="tab"
           aria-selected={view === id}
           onClick={() => setView(id)}
-          className={
-            compact
-              ? `inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none ${
-                  view === id ? "bg-accent text-black" : "text-muted hover:text-ink"
-                }`
-              : `min-h-10 rounded-md px-3 py-1.5 text-xs font-medium ${
-                  view === id ? "bg-accent text-black" : "text-muted hover:text-ink"
-                }`
-          }
+          className={`inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none md:px-3 md:text-xs ${
+            view === id ? "bg-accent text-black" : "text-muted hover:text-ink"
+          }`}
         >
           {label}
         </button>
@@ -286,7 +281,7 @@ export function MarketWorkspace({
               className="inline-flex items-center rounded-md border border-line px-3 text-xs text-muted hover:text-ink"
               style={{ height: 30, boxSizing: "border-box" }}
             >
-              시세 산출 방식
+              랭킹 산출 방식
             </button>
             <HeatmapCountdown
               intervalSec={refreshIntervalSec}
@@ -483,7 +478,7 @@ export function MarketWorkspace({
               }}
               className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line text-sm text-muted hover:text-ink"
             >
-              시세 산출 방식
+              랭킹 산출 방식
             </button>
             <button
               type="button"

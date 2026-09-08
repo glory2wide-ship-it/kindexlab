@@ -108,7 +108,7 @@ export function KinDexAboutSections({
         <h2 className="text-xl font-semibold">지수 산출 방식</h2>
         <p className="text-sm text-muted">
           {channel
-            ? `${getPostChannel(channel).label} 데스크의 시세 산출 방식입니다.`
+            ? `${getPostChannel(channel).label} 데스크의 랭킹 산출 방식입니다.`
             : "카테고리마다 원천이 다릅니다. 같은 보드 안에서의 순위와 방향을 읽는 것이 정확합니다."}
         </p>
         {channels.map((id) => (

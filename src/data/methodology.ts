@@ -1,5 +1,5 @@
 /**
- * Landing "시세 산출 방식" modal copy.
+ * Landing "랭킹 산출 방식" modal copy.
  *
  * Tracks what the product actually shows across desks: entertainment live
  * charts, politics/economy/culture/travel ranking boards, and the unified

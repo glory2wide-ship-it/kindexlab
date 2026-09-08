@@ -47,7 +47,7 @@ git merge github/main
 | `/briefing` | 오늘 발행분 허브(종합 1 + Update 키워드) |
 | `/briefing/[slug]` | 1,000단어+ H2/H3 브리핑 본문 |
 | `/briefing/archive` | 어제 이전 에디션 검색·카테고리 필터 |
-| `/about` | 데이터 구성·시세 산출 방식 |
+| `/about` | 데이터 구성·랭킹 산출 방식 |
 | `/privacy` | 개인정보처리방침 |
 | `/terms` | 이용약관 |
 | `/disclaimer` | 면책조항 |

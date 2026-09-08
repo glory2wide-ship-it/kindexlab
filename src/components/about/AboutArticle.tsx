@@ -57,7 +57,7 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
               정렬합니다. 분봉을 바꾸면 단기 노이즈와 중기 흐름을 같은 보드에서 비교할 수 있습니다.
             </p>
             <p>
-              상단 메뉴의 엔터·정치·경제·문화/생활·여행/맛집 데스크마다 실시간 지수,
+              상단 메뉴의 엔터·정치·경제·문화/생활·여행/맛집 데스크마다 실시간 랭킹,
               일일브리핑, 아카이브, 소개가 같은 규격으로 제공됩니다.
             </p>
             <ul className="flex flex-wrap gap-2 text-sm">

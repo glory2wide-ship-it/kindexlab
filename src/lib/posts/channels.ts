@@ -4,8 +4,8 @@ import { isPoliticsEntityType, POLITICS_TYPE_ORDER } from "@/lib/politics/types"
 
 export type ChannelSectionId = "board" | "briefing" | "archive" | "about";
 
-/** Page heading for a channel's live index board, and the tab title it drives. */
-export const LIVE_INDEX_LABEL = "실시간 지수";
+/** Page heading for a channel's live ranking board, and the tab title it drives. */
+export const LIVE_INDEX_LABEL = "실시간 랭킹";
 
 /**
  * Two-character desk tags for the unified landing heatmap.
@@ -26,8 +26,7 @@ export const POST_CHANNELS: {
   href: `/${PostChannel}`;
   label: string;
   eyebrow: string;
-  /** H1 on the channel board page. Spelled out per channel rather than derived
-   *  from `label`, since 엔터 drops the 이슈 qualifier the others carry. */
+  /** H1 on the channel board page (desktop). Mobile hides this heading. */
   indexTitle: string;
   description: string;
 }[] = [
@@ -36,16 +35,16 @@ export const POST_CHANNELS: {
     href: "/entertainment",
     label: "엔터",
     eyebrow: "ENTERTAINMENT",
-    indexTitle: "엔터 지수",
+    indexTitle: "엔터테인먼트",
     description:
-      "K POP·트로트·가요, TV 시청률, 음원, 스타, 영화, 유튜버, 웹툰, 게임을 실시간 지수와 브리핑으로 읽습니다.",
+      "K POP·트로트·가요, TV 시청률, 음원, 스타, 영화, 유튜버, 웹툰, 게임을 실시간 랭킹과 브리핑으로 읽습니다.",
   },
   {
     id: "politics",
     href: "/politics",
     label: "정치",
     eyebrow: "POLITICS",
-    indexTitle: "정치 이슈 지수",
+    indexTitle: "정치",
     description:
       "정부 지원금, 정당·정치인 지지도, 지자체 정책, 정치 유튜브·평론가, 이슈 키워드를 지수로 읽습니다.",
   },
@@ -54,7 +53,7 @@ export const POST_CHANNELS: {
     href: "/economy",
     label: "경제",
     eyebrow: "ECONOMY",
-    indexTitle: "경제 이슈 지수",
+    indexTitle: "경제",
     description:
       "경제 정부지원금, 지역별 부동산, 금융, 주식, 해외 주식, 원자재·환율, 소비자 물가, 창업·프랜차이즈, 이슈 키워드를 보드로 읽습니다.",
   },
@@ -63,7 +62,7 @@ export const POST_CHANNELS: {
     href: "/culture",
     label: "문화/생활",
     eyebrow: "CULTURE & LIVING",
-    indexTitle: "문화/생활 이슈 지수",
+    indexTitle: "문화/생활",
     description:
       "문화/생활 정부 지원금, 공연, 전시·팝업스토어, 도서·베스트셀러, 건강정보, 요리 레시피, 자동차, 이슈 키워드를 한 데스크에서 읽습니다.",
   },
@@ -72,7 +71,7 @@ export const POST_CHANNELS: {
     href: "/travel",
     label: "여행/맛집",
     eyebrow: "TRAVEL & FOOD",
-    indexTitle: "여행/맛집 이슈 지수",
+    indexTitle: "여행/맛집",
     description:
       "여행 정부지원금, 국내 여행, 해외 여행, 지역별 주말 나들이, 지역별 음식/맛집을 랭킹 보드로 읽습니다.",
   },

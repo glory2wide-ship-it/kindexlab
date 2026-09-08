@@ -4,10 +4,9 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
+import { LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { MarketStatus, RankingEntity } from "@/lib/types";
-
-const HEATMAP_PANEL_TITLE = "실시간 지수";
 
 /**
  * Landing board for the cross-category heatmap.
@@ -36,7 +35,7 @@ export function UnifiedMarketBoard({
         items={items}
         initialView="treemap"
         hideCategoryTabs
-        title={HEATMAP_PANEL_TITLE}
+        title={LIVE_INDEX_LABEL}
         subtitle="등락률·시세·버즈를 히트맵과 리스트로 읽습니다. 주식·해외 주식·원자재·환율 타일은 현재가(단위)를 표시합니다."
         refreshIntervalSec={refreshIntervalSec}
         refreshing={pending}

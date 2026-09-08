@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { isNavigating } from "@/lib/nav/progress";
 import { DEFAULT_TRENDS_REVALIDATE_SEC, formatRefreshCountdown } from "@/lib/refresh";
 
-/** Keep the same outer box as the neighboring "시세 산출 방식" control (30px). */
+/** Keep the same outer box as the neighboring "랭킹 산출 방식" control (30px). */
 const SHELL_CLASS =
   "inline-flex min-w-[8.64rem] shrink-0 items-center justify-center rounded-md border border-line bg-accent px-3 text-xs font-medium tabular-nums text-black";
 const SHELL_STYLE = { height: 30, boxSizing: "border-box" as const };

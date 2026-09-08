@@ -24,7 +24,7 @@ export interface ChannelAboutContent {
 }
 
 const DESK_NAV =
-  "상단에서 엔터·정치·경제·문화/생활·여행/맛집을 오갈 수 있습니다. 각 카테고리 H1 아래 탭은 실시간 지수, 일일브리핑, 아카이브, 소개입니다.";
+  "상단에서 엔터·정치·경제·문화/생활·여행/맛집을 오갈 수 있습니다. 각 카테고리 H1 아래 탭은 실시간 랭킹, 일일브리핑, 아카이브, 소개입니다.";
 
 export const CHANNEL_ABOUT: Record<PostChannel, ChannelAboutContent> = {
   entertainment: {
