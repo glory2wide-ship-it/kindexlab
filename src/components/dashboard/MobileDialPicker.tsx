@@ -4,9 +4,43 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type DialOption<T extends string> = { id: T; label: string };
 
+function DialChevron({
+  direction,
+  visible,
+}: {
+  direction: "left" | "right";
+  visible: boolean;
+}) {
+  return (
+    <span
+      className={`pointer-events-none flex h-full w-[18px] shrink-0 items-center justify-center text-accent transition-opacity ${
+        visible ? "opacity-100" : "opacity-35"
+      }`}
+      aria-hidden
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="h-[18.4px] w-[18.4px]"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {direction === "left" ? (
+          <path d="M15 6l-6 6 6 6" />
+        ) : (
+          <path d="M9 6l6 6-6 6" />
+        )}
+      </svg>
+    </span>
+  );
+}
+
 /**
  * Horizontal snap dial: the item nearest the center is selected.
  * Mobile heatmap filter chrome only.
+ * Chevrons sit in side gutters so they never cover option labels.
  */
 export function MobileDialPicker<T extends string>({
   options,
@@ -108,98 +142,53 @@ export function MobileDialPicker<T extends string>({
 
   return (
     <div
-      className="relative min-w-0 flex-1 overflow-hidden rounded-md border border-line bg-board"
+      className="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-md border border-line bg-board"
       style={{ height: 28 }}
       aria-label={ariaLabel}
     >
-      <div
-        ref={scrollerRef}
-        className="flex h-full snap-x snap-mandatory items-center gap-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        style={{
-          scrollPaddingInline: "32%",
-          WebkitOverflowScrolling: "touch",
-        }}
-      >
-        <span className="w-[32%] shrink-0" aria-hidden />
-        {options.map((opt) => {
-          const active = opt.id === value;
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              ref={(node) => {
-                if (node) itemRefs.current.set(opt.id, node);
-                else itemRefs.current.delete(opt.id);
-              }}
-              onClick={() => {
-                onChange(opt.id);
-                scrollToValue(opt.id, "smooth");
-              }}
-              className={`snap-center shrink-0 px-2 text-center text-[11px] font-medium leading-none whitespace-nowrap ${
-                active ? "text-ink" : "text-muted"
-              }`}
-              aria-pressed={active}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
-        <span className="w-[32%] shrink-0" aria-hidden />
+      <DialChevron direction="left" visible={canScrollLeft} />
+      <div className="relative min-w-0 flex-1 overflow-hidden">
+        <div
+          ref={scrollerRef}
+          className="flex h-full snap-x snap-mandatory items-center gap-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{
+            scrollPaddingInline: "28%",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          <span className="w-[28%] shrink-0" aria-hidden />
+          {options.map((opt) => {
+            const active = opt.id === value;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                ref={(node) => {
+                  if (node) itemRefs.current.set(opt.id, node);
+                  else itemRefs.current.delete(opt.id);
+                }}
+                onClick={() => {
+                  onChange(opt.id);
+                  scrollToValue(opt.id, "smooth");
+                }}
+                className={`snap-center shrink-0 px-2 text-center text-[11px] font-medium leading-none whitespace-nowrap ${
+                  active ? "text-ink" : "text-muted"
+                }`}
+                aria-pressed={active}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+          <span className="w-[28%] shrink-0" aria-hidden />
+        </div>
+        {/* Center selection face — fill only, no border */}
+        <div
+          className="pointer-events-none absolute inset-y-0.5 left-1/2 w-[42%] -translate-x-1/2 rounded bg-accent/25"
+          aria-hidden
+        />
       </div>
-      {/* Center selection face — fill only, no border */}
-      <div
-        className="pointer-events-none absolute inset-y-0.5 left-1/2 w-[38%] -translate-x-1/2 rounded bg-accent/25"
-        aria-hidden
-      />
-      {/* Edge fades + accent chevrons (no fill behind text) */}
-      <div
-        className={`pointer-events-none absolute inset-y-0 left-0 w-7 bg-gradient-to-r from-board via-board/85 to-transparent transition-opacity ${
-          canScrollLeft ? "opacity-100" : "opacity-45"
-        }`}
-        aria-hidden
-      />
-      <div
-        className={`pointer-events-none absolute inset-y-0 right-0 w-7 bg-gradient-to-l from-board via-board/85 to-transparent transition-opacity ${
-          canScrollRight ? "opacity-100" : "opacity-45"
-        }`}
-        aria-hidden
-      />
-      <span
-        className={`pointer-events-none absolute top-1/2 left-0 flex -translate-y-1/2 items-center justify-center text-accent transition-opacity ${
-          canScrollLeft ? "opacity-100" : "opacity-35"
-        }`}
-        aria-hidden
-      >
-        <svg
-          viewBox="0 0 24 24"
-          className="h-[18.4px] w-[18.4px]"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M15 6l-6 6 6 6" />
-        </svg>
-      </span>
-      <span
-        className={`pointer-events-none absolute top-1/2 right-0 flex -translate-y-1/2 items-center justify-center text-accent transition-opacity ${
-          canScrollRight ? "opacity-100" : "opacity-35"
-        }`}
-        aria-hidden
-      >
-        <svg
-          viewBox="0 0 24 24"
-          className="h-[18.4px] w-[18.4px]"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M9 6l6 6-6 6" />
-        </svg>
-      </span>
+      <DialChevron direction="right" visible={canScrollRight} />
     </div>
   );
 }
