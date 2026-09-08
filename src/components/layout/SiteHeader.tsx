@@ -15,9 +15,9 @@ export function SiteHeader() {
               KD
             </span>
             <span className="min-w-0 leading-tight">
-              <span className="block truncate font-gothic text-sm font-semibold tracking-tight sm:text-base">
+              <span className="block truncate font-gothic text-sm font-semibold tracking-tight">
                 <span className="md:hidden">{SITE.name}</span>
-                <span className="hidden md:inline">
+                <span className="hidden text-[20.8px] leading-tight md:inline">
                   {SITE.nameKo} <span className="font-normal text-muted">/</span> {SITE.name}
                 </span>
               </span>
