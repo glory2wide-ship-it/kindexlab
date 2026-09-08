@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -54,7 +55,7 @@ export function useActiveChannelOverride(): PostChannel | undefined {
 export function SetActiveChannel({ channel }: { channel: PostChannel }) {
   const { setChannel } = useContext(ActiveChannelContext);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setChannel(channel);
     return () => setChannel(undefined);
   }, [channel, setChannel]);

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CategoryDeskGrid } from "@/components/dashboard/CategoryDeskGrid";
+import { TREEMAP_FRAME_CLASS } from "@/components/dashboard/treemap-config";
 import { UnifiedMarketBoard } from "@/components/dashboard/UnifiedMarketBoard";
 import { LandingDeskHeader } from "@/components/layout/LandingDeskHeader";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
@@ -38,7 +39,7 @@ const FEATURED_BRIEFINGS = 7;
 function HeatmapSkeleton() {
   return (
     <div
-      className="h-[520px] animate-pulse rounded-xl border border-line/60 bg-panel md:h-[700px]"
+      className={`${TREEMAP_FRAME_CLASS} animate-pulse rounded-xl border border-line/60 bg-panel`}
       aria-hidden
     />
   );

@@ -35,7 +35,7 @@ export function FactTable({
                   key={header}
                   scope="col"
                   className={`border-b border-line px-4 py-3 text-left font-sans text-[12.4px] font-semibold uppercase tracking-wide text-muted max-md:px-2.5 max-md:py-2 max-md:text-[11px] max-md:normal-case max-md:tracking-normal md:whitespace-nowrap ${
-                    headerIndex === 0 ? "max-md:w-[32%]" : "max-md:w-[68%]"
+                    headerIndex === 0 ? "max-md:w-[32%]" : ""
                   }`}
                 >
                   {header}

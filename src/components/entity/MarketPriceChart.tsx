@@ -143,7 +143,7 @@ export function MarketPriceChart({
   ];
 
   return (
-    <section id="chart" className="scroll-mt-24 space-y-4">
+    <section id="chart" className="scroll-mt-28 space-y-4 md:scroll-mt-24">
       <div className="overflow-hidden rounded-2xl border border-line bg-panel">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line px-5 py-4 md:px-7">
           <div>
