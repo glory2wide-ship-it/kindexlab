@@ -42,20 +42,27 @@ async function ChannelDeskSection({ channel }: { channel: PostChannel }) {
 /**
  * Channel board body shared by `/[category]` and `/politics`.
  *
- * `CategoryChrome` already streams the H1. This page must not await desk data
- * at the top level or soft-nav waits on boards/quotes before painting chrome.
+ * Must stay a fragment (no wrapping div) so CategoryChrome flex `order`
+ * can place: ticker (1) → category chips (2) → desk/briefing (3).
+ * A wrapper with default order:0 pushed chips below the whole board.
  */
 export function ChannelBoardPageBody({ channel }: { channel: PostChannel }) {
   return (
-    <div className="space-y-8">
-      <Suspense fallback={<DeskFallback />}>
+    <>
+      <Suspense
+        fallback={
+          <div className="order-3 md:order-3">
+            <DeskFallback />
+          </div>
+        }
+      >
         <ChannelDeskSection channel={channel} />
       </Suspense>
-      <section className="border-t border-line pt-8">
+      <section className="order-3 space-y-8 border-t border-line pt-8 md:order-3">
         <Suspense fallback={<BriefingFallback />}>
           <ChannelBriefingPage channel={channel} titleLevel={2} />
         </Suspense>
       </section>
-    </div>
+    </>
   );
 }

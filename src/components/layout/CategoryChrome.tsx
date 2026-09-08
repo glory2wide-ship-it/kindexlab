@@ -13,7 +13,10 @@ export function CategoryChrome({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      {/* Mobile: ticker (from children) sits above this via flex order. */}
+      {/*
+        Mobile order: ticker (from children, order-1) → category chips (2) → desk (3).
+        Children must be fragments/Suspense — not a single order:0 wrapper.
+      */}
       <div className="order-2 space-y-2 md:order-1">
         <CategoryDeskHeader channel={channel} />
       </div>
