@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type DialOption<T extends string> = { id: T; label: string };
 
-const GUTTER_PX = 22;
-
 function DialChevron({
   direction,
   visible,
@@ -15,10 +13,9 @@ function DialChevron({
 }) {
   return (
     <span
-      className={`pointer-events-none z-10 flex h-full shrink-0 items-center justify-center bg-board text-accent transition-opacity ${
+      className={`pointer-events-none flex h-[28px] w-[14px] shrink-0 items-center justify-center text-accent transition-opacity ${
         visible ? "opacity-100" : "opacity-35"
       }`}
-      style={{ width: GUTTER_PX }}
       aria-hidden
     >
       <svg
@@ -41,10 +38,9 @@ function DialChevron({
 }
 
 /**
- * Horizontal snap dial: the item nearest the center is selected.
+ * Horizontal snap dial: selected value centered, neighbors visible left/right.
+ * Chevrons sit outside the label box so they never cover option text.
  * Mobile heatmap filter chrome only.
- * Chevrons live in opaque side gutters; the label lane is masked at the edges
- * so option text never sits under the arrows.
  */
 export function MobileDialPicker<T extends string>({
   options,
@@ -145,31 +141,22 @@ export function MobileDialPicker<T extends string>({
   }, [onChange, options, scrollToValue, updateEdges, value]);
 
   return (
-    <div
-      className="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-md border border-line bg-board"
-      style={{ height: 28 }}
-      aria-label={ariaLabel}
-    >
+    <div className="flex min-w-0 flex-1 items-center gap-0" aria-label={ariaLabel}>
       <DialChevron direction="left" visible={canScrollLeft} />
       <div
-        className="relative min-w-0 flex-1 overflow-hidden"
-        style={{
-          // Soft-clip neighbor labels before they reach the arrow gutters.
-          WebkitMaskImage:
-            "linear-gradient(to right, transparent 0%, #000 18%, #000 82%, transparent 100%)",
-          maskImage:
-            "linear-gradient(to right, transparent 0%, #000 18%, #000 82%, transparent 100%)",
-        }}
+        className="relative min-w-0 flex-1 overflow-hidden rounded-md border border-line bg-board"
+        style={{ height: 28 }}
       >
         <div
           ref={scrollerRef}
           className="flex h-full snap-x snap-mandatory items-center gap-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           style={{
-            scrollPaddingInline: "34%",
+            // Keep ~1/3 lane on each side so neighbors stay in view.
+            scrollPaddingInline: "33%",
             WebkitOverflowScrolling: "touch",
           }}
         >
-          <span className="w-[34%] shrink-0" aria-hidden />
+          <span className="w-[33%] shrink-0" aria-hidden />
           {options.map((opt) => {
             const active = opt.id === value;
             return (
@@ -184,8 +171,8 @@ export function MobileDialPicker<T extends string>({
                   onChange(opt.id);
                   scrollToValue(opt.id, "smooth");
                 }}
-                className={`snap-center shrink-0 px-2.5 text-center text-[11px] font-medium leading-none whitespace-nowrap ${
-                  active ? "text-ink" : "text-muted/70"
+                className={`snap-center shrink-0 px-1.5 text-center text-[11px] font-medium leading-none whitespace-nowrap ${
+                  active ? "text-ink" : "text-muted"
                 }`}
                 aria-pressed={active}
               >
@@ -193,11 +180,11 @@ export function MobileDialPicker<T extends string>({
               </button>
             );
           })}
-          <span className="w-[34%] shrink-0" aria-hidden />
+          <span className="w-[33%] shrink-0" aria-hidden />
         </div>
         {/* Center selection face — fill only, no border */}
         <div
-          className="pointer-events-none absolute inset-y-0.5 left-1/2 w-[44%] -translate-x-1/2 rounded bg-accent/25"
+          className="pointer-events-none absolute inset-y-0.5 left-1/2 w-[34%] -translate-x-1/2 rounded bg-accent/25"
           aria-hidden
         />
       </div>
