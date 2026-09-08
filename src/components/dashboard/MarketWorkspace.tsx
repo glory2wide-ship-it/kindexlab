@@ -431,7 +431,7 @@ export function MarketWorkspace({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-panel px-4 py-2 font-sans text-[10px] text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-panel px-4 py-2 font-sans text-[12px] text-muted">
         <span>
           상승 초록 · 하락 빨강 · 보합 차콜 · 히트맵 {sortedItems.length} · 리스트 {listItems.length}
           종목
