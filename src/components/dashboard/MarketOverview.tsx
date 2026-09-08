@@ -65,7 +65,7 @@ export function MarketOverview({
   const indices = Array.isArray(indicesProp) ? indicesProp : [];
   const mobileHidden = hideOnMobileIds?.length ? new Set(hideOnMobileIds) : null;
   const labelClass = enlargeDesktopTitleScore
-    ? "truncate text-[10px] text-muted sm:text-xs md:text-[18px]"
+    ? "truncate text-[10px] text-muted sm:text-xs md:text-[15.3px]"
     : "truncate text-[10px] text-muted sm:text-xs md:text-[14.4px]";
   const scoreClass = enlargeDesktopScoreExtra
     ? "kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.7625rem,calc(100cqi/3.824),3.0375rem)]"
