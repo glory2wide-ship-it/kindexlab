@@ -94,7 +94,7 @@ export function CategoryBoardRail({
 
   return (
     <section className="rounded-2xl border border-line bg-panel px-5 py-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <div className="mb-3 hidden flex-wrap items-baseline justify-between gap-2 md:flex">
         <div>
           <h2 className="text-sm font-semibold">랭킹·지수 보드</h2>
           {onSelect ? (
@@ -114,7 +114,7 @@ export function CategoryBoardRail({
           전체 보기 →
         </Link>
       </div>
-      <ul className="mt-3 flex flex-wrap gap-2">{tabs}</ul>
+      <ul className="flex flex-wrap gap-2">{tabs}</ul>
       {selected && !isDeskBoard(selected) ? (
         <p className="mt-2 text-[11px] text-muted">
           <Link href={boardPath(selected.slug)} className="text-accent hover:underline">

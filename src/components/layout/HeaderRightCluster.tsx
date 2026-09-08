@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
+import { HeaderRefreshCountdown } from "@/components/layout/HeaderRefreshCountdown";
 import { KstClock } from "@/components/layout/KstClock";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import {
@@ -42,26 +43,24 @@ const HeaderSearch = dynamic(
 );
 
 const LIVE_GREEN = "#22c55e";
-/** Previous 16.1px × 0.85 */
-const LIVE_FONT_SIZE = "13.685px";
 
 /** Green LIVE pill: dot + label blink together on a 3s cycle. */
 function LiveBadge() {
   return (
     <span
-      className="header-live-blink inline-flex shrink-0 rounded-full border-none bg-emerald-50 px-2.5 py-0.5 font-sans dark:bg-emerald-950/40"
+      className="header-live-blink inline-flex shrink-0 rounded-full border-none bg-emerald-50 px-2 py-0.5 font-sans dark:bg-emerald-950/40 md:px-2.5"
       aria-label="실시간 집계"
     >
       <span className="flex w-full items-center justify-center gap-1 text-center">
         <span
-          className="inline-flex h-[8.5px] w-[8.5px] shrink-0 rounded-full"
+          className="inline-flex h-[7.2px] w-[7.2px] shrink-0 rounded-full md:h-[8.5px] md:w-[8.5px]"
           style={{ backgroundColor: LIVE_GREEN }}
           aria-hidden
         />
         <span
           data-live-label
-          className="font-bold tracking-[0.1em]"
-          style={{ color: LIVE_GREEN, fontSize: LIVE_FONT_SIZE }}
+          className="font-bold tracking-[0.1em] text-[11.63px] md:text-[13.685px]"
+          style={{ color: LIVE_GREEN }}
         >
           LIVE
         </span>
@@ -118,7 +117,7 @@ function HeaderClockSlot() {
 
 /**
  * Desktop (md+): search + clock + LIVE + theme (unchanged).
- * Mobile: compact search + LIVE only (clock/theme live in MobileMenuSheet).
+ * Mobile: search + LIVE + MM:SS countdown + theme.
  */
 export function HeaderRightCluster() {
   return (
@@ -128,11 +127,10 @@ export function HeaderRightCluster() {
     >
       <HeaderSearch />
       <HeaderClockSlot />
-      <div className="flex shrink-0 items-center gap-1.5 md:gap-2.5">
+      <div className="flex shrink-0 items-center gap-1 md:gap-2.5">
         <LiveBadge />
-        <div className="hidden md:block">
-          <ThemeToggle />
-        </div>
+        <HeaderRefreshCountdown />
+        <ThemeToggle />
       </div>
     </div>
   );

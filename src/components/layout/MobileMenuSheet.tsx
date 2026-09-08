@@ -4,12 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { KstClock } from "@/components/layout/KstClock";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { POST_CHANNELS } from "@/lib/posts/channels";
 
 /**
  * Mobile-only site menu (md+ unused).
- * Holds channel links, KST clock, and theme toggle so the header stays one row.
+ * Holds channel links and KST clock so the header stays one row.
+ * Theme toggle lives in the mobile header next to LIVE / countdown.
  */
 export function MobileMenuSheet({
   open,
@@ -87,12 +87,6 @@ export function MobileMenuSheet({
             <p className="pb-2 text-[11px] font-semibold tracking-wide text-muted">한국 표준시</p>
             <div className="flex justify-center rounded-lg bg-board px-3 py-2">
               <KstClock />
-            </div>
-          </div>
-          <div>
-            <p className="pb-2 text-[11px] font-semibold tracking-wide text-muted">테마</p>
-            <div className="flex justify-center">
-              <ThemeToggle />
             </div>
           </div>
         </div>

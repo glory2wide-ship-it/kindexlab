@@ -32,7 +32,7 @@ export function ThemeToggle() {
 
   return (
     <div
-      className="relative flex shrink-0 items-center justify-center rounded-full bg-[#e2e8f0] p-0.5 shadow-inner dark:bg-[#334155]"
+      className="relative flex origin-center scale-[0.85] shrink-0 items-center justify-center rounded-full bg-[#e2e8f0] p-0.5 shadow-inner dark:bg-[#334155] md:scale-100"
       style={{ width: TRACK_WIDTH_PX, height: TRACK_HEIGHT_PX }}
       role="group"
       aria-label="테마 전환"

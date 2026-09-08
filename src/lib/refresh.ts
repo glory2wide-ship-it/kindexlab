@@ -16,9 +16,10 @@ export function formatRefreshCountdown(totalSeconds: number): string {
   return `Update ${min} min ${sec} sec`;
 }
 
+/** Compact timer for mobile header — e.g. "02:55". */
 export function formatRefreshClock(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   const min = Math.floor(s / 60);
   const sec = s % 60;
-  return `${min}:${String(sec).padStart(2, "0")}`;
+  return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }

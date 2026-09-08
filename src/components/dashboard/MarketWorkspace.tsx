@@ -176,13 +176,32 @@ export function MarketWorkspace({
   const demoKey = filterKey(gender, age, region);
   const demoActive = gender !== "all" || age !== "all" || region !== "all";
   const [filterOpen, setFilterOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const sync = () => setIsMobileViewport(!mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   const timeframeLabel = TIMEFRAMES.find((option) => option.id === timeframe)?.label ?? timeframe;
   const categoryLabel = categories.find((item) => item.id === category)?.label ?? "종합";
+  const genderLabel = gender === "all" ? "전체" : filterLabel(gender, "all", "all");
+  const ageLabel = age === "all" ? "전체" : filterLabel("all", age, "all");
   const filterSummaryParts = [
     hideTimeframes ? null : timeframeLabel,
     hideCategoryTabs || category === "all" ? null : categoryLabel,
     demoActive ? filterLabel(gender, age, region) : null,
   ].filter(Boolean) as string[];
+  const filterButtonSummary = [
+    hideTimeframes ? null : timeframeLabel,
+    genderLabel,
+    ageLabel,
+  ]
+    .filter(Boolean)
+    .join(" / ");
 
   // Board tiles link straight to /ranking/[slug]; the analysis column lives there.
   return (
@@ -221,17 +240,22 @@ export function MarketWorkspace({
             >
               시세 산출 방식
             </button>
-            <HeatmapCountdown
-              intervalSec={refreshIntervalSec}
-              refreshing={refreshing}
-              onExpire={onRefresh}
-            />
+            <div className="hidden md:inline-flex">
+              <HeatmapCountdown
+                intervalSec={refreshIntervalSec}
+                refreshing={refreshing}
+                onExpire={isMobileViewport ? undefined : onRefresh}
+              />
+            </div>
             <button
               type="button"
               onClick={() => setFilterOpen(true)}
-              className="inline-flex min-h-10 items-center rounded-md border border-line px-3 text-xs font-medium text-ink md:hidden"
+              className="inline-flex min-h-10 max-w-[11.5rem] flex-col items-start justify-center rounded-md border border-line px-2.5 py-1 text-left text-ink md:hidden"
             >
-              필터
+              <span className="text-[11px] font-semibold leading-tight">필터 · {filterButtonSummary}</span>
+              <span className="text-[9px] leading-tight text-muted">
+                3분·5분·일봉 / 남성·여성 / 10대·20대·30대
+              </span>
             </button>
           </div>
         </div>
