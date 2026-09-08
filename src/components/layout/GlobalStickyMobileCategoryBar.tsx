@@ -56,7 +56,7 @@ export function GlobalStickyMobileCategoryBar() {
           </div>
         ) : (
           <div
-            className="flex justify-end"
+            className="flex justify-center"
             data-sticky-mobile-category-sections
           >
             <SectionTabSearch inputId="section-tab-search-mobile" />

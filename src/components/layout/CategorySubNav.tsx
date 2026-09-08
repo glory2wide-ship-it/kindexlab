@@ -67,7 +67,7 @@ export function CategorySubNav({
 
   const nav = (
     <nav
-      className={`category-sub-nav flex min-w-0 flex-1 gap-1 overflow-x-auto text-sm ${embedded ? "ml-0" : ""}`}
+      className="category-sub-nav flex min-w-0 shrink-0 gap-1 overflow-x-auto text-sm"
       aria-label={meta ? `${meta.label} 서브 메뉴` : "전체 서브 메뉴"}
     >
       {CHANNEL_SECTIONS.map((item) => {
@@ -101,7 +101,7 @@ export function CategorySubNav({
 
   if (embedded) {
     return (
-      <div className="flex min-w-0 items-center gap-1.5">
+      <div className="flex min-w-0 items-center justify-center gap-1.5">
         {nav}
         {search}
       </div>
@@ -109,12 +109,14 @@ export function CategorySubNav({
   }
 
   return (
-    <div className="category-sub-nav-bar flex flex-wrap items-center gap-3 py-2">
+    <div className="category-sub-nav-bar flex w-full flex-wrap items-center justify-between gap-3 py-2">
       <DeskEyebrow variant="subnav" className="category-sub-nav-eyebrow shrink-0">
         {meta?.eyebrow ?? "ALL DESKS"}
       </DeskEyebrow>
-      {nav}
-      {search}
+      <div className="flex min-w-0 shrink-0 items-center justify-end gap-2">
+        {nav}
+        {search}
+      </div>
     </div>
   );
 }
