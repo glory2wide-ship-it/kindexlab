@@ -89,7 +89,7 @@ export const POST_CHANNELS: {
     indexTitle: "여행/맛집",
     description:
       "여행 정부지원금, 국내 여행, 해외 여행, 지역별 주말 나들이, 지역별 음식/맛집을 랭킹 보드로 읽습니다.",
-    indexTitleDesktop: "차트로 만나는 대한민국 미식·여행 트렌드! 여행·맛집 지수",
+    indexTitleDesktop: "차트로 만나는 미식·여행 트렌드! 여행·맛집 지수",
     descriptionDesktop:
       "국내외 여행지, 미식 트렌드, 정부 여행 지원금 혜택까지 가장 뜨거운 핫이슈를 확인하세요.",
   },
