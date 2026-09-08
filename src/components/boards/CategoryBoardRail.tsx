@@ -39,7 +39,7 @@ export function CategoryBoardRail({
     : "border-line text-muted hover:text-ink";
 
   const tabShell =
-    "inline-flex w-full items-center justify-center rounded-md border px-1 py-1.5 text-center text-[10px] leading-none whitespace-nowrap md:inline-block md:w-auto md:px-3 md:text-xs md:leading-normal md:whitespace-normal";
+    "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[11px] leading-none whitespace-nowrap md:inline-block md:w-auto md:px-3 md:text-xs md:leading-normal md:whitespace-normal";
 
   const orderedKeys = [
     ...boards.slice(0, insertAt).map((board) => board.slug),

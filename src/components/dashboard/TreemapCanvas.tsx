@@ -211,13 +211,20 @@ export function TreemapView({
           const sourceSize = Math.max(8, rankSize - 2) * 1.15;
           const showSource = showSourceCaptions && rank <= 10 && Boolean(sourceLabel) && w >= 52 && h >= 28;
           const displayTitle = isHeadline ? summarizeHeadlineTitle(entity.name) : (label?.name ?? lines.title);
-          /** Mobile: main title −25%; rate/pt −30%. Desktop unchanged. */
-          const titleScale = isMobileViewport ? 0.75 : 1;
-          const rateScale = isMobileViewport ? 0.7 : 1;
-          const nameFontSize = (label?.nameSize ?? 16) * titleScale;
-          const headlineFontSize =
-            headlineTitleSize(w, h) * (rank >= 8 && rank <= 15 ? 0.8 : 1) * titleScale;
-          const rateFontSize = (label?.rateSize ?? 16.5) * rateScale;
+          /**
+           * Mobile title: 1–7 → +20%, 8–12 → +30% (undo layout’s 8–15 shrink first).
+           * Mobile rate/pt: −15%. Desktop unchanged.
+           */
+          const layoutNameSize = label?.nameSize ?? 16;
+          const nameBase =
+            isMobileViewport && rank >= 8 && rank <= 15 ? layoutNameSize / 0.8 : layoutNameSize;
+          const mobileTitleBoost =
+            !isMobileViewport ? 1 : rank <= 7 ? 1.2 : rank <= 12 ? 1.3 : 1;
+          const nameFontSize = nameBase * mobileTitleBoost;
+          const headlineFontSize = isMobileViewport
+            ? headlineTitleSize(w, h) * mobileTitleBoost
+            : headlineTitleSize(w, h) * (rank >= 8 && rank <= 15 ? 0.8 : 1);
+          const rateFontSize = (label?.rateSize ?? 16.5) * (isMobileViewport ? 0.85 : 1);
           const href = entityHref(entity);
           const rankHeaderWidth = Math.min(164, w - 4);
           const rankHeaderX = isMobileViewport
