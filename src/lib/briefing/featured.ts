@@ -5,30 +5,28 @@ import { POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 import type { BriefingArticle } from "@/lib/types";
 
-/** Drop anything that is not the current KST edition before rendering. */
+/**
+ * Prefer today's KST edition; when the daily job has not landed yet, keep
+ * whatever `getTodaysBriefings` already selected (latest successful slot).
+ */
 export function filterLiveBriefings(
   articles: BriefingArticle[],
   editionDate = kstDateString(),
 ): BriefingArticle[] {
-  return articles.filter((item) => item.editionDate === editionDate);
-}
-
-function assertTodaysEditions(articles: BriefingArticle[], today: string): void {
-  const stale = articles.filter((item) => item.editionDate !== today);
-  if (!stale.length) return;
-  const slugs = stale.map((item) => `${item.slug} (${item.editionDate})`).join(", ");
-  throw new Error(`Featured briefings must be today's edition (${today}); stale: ${slugs}`);
+  const todays = articles.filter((item) => item.editionDate === editionDate);
+  return todays.length ? todays : articles;
 }
 
 /**
- * Today's live briefings across every desk, drawn round-robin.
+ * Live desk briefings across every channel, drawn round-robin for the landing.
  *
- * The landing rail is titled "Update 브리핑", so it must reflect the
- * current KST edition — not archived premium columns from generated.json.
+ * Uses `getTodaysBriefings` (today first, then last successful edition per desk)
+ * so the rail stays populated after midnight KST until today's job finishes —
+ * matching channel `/briefing` pages. Never pulls premium columns from
+ * generated.json.
  */
 export async function loadFeaturedBriefings(limit: number): Promise<BriefingArticle[]> {
-  const today = kstDateString();
-  const articles = filterLiveBriefings(await getTodaysBriefings(), today);
+  const articles = filterLiveBriefings(await getTodaysBriefings());
   if (!articles.length) return [];
 
   const pools = new Map<PostChannel, BriefingArticle[]>();
@@ -62,6 +60,5 @@ export async function loadFeaturedBriefings(limit: number): Promise<BriefingArti
     if (!advanced) break;
   }
 
-  assertTodaysEditions(picked, today);
   return picked;
 }

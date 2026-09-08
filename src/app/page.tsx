@@ -110,7 +110,7 @@ async function HomeBriefingSection() {
   );
   return (
     <>
-      {/* TODAY'S DESK: live KST briefings only — see landing:check */}
+      {/* Live desk briefings (today, or last successful edition until cron runs) */}
       <BriefingRail articles={briefings} />
       <ContentSlot placement="footer" label="종합 지수" adFormat="auto" />
     </>
