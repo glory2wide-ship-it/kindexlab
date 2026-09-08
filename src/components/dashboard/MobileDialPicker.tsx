@@ -151,30 +151,30 @@ export function MobileDialPicker<T extends string>({
         className="pointer-events-none absolute inset-y-0.5 left-1/2 w-[38%] -translate-x-1/2 rounded bg-accent/25"
         aria-hidden
       />
-      {/* Edge fades + chevrons hint horizontal swipe */}
+      {/* Edge fades + larger swipe chevrons */}
       <div
-        className={`pointer-events-none absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-board to-transparent transition-opacity ${
-          canScrollLeft ? "opacity-100" : "opacity-40"
+        className={`pointer-events-none absolute inset-y-0 left-0 w-7 bg-gradient-to-r from-board via-board/90 to-transparent transition-opacity ${
+          canScrollLeft ? "opacity-100" : "opacity-50"
         }`}
         aria-hidden
       />
       <div
-        className={`pointer-events-none absolute inset-y-0 right-0 w-5 bg-gradient-to-l from-board to-transparent transition-opacity ${
-          canScrollRight ? "opacity-100" : "opacity-40"
+        className={`pointer-events-none absolute inset-y-0 right-0 w-7 bg-gradient-to-l from-board via-board/90 to-transparent transition-opacity ${
+          canScrollRight ? "opacity-100" : "opacity-50"
         }`}
         aria-hidden
       />
       <span
-        className={`pointer-events-none absolute top-1/2 left-0.5 -translate-y-1/2 text-[9px] leading-none text-muted transition-opacity ${
-          canScrollLeft ? "opacity-80" : "opacity-30"
+        className={`pointer-events-none absolute top-1/2 left-0 flex h-[22px] w-[22px] -translate-y-1/2 items-center justify-center rounded-full border border-line bg-accent text-[16px] font-bold leading-none text-black shadow transition-opacity ${
+          canScrollLeft ? "opacity-100" : "opacity-40"
         }`}
         aria-hidden
       >
         ‹
       </span>
       <span
-        className={`pointer-events-none absolute top-1/2 right-0.5 -translate-y-1/2 text-[9px] leading-none text-muted transition-opacity ${
-          canScrollRight ? "opacity-80" : "opacity-30"
+        className={`pointer-events-none absolute top-1/2 right-0 flex h-[22px] w-[22px] -translate-y-1/2 items-center justify-center rounded-full border border-line bg-accent text-[16px] font-bold leading-none text-black shadow transition-opacity ${
+          canScrollRight ? "opacity-100" : "opacity-40"
         }`}
         aria-hidden
       >
