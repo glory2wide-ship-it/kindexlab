@@ -30,7 +30,7 @@ export function SiteHeader() {
           {/* Desktop channel nav — unchanged placement */}
           <HeaderNav />
 
-          {/* Mobile: LIVE + theme + search (far right) · Desktop: full right cluster */}
+          {/* Mobile: LIVE + theme · Desktop: clock + LIVE + theme (search on section tabs) */}
           <div className="ml-auto flex min-w-0 items-center gap-1.5 md:contents">
             <HeaderRightCluster />
           </div>

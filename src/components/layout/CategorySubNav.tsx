@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useRouter, useSelectedLayoutSegment } from "next/navigation";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
@@ -14,6 +15,24 @@ import {
 } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 
+const SectionTabSearch = dynamic(
+  () => import("@/components/layout/HeaderSearch").then((mod) => mod.HeaderSearch),
+  {
+    ssr: false,
+    loading: () => (
+      <span
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line bg-panel text-ink md:h-9 md:w-9"
+        aria-hidden
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-3-3" />
+        </svg>
+      </span>
+    ),
+  },
+);
+
 function sectionFromPathname(pathname: string, channel: PostChannel): ChannelSectionId {
   const base = `/${channel}`;
   if (pathname === base || pathname === `${base}/`) return "board";
@@ -25,11 +44,15 @@ function sectionFromPathname(pathname: string, channel: PostChannel): ChannelSec
 export function CategorySubNav({
   channel,
   embedded = false,
+  searchInputId = "section-tab-search",
+  showSearch = true,
 }: {
   /** When omitted, links target the landing (전체) site sections. */
   channel?: PostChannel;
   /** When true, render only the pill row (mobile sticky stack). */
   embedded?: boolean;
+  searchInputId?: string;
+  showSearch?: boolean;
 }) {
   const pathname = usePathname() || "/";
   const segment = useSelectedLayoutSegment();
@@ -44,7 +67,7 @@ export function CategorySubNav({
 
   const nav = (
     <nav
-      className={`category-sub-nav flex gap-1 overflow-x-auto text-sm ${embedded ? "ml-0" : ""}`}
+      className={`category-sub-nav flex min-w-0 flex-1 gap-1 overflow-x-auto text-sm ${embedded ? "ml-0" : ""}`}
       aria-label={meta ? `${meta.label} 서브 메뉴` : "전체 서브 메뉴"}
     >
       {CHANNEL_SECTIONS.map((item) => {
@@ -72,8 +95,17 @@ export function CategorySubNav({
     </nav>
   );
 
+  const search = showSearch ? (
+    <SectionTabSearch inputId={searchInputId} />
+  ) : null;
+
   if (embedded) {
-    return nav;
+    return (
+      <div className="flex min-w-0 items-center gap-1.5">
+        {nav}
+        {search}
+      </div>
+    );
   }
 
   return (
@@ -82,6 +114,7 @@ export function CategorySubNav({
         {meta?.eyebrow ?? "ALL DESKS"}
       </DeskEyebrow>
       {nav}
+      {search}
     </div>
   );
 }
