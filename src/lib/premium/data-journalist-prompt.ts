@@ -4,22 +4,27 @@
  * - ~20% light originality (why-now · reader meaning · careful outlook)
  *
  * Outline: ❶ 오늘의 결론 / ❷ 왜 지금 관심이 높아졌나 / ❸ [독자 소제목] / ❹ [전망 소제목]
+ *          / ❺ KinDex 데이터가 보여주는 특징 (한 문단) → takeaways「핵심 요약」직전
  * KinDex 숫자는 산출 강의가 아니라 관심·화제 트렌드 해석.
  */
 import { TREND_ANALYSIS_DISCLAIMER } from "@/lib/editorial/disclaimer";
 import {
   editionFreshnessRules,
   editorialGroundingRules,
+  ensureKindexFeatureSectionPlacement,
+  isKindexFeatureSectionHeading,
+  KINDEX_FEATURE_SECTION_HEADING,
   tenseConsistencyRules,
 } from "@/lib/editorial/tense-rules";
 import { bannedPhraseReminder } from "@/lib/premium/prompt";
 import { resolveChannelEditorPersona } from "@/lib/premium/briefing-editorial";
 import { formatNumberedH2 } from "@/lib/premium/seo-format";
 
-/** Slots 1·2 stay fixed (plus ❶❷); slots 3·4 are adaptive (plus ❸❹). */
+/** Slots 1·2·5 stay fixed (❶❷❺); slots 3·4 are adaptive (❸❹). */
 export const HYBRID_FIXED_HEADINGS = {
   conclusion: "오늘의 결론",
   whyNow: "왜 지금 관심이 높아졌나",
+  kindexFeature: KINDEX_FEATURE_SECTION_HEADING,
   /** @deprecated Awkward — never force into published copy. */
   outlook: "앞으로 지켜볼 흐름",
 } as const;
@@ -154,58 +159,64 @@ const LEGACY_ADSENSE_CORE = `[콘텐츠 밀도 — 팩트 보도 이후 필수 (
 2. How(실용 인사이트): 독자의 일상·소비·시청·구독·지갑에 미치는 영향과, 확인·비교·판단에 쓸 구체 요령을 본문 서술로 녹이세요. '독자 체크리스트'·'확인해야 할 N가지' 목록형 패딩은 금지입니다.
 3. 데이터 비교 표: 핵심 지표·일정·장단·수치·비교 대상을 table(헤더 3열+, 행 2~4)로 시각화하세요. caption은 '팩트 체크' 또는 '핵심 팩트 요약'만 사용하세요.
 4. 전망·파급: RAG·공개 일정·관심 신호에 비춰 앞으로의 전개를 신중히 제시하세요. 확인되지 않은 수치·확정 발표를 지어내지 마세요.
-5. 위 Why·How·전망 밀도는 아래 [최종 출력 섹션] 네 칸에 녹이세요. 표·FAQ는 본문을 보완합니다.`;
+5. 위 Why·How·전망 밀도는 아래 [최종 출력 섹션] ❶~❹에 녹이고, KinDex 숫자 해석은 ❺ 한 문단에 모으세요. 표·FAQ는 본문을 보완합니다.`;
 
-const HYBRID_SECTION_OUTPUT = `[최종 출력 섹션 — sections 정확히 4개, headingLevel 2]
-heading 앞에 반드시 ❶❷❸❹ 번호를 붙이세요 (레거시 애드센스 칼럼과 동일).
+const HYBRID_SECTION_OUTPUT = `[최종 출력 섹션 — sections 정확히 5개, headingLevel 2]
+heading 앞에 반드시 ❶❷❸❹❺ 번호를 붙이세요 (레거시 애드센스 칼럼과 동일).
+❺ 다음에 오는 takeaways가 화면의 「핵심 요약」이 됩니다. ❺는 그 직전 본문 소제목입니다.
 
 1. ❶ 오늘의 결론  ← 본문 역할 고정, 번호 필수
    - 오늘 뉴스와 KinDex 관심 데이터에서 가장 중요한 변화와 의미를 2~4문단으로.
-   - "A가 1위"만으로 끝내지 마세요. 순위·변동 숫자가 있으면 관심·화제 트렌드(방향·속도·상대 위치)로 해석하세요. 산출 공식 강의는 금지.
+   - "A가 1위"만으로 끝내지 마세요. 자세한 숫자 트렌드 해석은 ❺에 모으세요.
 2. ❷ 왜 지금 관심이 높아졌나  ← 본문 역할 고정, 번호 필수
    - 사건·뉴스·사회적 맥락 분석. RAG에 확인된 일정·보도만 인과로 연결하세요.
 3. ❸ [독자·주제별 자연 소제목]  ← "사용자에게 의미하는 변화" 금지
    - 예: "❸ 투자자에게 의미하는 변화" / "❸ 지원금을 신청하는 방법" / "❸ 팬들에게 끼치는 영향"
-   - 본문: 해당 독자 관점의 실질 핵심 + KinDex 숫자가 보여주는 관심 트렌드. 목록형 체크리스트 금지.
+   - 본문: 해당 독자 관점의 실질 핵심. 목록형 체크리스트 금지. KinDex 숫자 해석은 ❺로.
 4. ❹ [글에 맞는 전망 소제목]  ← "앞으로 지켜볼 흐름" 금지. 주제별로 새로 지으세요.
    - 예: 지원금 → "❹ 다음 모집·쿠폰 일정을 확인하는 법"
    - 예: 주식 → "❹ 실적·수급에서 확인할 포인트"
    - 예: 팬덤 → "❹ 다음 일정과 반응을 보는 법"
    - 예: 여행·맛집 → "❹ 예약·성수기 전에 확인할 변수"
    - 본문: 뉴스와 데이터 기반의 신중 전망. "가능성이 있습니다", "확인이 필요합니다" 수준.
-   - 본 섹션 마지막 문단의 마지막 문장은 필수 디스클레이머로 끝내세요.`;
+   - 본 섹션 마지막 문단의 마지막 문장은 필수 디스클레이머로 끝내세요.
+5. ❺ KinDex 데이터가 보여주는 특징  ← 제목 고정, 번호 필수, paragraphs 정확히 1개
+   - 순위·변동·관심·열기 숫자가 가리키는 관심·화제 특징만 한 문단으로 해석하세요.
+   - 산출 공식·점수 척도 강의 금지. 입력에 없는 수치 금지.
+   - takeaways(핵심 요약) 바로 앞에 둡니다.`;
 
 const LEGACY_CRAFT_RULES = `[작성 및 서식 엄격 규칙]
 1. 문장 종결: 모든 서술 문장을 높임말(합니다체: ~습니다/~합니다/~됩니다/~있습니다/~없습니다)로 끝내고 마침표(.)를 찍으세요. 의문문은 '~까요?'만 허용. '~다/~했다/~이다/~된다' 해라체 금지.
 2. 문체 리듬: 동일 종결(~습니다 등)이 연속 3회 나오지 않도록 '~합니다/~됩니다/~았습니다/~고 있습니다' 등으로 바꾸세요.
 3. Anti-AI 패턴 배제: "결론적으로", "요약하자면", "이 글에서는", "주목받고 있다", "귀추가 주목된다", "다양한 관점이 존재한다", "상황을 지켜볼 필요가 있다", "알아보았습니다", "살펴보겠습니다", "긍정적인 반응을 보였다", "새로운 패러다임", "혁신을 선보", "심층 분석", "주목할 만한", "화제가 되고", "관심이 집중" 등 상투어 금지.
-4. 문장 길이: 한 문장은 공백 제외 45~90자 권장(최소 40자). 20~35자 단문 연속 금지. 문단당 2~4문장, 한 문단에 5문장 이상 금지.
+4. 문장 길이: 한 문장은 공백 제외 45~90자 권장(최소 40자). 20~35자 단문 연속 금지. 문단당 2~4문장, 한 문단에 5문장 이상 금지. ❺만 예외로 한 문단(여러 문장 가능).
 5. 수치·객관성: 모호한 감상 대신 날짜·기관명·비율·확인된 근거로 서술하세요.
-6. 팩트 기반: [최신 뉴스 데이터]가 1차 근거입니다. KinDex 관심 신호는 숫자가 가리키는 트렌드 해석으로 보조합니다. 없는 사건·수치를 지어내지 마세요.
+6. 팩트 기반: [최신 뉴스 데이터]가 1차 근거입니다. KinDex 관심 신호는 ❺에서 숫자가 가리키는 트렌드 해석으로 보조합니다. 없는 사건·수치를 지어내지 마세요.
 7. 할루시네이션 방지: 다의어·접두어 일치만으로 이종 산업 소식을 한 인과로 묶지 마세요.
 8. 메타 누설 금지: 글자 수, 읽는 시간, SEO, AdSense, '애드센스 고품질 본문 기준 충족', LLM 서문을 본문에 넣지 마세요.
-9. 소제목: ❶❷❸❹ 번호 필수. 1·2는 고정 문구, 3·4는 독자·주제별 자연어. "사용자에게 의미하는 변화"·"앞으로 지켜볼 흐름" 금지.`;
+9. 소제목: ❶❷❸❹❺ 번호 필수. 1·2·5는 고정 문구, 3·4는 독자·주제별 자연어. "사용자에게 의미하는 변화"·"앞으로 지켜볼 흐름" 금지.`;
 
 const LEGACY_SEO_BLOCK = `[애드센스·검색 SEO]
 1. 분량: 공백 제외 목표 1,000~1,800자(파이프라인 floor/ceiling을 우선). 밀도는 패딩이 아니라 분석으로 채우세요.
-2. H1=title 하나. sections는 정확히 4개(H2, heading에 ❶❷❸❹). FAQ 질문은 H3 개념.
+2. H1=title 하나. sections는 정확히 5개(H2, heading에 ❶❷❸❹❺). FAQ 질문은 H3 개념.
 3. 포커스 키워드(브래킷 부처명 제외한 핵심어)를 문서 전체에서 5~6회만 자연 배치. 7회 초과·소제목·표·FAQ 질문 과반복 금지.
 4. table 1개 + FAQ 3개+(답변 각 2~3문장).
 5. externalLink.href는 제공된 뉴스 URL만. internalLink.href는 실제 경로만 (/board/…, /{channel}/briefing, /ranking/…). /search?q= 금지.
-6. takeaways 3개 = 독자가 바로 가져갈 실행·판단 포인트(높임말). 목록 패딩 금지.
+6. takeaways 3개 = 독자가 바로 가져갈 실행·판단 포인트(높임말). 목록 패딩 금지. 화면에서는 ❺ 다음 「핵심 요약」.
 7. JSON-LD는 파이프라인이 조립하므로 script 태그를 본문에 넣지 마세요.`;
 
 /**
- * ~20%: light originality — KinDex meaning only where the outline asks for it.
+ * ~20%: light originality — KinDex meaning concentrated in section ❺.
  */
 const LIGHT_JOURNALIST_BLOCK = `[독창 앵글 — 가벼운 보강만 · 비중 ≈20%]
-네 섹션 안에서만 아래를 짧게 반영하세요.
-1) 오늘 뉴스 + KinDex 관심에서 무엇이 가장 중요한가
-2) 왜 지금 관심이 붙었는가 (사건·사회 맥락)
-3) 이 글의 실제 독자(투자자·소비자·신청자·팬 등)에게 무엇이 달라지는가
-4) 앞으로 어떤 일정·변수·반응을 확인하면 좋은가 (상투적 "지켜볼 흐름" 금지)
+❶~❹에는 뉴스·독자·전망을, ❺에는 KinDex 숫자 해석만 짧게 반영하세요.
+1) 오늘 뉴스 + KinDex 관심에서 무엇이 가장 중요한가 (❶)
+2) 왜 지금 관심이 붙었는가 (사건·사회 맥락) (❷)
+3) 이 글의 실제 독자(투자자·소비자·신청자·팬 등)에게 무엇이 달라지는가 (❸)
+4) 앞으로 어떤 일정·변수·반응을 확인하면 좋은가 (❹, 상투적 "지켜볼 흐름" 금지)
+5) KinDex 순위·변동·관심이 보여주는 특징 한 문단 (❺, 핵심 요약 직전)
 금지: KinDex/킨덱스 산출 방식, 점수 척도(100점·999점 등) 장문 해설, 등락률·시세 나열, 순위표를 그대로 문장으로 옮기기.
-KinDex 숫자가 있으면 관심의 방향·속도·상대 위치를 해석하세요. 입력에 없는 수치는 만들지 마세요.`;
+KinDex 숫자가 있으면 관심의 방향·속도·상대 위치를 ❺에서 해석하세요. 입력에 없는 수치는 만들지 마세요.`;
 
 /**
  * Hybrid system prompt used when `dataJournalist: true` (오늘의 분석 / heatmap columns).
@@ -245,8 +256,9 @@ export function buildHybridAnalysisSystemPrompt(channel?: string): string {
 - sections[1].heading="❷ ${HYBRID_FIXED_HEADINGS.whyNow}"
 - sections[2].heading="❸ …" 독자·주제 자연 소제목 (예: "❸ ${readerHint}"). "${HYBRID_LEGACY_READER_HEADING}" 금지.
 - sections[3].heading="❹ …" 전망 자연 소제목 (예: "❹ ${outlookHint}"). "${HYBRID_LEGACY_OUTLOOK_HEADING}" 금지.
-- 각 섹션 paragraphs 3~4개.
-- 본문 마지막 문단의 마지막 문장은 반드시: ${TREND_ANALYSIS_DISCLAIMER}`,
+- sections[4].heading="❺ ${HYBRID_FIXED_HEADINGS.kindexFeature}" ← 제목 고정, paragraphs 정확히 1개, takeaways(핵심 요약) 직전
+- ❶~❹ 각 섹션 paragraphs 3~4개. ❺만 paragraphs 1개.
+- ❹ 마지막 문단의 마지막 문장은 반드시: ${TREND_ANALYSIS_DISCLAIMER}`,
   ]
     .join("\n\n")
     .trim();
@@ -283,16 +295,20 @@ function isAwkwardOutlookHeading(heading: string): boolean {
 }
 
 /**
- * Normalize hybrid outline: fix slots 1·2; repair 3·4; prefix ❶❷❸❹.
+ * Normalize hybrid outline: fix slots 1·2·5; repair 3·4; prefix ❶❷❸❹❺.
+ * ❺ KinDex feature section is always one paragraph, immediately before takeaways/핵심 요약.
  */
 export function applyHybridAnalysisHeadings<T extends { heading: string; headingLevel?: 2 | 3; paragraphs: string[] }>(
   sections: T[],
   context?: { channel?: string; categoryHint?: string; focusKeyword?: string },
 ): Array<T & { heading: string; headingLevel: 2 }> {
-  const cleaned = sections.map((section) => ({
-    ...section,
-    heading: scrubHeadingNoise(section.heading),
-  }));
+  const placed = ensureKindexFeatureSectionPlacement(sections);
+  const cleaned = placed
+    .filter((section) => !section.heading.includes("핵심 요약"))
+    .map((section) => ({
+      ...section,
+      heading: scrubHeadingNoise(section.heading),
+    }));
   const taken = new Set<number>();
   const fallbackReader = resolveHybridReaderHeading(context ?? {});
   const fallbackOutlook = resolveHybridOutlookHeading(context ?? {});
@@ -322,14 +338,16 @@ export function applyHybridAnalysisHeadings<T extends { heading: string; heading
     (heading) => heading === HYBRID_FIXED_HEADINGS.whyNow || heading.includes("왜 지금"),
     1,
   );
+  const kindexSource = pick((heading) => isKindexFeatureSectionHeading(heading), cleaned.length - 1);
   const readerSource = pick((heading) => {
     if (!heading) return false;
     if (heading === HYBRID_FIXED_HEADINGS.conclusion || heading.includes("오늘의 결론")) return false;
     if (heading === HYBRID_FIXED_HEADINGS.whyNow || heading.includes("왜 지금")) return false;
+    if (isKindexFeatureSectionHeading(heading)) return false;
     if (AWKWARD_OUTLOOK_HEADINGS.some((item) => heading === item || heading.includes("지켜볼"))) return false;
     return true;
   }, 2);
-  const outlookSource = pick(() => true, 3);
+  const outlookSource = pick((heading) => !isKindexFeatureSectionHeading(heading), 3);
 
   const readerHeading =
     readerSource && !isAwkwardReaderHeading(readerSource.heading)
@@ -341,6 +359,18 @@ export function applyHybridAnalysisHeadings<T extends { heading: string; heading
       : fallbackOutlook;
 
   const emptyParas = ["관련 확인된 사실이 제한적입니다."];
+  const kindexParas = (() => {
+    const merged = (kindexSource?.paragraphs ?? [])
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    return [
+      merged ||
+        "KinDex 관심 신호는 이 이슈로 검색·화제가 모이는 방향과 속도를 가리키며, 산출 공식이 아니라 관심의 상대 위치로 읽습니다.",
+    ];
+  })();
+
   const ordered = [
     {
       ...(conclusion as T),
@@ -365,6 +395,12 @@ export function applyHybridAnalysisHeadings<T extends { heading: string; heading
       heading: outlookHeading,
       headingLevel: 2 as const,
       paragraphs: (outlookSource?.paragraphs?.length ? outlookSource.paragraphs : emptyParas) as string[],
+    },
+    {
+      ...(kindexSource as T),
+      heading: HYBRID_FIXED_HEADINGS.kindexFeature,
+      headingLevel: 2 as const,
+      paragraphs: kindexParas,
     },
   ];
 
@@ -417,8 +453,9 @@ export function buildDataJournalistUserPrompt(params: {
     `- 분량: 공백 제외 ${floor}~${ceiling}자 (목표 ${charTarget})`,
     `- 3번 소제목 권장안: ${readerHeading}`,
     `- 4번 소제목 권장안: ${outlookHeading}`,
+    `- 5번 소제목(고정): ${HYBRID_FIXED_HEADINGS.kindexFeature} — paragraphs 1개, 핵심 요약 직전`,
     "",
-    "[KinDex 관심 신호 — 산출 공식 강의 금지. 숫자가 보여주는 관심·화제 트렌드(방향·속도·상대 위치)를 해석]",
+    "[KinDex 관심 신호 — 산출 공식 강의 금지. 숫자가 보여주는 관심·화제 트렌드(방향·속도·상대 위치)를 ❺ 한 문단에서 해석]",
     params.kindexSignals?.trim() ||
       "별도 수치 블록 없음 — RAG·연관 키워드만으로 작성하세요.",
     "",
@@ -428,20 +465,22 @@ export function buildDataJournalistUserPrompt(params: {
     "",
     "[작성 지시 — 하이브리드 80/20 · 섹션]",
     `- "${focusCore}"에 대해 완전한 JSON을 한 번에 작성하세요.`,
-    "- 밀도(Why·How·표·전망·SEO)는 ≈80%, 독창 해석은 ≈20%로 네 섹션에 녹이세요.",
+    "- 밀도(Why·How·표·전망·SEO)는 ≈80%, 독창 해석은 ≈20%로 다섯 섹션에 녹이세요.",
     "- sections heading 순서(번호 필수):",
     `  1) ❶ ${HYBRID_FIXED_HEADINGS.conclusion}`,
     `  2) ❷ ${HYBRID_FIXED_HEADINGS.whyNow}`,
     `  3) ❸ ${readerHeading} (독자·주제별 자연 표현 / "${HYBRID_LEGACY_READER_HEADING}" 금지)`,
     `  4) ❹ ${outlookHeading} (전망 자연 표현 / "${HYBRID_LEGACY_OUTLOOK_HEADING}" 금지)`,
+    `  5) ❺ ${HYBRID_FIXED_HEADINGS.kindexFeature} (고정 제목 · paragraphs 정확히 1개 · takeaways/핵심 요약 직전)`,
     "- 오늘의 결론: 오늘 뉴스와 KinDex 데이터에서 가장 중요한 변화와 의미",
     "- 왜 지금 관심이 높아졌나: 사건·뉴스·사회적 맥락 분석",
-    "- 3번 섹션: 실제 독자 관점의 실질 핵심 + KinDex 숫자가 보여주는 관심 트렌드",
+    "- 3번 섹션: 실제 독자 관점의 실질 핵심",
     "- 4번 섹션: 뉴스·데이터 기반의 신중 전망(일정·변수·확인 포인트)",
-    "- KinDex 산출 방식·점수 척도 강의 금지. 있는 숫자는 관심 트렌드로 해석.",
-    "- 각 섹션 paragraphs 3~4개. 문장 45~90자, 높임말(합니다체) 필수.",
+    "- 5번 섹션: KinDex 순위·변동·관심이 보여주는 특징만 한 문단으로 해석",
+    "- KinDex 산출 방식·점수 척도 강의 금지. 있는 숫자는 ❺에서 관심 트렌드로 해석.",
+    "- ❶~❹ paragraphs 3~4개. ❺ paragraphs 1개. 문장 45~90자, 높임말(합니다체) 필수.",
     `- 포커스 핵심어 "${focusCore}"를 title·excerpt·본문·FAQ 합쳐 5~6회만 자연 배치하세요.`,
-    "- table caption은 '팩트 체크' 또는 '핵심 팩트 요약'. FAQ 3개+. takeaways 3개(높임말).",
+    "- table caption은 '팩트 체크' 또는 '핵심 팩트 요약'. FAQ 3개+. takeaways 3개(높임말) — 화면의 「핵심 요약」.",
     "- 확인되지 않은 사건·수치를 지어내지 마세요.",
     "- 본문에 AdSense/SEO/글자 수 메타 문구를 절대 넣지 마세요.",
   ].join("\n");

@@ -21,6 +21,12 @@ import {
   ensureSectionsDisclaimer,
 } from "@/lib/editorial/disclaimer";
 import {
+  ensureKindexFeatureSectionPlacement,
+  isCoreSummaryHeading,
+  scrubSectionHeadingNoise,
+} from "@/lib/editorial/tense-rules";
+import { formatNumberedH2 } from "@/lib/premium/seo-format";
+import {
   SENT_MAX,
   SENT_MIN,
   charLen,
@@ -583,13 +589,21 @@ export function composePremiumTodayAnalysis(options: {
   const focus =
     focusFromName && !/이슈$/.test(focusFromName) ? focusFromName : picked.focus;
   const supportKw = picked.supportKw;
-  // Preserve hybrid/legacy ❶❷❸❹ numbering from the premium draft.
-  const sections: TodayAnalysisSection[] = premium.sections.map((section) => ({
+  // Preserve hybrid/legacy numbering from the premium draft; force KinDex
+  // feature section immediately before「핵심 요약」.
+  const mapped: TodayAnalysisSection[] = premium.sections.map((section) => ({
     heading: section.heading.replace(/\.$/, "").trim() || section.heading,
     headingLevel: 2 as const,
     paragraphs: [...section.paragraphs],
   }));
-  if (premium.takeaways?.length && !sections.some((section) => section.heading.includes("핵심 요약"))) {
+  const ordered = ensureKindexFeatureSectionPlacement(mapped);
+  const body = ordered.filter((section) => !isCoreSummaryHeading(section.heading));
+  const sections: TodayAnalysisSection[] = body.map((section, index) => ({
+    ...section,
+    heading: formatNumberedH2(index, scrubSectionHeadingNoise(section.heading) || section.heading),
+    headingLevel: 2 as const,
+  }));
+  if (premium.takeaways?.length && !sections.some((section) => isCoreSummaryHeading(section.heading))) {
     sections.push({
       heading: "핵심 요약",
       headingLevel: 2,

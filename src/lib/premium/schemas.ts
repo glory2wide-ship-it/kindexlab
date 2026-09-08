@@ -58,7 +58,7 @@ const faqItemSchema: JsonSchemaObject = {
 
 /**
  * Hybrid Today's Analysis (≈80% legacy AdSense / ≈20% light originality).
- * Matches the legacy 4-section Fact→Why→How→Outlook outline — not the old 8-section KinDex outline.
+ * 5 sections: ❶결론 ❷왜지금 ❸독자 ❹전망 ❺KinDex특징(한 문단, 핵심 요약 직전).
  */
 export const DATA_JOURNALIST_ARTICLE_JSON_SCHEMA: OpenAiJsonSchemaFormat = {
   name: "data_journalist_article",
@@ -70,14 +70,14 @@ export const DATA_JOURNALIST_ARTICLE_JSON_SCHEMA: OpenAiJsonSchemaFormat = {
       excerpt: stringSchema,
       sections: {
         type: "array",
-        minItems: 4,
-        maxItems: 5,
+        minItems: 5,
+        maxItems: 6,
         items: {
           type: "object",
           properties: {
             heading: stringSchema,
             headingLevel: { type: "integer" },
-            paragraphs: { type: "array", items: stringSchema, minItems: 3, maxItems: 5 },
+            paragraphs: { type: "array", items: stringSchema, minItems: 1, maxItems: 5 },
           },
           required: ["heading", "headingLevel", "paragraphs"],
           additionalProperties: false,
@@ -119,14 +119,14 @@ export const ARTICLE_JSON_SCHEMA: OpenAiJsonSchemaFormat = {
       excerpt: stringSchema,
       sections: {
         type: "array",
-        minItems: 4,
+        minItems: 5,
         maxItems: 9,
         items: {
           type: "object",
           properties: {
             heading: stringSchema,
             headingLevel: { type: "integer" },
-            paragraphs: { type: "array", items: stringSchema, minItems: 2, maxItems: 5 },
+            paragraphs: { type: "array", items: stringSchema, minItems: 1, maxItems: 5 },
           },
           required: ["heading", "headingLevel", "paragraphs"],
           additionalProperties: false,

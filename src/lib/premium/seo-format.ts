@@ -1,3 +1,9 @@
+import {
+  ensureKindexFeatureSectionPlacement,
+  isCoreSummaryHeading,
+  KINDEX_FEATURE_SECTION_HEADING,
+  scrubSectionHeadingNoise,
+} from "@/lib/editorial/tense-rules";
 import type { PostFaq, PostLink, PostTable } from "@/lib/posts/types";
 
 export interface SeoSection {
@@ -79,11 +85,28 @@ export function formatNumberedH2(index: number, heading: string): string {
 
 /** Applies H2 numbering to main sections; keeps FAQ/table as separate H2/H3 blocks. */
 export function applySeoHeadingStructure(sections: SeoSection[]): SeoSection[] {
+  const placed = ensureKindexFeatureSectionPlacement(
+    sections.map((section) => ({
+      ...section,
+      heading: section.heading ?? "",
+      paragraphs: section.paragraphs ?? [],
+      headingLevel: (section.headingLevel === 3 ? 3 : 2) as 2 | 3,
+    })),
+  );
+
   let h2Index = 0;
-  return sections.map((section) => {
+  return placed.map((section) => {
+    if (isCoreSummaryHeading(section.heading)) {
+      return {
+        ...section,
+        heading: "핵심 요약",
+        headingLevel: 2 as const,
+      };
+    }
     const level = section.headingLevel === 3 ? 3 : 2;
     if (level === 2 && section.heading) {
-      const heading = formatNumberedH2(h2Index, section.heading);
+      const base = scrubSectionHeadingNoise(section.heading) || KINDEX_FEATURE_SECTION_HEADING;
+      const heading = formatNumberedH2(h2Index, base);
       h2Index += 1;
       return { ...section, heading, headingLevel: 2 as const };
     }
@@ -267,7 +290,8 @@ export function seoExpansionPrompt(keyword: string): string {
     "- 인사말·마무리 요약·'독자 체크리스트' 패딩은 금지입니다.",
     "- 전문가 시각·구체 예시·수치 근거를 보태되, '좋다/추천한다'만 쓰지 마세요.",
     "- 문장 끝 마침표(.)를 빠짐없이 넣고, 문단은 3~4문장 단위로 유지하세요.",
-    "- H2 소제목은 ❶❷❸❹ 기호로, FAQ 질문은 H3로 구분할 수 있게 섹션을 나누세요.",
+    "- H2 소제목은 ❶❷❸❹❺ 기호로, FAQ 질문은 H3로 구분할 수 있게 섹션을 나누세요.",
+    "- 본문 마지막 H2는 반드시 `KinDex 데이터가 보여주는 특징`(한 문단)이며 takeaways/핵심 요약 직전입니다.",
   ].join("\n");
 }
 
@@ -275,7 +299,7 @@ export function seoStructureRules(): string {
   return [
     "[SEO 문서 구조 — H 태그 엄격 적용]",
     "- 페이지 H1은 제목(title) 하나뿐입니다. 본문 JSON에는 H1을 쓰지 마세요.",
-    "- 주요 섹션 heading은 H2(headingLevel: 2)이며 ❶❷❸❹❺ 기호로 번호를 매깁니다. H2 3~5개.",
+    "- 주요 섹션 heading은 H2(headingLevel: 2)이며 ❶❷❸❹❺ 기호로 번호를 매깁니다. H2 5개(마지막은 KinDex 데이터가 보여주는 특징 · 한 문단 · 핵심 요약 직전).",
     "- FAQ 질문·세부 팩트 항목은 H3(headingLevel: 3)로 구분합니다. FAQ Q&A 3개 이상.",
     "- table.caption은 '팩트 체크' 또는 '핵심 팩트 요약' 형태로 작성합니다. Table 최소 1개.",
     "- externalLink·internalLink는 클릭 가능한 href·label 쌍입니다. internal은 실제 보드·브리핑·랭킹 경로만(/search 금지).",

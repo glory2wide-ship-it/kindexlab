@@ -7,7 +7,7 @@ import type { TodayAnalysisSection } from "@/lib/editorial/today-analysis";
 import type { PostFaq, PostTable } from "@/lib/posts/types";
 import type { BoardDefinition, BoardRankEntry, BoardReport, DemographicRanking } from "@/lib/boards/types";
 import { AGE_LABEL, GENDER_LABEL } from "@/lib/boards/demographics";
-import { kindexDataTrendInterpretationRules } from "@/lib/editorial/tense-rules";
+import { kindexDataTrendInterpretationRules, ensureKindexFeatureSectionPlacement } from "@/lib/editorial/tense-rules";
 
 const MIN_CHARS = 1_000;
 const NUMBERING = ["❶", "❷", "❸", "❹", "❺"];
@@ -154,10 +154,17 @@ function fallbackReport(
         `${board.supportKeyword} 관점에서 보면 하위권과의 차이는 지속성이다. 단발성 이슈는 다음 집계에서 빠르게 내려앉는다.`,
       ],
     },
+    {
+      heading: "❸ KinDex 데이터가 보여주는 특징",
+      headingLevel: 2,
+      paragraphs: [
+        `${lead?.name ?? "선두 항목"}의 KinDex 관심 신호는 상대 순위와 점수 움직임으로 화제가 모이는 방향·속도를 가리키며, 산출 공식이 아니라 관심의 상대 위치로 읽습니다.`,
+      ],
+    },
   ];
 
   const targetAnalysis: TodayAnalysisSection = {
-    heading: "❸ 세대별·성별 분석 리포트",
+    heading: "❹ 세대별·성별 분석 리포트",
     headingLevel: 2,
     paragraphs: [
       `성별로 보면 남성 1위는 ${demographics.gender.male?.[0]?.name ?? "-"}, 여성 1위는 ${demographics.gender.female?.[0]?.name ?? "-"}다. 같은 보드에서도 상위 항목이 갈린다.`,
@@ -240,15 +247,15 @@ export async function writeBoardReport(input: {
     "{",
     '  "title": "H1 제목(포커스 키워드 포함, 30자 내외)",',
     '  "excerpt": "요약 2문장",',
-    '  "sections": [ { "heading": "H2 소제목", "paragraphs": ["문단", "문단", "문단"] } × 3 ],',
+    '  "sections": [ { "heading": "H2 소제목", "paragraphs": ["문단", "문단", "문단"] } × 2~3 ] + 마지막 { "heading": "KinDex 데이터가 보여주는 특징", "paragraphs": ["한 문단"] },',
     '  "target_analysis": { "heading": "세대별·성별 분석 리포트", "paragraphs": ["문단", "문단", "문단"] },',
     '  "faq": [ { "question": "질문", "answer": "답변" } × 3 ]',
     "}",
     "",
-    `sections에는 1위 항목이 왜 1위인지, 상위권과 하위권을 가른 요인, ${board.supportKeyword}의 향후 관전 포인트를 각각 담아라.`,
+    `sections에는 1위 항목이 왜 1위인지, 상위권과 하위권을 가른 요인, ${board.supportKeyword}의 향후 관전 포인트를 담고, 마지막 소제목은 반드시 "KinDex 데이터가 보여주는 특징"(paragraphs 1개)으로 숫자 트렌드만 해석하라.`,
     "target_analysis에는 '왜 특정 세대가 이 항목에 반응하는가'를 심리와 소비 경로 중심으로 날카롭게 분석하라. 성별 차이와 연령 차이를 각각 최소 한 문단씩 다뤄라.",
     "경제·모빌리티 보드라면 40대 남성이 수입차 감가상각과 에어서스펜션 유지비에 집착하는 이유를 구체적으로 써라.",
-    `각 문단은 3~4문장(120자 이상)으로 쓰고, 전체 본문은 공백 제외 ${MIN_CHARS}자 이상이어야 한다.`,
+    `각 문단은 3~4문장(120자 이상)으로 쓰고, 전체 본문은 공백 제외 ${MIN_CHARS}자 이상이어야 한다. KinDex 특징 섹션만 한 문단으로 짧게 써라.`,
     "분량이 모자라면 순위표의 4~10위 항목을 근거로 문단을 더 채워라.",
   ].join("\n");
 
@@ -262,7 +269,15 @@ export async function writeBoardReport(input: {
     model: draftModel(),
   });
 
-  const sections = toSections(parsed?.sections);
+  const sections = ensureKindexFeatureSectionPlacement(
+    toSections(parsed?.sections).map((section) => ({
+      ...section,
+      heading: section.heading.replace(/^[❶❷❸❹❺]\s*/, "").trim(),
+    })),
+  ).map((section, index) => ({
+    ...section,
+    heading: `${NUMBERING[index] ?? "❺"} ${section.heading.replace(/^[❶❷❸❹❺]\s*/, "").trim()}`,
+  }));
   const targetHeading = stripCliche(cleanText(parsed?.target_analysis?.heading)) || "세대별·성별 분석 리포트";
   const targetParagraphs = cleanParagraphs(parsed?.target_analysis?.paragraphs);
   const faq = toFaq(parsed?.faq);

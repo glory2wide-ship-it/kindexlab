@@ -27,6 +27,10 @@ import {
   buildHybridAnalysisSystemPrompt,
   buildDataJournalistUserPrompt,
 } from "@/lib/premium/data-journalist-prompt";
+import {
+  ensureKindexFeatureSectionPlacement,
+  isKindexFeatureSectionHeading,
+} from "@/lib/editorial/tense-rules";
 import { describePlacements, injectMonetization, type PremiumPlacement } from "@/lib/premium/widgets";
 import {
   dropRepeatedSentences,
@@ -483,8 +487,8 @@ export async function generatePremiumArticle(input: {
     input.minCharsOverride ?? (input.briefing ? briefingMinChars(mode) : PREMIUM_MIN_CHARS);
   const maxChars = input.maxCharsOverride ?? BRIEFING_FULL_TARGET_MAX_CHARS;
   const minFaq = input.briefing && mode === "shorts" ? 1 : PREMIUM_FAQ_MIN;
-  /** Hybrid Today's Analysis uses the legacy 4-section AdSense outline. */
-  const minSections = 4;
+  /** Hybrid + briefing: ❶~❹ + ❺ KinDex 데이터가 보여주는 특징. */
+  const minSections = 5;
 
   const kindexSignals = [
     ...(context.signalFacts ?? []),
@@ -581,7 +585,7 @@ export async function generatePremiumArticle(input: {
   if (!raw || !hasRequiredKeys(raw, ["title", "excerpt", "sections", "table", "faq"])) {
     logger.warn("premium-article-retry", { reason: "llm-empty" });
     raw = await requestArticle(
-      `${user}\n\n[재시도] 응답은 완전 JSON 하나만. sections 4개·FAQ 3개·표 1개를 짧게 닫아 토큰 한도 전에 완성하세요.`,
+      `${user}\n\n[재시도] 응답은 완전 JSON 하나만. sections 5개(마지막 ❺ KinDex 데이터가 보여주는 특징·한 문단)·FAQ 3개·표 1개를 짧게 닫아 토큰 한도 전에 완성하세요.`,
       "premium-article-retry",
     );
   }
@@ -623,6 +627,11 @@ export async function generatePremiumArticle(input: {
     }
   }
   sections = sections.filter((section) => section.paragraphs.length > 0);
+
+  // Soft-inject the required KinDex feature section so 4-section drafts still clear the gate.
+  if (!sections.some((section) => isKindexFeatureSectionHeading(section.heading))) {
+    sections = ensureKindexFeatureSectionPlacement(sections) as PremiumSection[];
+  }
 
   if (sections.length < minSections || faqText.length < minFaq || !table.headers.length) {
     return {

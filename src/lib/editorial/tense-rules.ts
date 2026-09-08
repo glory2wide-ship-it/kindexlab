@@ -50,9 +50,95 @@ export function sentencePeriodRules(): string {
   ].join("\n");
 }
 
+/** Fixed H2 title for the dedicated KinDex trend-feature section. */
+export const KINDEX_FEATURE_SECTION_HEADING = "KinDex 데이터가 보여주는 특징";
+
+const KINDEX_FEATURE_FALLBACK_PARAGRAPH =
+  "KinDex 관심 신호는 이 이슈로 검색·화제가 모이는 방향과 속도를 가리키며, 산출 공식이 아니라 관심의 상대 위치로 읽습니다.";
+
+/** Strip numbered H2 prefixes so heading matching stays stable. */
+export function scrubSectionHeadingNoise(heading: string): string {
+  return heading
+    .replace(/^#{1,6}\s*/, "")
+    .replace(/^[❶❷❸❹❺❻❼❽❾]\s*/, "")
+    .replace(/^\d+[.\s]+/, "")
+    .replace(/\.$/, "")
+    .trim();
+}
+
+export function isKindexFeatureSectionHeading(heading: string): boolean {
+  const clean = scrubSectionHeadingNoise(heading);
+  return (
+    clean === KINDEX_FEATURE_SECTION_HEADING ||
+    clean.includes(KINDEX_FEATURE_SECTION_HEADING) ||
+    /^KinDex\s*데이터가\s*보여주는/.test(clean)
+  );
+}
+
+export function isCoreSummaryHeading(heading: string): boolean {
+  return scrubSectionHeadingNoise(heading).includes("핵심 요약");
+}
+
+/**
+ * Force one numbered「KinDex 데이터가 보여주는 특징」section (single paragraph)
+ * immediately before「핵심 요약」, after all other body sections.
+ */
+export function ensureKindexFeatureSectionPlacement<
+  T extends { heading: string; paragraphs: string[]; headingLevel?: 2 | 3 },
+>(
+  sections: T[],
+  options?: { fallbackParagraph?: string },
+): T[] {
+  const fallback = options?.fallbackParagraph?.trim() || KINDEX_FEATURE_FALLBACK_PARAGRAPH;
+  const summary: T[] = [];
+  const body: T[] = [];
+  let kindex: T | undefined;
+
+  for (const section of sections) {
+    if (isCoreSummaryHeading(section.heading)) {
+      summary.push(section);
+      continue;
+    }
+    if (isKindexFeatureSectionHeading(section.heading)) {
+      const merged = [...(kindex?.paragraphs ?? []), ...(section.paragraphs ?? [])]
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      kindex = {
+        ...section,
+        ...(kindex ?? {}),
+        heading: KINDEX_FEATURE_SECTION_HEADING,
+        headingLevel: 2 as const,
+        paragraphs: [merged || fallback],
+      } as T;
+      continue;
+    }
+    body.push(section);
+  }
+
+  if (!kindex) {
+    kindex = {
+      heading: KINDEX_FEATURE_SECTION_HEADING,
+      headingLevel: 2 as const,
+      paragraphs: [fallback],
+    } as T;
+  } else if (!kindex.paragraphs.length || !kindex.paragraphs[0]?.trim()) {
+    kindex = { ...kindex, paragraphs: [fallback] };
+  } else if (kindex.paragraphs.length > 1) {
+    kindex = {
+      ...kindex,
+      paragraphs: [kindex.paragraphs.map((item) => item.trim()).filter(Boolean).join(" ").trim() || fallback],
+    };
+  }
+
+  return [...body, kindex, ...summary];
+}
+
 /**
  * 모든 글 생성 프롬프트에 넣는 KinDex 숫자 해석 지침.
  * 산출 공식이 아니라, 숫자가 가리키는 관심·화제 트렌드를 해석한다.
+ * 전용 번호 소제목 + 한 문단으로「핵심 요약」직전에 둔다.
  */
 export function kindexDataTrendInterpretationRules(): string {
   return [
@@ -62,6 +148,11 @@ export function kindexDataTrendInterpretationRules(): string {
     "- 상승·하락·급등·정체·상대적 관심 쏠림처럼 ‘방향과 속도, 다른 이슈 대비 위치’를 문장으로 풀어 쓴다.",
     "- 점수 산식·100점 만점·999 스케일 강의는 하지 않는다. 숫자는 관심의 세기와 움직임을 읽는 신호로만 쓴다.",
     "- 입력에 없는 수치를 지어내지 않는다. 있는 숫자만 트렌드로 해석한다.",
+    "[필수 소제목 배치 — 모든 글]",
+    `- 본문 sections에 번호 달린 소제목 \`KinDex 데이터가 보여주는 특징\`을 반드시 둔다 (오늘의 분석·하이브리드는 ❺, 그 외 글은 본문 H2 중 마지막 번호).`,
+    "- 이 소제목 그룹의 paragraphs는 정확히 1개(한 문단)만 쓴다. 2개 이상 금지.",
+    "- 위치: 글 본문의 마지막 소주제이며, takeaways가 되는 \`핵심 요약\` 바로 앞에 온다.",
+    "- 다른 섹션(결론·Why·How·전망)에는 KinDex 숫자 해석을 길게 반복하지 말고, 이 소제목 한 문단에 모은다.",
   ].join("\n");
 }
 
