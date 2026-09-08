@@ -18,7 +18,13 @@ export function CategoryDeskHeader({ channel }: { channel: PostChannel }) {
       <h1 className="hidden text-2xl font-semibold tracking-tight md:block md:text-3xl">
         {desktopTitle}
       </h1>
-      <p className="hidden max-w-3xl text-sm leading-6 text-muted md:block">
+      <p
+        className={
+          channel === "entertainment"
+            ? "hidden max-w-3xl text-[16.8px] leading-[28.8px] text-muted md:block"
+            : "hidden max-w-3xl text-sm leading-6 text-muted md:block"
+        }
+      >
         {desktopDescription}
       </p>
       <div className="md:hidden">
