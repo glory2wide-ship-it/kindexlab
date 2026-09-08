@@ -254,7 +254,7 @@ export function MarketWorkspace({
               className={`inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none md:px-3 md:text-xs ${
                 selected
                   ? "bg-[#dc2626] text-white"
-                  : "border border-[#dc2626]/70 text-[#dc2626] hover:bg-[#dc2626]/10"
+                  : "text-muted hover:text-ink"
               }`}
             >
               {label}
