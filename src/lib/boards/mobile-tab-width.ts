@@ -1,7 +1,7 @@
 /**
  * Relative column weights for mobile board-rail chips (first-row column template).
  * Values >1 widen the column; <1 narrow it. Desktop layout ignores this.
- * Baseline bumped ~10% with the mobile 11px tab type so labels stay inside chips.
+ * Baseline bumped ~10% with the mobile 12.1px tab type so labels stay inside chips.
  */
 export const MOBILE_BOARD_TAB_WIDTH: Record<string, number> = {
   // Entertainment
