@@ -84,12 +84,14 @@ export function MarketOverview({
               />
             ) : null}
             <div className="relative z-[1]">
-              <p className="truncate text-[10px] text-muted sm:text-xs">{index.label}</p>
-              <p className="kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2">
+              <p className="truncate text-[10px] text-muted sm:text-xs md:text-[14.4px]">
+                {index.label}
+              </p>
+              <p className="kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.128rem,calc(100cqi/5.975),1.944rem)]">
                 <FlipBoardNumber value={index.value} playToken={flashNonce} />
               </p>
               <p
-                className={`mt-1 flex flex-col gap-0.5 font-sans text-[10px] font-semibold tabular-nums leading-tight sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-1.5 sm:text-[11px] ${
+                className={`mt-1 flex flex-col gap-0.5 font-sans text-[10px] font-semibold tabular-nums leading-tight sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-1.5 sm:text-[11px] md:text-[13.2px] ${
                   up ? "text-up" : down ? "text-down" : "text-muted"
                 }`}
               >
