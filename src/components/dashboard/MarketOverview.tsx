@@ -50,6 +50,7 @@ export function MarketOverview({
   selectedId,
   hideOnMobileIds,
   enlargeDesktopTitleScore = false,
+  enlargeDesktopScoreExtra = false,
 }: {
   indices: MarketIndex[];
   flashNonce?: number;
@@ -58,15 +59,19 @@ export function MarketOverview({
   hideOnMobileIds?: readonly string[];
   /** Desktop-only +25% on menu label + KPI score (엔터·경제·정치·문화). */
   enlargeDesktopTitleScore?: boolean;
+  /** Desktop-only extra +25% on KPI score only (엔터·경제·문화). */
+  enlargeDesktopScoreExtra?: boolean;
 }) {
   const indices = Array.isArray(indicesProp) ? indicesProp : [];
   const mobileHidden = hideOnMobileIds?.length ? new Set(hideOnMobileIds) : null;
   const labelClass = enlargeDesktopTitleScore
     ? "truncate text-[10px] text-muted sm:text-xs md:text-[18px]"
     : "truncate text-[10px] text-muted sm:text-xs md:text-[14.4px]";
-  const scoreClass = enlargeDesktopTitleScore
-    ? "kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.41rem,calc(100cqi/4.78),2.43rem)]"
-    : "kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.128rem,calc(100cqi/5.975),1.944rem)]";
+  const scoreClass = enlargeDesktopScoreExtra
+    ? "kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.7625rem,calc(100cqi/3.824),3.0375rem)]"
+    : enlargeDesktopTitleScore
+      ? "kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.41rem,calc(100cqi/4.78),2.43rem)]"
+      : "kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.128rem,calc(100cqi/5.975),1.944rem)]";
 
   return (
     <section className="index-gothic grid grid-cols-3 gap-2 font-sans sm:gap-3 md:flex md:flex-nowrap md:gap-2">

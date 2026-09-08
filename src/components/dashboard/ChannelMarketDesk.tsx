@@ -415,6 +415,11 @@ export function ChannelMarketDesk({
               channel === "politics" ||
               channel === "culture"
             }
+            enlargeDesktopScoreExtra={
+              channel === "entertainment" ||
+              channel === "economy" ||
+              channel === "culture"
+            }
           />
         ) : null}
       </div>
