@@ -6,7 +6,6 @@ import { getChannelBriefingEdition, splitChannelEdition } from "@/lib/api";
 import { channelMainLabel } from "@/lib/briefing/desks";
 import { channelSectionHref, POST_CHANNELS } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
-import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 export const metadata: Metadata = {
   title: "데일리 트렌드 브리핑",
