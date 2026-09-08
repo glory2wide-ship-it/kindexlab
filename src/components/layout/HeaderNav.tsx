@@ -2,6 +2,7 @@
 
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useActiveChannelOverride } from "@/components/providers/ActiveChannelProvider";
 import { POST_CHANNELS } from "@/lib/posts/channels";
 
 function CategoryLabel({ children }: { children: string }) {
@@ -17,7 +18,8 @@ function CategoryLabel({ children }: { children: string }) {
 export function HeaderNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const allActive = pathname === "/";
+  const override = useActiveChannelOverride();
+  const allActive = !override && pathname === "/";
 
   return (
     <nav
@@ -39,7 +41,9 @@ export function HeaderNav() {
         <CategoryLabel>전체</CategoryLabel>
       </Link>
       {POST_CHANNELS.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active = override
+          ? override === item.id
+          : pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
             key={item.id}
