@@ -14,15 +14,15 @@ export function CategoryChrome({
   return (
     <div className="flex flex-col gap-3 md:gap-4">
       {/*
-        Mobile order: ticker (from children, order-1) → subnav/header (2) → desk (3).
-        Desktop: board H1 (ranking only) → sticky section tabs (same place on every
-        section page) → page body. Sticky tabs are desktop-only inside CategorySubNav.
-        Children must be fragments/Suspense — not a single order:0 wrapper.
+        Mobile: ticker (children order-1) → header/subnav (order-2) → desk (order-3).
+        Desktop: header + sticky section tabs must stay above page bodies.
+        Board children use md:order-2/3; briefing/archive/about default to order-0,
+        so chrome uses md:order-0 (not order-1) or those pages paint first and hide the tabs.
       */}
-      <div className="order-2 space-y-2 md:order-1">
+      <div className="order-2 space-y-2 md:order-0">
         <CategoryDeskHeader channel={channel} />
       </div>
-      <div className="order-2 md:order-1">
+      <div className="order-2 md:order-0">
         <CategorySubNav channel={channel} />
       </div>
       {children}
