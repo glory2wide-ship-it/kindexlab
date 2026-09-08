@@ -50,7 +50,6 @@ export default async function BriefingHubPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <header className="space-y-3">
-        <DeskEyebrow variant="xs">BRIEFING DESK</DeskEyebrow>
         <h1 className="text-3xl font-semibold tracking-tight">오늘의 트렌드 브리핑</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
           카테고리마다 상단은 종합 브리핑, 아래는 Update 키워드입니다. 날짜가 바뀌면 전날
@@ -66,8 +65,7 @@ export default async function BriefingHubPage() {
             href={channelSectionHref(channel.id, "briefing")}
             className="rounded-2xl border border-line bg-panel p-4 hover:border-accent"
           >
-            <DeskEyebrow variant="base">{channel.eyebrow}</DeskEyebrow>
-            <h2 className="mt-2 font-semibold tracking-tight">{channel.label} 일일브리핑</h2>
+            <h2 className="font-semibold tracking-tight">{channel.label} 일일브리핑</h2>
             <p className="mt-1 text-xs leading-5 text-muted">종합 브리핑 + Update 키워드</p>
           </Link>
         ))}
