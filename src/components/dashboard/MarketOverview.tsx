@@ -78,20 +78,19 @@ export function MarketOverview({
                 className="market-live-flash pointer-events-none absolute inset-0 rounded-xl ring-1 ring-accent/35"
               />
             ) : null}
-            <div className="relative z-[1] flex items-start justify-between gap-1 text-[10px] text-muted sm:gap-2 sm:text-xs">
-              <span className="min-w-0 truncate">{index.label}</span>
-              <span
-                className={`shrink-0 whitespace-nowrap font-sans tabular-nums ${
+            <div className="relative z-[1]">
+              <p className="truncate text-[10px] text-muted sm:text-xs">{index.label}</p>
+              <p className="kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2">
+                <FlipBoardNumber value={index.value} playToken={flashNonce} />
+              </p>
+              <p
+                className={`mt-1 font-sans text-[10px] font-semibold tabular-nums sm:text-[11px] ${
                   up ? "text-up" : down ? "text-down" : "text-muted"
                 }`}
               >
                 {formatRate(Number(index.changeRate))} {formatPoints(points)}
-              </span>
+              </p>
             </div>
-            <p className="kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2">
-              <FlipBoardNumber value={index.value} playToken={flashNonce} />
-            </p>
-            <p className="mt-1 truncate text-[10px] text-muted sm:text-[11px]">{index.note}</p>
           </Link>
         );
       })}
