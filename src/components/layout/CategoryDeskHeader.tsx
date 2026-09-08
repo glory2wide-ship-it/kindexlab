@@ -4,7 +4,7 @@ import type { PostChannel } from "@/lib/posts/types";
 
 /**
  * Category board hero.
- * Mobile: submenu only (chips are in StickyMobileCategoryBar).
+ * Mobile: submenu only (chips are in GlobalStickyMobileCategoryBar).
  * Desktop: title + description (submenu stays in CategorySubNav sticky bar).
  */
 export function CategoryDeskHeader({ channel }: { channel: PostChannel }) {

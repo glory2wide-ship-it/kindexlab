@@ -2,7 +2,7 @@ import { SITE_INDEX_HEADLINE, SITE_LANDING_HEADLINE } from "@/lib/site";
 
 /**
  * Landing hero — desktop keeps headline copy.
- * Mobile category chips live in StickyMobileCategoryBar (page-level sticky).
+ * Mobile category chips live in GlobalStickyMobileCategoryBar (root layout).
  */
 export function LandingDeskHeader() {
   return (
