@@ -171,8 +171,8 @@ export function renderFactTableHtml(table: PostTable): string {
     )
     .join("");
   return [
-    '<div class="overflow-x-auto rounded-xl border border-line">',
-    '<table class="w-full min-w-[32rem] border-collapse text-sm">',
+    '<div class="article-fact-table overflow-x-visible rounded-xl border border-line md:overflow-x-auto">',
+    '<table class="w-full border-collapse text-sm max-md:table-fixed md:min-w-[32rem]">',
     `<thead><tr>${head}</tr></thead>`,
     `<tbody>${body}</tbody>`,
     "</table>",

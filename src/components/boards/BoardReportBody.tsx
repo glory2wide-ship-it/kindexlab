@@ -60,17 +60,19 @@ export function BoardReportBody({ board }: { board: CachedBoard }) {
           ))}
 
           {index === 0 && table?.rows?.length ? (
-            <div className="overflow-x-auto rounded-xl border border-line">
+            <div className="overflow-x-visible rounded-xl border border-line md:overflow-x-auto">
               <p className="border-b border-line px-3 py-2 text-sm font-semibold">
                 {table.caption}
               </p>
-              <table className="w-full min-w-[32rem] border-collapse text-sm">
+              <table className="w-full border-collapse text-sm max-md:table-fixed md:min-w-[32rem]">
                 <thead className="bg-board/60">
                   <tr>
-                    {(table.headers ?? []).map((header) => (
+                    {(table.headers ?? []).map((header, headerIndex) => (
                       <th
                         key={header}
-                        className="border-b border-line px-3 py-2 text-left font-semibold"
+                        className={`border-b border-line px-3 py-2 text-left font-semibold max-md:break-words max-md:px-2 max-md:text-[12px] ${
+                          headerIndex === 0 ? "max-md:w-[32%]" : ""
+                        }`}
                       >
                         {header}
                       </th>
@@ -83,7 +85,7 @@ export function BoardReportBody({ board }: { board: CachedBoard }) {
                       {row.map((cell, cellIndex) => (
                         <td
                           key={`${rowIndex}-${cellIndex}`}
-                          className={`border-b border-line px-3 py-2 ${
+                          className={`border-b border-line px-3 py-2 max-md:break-words max-md:px-2 max-md:text-[13px] max-md:leading-5 ${
                             cellIndex === 2 ? "font-sans tabular-nums" : ""
                           }`}
                         >

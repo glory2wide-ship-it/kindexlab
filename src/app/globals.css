@@ -351,4 +351,32 @@ nav[aria-label$="서브 메뉴"] {
   line-height: var(--article-line-height);
 }
 
+/* Article tables: wrap on mobile so readers never need horizontal scroll. */
+@media (max-width: 767px) {
+  .article-prose table,
+  .prose-board table,
+  .article-fact-table table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed;
+  }
+
+  .article-prose th,
+  .article-prose td,
+  .prose-board th,
+  .prose-board td,
+  .article-fact-table th,
+  .article-fact-table td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .article-prose .overflow-x-auto,
+  .prose-board .overflow-x-auto,
+  .article-fact-table.overflow-x-auto {
+    overflow-x: visible;
+  }
+}
+
 

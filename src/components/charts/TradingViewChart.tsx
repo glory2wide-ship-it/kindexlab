@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AreaSeries,
   CandlestickSeries,
@@ -115,6 +115,16 @@ export function TradingViewChart({
     lineValues: [],
   });
   const fitRafRef = useRef<number | null>(null);
+  const [resolvedHeight, setResolvedHeight] = useState(height);
+
+  // Mobile chart height is 25% shorter; desktop keeps the requested height.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const apply = () => setResolvedHeight(mq.matches ? Math.round(height * 0.75) : height);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, [height]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -127,7 +137,7 @@ export function TradingViewChart({
 
     const chart = createChart(host, {
       autoSize: true,
-      height,
+      height: resolvedHeight,
       layout: {
         background: { type: ColorType.Solid, color: board },
         textColor: muted,
@@ -217,7 +227,7 @@ export function TradingViewChart({
       chartRef.current = null;
       priceRef.current = null;
     };
-  }, [height, pricePrecision]);
+  }, [resolvedHeight, pricePrecision]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -354,11 +364,11 @@ export function TradingViewChart({
     if (priceRef.current) {
       fitPriceToVisibleRange(chart, priceRef.current, style, ohlc, lineValues);
     }
-  }, [candles, linePath, timeframe, style, positive, height, pricePrecision, initialVisibleBars]);
+  }, [candles, linePath, timeframe, style, positive, pricePrecision, initialVisibleBars]);
 
   return (
     <div className="relative w-full overflow-hidden rounded-lg border border-line/50 bg-panel">
-      <div ref={hostRef} className="w-full" style={{ minHeight: height }} />
+      <div ref={hostRef} className="w-full" style={{ minHeight: resolvedHeight }} />
     </div>
   );
 }

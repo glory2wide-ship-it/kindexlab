@@ -20,7 +20,7 @@ const TradingViewChart = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[400px] items-center justify-center rounded-lg border border-line/60 bg-panel text-xs text-muted">
+      <div className="flex h-[300px] items-center justify-center rounded-lg border border-line/60 bg-panel text-xs text-muted md:h-[400px]">
         차트 불러오는 중…
       </div>
     ),
@@ -81,8 +81,8 @@ export function BuzzChart({
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1 rounded-lg bg-board p-1">
+          <div className="flex w-full min-w-0 flex-col items-stretch gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
+            <div className="flex w-fit gap-1 rounded-lg bg-board p-1">
               {(
                 [
                   { id: "line" as const, label: "라인" },
@@ -103,13 +103,13 @@ export function BuzzChart({
                 </button>
               ))}
             </div>
-            <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
+            <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-board p-1 [-ms-overflow-style:none] [scrollbar-width:none] md:flex-wrap [&::-webkit-scrollbar]:hidden">
               {TIMEFRAMES.map((option) => (
                 <button
                   key={option.id}
                   type="button"
                   onClick={() => setTimeframe(option.id)}
-                  className={`rounded-md px-2.5 py-1.5 font-sans text-[11px] font-medium sm:px-3 ${
+                  className={`shrink-0 rounded-md px-2 py-1.5 font-sans text-[11px] font-medium md:px-3 ${
                     timeframe === option.id
                       ? "bg-ink text-board"
                       : "text-muted hover:bg-panel hover:text-ink"
