@@ -57,7 +57,7 @@ export function TodayAnalysis({
   return (
     <article
       id="today-analysis"
-      className={`scroll-mt-24 rounded-2xl border border-line bg-panel ${
+      className={`scroll-mt-28 rounded-2xl border border-line bg-panel md:scroll-mt-24 ${
         compact ? "p-5 md:p-6" : "p-6 md:p-8"
       }`}
     >
