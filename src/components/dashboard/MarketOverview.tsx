@@ -49,15 +49,24 @@ export function MarketOverview({
   flashNonce = 0,
   selectedId,
   hideOnMobileIds,
+  enlargeDesktopTitleScore = false,
 }: {
   indices: MarketIndex[];
   flashNonce?: number;
   selectedId?: string;
   /** Index ids hidden below the `md` breakpoint (desktop keeps them). */
   hideOnMobileIds?: readonly string[];
+  /** Desktop-only +25% on menu label + KPI score (엔터·경제·정치·문화). */
+  enlargeDesktopTitleScore?: boolean;
 }) {
   const indices = Array.isArray(indicesProp) ? indicesProp : [];
   const mobileHidden = hideOnMobileIds?.length ? new Set(hideOnMobileIds) : null;
+  const labelClass = enlargeDesktopTitleScore
+    ? "truncate text-[10px] text-muted sm:text-xs md:text-[18px]"
+    : "truncate text-[10px] text-muted sm:text-xs md:text-[14.4px]";
+  const scoreClass = enlargeDesktopTitleScore
+    ? "kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.41rem,calc(100cqi/4.78),2.43rem)]"
+    : "kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.128rem,calc(100cqi/5.975),1.944rem)]";
 
   return (
     <section className="index-gothic grid grid-cols-3 gap-2 font-sans sm:gap-3 md:flex md:flex-nowrap md:gap-2">
@@ -84,10 +93,8 @@ export function MarketOverview({
               />
             ) : null}
             <div className="relative z-[1]">
-              <p className="truncate text-[10px] text-muted sm:text-xs md:text-[14.4px]">
-                {index.label}
-              </p>
-              <p className="kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.128rem,calc(100cqi/5.975),1.944rem)]">
+              <p className={labelClass}>{index.label}</p>
+              <p className={scoreClass}>
                 <FlipBoardNumber value={index.value} playToken={flashNonce} />
               </p>
               <p

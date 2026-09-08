@@ -409,6 +409,12 @@ export function ChannelMarketDesk({
             hideOnMobileIds={
               channel === "politics" ? (["policy-controversy-index"] as const) : undefined
             }
+            enlargeDesktopTitleScore={
+              channel === "entertainment" ||
+              channel === "economy" ||
+              channel === "politics" ||
+              channel === "culture"
+            }
           />
         ) : null}
       </div>
