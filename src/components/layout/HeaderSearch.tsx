@@ -22,7 +22,15 @@ function SearchIcon({ className }: { className?: string }) {
   );
 }
 
-export function HeaderSearch() {
+export function HeaderSearch({
+  inputId = "site-search",
+  mobileOnly = false,
+}: {
+  /** Avoid duplicate ids when search is mounted in header + category bar. */
+  inputId?: string;
+  /** Category-bar placement: mobile chrome only (desktop uses header search). */
+  mobileOnly?: boolean;
+} = {}) {
   const router = useRouter();
   const listId = useId();
   const rootRef = useRef<HTMLFormElement>(null);
@@ -175,18 +183,18 @@ export function HeaderSearch() {
     <form
       ref={rootRef}
       action="/search"
-      className={SEARCH_FORM_CLASS}
+      className={`${SEARCH_FORM_CLASS}${mobileOnly ? " md:hidden" : ""}`}
       onSubmit={(event) => {
         event.preventDefault();
         submitSearch();
       }}
     >
-      <label htmlFor="site-search" className="sr-only">
+      <label htmlFor={inputId} className="sr-only">
         종목·키워드 검색
       </label>
       <input
         ref={inputRef}
-        id="site-search"
+        id={inputId}
         type="text"
         name="q"
         value={query}
@@ -233,10 +241,12 @@ export function HeaderSearch() {
         className={mobileExpanded ? SEARCH_INPUT_EXPANDED_CLASS : SEARCH_INPUT_CLASS}
         style={SEARCH_INPUT_STYLE}
       />
-      {/* Desktop submit — unchanged */}
-      <button type="submit" aria-label="검색" className={`${SEARCH_BUTTON_CLASS} max-md:hidden`}>
-        <SearchIcon className="h-4 w-4" />
-      </button>
+      {/* Desktop submit — unchanged (hidden when this instance is mobile-only) */}
+      {mobileOnly ? null : (
+        <button type="submit" aria-label="검색" className={`${SEARCH_BUTTON_CLASS} max-md:hidden`}>
+          <SearchIcon className="h-4 w-4" />
+        </button>
+      )}
       {/* Mobile: expand field, or submit when already expanded */}
       <button
         type="button"

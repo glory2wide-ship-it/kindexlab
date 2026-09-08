@@ -9,6 +9,7 @@ import {
   isDeskBoard,
   menuBoardsForChannel,
 } from "@/lib/boards/registry";
+import { MOBILE_COMPOSITE_TAB_LABEL, mobileBoardTabLabel } from "@/lib/boards/mobile-tab-label";
 import type { BoardDefinition } from "@/lib/boards/types";
 import type { PostChannel } from "@/lib/posts/types";
 
@@ -37,7 +38,7 @@ export function CategoryBoardRail({
     : "border-line text-muted hover:text-ink";
 
   const tabShell =
-    "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[11px] leading-tight md:inline-block md:w-auto md:px-3 md:text-xs md:leading-normal";
+    "inline-flex w-full items-center justify-center rounded-md border px-1 py-1.5 text-center text-[10px] leading-none whitespace-nowrap md:inline-block md:w-auto md:px-3 md:text-xs md:leading-normal md:whitespace-normal";
 
   const compositeTab = onSelect ? (
     <li key="composite" className="min-w-0">
@@ -46,7 +47,8 @@ export function CategoryBoardRail({
         onClick={() => onSelect("")}
         className={`${tabShell} ${compositeClass}`}
       >
-        종합 랭킹
+        <span className="md:hidden">{MOBILE_COMPOSITE_TAB_LABEL}</span>
+        <span className="hidden md:inline">종합 랭킹</span>
       </button>
     </li>
   ) : (
@@ -55,13 +57,15 @@ export function CategoryBoardRail({
         href={`/${channel}`}
         className={`${tabShell} border-line text-muted hover:text-ink`}
       >
-        종합 랭킹
+        <span className="md:hidden">{MOBILE_COMPOSITE_TAB_LABEL}</span>
+        <span className="hidden md:inline">종합 랭킹</span>
       </Link>
     </li>
   );
 
   const boardTab = (board: BoardDefinition) => {
     const active = selectedSlug === board.slug;
+    const mobileLabel = mobileBoardTabLabel(board.slug, board.shortTitle);
     if (onSelect) {
       return (
         <li key={board.slug} className="min-w-0">
@@ -72,7 +76,8 @@ export function CategoryBoardRail({
               active ? "border-accent bg-accent text-black" : "border-line text-muted hover:text-ink"
             }`}
           >
-            {board.shortTitle}
+            <span className="md:hidden">{mobileLabel}</span>
+            <span className="hidden md:inline">{board.shortTitle}</span>
           </button>
         </li>
       );
@@ -83,7 +88,8 @@ export function CategoryBoardRail({
           href={boardPath(board.slug)}
           className={`${tabShell} border-line text-muted hover:text-ink`}
         >
-          {board.shortTitle}
+          <span className="md:hidden">{mobileLabel}</span>
+          <span className="hidden md:inline">{board.shortTitle}</span>
         </Link>
       </li>
     );
@@ -98,7 +104,7 @@ export function CategoryBoardRail({
   const mobileCols = Math.max(2, Math.ceil(tabs.length / 2));
 
   return (
-    <section className="rounded-2xl border border-line bg-panel px-5 py-4">
+    <section className="rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3 max-md:py-3">
       <div className="mb-3 hidden flex-wrap items-baseline justify-between gap-2 md:flex">
         <div>
           <h2 className="text-sm font-semibold">랭킹·지수 보드</h2>

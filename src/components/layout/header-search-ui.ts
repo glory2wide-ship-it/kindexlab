@@ -11,5 +11,5 @@ export const SEARCH_INPUT_STYLE = { textAlign: "center" as const, lineHeight: "3
 export const SEARCH_BUTTON_CLASS =
   "grid h-9 w-9 shrink-0 place-items-center rounded-full border border-line bg-panel text-muted transition-colors hover:text-ink";
 export const SEARCH_BUTTON_MOBILE_CLASS =
-  "grid h-10 w-10 shrink-0 place-items-center rounded-md border border-line bg-panel text-ink transition-colors hover:text-accent md:hidden";
+  "grid h-[25.5px] w-[25.5px] shrink-0 place-items-center rounded-md border border-line bg-panel text-ink transition-colors hover:text-accent md:hidden";
 

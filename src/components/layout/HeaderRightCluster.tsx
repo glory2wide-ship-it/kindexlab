@@ -116,7 +116,7 @@ function HeaderClockSlot() {
 
 /**
  * Desktop (md+): search + clock + LIVE + theme (unchanged).
- * Mobile: LIVE + theme + search (far right). Countdown lives on the heatmap panel.
+ * Mobile: LIVE + theme only — search sits beside the category chips.
  */
 export function HeaderRightCluster() {
   return (
@@ -124,8 +124,7 @@ export function HeaderRightCluster() {
       data-header-right
       className="flex min-w-0 shrink-0 items-center overflow-visible md:ml-auto md:min-w-[26rem]"
     >
-      {/* Search last on mobile (order-last); first on desktop */}
-      <div className="order-last md:order-none">
+      <div className="hidden md:contents">
         <HeaderSearch />
       </div>
       <HeaderClockSlot />

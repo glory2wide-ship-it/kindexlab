@@ -194,8 +194,15 @@ export function MarketWorkspace({
     .filter(Boolean)
     .join(" / ");
 
-  const viewToggle = (
-    <div className="flex rounded-lg bg-board p-0.5 md:p-1" role="tablist" aria-label="보기 전환">
+  const CONTROL_H = 25.5;
+
+  const viewToggle = (compact: boolean) => (
+    <div
+      className="flex rounded-md bg-board p-0.5 md:rounded-lg md:p-1"
+      role="tablist"
+      aria-label="보기 전환"
+      style={compact ? { height: CONTROL_H } : undefined}
+    >
       {(
         [
           ["treemap", "히트맵"],
@@ -208,9 +215,15 @@ export function MarketWorkspace({
           role="tab"
           aria-selected={view === id}
           onClick={() => setView(id)}
-          className={`min-h-9 rounded-md px-2.5 py-1 text-[11px] font-medium md:min-h-10 md:px-3 md:py-1.5 md:text-xs ${
-            view === id ? "bg-accent text-black" : "text-muted hover:text-ink"
-          }`}
+          className={
+            compact
+              ? `inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none ${
+                  view === id ? "bg-accent text-black" : "text-muted hover:text-ink"
+                }`
+              : `min-h-10 rounded-md px-3 py-1.5 text-xs font-medium ${
+                  view === id ? "bg-accent text-black" : "text-muted hover:text-ink"
+                }`
+          }
         >
           {label}
         </button>
@@ -222,22 +235,28 @@ export function MarketWorkspace({
   return (
     <section id="heatmap" className="scroll-mt-36 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm">
       <div className="flex flex-col gap-3 border-b border-line px-4 py-3">
-        {/* Mobile: filter (B) left · title + view tabs (A) + countdown right */}
-        <div className="flex items-center gap-2 md:hidden">
+        {/* Mobile: row1 view+clock · row2 filter (no title / no "필터" label) */}
+        <div className="flex flex-col gap-1.5 md:hidden">
+          <div className="flex items-center gap-1.5">
+            {viewToggle(true)}
+            <div className="ml-auto shrink-0">
+              <HeaderRefreshCountdown intervalSec={refreshIntervalSec} />
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => setFilterOpen(true)}
-            className="inline-flex min-h-9 min-w-0 shrink items-center rounded-lg border border-line bg-board px-2.5 py-1 text-left text-ink"
+            aria-label={`필터 ${filterButtonSummary}`}
+            className="inline-flex w-full items-center justify-between rounded-md border border-line bg-board px-3 text-left text-ink"
+            style={{ height: CONTROL_H }}
           >
-            <span className="truncate text-[11px] font-semibold leading-tight">
-              필터 · {filterButtonSummary}
+            <span className="truncate text-[11px] font-medium leading-none tabular-nums">
+              {filterButtonSummary}
+            </span>
+            <span className="shrink-0 text-[10px] text-muted" aria-hidden>
+              설정
             </span>
           </button>
-          <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1.5">
-            <h1 className="shrink-0 text-sm font-semibold">{title}</h1>
-            {viewToggle}
-            <HeaderRefreshCountdown intervalSec={refreshIntervalSec} />
-          </div>
         </div>
 
         {/* Desktop header — unchanged structure */}
@@ -247,7 +266,7 @@ export function MarketWorkspace({
             <p className="text-xs text-muted">{subtitle}</p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
-            {viewToggle}
+            {viewToggle(false)}
             <button
               type="button"
               onClick={() => setMethodOpen(true)}
