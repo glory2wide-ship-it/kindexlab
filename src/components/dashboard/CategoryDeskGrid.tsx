@@ -49,7 +49,9 @@ export function CategoryDeskGrid({
         {desks.map((desk) => (
           <article
             key={desk.channel}
-            className="flex min-w-0 flex-col rounded-2xl border border-line bg-panel px-2.5 py-2.5 transition-colors hover:border-accent/50 sm:px-3 sm:py-3"
+            className={`flex min-w-0 flex-col rounded-2xl border border-line bg-panel px-2.5 py-2.5 transition-colors hover:border-accent/50 sm:px-3 sm:py-3${
+              desk.channel === "politics" ? " max-md:hidden" : ""
+            }`}
           >
             <h3 className="text-sm font-semibold leading-5 tracking-tight">
               <Link href={desk.href} prefetch={false} className="hover:text-accent">

@@ -402,7 +402,14 @@ export function ChannelMarketDesk({
           />
         ) : null}
         {showHeatmap && indices.length ? (
-          <MarketOverview indices={indices} flashNonce={flashNonce} selectedId={selectedSlug || undefined} />
+          <MarketOverview
+            indices={indices}
+            flashNonce={flashNonce}
+            selectedId={selectedSlug || undefined}
+            hideOnMobileIds={
+              channel === "politics" ? (["policy-controversy-index"] as const) : undefined
+            }
+          />
         ) : null}
       </div>
     </>

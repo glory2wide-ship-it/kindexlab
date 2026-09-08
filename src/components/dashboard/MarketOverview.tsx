@@ -48,12 +48,16 @@ export function MarketOverview({
   indices: indicesProp,
   flashNonce = 0,
   selectedId,
+  hideOnMobileIds,
 }: {
   indices: MarketIndex[];
   flashNonce?: number;
   selectedId?: string;
+  /** Index ids hidden below the `md` breakpoint (desktop keeps them). */
+  hideOnMobileIds?: readonly string[];
 }) {
   const indices = Array.isArray(indicesProp) ? indicesProp : [];
+  const mobileHidden = hideOnMobileIds?.length ? new Set(hideOnMobileIds) : null;
 
   return (
     <section className="index-gothic grid grid-cols-3 gap-2 font-sans sm:gap-3 lg:grid-cols-4 xl:grid-cols-6 xl:gap-2">
@@ -63,6 +67,7 @@ export function MarketOverview({
         const down = resolved.changeRate < 0;
         const composite = resolved.id === COMPOSITE_INDEX_ID || resolved.id === selectedId;
         const points = resolved.changePoints ?? 0;
+        const hideOnMobile = mobileHidden?.has(index.id);
         return (
           <Link
             key={`${index.id}-${resolved.value}-${resolved.changeRate}`}
@@ -70,7 +75,7 @@ export function MarketOverview({
             aria-label={`${index.label} ${resolved.value.toFixed(2)} ${formatRate(Number(resolved.changeRate))}`}
             className={`relative min-w-0 overflow-hidden rounded-xl border bg-panel p-2 shadow-sm transition-colors hover:border-accent/50 @container sm:p-3 ${
               composite ? "border-accent/50 ring-1 ring-accent/25" : "border-line"
-            }`}
+            }${hideOnMobile ? " max-md:hidden" : ""}`}
           >
             {flashNonce > 0 ? (
               <span

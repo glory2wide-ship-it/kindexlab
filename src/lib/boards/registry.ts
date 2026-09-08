@@ -1845,9 +1845,8 @@ const POLITICS_MENU_ORDER = [
   "policy-controversy-index",
 ] as const;
 
-/** Entertainment rail — 문화/생활 정부 지원금 first (shared board); 음원 sits right of 시청률. */
+/** Entertainment rail — 음원 sits right of 시청률. */
 const ENTERTAINMENT_MENU_ORDER = [
-  CULTURE_GRANT_SLUG,
   "kpop-fandom-power",
   "trot-kayo-fandom-power",
   "realtime-tv-ratings",
@@ -1900,14 +1899,9 @@ export function menuBoardsForChannel(channel: PostChannel): BoardDefinition[] {
     .filter((board) => !isRetiredPoliticsBoard(board.slug))
     .filter((board) => board.deskKind !== "headlines" && !isHeadlineNewsBoard(board.slug));
   if (channel === "entertainment") {
-    // Share the culture/living grant board in the slot that used to be 엔터 정부지원금.
-    const cultureGrant = getBoard(CULTURE_GRANT_SLUG);
+    // Culture/living grant lives only on the culture desk — keep it out of 엔터 rail + 종합.
     const withoutGrant = boards.filter((board) => board.slug !== CULTURE_GRANT_SLUG);
-    const ordered = sortMenusByOrder(
-      cultureGrant ? [cultureGrant, ...withoutGrant] : withoutGrant,
-      ENTERTAINMENT_MENU_ORDER,
-    );
-    return ordered;
+    return sortMenusByOrder(withoutGrant, ENTERTAINMENT_MENU_ORDER);
   }
   if (channel === "travel") return sortMenusByOrder(boards, TRAVEL_MENU_ORDER);
   if (channel === "politics") return sortMenusByOrder(boards, POLITICS_MENU_ORDER);
