@@ -195,6 +195,17 @@ export function hasLeakedMetadata(text: string): boolean {
   return METADATA_LEAK.test(text);
 }
 
+/** Truncated predicate typo that models sometimes emit (시점맙니다 등). */
+export function hasBrokenPredicateEndings(text: string): boolean {
+  return /[\uac00-\ud7a3]맙니다/.test(text);
+}
+
+/** Numbered heading with 년 but missing the year digits (❶ 년 …). */
+export function hasMissingYearDigitsInHeadings(text: string): boolean {
+  // Note: do not use \b after Hangul — JS word boundaries ignore CJK.
+  return /[❶❷❸❹❺❻❼❽]\s*년(?:\s|$|<)/.test(text);
+}
+
 /** Returns how many sentences repeat the same claim fingerprint. */
 export function duplicateClaimCount(text: string): number {
   const seen = new Set<string>();

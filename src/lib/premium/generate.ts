@@ -41,6 +41,8 @@ import {
   hasGenericPadding,
   hasLeakedMetadata,
   hasRepetitiveDeclarativeEndings,
+  hasBrokenPredicateEndings,
+  hasMissingYearDigitsInHeadings,
   hasTemplateConnectiveSpam,
 } from "@/lib/editorial/rules";
 import {
@@ -648,6 +650,7 @@ export async function generatePremiumArticle(input: {
     excerpt: excerptText,
     sections,
     faq: faqText,
+    editionDate,
   });
   title = corrected.title;
   excerptText = corrected.excerpt;
@@ -962,6 +965,13 @@ export async function generatePremiumArticle(input: {
   }
   if (input.briefing && hasLeakedMetadata(plain)) {
     return { ok: false, reason: "banned-copy", detail: "metadata-leak" };
+  }
+  if (hasBrokenPredicateEndings(plain)) {
+    return { ok: false, reason: "banned-copy", detail: "broken-predicate-ending" };
+  }
+  const headingScan = sections.map((section) => section.heading).join("\n");
+  if (hasMissingYearDigitsInHeadings(headingScan)) {
+    return { ok: false, reason: "banned-copy", detail: "missing-year-digits" };
   }
 
   const finalChars = premiumCharCount(

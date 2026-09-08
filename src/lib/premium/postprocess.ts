@@ -65,6 +65,74 @@ export function scrubBannedPhraseStems(text: string): string {
   return out;
 }
 
+/**
+ * Repair truncated Korean endings like "시점맙니다" that models sometimes emit
+ * mid-clause. Prefer joining particles over a bare "입니다" when the next clause continues.
+ */
+export function scrubBrokenPredicateEndings(text: string): string {
+  let out = text;
+  const contextual: { test: RegExp; to: string }[] = [
+    { test: /시점맙니다\.\s*/g, to: "시점에 " },
+    { test: /시기맙니다\.\s*/g, to: "시기에 " },
+    { test: /요일맙니다\.\s*/g, to: "요일마다 " },
+    { test: /수요일맙니다\.\s*/g, to: "수요일마다 " },
+    { test: /때맙니다\.\s*/g, to: "때마다 " },
+    { test: /순간맙니다\.\s*/g, to: "순간에 " },
+    { test: /시즌맙니다\.\s*/g, to: "시즌에 " },
+    { test: /도시맙니다\.\s*/g, to: "도시마다 " },
+    { test: /시설맙니다\.\s*/g, to: "시설마다 " },
+    { test: /이벤트맙니다\.\s*/g, to: "이벤트마다 " },
+    { test: /음원맙니다\.\s*/g, to: "음원마다 " },
+    { test: /곡맙니다\.\s*/g, to: "곡마다 " },
+    { test: /동선맙니다\.\s*/g, to: "동선마다 " },
+    { test: /운전자맙니다\.\s*/g, to: "운전자마다 " },
+    { test: /국면맙니다\.\s*/g, to: "국면에서 " },
+    { test: /행보맙니다\.\s*/g, to: "행보에서 " },
+    { test: /업데이트맙니다\.\s*/g, to: "업데이트가 " },
+    { test: /무대맙니다\.\s*/g, to: "무대마다 " },
+    { test: /미술관맙니다\.\s*/g, to: "미술관마다 " },
+    { test: /플랫폼맙니다\.\s*/g, to: "플랫폼마다 " },
+    { test: /차주맙니다\.\s*/g, to: "차주에 " },
+    { test: /명절맙니다\.\s*/g, to: "명절에 " },
+    { test: /주말맙니다\.\s*/g, to: "주말에 " },
+    { test: /지자체맙니다\.\s*치열해졌습니다\./g, to: "지자체마다 치열해졌습니다." },
+    { test: /지자체맙니다\.\s*/g, to: "지자체마다 " },
+    // Fallback: noun+맙니다 → noun+입니다 (never a valid Korean predicate by itself).
+    { test: /([\uac00-\ud7a3])맙니다/g, to: "$1입니다" },
+  ];
+  for (const rule of contextual) out = out.replace(rule.test, rule.to);
+  return out;
+}
+
+const BARE_YEAR_IN_NUMBERED_HEADING = /([❶❷❸❹❺❻❼❽])\s*년(\s+)/g;
+
+/** Recover missing digits before 년 in numbered headings (e.g. "❶ 년 가을" → "❶ 2026년 가을"). */
+export function repairMissingYearDigits(
+  text: string,
+  opts?: { editionDate?: string | null; title?: string | null },
+): string {
+  // Note: do not use \b after Hangul — JS word boundaries ignore CJK.
+  if (!/[❶❷❸❹❺❻❼❽]\s*년(?:\s|$|<)/.test(text)) return text;
+
+  const editionYear = (opts?.editionDate || "").match(/^(20\d{2})/)?.[1] ?? "";
+  const title = opts?.title || "";
+  const titleYear = title.match(/(20\d{2})\s*년/)?.[1] ?? "";
+  const durationYear = title.match(/(\d{1,2})\s*년\s*치/)?.[1] ?? "";
+
+  return text.replace(
+    BARE_YEAR_IN_NUMBERED_HEADING,
+    (full, mark: string, space: string, offset: number, source: string) => {
+      const after = source.slice(offset + full.length, offset + full.length + 4);
+      if (after.startsWith("치") && durationYear) {
+        return `${mark} ${durationYear}년${space}`;
+      }
+      const year = titleYear || editionYear;
+      if (!year) return full;
+      return `${mark} ${year}년${space}`;
+    },
+  );
+}
+
 /** Drop checklist / “확인해야 할 N가지” padding sentences without an LLM round-trip. */
 const GENERIC_PADDING_SENTENCE =
   /(?:체크리스트|실행\s*체크리스트|독자가\s*(?:먼저|반드시)\s*확인|확인해야\s*할\s*(?:N|몇|\d+)|꼼꼼히\s*점검)/i;
@@ -78,11 +146,18 @@ export function scrubGenericPaddingProse(text: string): string {
 }
 
 /** Full free post-process for a single prose field. */
-export function autoCorrectProse(text: string): string {
+export function autoCorrectProse(
+  text: string,
+  opts?: { editionDate?: string | null; title?: string | null },
+): string {
   return ensureSentencePunctuation(
     toHonorificProse(
       scrubBannedPhraseStems(
-        scrubGenericPaddingProse(scrubBoilerplatePhrases(normalizeWhitespace(text))),
+        scrubGenericPaddingProse(
+          scrubBoilerplatePhrases(
+            repairMissingYearDigits(scrubBrokenPredicateEndings(normalizeWhitespace(text)), opts),
+          ),
+        ),
       ),
     ),
   );
@@ -93,29 +168,41 @@ export function autoCorrectArticleFields(input: {
   excerpt: string;
   sections: SeoSection[];
   faq: PostFaq[];
+  editionDate?: string | null;
 }): {
   title: string;
   excerpt: string;
   sections: SeoSection[];
   faq: PostFaq[];
 } {
-  const title = scrubBannedPhraseStems(scrubBoilerplatePhrases(normalizeWhitespace(input.title)));
-  const excerpt = autoCorrectProse(input.excerpt);
+  const yearOpts = { editionDate: input.editionDate, title: input.title };
+  const title = repairMissingYearDigits(
+    scrubBannedPhraseStems(scrubBoilerplatePhrases(normalizeWhitespace(input.title))),
+    yearOpts,
+  );
+  const excerpt = autoCorrectProse(input.excerpt, yearOpts);
   const sections = polishArticleSections(
     input.sections.map((section) => ({
       ...section,
       heading: section.heading
-        ? scrubBannedPhraseStems(scrubBoilerplatePhrases(normalizeWhitespace(section.heading)))
+        ? repairMissingYearDigits(
+            scrubBannedPhraseStems(scrubBoilerplatePhrases(normalizeWhitespace(section.heading))),
+            yearOpts,
+          )
         : section.heading,
       paragraphs: section.paragraphs.map((paragraph) =>
-        toHonorificProse(scrubBannedPhraseStems(scrubBoilerplatePhrases(paragraph))),
+        toHonorificProse(
+          scrubBannedPhraseStems(scrubBoilerplatePhrases(scrubBrokenPredicateEndings(paragraph))),
+        ),
       ),
     })),
   );
   const faq = polishFaq(
     input.faq.map((item) => ({
       question: scrubBoilerplatePhrases(item.question),
-      answer: toHonorificProse(scrubBannedPhraseStems(scrubBoilerplatePhrases(item.answer))),
+      answer: toHonorificProse(
+        scrubBannedPhraseStems(scrubBoilerplatePhrases(scrubBrokenPredicateEndings(item.answer))),
+      ),
     })),
   );
   return {

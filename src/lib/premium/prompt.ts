@@ -37,7 +37,10 @@ export const STATIC_SYSTEM_PROMPT = [
 6. 팩트 기반 작성: [최신 뉴스 데이터]에만 기반합니다. 수집 데이터에 없는 인물 관계·사건·수치를 지어내지 마세요. Sparse/Shorts에서도 Why·How·표·전망의 뼈대는 유지하되 확인된 범위만 밀도 있게 쓰세요.
 7. 할루시네이션·노이즈 방지: 'FLOAT', 'Counter-' 등 다의어·접두어 일치만으로 이종 산업 소식을 한 인과로 묶지 마세요. 연계가 없으면 독립 단락 요약만 하세요.
 8. 메타 누설 금지: 글자 수, 읽는 시간, SEO, AdSense, '애드센스 고품질 본문 기준 충족', '고품질 본문 기준 충족', 날짜·카테고리 메타(예: '2026-09-02 · 실시간 웹툰 · 11분'), '네 기사를 작성해 드리겠습니다' 같은 LLM 서문을 본문에 넣지 마세요.
-9. 체류시간 유도형 소제목: H2는 ❶❷❸❹❺ 번호 형식이며, ❺는 반드시 \`KinDex 데이터가 보여주는 특징\`입니다. ❶~❹는 이 사안에서만 나올 수 있는 고유명사·구체 사실을 넣으세요. '향후 전망과 실행 팁', '전문가 시각의 장단점', '독자 체크리스트'처럼 키워드만 바꾸면 통하는 템플릿 소제목·목록 섹션은 실패입니다.`,
+9. 체류시간 유도형 소제목: H2는 ❶❷❸❹❺ 번호 형식이며, ❺는 반드시 \`KinDex 데이터가 보여주는 특징\`입니다. ❶~❹는 이 사안에서만 나올 수 있는 고유명사·구체 사실을 넣으세요. '향후 전망과 실행 팁', '전문가 시각의 장단점', '독자 체크리스트'처럼 키워드만 바꾸면 통하는 템플릿 소제목·목록 섹션은 실패입니다.
+10. 【연도 숫자 필수 — 강력 강제】 소제목·본문에서 연도를 말할 때 반드시 \`2026년\`처럼 네 자리(또는 기간 \`10년\`) 숫자를 \`년\` 바로 앞에 붙이세요. \`❶ 년 가을…\`, \`❹ 년 예산…\`처럼 숫자 없이 \`년\`만 두는 것은 즉시 폐기입니다. 예: 옳은 표기 \`❶ 2026년 9월 …\` / 틀린 표기 \`❶ 년 9월 …\`.
+11. 문장 중간을 끊고 \`맙니다\`로 끝내지 마세요. \`시점맙니다\`, \`때맙니다\` 같은 잘린 종결은 금지이며, \`시점에\`/\`때마다\`/\`입니다\` 등 자연스러운 서술어로 이어 쓰세요.
+12. 「파급 효과」「파급 효과를」 표현은 허용합니다. 전망·파급 소제목·본문에 자연스럽게 사용하세요.`,
   `[애드센스·워드프레스 SEO]
 1. Full/Sparse/Shorts: 공백 제외 1,000~1,800자. 하한 1,000자 미달 시 품질 게이트 실패. 팩트 + Why + How + 표 + 전망 + KinDex 특징 한 문단으로 밀도를 채우고 패딩·물타기는 금지.
 2. H1은 title 하나. 본문 sections는 스키마상 최소 5개(H2, headingLevel 2). 마지막 본문 H2는 \`KinDex 데이터가 보여주는 특징\`(한 문단)이며 takeaways/핵심 요약 직전입니다. FAQ 질문은 H3 개념.
@@ -148,6 +151,7 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
     '- internalLink.href는 /board/… · /{channel}/briefing · /ranking/… 등 실제 화면 경로만. /search?q= 금지. label은 "관련 글: …" 또는 보드명.',
     briefing ? "- takeaways는 반드시 []." : "- takeaways는 How에 맞는 구체 행동 2~4개. 화면에서는 ❺ 다음 「핵심 요약」.",
     "- 모든 서술 문장은 높임말(합니다체). 해라체·한다체 금지. 문장 끝 마침표(.) 필수. 동일 높임말 종결 연속 3회 금지.",
+    "- 【필수】 소제목에 연도가 들어가면 숫자+년 형태를 지키세요. 예: '❶ 2026년 …'. '❶ 년 …'처럼 숫자 누락은 실패입니다. 「파급 효과」는 사용 가능합니다.",
   ].join("\n");
 }
 
@@ -172,7 +176,6 @@ export const PREMIUM_BANNED_PHRASES = [
   "주목할 만한",
   "화제가 되고",
   "관심이 집중",
-  "파급 효과를",
   "중요한 역할을 하",
   "촉진하는 데 기여",
 ] as const;
@@ -197,7 +200,6 @@ const BANNED_PATTERNS: { label: (typeof PREMIUM_BANNED_PHRASES)[number]; test: R
   { label: "주목할 만한", test: /주목할\s*만한/ },
   { label: "화제가 되고", test: /화제가\s*되(고|는)/ },
   { label: "관심이 집중", test: /관심이\s*집중/ },
-  { label: "파급 효과를", test: /파급\s*효과를/ },
   { label: "중요한 역할을 하", test: /중요한\s*역할을\s*하/ },
   { label: "촉진하는 데 기여", test: /촉진하는\s*데\s*기여/ },
 ];
@@ -236,7 +238,9 @@ export function bannedPhraseReminder(): string {
     "- 긍정과 부정을 나란히 읽으면",
     "- 새로운 패러다임 / 혁신을 선보 / 심층 분석 / 주목할 만한 / 화제가 되고 / 관심이 집중",
     "- 좋다 / 추천한다 만으로 끝나는 모호한 감상 (수치·근거 없는 평가)",
+    "- 숫자 없는 '년'(예: '❶ 년 …') / 잘린 종결 '맙니다'(예: '시점맙니다')",
     "이 표현이 하나라도 들어가면 글 전체가 폐기됩니다. 단정적인 서술로 대체하세요.",
+    "「파급 효과」는 금지 대상이 아닙니다. 전망·파급 서술에 사용해도 됩니다.",
   ].join("\n");
 }
 
@@ -263,7 +267,7 @@ export function premiumPromptCacheKey(opts: {
   const kind = opts.briefing ? "briefing" : "premium";
   const mode = (opts.mode || "full").toLowerCase();
   // Channel omitted from cache key prefix so the static system prefix shares one machine.
-  return `kindexlab:${kind}:single:${mode}:v16`;
+  return `kindexlab:${kind}:single:${mode}:v17`;
 }
 
 export function wordpressAdsenseGuidelines(includeFullSeo: boolean): string {
