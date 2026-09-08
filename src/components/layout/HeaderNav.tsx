@@ -20,7 +20,7 @@ export function HeaderNav() {
 
   return (
     <nav
-      className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-x-auto text-[12px] sm:text-sm md:justify-center"
+      className="hidden min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto text-sm md:flex"
       aria-label="최상위 카테고리"
     >
       {POST_CHANNELS.map((item) => {

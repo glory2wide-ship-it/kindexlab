@@ -8,6 +8,7 @@ import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundar
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
 import { TreemapSkeleton } from "@/components/dashboard/TreemapSkeleton";
 import { TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
+import { MobileBottomSheet } from "@/components/layout/MobileBottomSheet";
 
 /**
  * Heatmap + layout load as their own chunk. SSR is off so a stale
@@ -174,15 +175,23 @@ export function MarketWorkspace({
   }, [filtered, timeframe, gender, age, region, showRegion, skipDemographicSkew, maxItems]);
   const demoKey = filterKey(gender, age, region);
   const demoActive = gender !== "all" || age !== "all" || region !== "all";
+  const [filterOpen, setFilterOpen] = useState(false);
+  const timeframeLabel = TIMEFRAMES.find((option) => option.id === timeframe)?.label ?? timeframe;
+  const categoryLabel = categories.find((item) => item.id === category)?.label ?? "종합";
+  const filterSummaryParts = [
+    hideTimeframes ? null : timeframeLabel,
+    hideCategoryTabs || category === "all" ? null : categoryLabel,
+    demoActive ? filterLabel(gender, age, region) : null,
+  ].filter(Boolean) as string[];
 
   // Board tiles link straight to /ranking/[slug]; the analysis column lives there.
   return (
     <section id="heatmap" className="scroll-mt-36 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm">
       <div className="flex flex-col gap-3 border-b border-line px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-base font-semibold">{title}</h1>
-            <p className="text-xs text-muted">{subtitle}</p>
+            <p className="hidden text-xs text-muted md:block">{subtitle}</p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <div className="flex rounded-lg bg-board p-1">
@@ -196,7 +205,7 @@ export function MarketWorkspace({
                   key={id}
                   type="button"
                   onClick={() => setView(id)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+                  className={`min-h-10 rounded-md px-3 py-1.5 text-xs font-medium md:min-h-0 ${
                     view === id ? "bg-accent text-black" : "text-muted hover:text-ink"
                   }`}
                 >
@@ -207,7 +216,7 @@ export function MarketWorkspace({
             <button
               type="button"
               onClick={() => setMethodOpen(true)}
-              className="inline-flex items-center rounded-md border border-line px-3 text-xs text-muted hover:text-ink"
+              className="hidden items-center rounded-md border border-line px-3 text-xs text-muted hover:text-ink md:inline-flex"
               style={{ height: 30, boxSizing: "border-box" }}
             >
               시세 산출 방식
@@ -217,65 +226,90 @@ export function MarketWorkspace({
               refreshing={refreshing}
               onExpire={onRefresh}
             />
+            <button
+              type="button"
+              onClick={() => setFilterOpen(true)}
+              className="inline-flex min-h-10 items-center rounded-md border border-line px-3 text-xs font-medium text-ink md:hidden"
+            >
+              필터
+            </button>
           </div>
         </div>
 
-        {hideCategoryTabs ? null : (
-        <div className="flex gap-1 overflow-x-auto rounded-lg bg-board p-1">
-          {categories.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setCategory(item.id)}
-              className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium ${
-                category === item.id ? "bg-accent text-black" : "text-muted hover:text-ink"
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        )}
-
-        {hideTimeframes ? null : (
-        <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
-          {TIMEFRAMES.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setTimeframe(option.id)}
-              className={`rounded-md px-3 py-1.5 font-sans text-[11px] font-medium ${
-                timeframe === option.id
-                  ? "bg-ink text-board"
-                  : "text-muted hover:bg-panel hover:text-ink"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-        )}
-
-        <DemographicTabs
-          gender={gender}
-          age={age}
-          onGender={setGender}
-          onAge={setAge}
-          boardSlug={boardSlug}
-          region={region}
-          onRegion={setRegion}
-          showRegion={showRegion}
-        />
-        {demoActive ? (
-          <p className="text-[11px] leading-5 text-muted">
-            {filterLabel(gender, age, region)}{" "}
-            {isHeadlineFeed(filtered)
-              ? "분봉 급상승·성별·연령 가중치로 헤드라인 순위를 다시 매겼습니다."
-              : skipDemographicSkew
-                ? "세그먼트 순위로 히트맵을 다시 그렸습니다."
-                : "관심 가중치로 순위를 다시 매겼습니다. 분봉 필터와 함께 적용됩니다."}
-          </p>
+        {filterSummaryParts.length ? (
+          <div className="flex flex-wrap gap-1.5 md:hidden">
+            {filterSummaryParts.map((part) => (
+              <button
+                key={part}
+                type="button"
+                onClick={() => setFilterOpen(true)}
+                className="rounded-full border border-line bg-board px-2.5 py-1 text-[11px] font-medium text-muted"
+              >
+                {part}
+              </button>
+            ))}
+          </div>
         ) : null}
+
+        {/* Desktop toolbar — unchanged structure */}
+        <div className="hidden flex-col gap-3 md:flex">
+          {hideCategoryTabs ? null : (
+            <div className="flex gap-1 overflow-x-auto rounded-lg bg-board p-1">
+              {categories.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setCategory(item.id)}
+                  className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium ${
+                    category === item.id ? "bg-accent text-black" : "text-muted hover:text-ink"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {hideTimeframes ? null : (
+            <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
+              {TIMEFRAMES.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setTimeframe(option.id)}
+                  className={`rounded-md px-3 py-1.5 font-sans text-[11px] font-medium ${
+                    timeframe === option.id
+                      ? "bg-ink text-board"
+                      : "text-muted hover:bg-panel hover:text-ink"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <DemographicTabs
+            gender={gender}
+            age={age}
+            onGender={setGender}
+            onAge={setAge}
+            boardSlug={boardSlug}
+            region={region}
+            onRegion={setRegion}
+            showRegion={showRegion}
+          />
+          {demoActive ? (
+            <p className="text-[11px] leading-5 text-muted">
+              {filterLabel(gender, age, region)}{" "}
+              {isHeadlineFeed(filtered)
+                ? "분봉 급상승·성별·연령 가중치로 헤드라인 순위를 다시 매겼습니다."
+                : skipDemographicSkew
+                  ? "세그먼트 순위로 히트맵을 다시 그렸습니다."
+                  : "관심 가중치로 순위를 다시 매겼습니다. 분봉 필터와 함께 적용됩니다."}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       <div
@@ -326,6 +360,96 @@ export function MarketWorkspace({
       </div>
 
       <MethodologyModal open={methodOpen} onClose={() => setMethodOpen(false)} channel={channel} />
+
+      <MobileBottomSheet open={filterOpen} title="히트맵 필터" onClose={() => setFilterOpen(false)}>
+        <div className="flex flex-col gap-5">
+          {hideCategoryTabs ? null : (
+            <section>
+              <h2 className="pb-2 text-[11px] font-semibold tracking-wide text-muted">분류</h2>
+              <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
+                {categories.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setCategory(item.id)}
+                    className={`min-h-10 shrink-0 rounded-md px-3 py-1.5 text-xs font-medium ${
+                      category === item.id ? "bg-accent text-black" : "text-muted hover:text-ink"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {hideTimeframes ? null : (
+            <section>
+              <h2 className="pb-2 text-[11px] font-semibold tracking-wide text-muted">기간</h2>
+              <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
+                {TIMEFRAMES.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setTimeframe(option.id)}
+                    className={`min-h-10 rounded-md px-3 py-1.5 font-sans text-[11px] font-medium ${
+                      timeframe === option.id
+                        ? "bg-ink text-board"
+                        : "text-muted hover:bg-panel hover:text-ink"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section>
+            <h2 className="pb-2 text-[11px] font-semibold tracking-wide text-muted">인구통계</h2>
+            <DemographicTabs
+              gender={gender}
+              age={age}
+              onGender={setGender}
+              onAge={setAge}
+              boardSlug={boardSlug}
+              region={region}
+              onRegion={setRegion}
+              showRegion={showRegion}
+            />
+            {demoActive ? (
+              <p className="mt-2 text-[11px] leading-5 text-muted">
+                {filterLabel(gender, age, region)}{" "}
+                {isHeadlineFeed(filtered)
+                  ? "분봉 급상승·성별·연령 가중치로 헤드라인 순위를 다시 매겼습니다."
+                  : skipDemographicSkew
+                    ? "세그먼트 순위로 히트맵을 다시 그렸습니다."
+                    : "관심 가중치로 순위를 다시 매겼습니다. 분봉 필터와 함께 적용됩니다."}
+              </p>
+            ) : null}
+          </section>
+
+          <section className="border-t border-line pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setFilterOpen(false);
+                setMethodOpen(true);
+              }}
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line text-sm text-muted hover:text-ink"
+            >
+              시세 산출 방식
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterOpen(false)}
+              className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-accent text-sm font-semibold text-black"
+            >
+              적용
+            </button>
+          </section>
+        </div>
+      </MobileBottomSheet>
     </section>
   );
 }

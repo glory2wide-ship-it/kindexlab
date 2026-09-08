@@ -70,7 +70,7 @@ function LiveBadge() {
   );
 }
 
-/** Centers the clock between the search button center and the LIVE label start. */
+/** Centers the clock between the search button center and the LIVE label start. Desktop only. */
 function HeaderClockSlot() {
   const slotRef = useRef<HTMLDivElement>(null);
   const [shiftX, setShiftX] = useState(0);
@@ -105,7 +105,10 @@ function HeaderClockSlot() {
   }, []);
 
   return (
-    <div ref={slotRef} className="flex min-w-0 flex-1 items-center justify-center px-1 sm:px-2">
+    <div
+      ref={slotRef}
+      className="hidden min-w-0 flex-1 items-center justify-center px-1 sm:px-2 md:flex"
+    >
       <div style={{ transform: shiftX ? `translateX(${shiftX}px)` : undefined }}>
         <KstClock />
       </div>
@@ -113,17 +116,23 @@ function HeaderClockSlot() {
   );
 }
 
+/**
+ * Desktop (md+): search + clock + LIVE + theme (unchanged).
+ * Mobile: compact search + LIVE only (clock/theme live in MobileMenuSheet).
+ */
 export function HeaderRightCluster() {
   return (
     <div
       data-header-right
-      className="ml-auto flex min-w-[17rem] shrink-0 items-center overflow-visible sm:min-w-[22rem] md:min-w-[26rem]"
+      className="flex min-w-0 shrink-0 items-center overflow-visible md:ml-auto md:min-w-[26rem]"
     >
       <HeaderSearch />
       <HeaderClockSlot />
-      <div className="flex shrink-0 items-center gap-2.5">
+      <div className="flex shrink-0 items-center gap-1.5 md:gap-2.5">
         <LiveBadge />
-        <ThemeToggle />
+        <div className="hidden md:block">
+          <ThemeToggle />
+        </div>
       </div>
     </div>
   );

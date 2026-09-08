@@ -5,8 +5,10 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   SEARCH_BUTTON_CLASS,
+  SEARCH_BUTTON_MOBILE_CLASS,
   SEARCH_FORM_CLASS,
   SEARCH_INPUT_CLASS,
+  SEARCH_INPUT_EXPANDED_CLASS,
   SEARCH_INPUT_STYLE,
 } from "@/components/layout/header-search-ui";
 import type { SearchSuggestion } from "@/lib/search/suggest";
@@ -28,6 +30,7 @@ export function HeaderSearch() {
   const listRef = useRef<HTMLUListElement>(null);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
   const [active, setActive] = useState(0);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 256 });
@@ -43,7 +46,7 @@ export function HeaderSearch() {
     const rect = el.getBoundingClientRect();
     setMenuPos({
       top: rect.bottom + 4,
-      left: rect.left,
+      left: Math.max(8, rect.right - Math.max(rect.width, 256)),
       width: Math.max(rect.width, 256),
     });
   }
@@ -96,13 +99,20 @@ export function HeaderSearch() {
       const target = event.target as Node;
       if (rootRef.current?.contains(target) || listRef.current?.contains(target)) return;
       setOpen(false);
+      setMobileExpanded(false);
     }
     document.addEventListener("mousedown", onPointer);
     return () => document.removeEventListener("mousedown", onPointer);
   }, []);
 
+  useEffect(() => {
+    if (!mobileExpanded) return;
+    inputRef.current?.focus();
+  }, [mobileExpanded]);
+
   function go(href: string) {
     setOpen(false);
+    setMobileExpanded(false);
     router.push(href);
   }
 
@@ -115,6 +125,16 @@ export function HeaderSearch() {
     }
     router.push(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   }
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = () => {
+      if (mq.matches) setMobileExpanded(false);
+    };
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   const dropdown =
     mounted && open && suggestions.length
@@ -184,7 +204,20 @@ export function HeaderSearch() {
             setOpen(true);
           }
         }}
+        onBlur={() => {
+          // Keep expanded while suggestions are open; otherwise collapse on mobile.
+          window.setTimeout(() => {
+            if (!open) setMobileExpanded(false);
+          }, 150);
+        }}
         onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            setOpen(false);
+            setMobileExpanded(false);
+            inputRef.current?.blur();
+            return;
+          }
           if (!suggestions.length) return;
           if (event.key === "ArrowDown") {
             event.preventDefault();
@@ -194,19 +227,28 @@ export function HeaderSearch() {
             event.preventDefault();
             setOpen(true);
             setActive((index) => (index - 1 + suggestions.length) % suggestions.length);
-          } else if (event.key === "Escape") {
-            event.preventDefault();
-            setOpen(false);
           }
         }}
         placeholder="종목·키워드 검색"
-        className={SEARCH_INPUT_CLASS}
+        className={mobileExpanded ? SEARCH_INPUT_EXPANDED_CLASS : SEARCH_INPUT_CLASS}
         style={SEARCH_INPUT_STYLE}
       />
+      {/* Desktop submit — unchanged */}
+      <button type="submit" aria-label="검색" className={`${SEARCH_BUTTON_CLASS} max-md:hidden`}>
+        <SearchIcon className="h-4 w-4" />
+      </button>
+      {/* Mobile: expand field, or submit when already expanded */}
       <button
-        type="submit"
+        type="button"
         aria-label="검색"
-        className={SEARCH_BUTTON_CLASS}
+        className={SEARCH_BUTTON_MOBILE_CLASS}
+        onClick={() => {
+          if (!mobileExpanded) {
+            setMobileExpanded(true);
+            return;
+          }
+          submitSearch();
+        }}
       >
         <SearchIcon className="h-4 w-4" />
       </button>

@@ -1,29 +1,47 @@
+"use client";
+
 import Link from "next/link";
+import { useCallback, useState } from "react";
 import { HeaderNav } from "@/components/layout/HeaderNav";
 import { HeaderRightCluster } from "@/components/layout/HeaderRightCluster";
+import { MobileMenuButton, MobileMenuSheet } from "@/components/layout/MobileMenuSheet";
 import { RouteProgress } from "@/components/layout/RouteProgress";
 import { SITE } from "@/lib/site";
 
 export function SiteHeader() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+
   return (
     <>
       <RouteProgress />
       <header className="sticky top-0 z-40 overflow-visible border-b border-line bg-board/90 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 overflow-visible px-4">
-          <Link href="/" className="flex min-w-0 items-center gap-2.5">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 overflow-visible px-4 md:justify-between md:gap-3">
+          <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2 md:gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-accent font-sans text-[11px] font-bold tracking-tight text-black">
               KD
             </span>
             <span className="leading-tight">
               <span className="block font-gothic text-sm font-semibold tracking-tight sm:text-base">
-                {SITE.nameKo} <span className="font-normal text-muted">/</span> {SITE.name}
+                <span className="md:hidden">{SITE.name}</span>
+                <span className="hidden md:inline">
+                  {SITE.nameKo} <span className="font-normal text-muted">/</span> {SITE.name}
+                </span>
               </span>
             </span>
           </Link>
+
+          {/* Desktop channel nav — unchanged placement */}
           <HeaderNav />
-          <HeaderRightCluster />
+
+          {/* Mobile: search + LIVE + menu · Desktop: full right cluster */}
+          <div className="ml-auto flex min-w-0 items-center gap-1.5 md:contents">
+            <HeaderRightCluster />
+            <MobileMenuButton open={menuOpen} onClick={() => setMenuOpen((value) => !value)} />
+          </div>
         </div>
       </header>
+      <MobileMenuSheet open={menuOpen} onClose={closeMenu} />
     </>
   );
 }
