@@ -60,7 +60,7 @@ export function MarketOverview({
   const mobileHidden = hideOnMobileIds?.length ? new Set(hideOnMobileIds) : null;
 
   return (
-    <section className="index-gothic grid grid-cols-3 gap-2 font-sans sm:gap-3 lg:grid-cols-4 xl:grid-cols-6 xl:gap-2">
+    <section className="index-gothic grid grid-cols-3 gap-2 font-sans sm:gap-3 md:flex md:flex-nowrap md:gap-2">
       {indices.map((index) => {
         const resolved = withIndexPoints(index);
         const up = resolved.changeRate > 0;
@@ -73,7 +73,7 @@ export function MarketOverview({
             key={`${index.id}-${resolved.value}-${resolved.changeRate}`}
             href={index.href ?? indexPath(index.id)}
             aria-label={`${index.label} ${resolved.value.toFixed(2)} ${formatRate(Number(resolved.changeRate))}`}
-            className={`relative min-w-0 overflow-hidden rounded-xl border bg-panel p-2 shadow-sm transition-colors hover:border-accent/50 @container sm:p-3 ${
+            className={`relative min-w-0 overflow-hidden rounded-xl border bg-panel p-2 shadow-sm transition-colors hover:border-accent/50 @container sm:p-3 md:flex-1 ${
               composite ? "border-accent/50 ring-1 ring-accent/25" : "border-line"
             }${hideOnMobile ? " max-md:hidden" : ""}`}
           >
