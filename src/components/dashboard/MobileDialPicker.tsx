@@ -13,14 +13,14 @@ function DialChevron({
 }) {
   return (
     <span
-      className={`pointer-events-none flex h-[28px] w-[10px] shrink-0 items-center justify-center text-accent transition-opacity ${
+      className={`pointer-events-none flex h-[28px] w-[13px] shrink-0 items-center justify-center text-accent transition-opacity ${
         visible ? "opacity-100" : "opacity-35"
       }`}
       aria-hidden
     >
       <svg
         viewBox="0 0 24 24"
-        className="h-[16px] w-[16px]"
+        className="h-[21px] w-[21px]"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.6"
@@ -144,7 +144,7 @@ export function MobileDialPicker<T extends string>({
     <div className="flex min-w-0 flex-1 items-center gap-0" aria-label={ariaLabel}>
       <DialChevron direction="left" visible={canScrollLeft} />
       <div
-        className="relative min-w-0 flex-1 overflow-hidden rounded-md border border-line bg-board"
+        className="relative min-w-0 flex-1 overflow-hidden rounded-md bg-board"
         style={{ height: 28 }}
       >
         <div

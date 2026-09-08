@@ -195,7 +195,9 @@ export function TreemapView({
             heatmapRank: rank,
           });
           const fill = heatText(change);
-          const rankSize = w >= 120 && h >= 56 ? 16.5 : 13.5;
+          const baseRankSize = w >= 120 && h >= 56 ? 16.5 : 13.5;
+          /** Mobile: #rank −30%; desktop unchanged. */
+          const rankSize = isMobileViewport ? baseRankSize * 0.7 : baseRankSize;
           const showRank = w >= 36 && h >= 20;
           // Desk tag rides on the rank line so the tile keeps its label height.
           const channelTag = entity.sourceChannel
@@ -209,7 +211,16 @@ export function TreemapView({
           const sourceSize = Math.max(8, rankSize - 2) * 1.15;
           const showSource = showSourceCaptions && rank <= 10 && Boolean(sourceLabel) && w >= 52 && h >= 28;
           const displayTitle = isHeadline ? summarizeHeadlineTitle(entity.name) : (label?.name ?? lines.title);
+          /** Mobile: main title −25%; desktop unchanged. */
+          const titleScale = isMobileViewport ? 0.75 : 1;
+          const nameFontSize = (label?.nameSize ?? 16) * titleScale;
+          const headlineFontSize =
+            headlineTitleSize(w, h) * (rank >= 8 && rank <= 15 ? 0.8 : 1) * titleScale;
           const href = entityHref(entity);
+          const rankHeaderWidth = Math.min(164, w - 4);
+          const rankHeaderX = isMobileViewport
+            ? leaf.x0 + 2
+            : Math.max(leaf.x0, leaf.x1 - 168);
           return (
             <Link
               key={`${entity.id}-${rank}`}
@@ -246,13 +257,17 @@ export function TreemapView({
                 />
                 {showRank ? (
                   <foreignObject
-                    x={Math.max(leaf.x0, leaf.x1 - 168)}
+                    x={rankHeaderX}
                     y={leaf.y0 + 3}
-                    width={Math.min(164, w - 4)}
+                    width={rankHeaderWidth}
                     height={showSource ? 64 : 28}
                   >
                     <div
-                      className="pointer-events-none flex h-full w-full flex-col items-end justify-start pr-1"
+                      className={`pointer-events-none flex h-full w-full flex-col justify-start ${
+                        isMobileViewport
+                          ? "items-start pl-1 text-left"
+                          : "items-end pr-1 text-right"
+                      }`}
                       style={{ color: fill }}
                     >
                       <span className="flex items-center gap-1 leading-none">
@@ -273,7 +288,9 @@ export function TreemapView({
                       </span>
                       {showSource && sourceLabel ? (
                         <span
-                          className="mt-0.5 max-w-full text-right font-medium leading-tight opacity-90"
+                          className={`mt-0.5 max-w-full font-medium leading-tight opacity-90 ${
+                            isMobileViewport ? "text-left" : "text-right"
+                          }`}
                           style={{
                             fontSize: sourceSize,
                             display: "-webkit-box",
@@ -309,7 +326,7 @@ export function TreemapView({
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          fontSize: label?.nameSize ?? 16,
+                          fontSize: nameFontSize,
                           lineHeight: 1.22,
                           letterSpacing: "-0.03em",
                           wordBreak: "break-all",
@@ -363,7 +380,7 @@ export function TreemapView({
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          fontSize: headlineTitleSize(w, h) * (rank >= 8 && rank <= 15 ? 0.8 : 1),
+                          fontSize: headlineFontSize,
                           lineHeight: 1.25,
                           letterSpacing: "-0.03em",
                           wordBreak: "break-all",
@@ -402,7 +419,7 @@ export function TreemapView({
                             WebkitBoxOrient: "vertical",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
-                            fontSize: label?.nameSize ?? 16,
+                            fontSize: nameFontSize,
                             lineHeight: 1.22,
                             letterSpacing: "-0.03em",
                             wordBreak: "break-all",
