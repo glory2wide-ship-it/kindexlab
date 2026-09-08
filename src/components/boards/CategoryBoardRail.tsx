@@ -117,7 +117,7 @@ export function CategoryBoardRail({
     <section className="rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3 max-md:py-2.5">
       <div className="mb-3 hidden flex-wrap items-baseline justify-between gap-2 md:flex">
         <div>
-          <h2 className="text-[16.09px] font-semibold">랭킹·지수 보드</h2>
+          <h2 className="text-base font-semibold">랭킹·지수 보드</h2>
           {onSelect ? (
             <p className="mt-0.5 text-[13.79px] text-muted">
               보드를 고르면 아래 히트맵이 그 주제로 바뀝니다. 종목을 누르면 분석·여론조사 상세가 열립니다.
