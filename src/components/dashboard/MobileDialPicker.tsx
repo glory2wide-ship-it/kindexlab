@@ -151,34 +151,54 @@ export function MobileDialPicker<T extends string>({
         className="pointer-events-none absolute inset-y-0.5 left-1/2 w-[38%] -translate-x-1/2 rounded bg-accent/25"
         aria-hidden
       />
-      {/* Edge fades + larger swipe chevrons */}
+      {/* Edge fades + accent chevrons (no fill behind text) */}
       <div
-        className={`pointer-events-none absolute inset-y-0 left-0 w-7 bg-gradient-to-r from-board via-board/90 to-transparent transition-opacity ${
-          canScrollLeft ? "opacity-100" : "opacity-50"
+        className={`pointer-events-none absolute inset-y-0 left-0 w-7 bg-gradient-to-r from-board via-board/85 to-transparent transition-opacity ${
+          canScrollLeft ? "opacity-100" : "opacity-45"
         }`}
         aria-hidden
       />
       <div
-        className={`pointer-events-none absolute inset-y-0 right-0 w-7 bg-gradient-to-l from-board via-board/90 to-transparent transition-opacity ${
-          canScrollRight ? "opacity-100" : "opacity-50"
+        className={`pointer-events-none absolute inset-y-0 right-0 w-7 bg-gradient-to-l from-board via-board/85 to-transparent transition-opacity ${
+          canScrollRight ? "opacity-100" : "opacity-45"
         }`}
         aria-hidden
       />
       <span
-        className={`pointer-events-none absolute top-1/2 left-0 flex h-[22px] w-[22px] -translate-y-1/2 items-center justify-center rounded-full border border-line bg-accent text-[16px] font-bold leading-none text-black shadow transition-opacity ${
-          canScrollLeft ? "opacity-100" : "opacity-40"
+        className={`pointer-events-none absolute top-1/2 left-0 flex -translate-y-1/2 items-center justify-center text-accent transition-opacity ${
+          canScrollLeft ? "opacity-100" : "opacity-35"
         }`}
         aria-hidden
       >
-        ‹
+        <svg
+          viewBox="0 0 24 24"
+          className="h-[18.4px] w-[18.4px]"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M15 6l-6 6 6 6" />
+        </svg>
       </span>
       <span
-        className={`pointer-events-none absolute top-1/2 right-0 flex h-[22px] w-[22px] -translate-y-1/2 items-center justify-center rounded-full border border-line bg-accent text-[16px] font-bold leading-none text-black shadow transition-opacity ${
-          canScrollRight ? "opacity-100" : "opacity-40"
+        className={`pointer-events-none absolute top-1/2 right-0 flex -translate-y-1/2 items-center justify-center text-accent transition-opacity ${
+          canScrollRight ? "opacity-100" : "opacity-35"
         }`}
         aria-hidden
       >
-        ›
+        <svg
+          viewBox="0 0 24 24"
+          className="h-[18.4px] w-[18.4px]"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M9 6l6 6-6 6" />
+        </svg>
       </span>
     </div>
   );
