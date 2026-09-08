@@ -53,6 +53,9 @@ export const POST_CHANNELS: {
     indexTitle: "정치",
     description:
       "정부 지원금, 정당·정치인 지지도, 지자체 정책, 정치 유튜브·평론가, 이슈 키워드를 지수로 읽습니다.",
+    indexTitleDesktop: "여론과 시사 이슈의 흐름을 지수로 읽다, 정치 지수",
+    descriptionDesktop:
+      "정부 지원금, 정당·정치인 지지도, 지자체 정책, 정치 유튜브·평론가, 이슈 키워드를 지수로 읽습니다.",
   },
   {
     id: "economy",
@@ -62,6 +65,9 @@ export const POST_CHANNELS: {
     indexTitle: "경제",
     description:
       "경제 정부지원금, 지역별 부동산, 금융, 주식, 해외 주식, 원자재·환율, 소비자 물가, 창업·프랜차이즈, 이슈 키워드를 보드로 읽습니다.",
+    indexTitleDesktop: "내 삶에 영향을 미치는 실시간 경제 이슈 지수",
+    descriptionDesktop:
+      "부동산, 정부지원금, 금융, 체감 물가, 이슈 종목이 일상과 시장에 미치는 영향을 차트로 확인하세요.",
   },
   {
     id: "culture",
@@ -71,6 +77,9 @@ export const POST_CHANNELS: {
     indexTitle: "문화/생활",
     description:
       "문화/생활 정부 지원금, 공연, 전시·팝업스토어, 도서·베스트셀러, 건강정보, 요리 레시피, 자동차, 이슈 키워드를 한 데스크에서 읽습니다.",
+    indexTitleDesktop: "트렌디한 삶의 방식과 소비 지형도, 문화·생활 지수",
+    descriptionDesktop:
+      "문화, 라이프스타일, 트렌드 아이템까지 일상 속 모든 관심사의 실시간 랭킹.",
   },
   {
     id: "travel",
@@ -80,6 +89,9 @@ export const POST_CHANNELS: {
     indexTitle: "여행/맛집",
     description:
       "여행 정부지원금, 국내 여행, 해외 여행, 지역별 주말 나들이, 지역별 음식/맛집을 랭킹 보드로 읽습니다.",
+    indexTitleDesktop: "차트로 만나는 대한민국 미식·여행 트렌드! 여행·맛집 지수",
+    descriptionDesktop:
+      "국내외 여행지, 미식 트렌드, 정부 여행 지원금 혜택까지 가장 뜨거운 핫이슈를 확인하세요.",
   },
 ];
 
