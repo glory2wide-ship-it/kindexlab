@@ -123,7 +123,7 @@ export function MarketWorkspace({
     };
   }, []);
 
-  const [view, setView] = useState<ViewMode>("list");
+  const [view, setView] = useState<ViewMode>("treemap");
   const [category, setCategory] = useState<CategoryId>(initialCategory);
   /** Mobile-first default matches heatmap dials (5분 · 전체 · 전체). Desktop flips to 3분. */
   const [timeframe, setTimeframe] = useState<Timeframe>("5m");
@@ -139,12 +139,12 @@ export function MarketWorkspace({
     if (mq.matches) setTimeframe("3m");
   }, []);
 
-  /** Mobile opens on list; desktop keeps caller initialView (usually treemap). */
+  /** Mobile opens on heatmap; desktop keeps caller initialView (usually treemap). */
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
     const applyDefault = () => {
       if (userPickedView) return;
-      setView(mq.matches ? initialView : "list");
+      setView(mq.matches ? initialView : "treemap");
     };
     applyDefault();
     mq.addEventListener("change", applyDefault);
@@ -213,7 +213,8 @@ export function MarketWorkspace({
   );
   const demoKey = filterKey(gender, age, region);
   const demoActive = gender !== "all" || age !== "all" || region !== "all";
-  const needsExtraFilterSheet = showRegion || !hideCategoryTabs;
+  /** Region has its own mobile dial; sheet is only for category tabs. */
+  const needsExtraFilterSheet = !hideCategoryTabs;
 
   const CONTROL_H = 25.5;
   const DESKTOP_CONTROL_H = 30;
@@ -225,15 +226,10 @@ export function MarketWorkspace({
 
   const viewToggle = (compact: boolean) => {
     const tabs = (
-      compact
-        ? ([
-            ["list", "리스트"],
-            ["treemap", "히트맵"],
-          ] as const)
-        : ([
-            ["treemap", "히트맵"],
-            ["list", "리스트"],
-          ] as const)
+      [
+        ["treemap", "히트맵"],
+        ["list", "리스트"],
+      ] as const
     );
     return (
       <div
@@ -242,20 +238,28 @@ export function MarketWorkspace({
         aria-label="보기 전환"
         style={{ height: compact ? CONTROL_H : DESKTOP_CONTROL_H }}
       >
-        {tabs.map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={view === id}
-            onClick={() => pickView(id)}
-            className={`inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none md:px-3 md:text-xs ${
-              view === id ? "bg-accent text-black" : "text-muted hover:text-ink"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+        {tabs.map(([id, label]) => {
+          const selected = view === id;
+          const heatmapEmphasis = compact && id === "treemap" && selected;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => pickView(id)}
+              className={`inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none md:px-3 md:text-xs ${
+                heatmapEmphasis
+                  ? "bg-[#dc2626] text-white"
+                  : selected
+                    ? "bg-accent text-black"
+                    : "text-muted hover:text-ink"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
     );
   };
@@ -272,7 +276,7 @@ export function MarketWorkspace({
               <HeaderRefreshCountdown intervalSec={refreshIntervalSec} />
             </div>
           </div>
-          <div className="-mx-1 flex items-stretch gap-1">
+          <div className="-mx-1 flex items-start gap-1">
             <div className="min-w-0 flex-1">
               <MobileHeatmapDials
                 timeframe={timeframe}
@@ -281,6 +285,9 @@ export function MarketWorkspace({
                 onGender={setGender}
                 age={age}
                 onAge={setAge}
+                region={region}
+                onRegion={setRegion}
+                showRegion={showRegion}
                 boardSlug={boardSlug}
                 hideTimeframes={hideTimeframes}
               />

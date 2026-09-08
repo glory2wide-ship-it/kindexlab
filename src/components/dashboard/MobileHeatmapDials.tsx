@@ -3,13 +3,14 @@
 import { MobileDialPicker } from "@/components/dashboard/MobileDialPicker";
 import { visibleAgeSegments } from "@/lib/boards/age-tabs";
 import { AGE_LABEL, GENDER_LABEL } from "@/lib/boards/demographics";
-import type { AgeSegment, GenderSegment } from "@/lib/boards/types";
+import { REGION_LABEL, REGION_SEGMENTS } from "@/lib/boards/regions";
+import type { AgeSegment, GenderSegment, RegionSegment } from "@/lib/boards/types";
 import { TIMEFRAMES } from "@/lib/categories";
 import type { Timeframe } from "@/lib/types";
 
 /**
- * Three horizontal dials for mobile heatmap filters.
- * Desktop DemographicTabs / timeframe chips stay unchanged.
+ * Horizontal dials for mobile heatmap filters.
+ * Optional region dial sits on a second row (부동산·여행 등 시/도 보드).
  */
 export function MobileHeatmapDials({
   timeframe,
@@ -18,6 +19,9 @@ export function MobileHeatmapDials({
   onGender,
   age,
   onAge,
+  region = "all",
+  onRegion,
+  showRegion = false,
   boardSlug,
   hideTimeframes = false,
 }: {
@@ -27,6 +31,9 @@ export function MobileHeatmapDials({
   onGender: (value: "all" | GenderSegment) => void;
   age: "all" | AgeSegment;
   onAge: (value: "all" | AgeSegment) => void;
+  region?: "all" | RegionSegment;
+  onRegion?: (value: "all" | RegionSegment) => void;
+  showRegion?: boolean;
   boardSlug?: string;
   hideTimeframes?: boolean;
 }) {
@@ -47,23 +54,41 @@ export function MobileHeatmapDials({
     ...afterAll.map((key) => ({ id: key, label: AGE_LABEL[key] })),
   ];
 
+  /** 전체 centered among 시/도 so neighbors stay visible like age dials. */
+  const mid = Math.ceil(REGION_SEGMENTS.length / 2);
+  const regionOptions = [
+    ...REGION_SEGMENTS.slice(0, mid).map((key) => ({ id: key, label: REGION_LABEL[key] })),
+    { id: "all" as const, label: "전체" },
+    ...REGION_SEGMENTS.slice(mid).map((key) => ({ id: key, label: REGION_LABEL[key] })),
+  ];
+
   return (
-    <div className="flex gap-1 md:hidden">
-      {hideTimeframes ? null : (
+    <div className="flex flex-col gap-1 md:hidden">
+      <div className="flex gap-1">
+        {hideTimeframes ? null : (
+          <MobileDialPicker
+            ariaLabel="기간"
+            options={timeOptions}
+            value={timeframe}
+            onChange={onTimeframe}
+          />
+        )}
         <MobileDialPicker
-          ariaLabel="기간"
-          options={timeOptions}
-          value={timeframe}
-          onChange={onTimeframe}
+          ariaLabel="성별"
+          options={genderOptions}
+          value={gender}
+          onChange={onGender}
         />
-      )}
-      <MobileDialPicker
-        ariaLabel="성별"
-        options={genderOptions}
-        value={gender}
-        onChange={onGender}
-      />
-      <MobileDialPicker ariaLabel="연령" options={ageOptions} value={age} onChange={onAge} />
+        <MobileDialPicker ariaLabel="연령" options={ageOptions} value={age} onChange={onAge} />
+      </div>
+      {showRegion && onRegion ? (
+        <MobileDialPicker
+          ariaLabel="지역"
+          options={regionOptions}
+          value={region}
+          onChange={onRegion}
+        />
+      ) : null}
     </div>
   );
 }
