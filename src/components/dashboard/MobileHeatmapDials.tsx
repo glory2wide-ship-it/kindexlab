@@ -48,7 +48,7 @@ export function MobileHeatmapDials({
   ];
 
   return (
-    <div className="flex gap-1.5 md:hidden">
+    <div className="flex gap-1 md:hidden">
       {hideTimeframes ? null : (
         <MobileDialPicker
           ariaLabel="기간"

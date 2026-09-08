@@ -240,7 +240,7 @@ export function MarketWorkspace({
               <HeaderRefreshCountdown intervalSec={refreshIntervalSec} />
             </div>
           </div>
-          <div className="flex items-stretch gap-1.5">
+          <div className="-mx-1 flex items-stretch gap-1">
             <div className="min-w-0 flex-1">
               <MobileHeatmapDials
                 timeframe={timeframe}
@@ -258,7 +258,7 @@ export function MarketWorkspace({
                 type="button"
                 onClick={() => setFilterOpen(true)}
                 aria-label="추가 필터"
-                className="inline-flex shrink-0 items-center justify-center rounded-md border border-line bg-board px-2 text-[10px] font-medium text-muted"
+                className="inline-flex shrink-0 items-center justify-center rounded-md border border-line bg-board px-1.5 text-[10px] font-medium text-muted"
                 style={{ height: 28 }}
               >
                 설정
