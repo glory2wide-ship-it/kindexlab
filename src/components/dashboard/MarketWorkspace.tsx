@@ -102,10 +102,14 @@ export function MarketWorkspace({
   onRefresh?: () => void;
 }) {
   useEffect(() => {
-    // Warm treemap after first paint so switching 리스트 → 히트맵 is instant.
+    // Warm treemap after first paint so LCP bandwidth is not contested,
+    // and warm the list module so 히트맵 → 리스트 stays snappy without
+    // keeping RankingTable mounted (that caused a desktop list flash).
     let cancelled = false;
     const warm = () => {
-      if (!cancelled) void import("@/components/dashboard/TreemapCanvas");
+      if (cancelled) return;
+      void import("@/components/dashboard/TreemapCanvas");
+      void import("@/components/dashboard/RankingTable");
     };
     let idleId: number | undefined;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -123,7 +127,7 @@ export function MarketWorkspace({
     };
   }, []);
 
-  const [view, setView] = useState<ViewMode>("treemap");
+  const [view, setView] = useState<ViewMode>(initialView);
   const [category, setCategory] = useState<CategoryId>(initialCategory);
   /** Mobile-first default matches heatmap dials (5분 · 전체 · 전체). Desktop flips to 3분. */
   const [timeframe, setTimeframe] = useState<Timeframe>("5m");
@@ -139,7 +143,7 @@ export function MarketWorkspace({
     if (mq.matches) setTimeframe("3m");
   }, []);
 
-  /** Mobile opens on heatmap; desktop keeps caller initialView (usually treemap). */
+  /** Keep default view in sync on viewport changes; never flash list on desktop. */
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
     const applyDefault = () => {
@@ -408,34 +412,25 @@ export function MarketWorkspace({
                 : "하단 랭킹·지수 보드에서 성별·연령별 순위를 볼 수 있습니다. 시세 종목은 다음 집계 주기에 채워집니다."}
             </p>
           </div>
+        ) : view === "treemap" ? (
+          <HeatmapErrorBoundary
+            resetKey={`${demoKey}-${timeframe}`}
+            fallback={
+              <p className="px-5 py-12 text-center text-sm text-muted">
+                히트맵을 그리지 못했습니다. 리스트 탭에서 순위를 확인하세요.
+              </p>
+            }
+          >
+            <TreemapView
+              key={`${demoKey}-${timeframe}-${sortedItems.length}`}
+              items={sortedItems}
+              category={category}
+              timeframe={timeframe}
+              showSourceCaptions={!boardSlug}
+            />
+          </HeatmapErrorBoundary>
         ) : (
-          <>
-            {view === "treemap" ? (
-              <HeatmapErrorBoundary
-                resetKey={`${demoKey}-${timeframe}`}
-                fallback={
-                  <p className="px-5 py-12 text-center text-sm text-muted">
-                    히트맵을 그리지 못했습니다. 리스트 탭에서 순위를 확인하세요.
-                  </p>
-                }
-              >
-                <TreemapView
-                  key={`${demoKey}-${timeframe}-${sortedItems.length}`}
-                  items={sortedItems}
-                  category={category}
-                  timeframe={timeframe}
-                  showSourceCaptions={!boardSlug}
-                />
-              </HeatmapErrorBoundary>
-            ) : null}
-            {/* Keep list mounted so 히트맵 → 리스트 never waits on remount/chunk. */}
-            <div
-              className={view === "list" ? "block" : "hidden"}
-              aria-hidden={view !== "list"}
-            >
-              <RankingTable items={listItems} timeframe={timeframe} lockOrder />
-            </div>
-          </>
+          <RankingTable items={listItems} timeframe={timeframe} lockOrder />
         )}
       </div>
 
