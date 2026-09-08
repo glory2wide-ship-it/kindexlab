@@ -17,7 +17,7 @@ export function LandingDeskHeader() {
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
           {SITE_INDEX_HEADLINE_DESKTOP}
         </h1>
-        <p className="max-w-3xl text-sm leading-6 text-muted">
+        <p className="max-w-3xl text-[16.8px] leading-[28.8px] text-muted">
           {SITE_LANDING_HEADLINE_DESKTOP}
         </p>
       </header>
