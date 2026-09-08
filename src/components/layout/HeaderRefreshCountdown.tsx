@@ -59,10 +59,10 @@ export function HeaderRefreshCountdown({
       }
       className="inline-flex h-[25.5px] shrink-0 items-center justify-center gap-1 rounded-md border border-line bg-accent px-1.5 font-sans font-semibold text-black"
     >
-      <span className="text-[9px] font-bold leading-none tracking-tight whitespace-nowrap">
+      <span className="text-[9.9px] font-bold leading-none tracking-tight whitespace-nowrap">
         LIVE Update
       </span>
-      <span className="text-[11px] tabular-nums leading-none">
+      <span className="text-[12.1px] tabular-nums leading-none">
         {pending ? "…" : formatRefreshClock(remainingSec)}
       </span>
     </div>
