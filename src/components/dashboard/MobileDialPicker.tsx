@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type DialOption<T extends string> = { id: T; label: string };
 
@@ -23,18 +23,32 @@ export function MobileDialPicker<T extends string>({
   const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const ignoreScrollRef = useRef(false);
   const frameRef = useRef(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const scrollToValue = useCallback((id: T, behavior: ScrollBehavior = "smooth") => {
+  const updateEdges = useCallback(() => {
     const scroller = scrollerRef.current;
-    const el = itemRefs.current.get(id);
-    if (!scroller || !el) return;
-    ignoreScrollRef.current = true;
-    const left = el.offsetLeft - (scroller.clientWidth - el.offsetWidth) / 2;
-    scroller.scrollTo({ left: Math.max(0, left), behavior });
-    window.setTimeout(() => {
-      ignoreScrollRef.current = false;
-    }, behavior === "auto" ? 50 : 280);
+    if (!scroller) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scroller;
+    setCanScrollLeft(scrollLeft > 2);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
   }, []);
+
+  const scrollToValue = useCallback(
+    (id: T, behavior: ScrollBehavior = "smooth") => {
+      const scroller = scrollerRef.current;
+      const el = itemRefs.current.get(id);
+      if (!scroller || !el) return;
+      ignoreScrollRef.current = true;
+      const left = el.offsetLeft - (scroller.clientWidth - el.offsetWidth) / 2;
+      scroller.scrollTo({ left: Math.max(0, left), behavior });
+      window.setTimeout(() => {
+        ignoreScrollRef.current = false;
+        updateEdges();
+      }, behavior === "auto" ? 50 : 280);
+    },
+    [updateEdges],
+  );
 
   useEffect(() => {
     scrollToValue(value, "auto");
@@ -61,12 +75,13 @@ export function MobileDialPicker<T extends string>({
       }
       if (bestId !== value) onChange(bestId);
       else scrollToValue(bestId, "smooth");
+      updateEdges();
     };
 
     const onScroll = () => {
       window.cancelAnimationFrame(frameRef.current);
       frameRef.current = window.requestAnimationFrame(() => {
-        /* wait for snap settle via scrollend when available */
+        updateEdges();
       });
     };
 
@@ -74,13 +89,13 @@ export function MobileDialPicker<T extends string>({
 
     scroller.addEventListener("scroll", onScroll, { passive: true });
     scroller.addEventListener("scrollend", onScrollEnd);
-    // Fallback when scrollend is missing
     let settleTimer = 0;
     const onScrollFallback = () => {
       window.clearTimeout(settleTimer);
       settleTimer = window.setTimeout(pickNearest, 120);
     };
     scroller.addEventListener("scroll", onScrollFallback, { passive: true });
+    updateEdges();
 
     return () => {
       scroller.removeEventListener("scroll", onScroll);
@@ -89,7 +104,7 @@ export function MobileDialPicker<T extends string>({
       window.clearTimeout(settleTimer);
       window.cancelAnimationFrame(frameRef.current);
     };
-  }, [onChange, options, scrollToValue, value]);
+  }, [onChange, options, scrollToValue, updateEdges, value]);
 
   return (
     <div
@@ -120,7 +135,7 @@ export function MobileDialPicker<T extends string>({
                 onChange(opt.id);
                 scrollToValue(opt.id, "smooth");
               }}
-              className={`snap-center shrink-0 px-2 text-center text-[10px] font-medium leading-none whitespace-nowrap ${
+              className={`snap-center shrink-0 px-2 text-center text-[11px] font-medium leading-none whitespace-nowrap ${
                 active ? "text-ink" : "text-muted"
               }`}
               aria-pressed={active}
@@ -136,6 +151,35 @@ export function MobileDialPicker<T extends string>({
         className="pointer-events-none absolute inset-y-0.5 left-1/2 w-[38%] -translate-x-1/2 rounded bg-accent/25"
         aria-hidden
       />
+      {/* Edge fades + chevrons hint horizontal swipe */}
+      <div
+        className={`pointer-events-none absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-board to-transparent transition-opacity ${
+          canScrollLeft ? "opacity-100" : "opacity-40"
+        }`}
+        aria-hidden
+      />
+      <div
+        className={`pointer-events-none absolute inset-y-0 right-0 w-5 bg-gradient-to-l from-board to-transparent transition-opacity ${
+          canScrollRight ? "opacity-100" : "opacity-40"
+        }`}
+        aria-hidden
+      />
+      <span
+        className={`pointer-events-none absolute top-1/2 left-0.5 -translate-y-1/2 text-[9px] leading-none text-muted transition-opacity ${
+          canScrollLeft ? "opacity-80" : "opacity-30"
+        }`}
+        aria-hidden
+      >
+        ‹
+      </span>
+      <span
+        className={`pointer-events-none absolute top-1/2 right-0.5 -translate-y-1/2 text-[9px] leading-none text-muted transition-opacity ${
+          canScrollRight ? "opacity-80" : "opacity-30"
+        }`}
+        aria-hidden
+      >
+        ›
+      </span>
     </div>
   );
 }

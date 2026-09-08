@@ -317,7 +317,7 @@ export function MarketWorkspace({
                   key={option.id}
                   type="button"
                   onClick={() => setTimeframe(option.id)}
-                  className={`rounded-md px-3 py-1.5 font-sans text-[11px] font-medium ${
+                  className={`rounded-md px-3 py-1.5 font-sans text-xs font-medium ${
                     timeframe === option.id
                       ? "bg-ink text-board"
                       : "text-muted hover:bg-panel hover:text-ink"
@@ -432,7 +432,7 @@ export function MarketWorkspace({
                     key={option.id}
                     type="button"
                     onClick={() => setTimeframe(option.id)}
-                    className={`min-h-10 rounded-md px-3 py-1.5 font-sans text-[11px] font-medium ${
+                    className={`min-h-10 rounded-md px-3 py-1.5 font-sans text-xs font-medium ${
                       timeframe === option.id
                         ? "bg-ink text-board"
                         : "text-muted hover:bg-panel hover:text-ink"
