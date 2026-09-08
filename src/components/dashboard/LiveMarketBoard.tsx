@@ -75,31 +75,33 @@ export function LiveMarketBoard({
   const politicsBoard = channel === "politics";
 
   return (
-    <div className="space-y-3">
-      {children}
-      <div className="-mx-4">
+    <>
+      {children ? <div className="order-3 md:order-3">{children}</div> : null}
+      <div className="order-1 -mx-4 md:order-2">
         {boardItems.length ? <TickerTape items={boardItems} /> : null}
       </div>
-      <MarketWorkspace
-        key={channel ?? initialCategory}
-        items={boardItems}
-        initialCategory={initialCategory}
-        flashNonce={flashNonce}
-        initialView="treemap"
-        categories={politicsBoard ? POLITICS_CATEGORIES : undefined}
-        channel={channel}
-        title={politicsBoard ? `정치 ${LIVE_INDEX_LABEL}` : LIVE_INDEX_LABEL}
-        subtitle={
-          politicsBoard
-            ? "9대 정치 지표를 히트맵과 리스트로 읽습니다. 기본 시계열은 3분봉입니다."
-            : "등락률·버즈·거래량을 히트맵과 리스트로 읽습니다."
-        }
-        refreshIntervalSec={refreshIntervalSec}
-        refreshing={refreshing}
-        onRefresh={() => void refresh()}
-      />
-      <MarketOverview indices={boardIndices} flashNonce={flashNonce} />
-      {afterOverview}
-    </div>
+      <div className="order-3 space-y-3 md:order-3">
+        <MarketWorkspace
+          key={channel ?? initialCategory}
+          items={boardItems}
+          initialCategory={initialCategory}
+          flashNonce={flashNonce}
+          initialView="treemap"
+          categories={politicsBoard ? POLITICS_CATEGORIES : undefined}
+          channel={channel}
+          title={politicsBoard ? `정치 ${LIVE_INDEX_LABEL}` : LIVE_INDEX_LABEL}
+          subtitle={
+            politicsBoard
+              ? "9대 정치 지표를 히트맵과 리스트로 읽습니다. 기본 시계열은 3분봉입니다."
+              : "등락률·버즈·거래량을 히트맵과 리스트로 읽습니다."
+          }
+          refreshIntervalSec={refreshIntervalSec}
+          refreshing={refreshing}
+          onRefresh={() => void refresh()}
+        />
+        <MarketOverview indices={boardIndices} flashNonce={flashNonce} />
+        {afterOverview}
+      </div>
+    </>
   );
 }

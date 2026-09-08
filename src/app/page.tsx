@@ -82,7 +82,9 @@ async function HomeBoardSection() {
         status="open"
         refreshIntervalSec={DEFAULT_TRENDS_REVALIDATE_SEC}
       />
-      <HomeDesksSection desks={unified.desks} />
+      <div className="order-3 space-y-4 md:order-3">
+        <HomeDesksSection desks={unified.desks} />
+      </div>
     </>
   );
 }
@@ -117,10 +119,22 @@ async function HomeBriefingSection() {
 export default function HomePage() {
   return (
     <div className="space-y-8">
-      {/* LCP text ships in the first RSC chunk — no await above this. */}
-      <div className="space-y-4">
-        <LandingDeskHeader />
-        <Suspense fallback={<HeatmapSkeleton />}>
+      {/*
+        Mobile order: ticker (1) → categories (2) → board (3).
+        Desktop keeps header → ticker → board. Category chips stay outside
+        Suspense so they paint with the first RSC chunk.
+      */}
+      <div className="flex flex-col gap-4">
+        <div className="order-2 md:order-1">
+          <LandingDeskHeader />
+        </div>
+        <Suspense
+          fallback={
+            <div className="order-3 md:order-3">
+              <HeatmapSkeleton />
+            </div>
+          }
+        >
           <HomeBoardSection />
         </Suspense>
       </div>

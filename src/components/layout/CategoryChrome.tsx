@@ -12,12 +12,18 @@ export function CategoryChrome({
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-4">
-      {/* Sync H1 — streams with the layout before desk Suspense resolves. */}
-      <CategoryDeskHeader channel={channel} />
-      <CategorySubNav channel={channel} />
+    <div className="flex flex-col gap-4">
+      {/* Mobile: ticker (from children) sits above this via flex order. */}
+      <div className="order-2 space-y-2 md:order-1">
+        <CategoryDeskHeader channel={channel} />
+      </div>
+      <div className="order-2 md:order-1">
+        <CategorySubNav channel={channel} />
+      </div>
       {children}
-      <ContentSlot placement="footer" adFormat="auto" />
+      <div className="order-3 md:order-3">
+        <ContentSlot placement="footer" adFormat="auto" />
+      </div>
     </div>
   );
 }

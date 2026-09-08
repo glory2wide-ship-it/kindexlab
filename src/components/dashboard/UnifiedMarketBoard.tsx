@@ -27,20 +27,22 @@ export function UnifiedMarketBoard({
   const [pending, startTransition] = useTransition();
 
   return (
-    <div className="space-y-3">
-      <div className="-mx-4">
+    <>
+      <div className="order-1 -mx-4 md:order-2">
         {items.length ? <TickerTape items={items} /> : null}
       </div>
-      <MarketWorkspace
-        items={items}
-        initialView="treemap"
-        hideCategoryTabs
-        title={LIVE_INDEX_LABEL}
-        subtitle="등락률·시세·버즈를 히트맵과 리스트로 읽습니다. 주식·해외 주식·원자재·환율 타일은 현재가(단위)를 표시합니다."
-        refreshIntervalSec={refreshIntervalSec}
-        refreshing={pending}
-        onRefresh={() => startTransition(() => router.refresh())}
-      />
-    </div>
+      <div className="order-3 space-y-3 md:order-3">
+        <MarketWorkspace
+          items={items}
+          initialView="treemap"
+          hideCategoryTabs
+          title={LIVE_INDEX_LABEL}
+          subtitle="등락률·시세·버즈를 히트맵과 리스트로 읽습니다. 주식·해외 주식·원자재·환율 타일은 현재가(단위)를 표시합니다."
+          refreshIntervalSec={refreshIntervalSec}
+          refreshing={pending}
+          onRefresh={() => startTransition(() => router.refresh())}
+        />
+      </div>
+    </>
   );
 }

@@ -354,58 +354,57 @@ export function ChannelMarketDesk({
   const boardRail = (
     <CategoryBoardRail channel={channel} selectedSlug={selectedSlug} onSelect={onSelectBoard} />
   );
-  const statusAndTicker = (
-    <div className="-mx-4">
-      {tickerItems.length ? <TickerTape items={tickerItems} /> : null}
-    </div>
-  );
 
   return (
-    <div className="space-y-3">
-      {statusAndTicker}
-      {boardRail}
-      {deskKind === "headlines" ? (
-        <HeadlineNewsRanking channel={channel} onItems={setHeadlineItems} />
-      ) : null}
-      {showHeatmap ? (
-        <MarketWorkspace
-          items={items}
-          flashNonce={flashNonce}
-          initialView="treemap"
-          hideCategoryTabs
-          hideTimeframes={false}
-          skipDemographicSkew={Boolean(selectedSlug) || boardHeatmap}
-          gender={gender}
-          age={age}
-          region={region}
-          onGender={setGender}
-          onAge={setAge}
-          onRegion={setRegion}
-          showRegion={showRegion}
-          boardSlug={selectedSlug || undefined}
-          channel={channel}
-          maxItems={heatmapMaxItems(channel, selectedSlug, region)}
-          refreshIntervalSec={DEFAULT_TRENDS_REVALIDATE_SEC}
-          refreshing={refreshing}
-          onRefresh={onHeatmapRefresh}
-          title={selectedBoard ? selectedBoard.title : title}
-          subtitle={
-            selectedBoard?.slug === "kospi-fomo-index" ||
-            selectedBoard?.slug === "overseas-stock-index"
-              ? `${demo === "전체" ? "전체" : demo} 순위 · 현재가·전일 대비 등락률을 히트맵에 표시합니다. 약 3분마다 갱신됩니다.`
-              : selectedBoard?.slug === "commodities-fx-index"
-                ? `${demo === "전체" ? "전체" : demo} 순위 · 환율·원자재 시세·등락률을 히트맵에 표시합니다. 약 3분마다 갱신됩니다.`
-              : selectedBoard
-                ? `${demo === "전체" ? "전체" : demo} 순위 · 100점 척도. 분봉 필터와 성별·연령${showRegion ? "·지역" : ""} 탭이 함께 적용됩니다.`
-                : channel === "economy"
-                  ? `${demo === "전체" ? "채널 종합" : demo} · 주식·해외 주식·원자재·환율 타일은 현재가(단위)로 표시됩니다.`
-                  : `${demo === "전체" ? "채널 종합" : demo} · 상단 보드 주제와 1:1로 묶인 히트맵입니다.`
-          }
-        />
-      ) : null}
-      {showHeatmap && indices.length ? (
-        <MarketOverview indices={indices} flashNonce={flashNonce} selectedId={selectedSlug || undefined} />
-      ) : null}
-    </div>
+    <>
+      <div className="order-1 -mx-4 md:order-2">
+        {tickerItems.length ? <TickerTape items={tickerItems} /> : null}
+      </div>
+      <div className="order-3 space-y-3 md:order-3">
+        {boardRail}
+        {deskKind === "headlines" ? (
+          <HeadlineNewsRanking channel={channel} onItems={setHeadlineItems} />
+        ) : null}
+        {showHeatmap ? (
+          <MarketWorkspace
+            items={items}
+            flashNonce={flashNonce}
+            initialView="treemap"
+            hideCategoryTabs
+            hideTimeframes={false}
+            skipDemographicSkew={Boolean(selectedSlug) || boardHeatmap}
+            gender={gender}
+            age={age}
+            region={region}
+            onGender={setGender}
+            onAge={setAge}
+            onRegion={setRegion}
+            showRegion={showRegion}
+            boardSlug={selectedSlug || undefined}
+            channel={channel}
+            maxItems={heatmapMaxItems(channel, selectedSlug, region)}
+            refreshIntervalSec={DEFAULT_TRENDS_REVALIDATE_SEC}
+            refreshing={refreshing}
+            onRefresh={onHeatmapRefresh}
+            title={selectedBoard ? selectedBoard.title : title}
+            subtitle={
+              selectedBoard?.slug === "kospi-fomo-index" ||
+              selectedBoard?.slug === "overseas-stock-index"
+                ? `${demo === "전체" ? "전체" : demo} 순위 · 현재가·전일 대비 등락률을 히트맵에 표시합니다. 약 3분마다 갱신됩니다.`
+                : selectedBoard?.slug === "commodities-fx-index"
+                  ? `${demo === "전체" ? "전체" : demo} 순위 · 환율·원자재 시세·등락률을 히트맵에 표시합니다. 약 3분마다 갱신됩니다.`
+                : selectedBoard
+                  ? `${demo === "전체" ? "전체" : demo} 순위 · 100점 척도. 분봉 필터와 성별·연령${showRegion ? "·지역" : ""} 탭이 함께 적용됩니다.`
+                  : channel === "economy"
+                    ? `${demo === "전체" ? "채널 종합" : demo} · 주식·해외 주식·원자재·환율 타일은 현재가(단위)로 표시됩니다.`
+                    : `${demo === "전체" ? "채널 종합" : demo} · 상단 보드 주제와 1:1로 묶인 히트맵입니다.`
+            }
+          />
+        ) : null}
+        {showHeatmap && indices.length ? (
+          <MarketOverview indices={indices} flashNonce={flashNonce} selectedId={selectedSlug || undefined} />
+        ) : null}
+      </div>
+    </>
   );
 }

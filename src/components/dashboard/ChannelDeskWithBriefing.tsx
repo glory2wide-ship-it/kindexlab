@@ -36,7 +36,7 @@ export function ChannelDeskWithBriefing({
   const [activeDeskId, setActiveDeskId] = useState("");
 
   return (
-    <div className="space-y-8">
+    <>
       <ChannelMarketDesk
         channel={channel}
         boards={boards}
@@ -45,7 +45,7 @@ export function ChannelDeskWithBriefing({
         initialQuotedByBoard={initialQuotedByBoard}
         onBoardChange={setActiveDeskId}
       />
-      <section className="border-t border-line pt-8">
+      <section className="order-3 space-y-8 border-t border-line pt-8 md:order-3">
         <ChannelBriefingLayout
           channel={channel}
           main={main}
@@ -54,6 +54,6 @@ export function ChannelDeskWithBriefing({
           activeDeskId={activeDeskId || undefined}
         />
       </section>
-    </div>
+    </>
   );
 }
