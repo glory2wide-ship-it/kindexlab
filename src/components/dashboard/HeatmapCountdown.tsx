@@ -2,20 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import { isNavigating } from "@/lib/nav/progress";
-import { DEFAULT_TRENDS_REVALIDATE_SEC, formatRefreshCountdown } from "@/lib/refresh";
+import { DEFAULT_TRENDS_REVALIDATE_SEC, formatRefreshClock } from "@/lib/refresh";
 
 /** Keep the same outer box as the neighboring "랭킹 산출 방식" control (30px). */
 const SHELL_CLASS =
-  "inline-flex min-w-[8.64rem] shrink-0 items-center justify-center rounded-md border border-line bg-accent px-3 text-[13.2px] font-medium tabular-nums text-black";
+  "inline-flex shrink-0 items-center justify-center gap-1 rounded-md border border-line bg-accent px-3 font-sans font-semibold text-black";
 const SHELL_STYLE = { height: 30, boxSizing: "border-box" as const };
-const CLOCK_STYLE = { textAlign: "center" as const, lineHeight: 1 };
+/** Current desktop type was 13.2px; +10% → 14.52px for the clock digits. */
+const LABEL_CLASS = "text-[11.88px] font-bold leading-none tracking-tight whitespace-nowrap";
+const CLOCK_CLASS = "refresh-countdown text-[14.52px] tabular-nums leading-none";
 
 export function HeatmapCountdownFallback() {
   return (
     <div role="timer" className={SHELL_CLASS} style={SHELL_STYLE} aria-hidden>
-      <span className="refresh-countdown w-full text-center" style={CLOCK_STYLE}>
-        Update 3 min
-      </span>
+      <span className={LABEL_CLASS}>LIVE Update</span>
+      <span className={CLOCK_CLASS}>03:00</span>
     </div>
   );
 }
@@ -23,6 +24,7 @@ export function HeatmapCountdownFallback() {
 /**
  * Owns the 1s countdown locally so parent heatmaps do not re-render (and
  * re-layout d3) every second. Optional `onExpire` fires about every interval.
+ * Desktop copy matches the mobile header countdown: "LIVE Update MM:SS".
  */
 export function HeatmapCountdown({
   intervalSec = DEFAULT_TRENDS_REVALIDATE_SEC,
@@ -57,8 +59,6 @@ export function HeatmapCountdown({
     return () => window.clearInterval(tick);
   }, [intervalSec]);
 
-  const label = refreshing ? "Updating…" : formatRefreshCountdown(remainingSec);
-
   return (
     <div
       role="timer"
@@ -71,8 +71,9 @@ export function HeatmapCountdown({
       className={SHELL_CLASS}
       style={SHELL_STYLE}
     >
-      <span className="refresh-countdown w-full text-center" style={CLOCK_STYLE}>
-        {label}
+      <span className={LABEL_CLASS}>LIVE Update</span>
+      <span className={CLOCK_CLASS}>
+        {refreshing ? "…" : formatRefreshClock(remainingSec)}
       </span>
     </div>
   );
