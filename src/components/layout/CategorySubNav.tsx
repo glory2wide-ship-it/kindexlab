@@ -8,6 +8,8 @@ import {
   channelSectionHref,
   getPostChannel,
   resolveChannelSection,
+  resolveSiteSection,
+  siteSectionHref,
   type ChannelSectionId,
 } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
@@ -24,27 +26,29 @@ export function CategorySubNav({
   channel,
   embedded = false,
 }: {
-  channel: PostChannel;
-  /** When true, render only the pill row (mobile, under H1). */
+  /** When omitted, links target the landing (전체) site sections. */
+  channel?: PostChannel;
+  /** When true, render only the pill row (mobile sticky stack). */
   embedded?: boolean;
 }) {
   const pathname = usePathname() || "/";
   const segment = useSelectedLayoutSegment();
-  const meta = getPostChannel(channel);
   const router = useRouter();
+  const meta = channel ? getPostChannel(channel) : null;
 
-  const active: ChannelSectionId =
-    pathname === `/${channel}` || pathname.startsWith(`/${channel}/`)
+  const active: ChannelSectionId = channel
+    ? pathname === `/${channel}` || pathname.startsWith(`/${channel}/`)
       ? sectionFromPathname(pathname, channel)
-      : resolveChannelSection(segment);
+      : resolveChannelSection(segment)
+    : resolveSiteSection(pathname);
 
   const nav = (
     <nav
       className={`category-sub-nav flex gap-1 overflow-x-auto text-sm ${embedded ? "ml-0" : ""}`}
-      aria-label={`${meta.label} 서브 메뉴`}
+      aria-label={meta ? `${meta.label} 서브 메뉴` : "전체 서브 메뉴"}
     >
       {CHANNEL_SECTIONS.map((item) => {
-        const href = channelSectionHref(channel, item.id);
+        const href = channel ? channelSectionHref(channel, item.id) : siteSectionHref(item.id);
         const isActive = item.id === active;
         return (
           <Link
@@ -75,7 +79,7 @@ export function CategorySubNav({
   return (
     <div className="category-sub-nav-bar flex flex-wrap items-center gap-3 py-2">
       <DeskEyebrow variant="subnav" className="category-sub-nav-eyebrow shrink-0">
-        {meta.eyebrow}
+        {meta?.eyebrow ?? "ALL DESKS"}
       </DeskEyebrow>
       {nav}
     </div>

@@ -148,6 +148,30 @@ export function channelSectionHref(channel: PostChannel, section: ChannelSection
   return `/${channel}${found?.path ?? ""}`;
 }
 
+/** Site-wide section links for the landing (전체) desk. */
+export function siteSectionHref(section: ChannelSectionId = "board"): string {
+  switch (section) {
+    case "briefing":
+      return "/briefing";
+    case "archive":
+      return "/briefing/archive";
+    case "about":
+      return "/about";
+    case "board":
+    default:
+      return "/";
+  }
+}
+
+export function resolveSiteSection(pathname: string): ChannelSectionId {
+  if (pathname === "/about" || pathname.startsWith("/about/")) return "about";
+  if (pathname === "/briefing/archive" || pathname.startsWith("/briefing/archive/")) {
+    return "archive";
+  }
+  if (pathname === "/briefing" || pathname.startsWith("/briefing/")) return "briefing";
+  return "board";
+}
+
 export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
   entertainment: [
     "kpop",

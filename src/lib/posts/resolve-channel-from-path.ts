@@ -23,3 +23,11 @@ export function resolveChannelFromPath(pathname: string): PostChannel | undefine
   }
   return undefined;
 }
+
+/** Landing + site-wide section routes that use 전체 section tabs (no channel). */
+export function isSiteSectionPath(pathname: string): boolean {
+  if (pathname === "/" || pathname === "") return true;
+  if (pathname === "/about" || pathname.startsWith("/about/")) return true;
+  if (pathname === "/briefing" || pathname.startsWith("/briefing/")) return true;
+  return false;
+}

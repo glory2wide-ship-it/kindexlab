@@ -3,18 +3,21 @@
 import { usePathname } from "next/navigation";
 import { CategorySubNav } from "@/components/layout/CategorySubNav";
 import { useActiveChannelOverride } from "@/components/providers/ActiveChannelProvider";
-import { resolveChannelFromPath } from "@/lib/posts/resolve-channel-from-path";
+import {
+  isSiteSectionPath,
+  resolveChannelFromPath,
+} from "@/lib/posts/resolve-channel-from-path";
 
 /**
  * Desktop sticky 실시간 랭킹 / 일일브리핑 / 아카이브 / 소개 rail.
- * Mobile uses the same nav inside GlobalStickyMobileCategoryBar.
+ * Shows on the landing (전체), site briefing/about, and every channel screen.
  */
 export function GlobalDesktopCategorySectionBar() {
   const pathname = usePathname() || "/";
   const override = useActiveChannelOverride();
   const channel = override ?? resolveChannelFromPath(pathname);
 
-  if (!channel) return null;
+  if (!channel && !isSiteSectionPath(pathname)) return null;
 
   return (
     <div
