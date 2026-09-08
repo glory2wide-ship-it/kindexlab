@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DemographicTabs } from "@/components/boards/DemographicTabs";
 import { BoardReportBody } from "@/components/boards/BoardReportBody";
+import { LIST_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import { clampAgeForBoard } from "@/lib/boards/age-tabs";
 import { filterKey, filterLabel, selectRanking, dropNamesForFilter } from "@/lib/boards/demographics";
 import { canonicalizeGameEsportsName, platformForGame, formatPlatformTag } from "@/lib/boards/game-platforms";
@@ -140,12 +141,12 @@ export function BoardRankingPanel({
     try {
       const def = getBoard(board.slug);
       return selectRanking(board.demographics, board.ranking ?? [], gender, age, {
-        limit: Math.max(10, board.ranking?.length ?? 10),
+        limit: LIST_MAX_ITEMS,
         dropNames: dropNamesForFilter(def, gender, age),
         region: showRegion ? region : "all",
-      });
+      }).slice(0, LIST_MAX_ITEMS);
     } catch {
-      return (board.ranking ?? []).slice(0, 10);
+      return (board.ranking ?? []).slice(0, LIST_MAX_ITEMS);
     }
   }, [board.demographics, board.ranking, board.slug, gender, age, region, showRegion]);
   const max = rows.length ? Math.max(...rows.map((row) => (Number.isFinite(row.score) ? row.score : 0))) : 0;

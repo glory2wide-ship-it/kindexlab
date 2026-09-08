@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { scheduleEntityPrefetch } from "@/lib/nav/prefetch";
 import { Sparkline } from "@/components/dashboard/Sparkline";
+import { LIST_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import { heatmapNameLines } from "@/lib/musicTitle";
 import { isTwoLineBracketHeatmap } from "@/lib/boards/culture-grants";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, rankDelta, metricLabel } from "@/lib/format";
@@ -32,12 +33,14 @@ export function RankingTable({
   const router = useRouter();
   const [sortKey, setSortKey] = useState<SortKey>("rank");
 
+  const cappedItems = useMemo(() => items.slice(0, LIST_MAX_ITEMS), [items]);
+
   useEffect(() => {
-    return scheduleEntityPrefetch(router.prefetch, items);
-  }, [items, router]);
+    return scheduleEntityPrefetch(router.prefetch, cappedItems);
+  }, [cappedItems, router]);
   const [dir, setDir] = useState<"asc" | "desc">("asc");
   const rows = useMemo(() => {
-    const mapped = items.map((item) => {
+    const mapped = cappedItems.map((item) => {
       const series = getTimeframeSeries(item, timeframe);
       return {
         item,
@@ -72,7 +75,7 @@ export function RankingTable({
       }
       return ((table[sortKey] as number) - (other[sortKey] as number)) * sign;
     });
-  }, [dir, items, lockOrder, sortKey, timeframe]);
+  }, [cappedItems, dir, lockOrder, sortKey, timeframe]);
 
   function toggle(key: SortKey) {
     if (sortKey === key) setDir((value) => (value === "asc" ? "desc" : "asc"));

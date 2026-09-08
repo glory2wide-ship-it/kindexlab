@@ -7,16 +7,20 @@ import { HeatmapCountdownFallback } from "@/components/dashboard/HeatmapCountdow
 import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundary";
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
 import { MobileHeatmapDials } from "@/components/dashboard/MobileHeatmapDials";
+import { RankingTable } from "@/components/dashboard/RankingTable";
 import { TreemapSkeleton } from "@/components/dashboard/TreemapSkeleton";
-import { TREEMAP_MAX_ITEMS, MOBILE_TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
+import {
+  TREEMAP_MAX_ITEMS,
+  MOBILE_TREEMAP_MAX_ITEMS,
+  LIST_MAX_ITEMS,
+} from "@/components/dashboard/treemap-config";
 import { HeaderRefreshCountdown } from "@/components/layout/HeaderRefreshCountdown";
 import { MobileBottomSheet } from "@/components/layout/MobileBottomSheet";
 
 /**
- * Heatmap + layout load as their own chunk. SSR is off so a stale
- * client bundle cannot hydrate against a newer server tree (the overlay
- * that kept firing after layout/search edits). The skeleton keeps height
- * stable until the chunk arrives.
+ * Heatmap loads as its own chunk (SSR off) so list-first mobile paint is not
+ * blocked by the treemap/layout module. RankingTable stays static — dynamic
+ * import was the main delay when switching 히트맵 → 리스트.
  */
 const TreemapView = dynamic(
   () => import("@/components/dashboard/TreemapCanvas").then((mod) => mod.TreemapView),
@@ -25,15 +29,6 @@ const TreemapView = dynamic(
 const HeatmapCountdown = dynamic(
   () => import("@/components/dashboard/HeatmapCountdown").then((mod) => mod.HeatmapCountdown),
   { ssr: false, loading: () => <HeatmapCountdownFallback /> },
-);
-const RankingTable = dynamic(
-  () => import("@/components/dashboard/RankingTable").then((mod) => mod.RankingTable),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-48 animate-pulse rounded-lg border border-line/50 bg-board/40" aria-hidden />
-    ),
-  },
 );
 const MethodologyModal = dynamic(
   () => import("@/components/methodology/MethodologyModal").then((mod) => mod.MethodologyModal),
@@ -107,7 +102,7 @@ export function MarketWorkspace({
   onRefresh?: () => void;
 }) {
   useEffect(() => {
-    // Warm treemap after first paint so LCP bandwidth is not contested.
+    // Warm treemap after first paint so switching 리스트 → 히트맵 is instant.
     let cancelled = false;
     const warm = () => {
       if (!cancelled) void import("@/components/dashboard/TreemapCanvas");
@@ -128,19 +123,32 @@ export function MarketWorkspace({
     };
   }, []);
 
-  const [view, setView] = useState<ViewMode>(initialView);
+  const [view, setView] = useState<ViewMode>("list");
   const [category, setCategory] = useState<CategoryId>(initialCategory);
   const [timeframe, setTimeframe] = useState<Timeframe>("3m");
   const [genderInternal, setGenderInternal] = useState<"all" | GenderSegment>("all");
   const [ageInternal, setAgeInternal] = useState<"all" | AgeSegment>("all");
   const [regionInternal, setRegionInternal] = useState<"all" | RegionSegment>("all");
   const [methodOpen, setMethodOpen] = useState(false);
+  const [userPickedView, setUserPickedView] = useState(false);
 
   /** Mobile dials open on 5분 centered; desktop toolbar keeps 3분 default. */
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
     if (!mq.matches) setTimeframe("5m");
   }, []);
+
+  /** Mobile opens on list; desktop keeps caller initialView (usually treemap). */
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const applyDefault = () => {
+      if (userPickedView) return;
+      setView(mq.matches ? initialView : "list");
+    };
+    applyDefault();
+    mq.addEventListener("change", applyDefault);
+    return () => mq.removeEventListener("change", applyDefault);
+  }, [initialView, userPickedView]);
 
   const gender = genderProp ?? genderInternal;
   const age = ageProp ?? ageInternal;
@@ -165,7 +173,7 @@ export function MarketWorkspace({
     return () => mq.removeEventListener("change", sync);
   }, []);
 
-  /** Single source of truth: treemap + list both render this exact array. */
+  /** Heatmap tile set (may be >10). List view slices to LIST_MAX_ITEMS. */
   const sortedItems = useMemo(() => {
     const desktopCap = Math.max(1, Math.min(maxItems, TREEMAP_MAX_ITEMS));
     const cap = isMobileViewport
@@ -206,6 +214,10 @@ export function MarketWorkspace({
     maxItems,
     isMobileViewport,
   ]);
+  const listItems = useMemo(
+    () => sortedItems.slice(0, LIST_MAX_ITEMS),
+    [sortedItems],
+  );
   const demoKey = filterKey(gender, age, region);
   const demoActive = gender !== "all" || age !== "all" || region !== "all";
   const needsExtraFilterSheet = showRegion || !hideCategoryTabs;
@@ -213,34 +225,47 @@ export function MarketWorkspace({
   const CONTROL_H = 25.5;
   const DESKTOP_CONTROL_H = 30;
 
-  const viewToggle = (compact: boolean) => (
-    <div
-      className="flex rounded-md bg-board p-0.5"
-      role="tablist"
-      aria-label="보기 전환"
-      style={{ height: compact ? CONTROL_H : DESKTOP_CONTROL_H }}
-    >
-      {(
-        [
-          ["treemap", "히트맵"],
-          ["list", "리스트"],
-        ] as const
-      ).map(([id, label]) => (
-        <button
-          key={id}
-          type="button"
-          role="tab"
-          aria-selected={view === id}
-          onClick={() => setView(id)}
-          className={`inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none md:px-3 md:text-xs ${
-            view === id ? "bg-accent text-black" : "text-muted hover:text-ink"
-          }`}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  );
+  const pickView = (id: ViewMode) => {
+    setUserPickedView(true);
+    setView(id);
+  };
+
+  const viewToggle = (compact: boolean) => {
+    const tabs = (
+      compact
+        ? ([
+            ["list", "리스트"],
+            ["treemap", "히트맵"],
+          ] as const)
+        : ([
+            ["treemap", "히트맵"],
+            ["list", "리스트"],
+          ] as const)
+    );
+    return (
+      <div
+        className="flex rounded-md bg-board p-0.5"
+        role="tablist"
+        aria-label="보기 전환"
+        style={{ height: compact ? CONTROL_H : DESKTOP_CONTROL_H }}
+      >
+        {tabs.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={view === id}
+            onClick={() => pickView(id)}
+            className={`inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none md:px-3 md:text-xs ${
+              view === id ? "bg-accent text-black" : "text-muted hover:text-ink"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   // Board tiles link straight to /ranking/[slug]; the analysis column lives there.
   return (
@@ -383,27 +408,40 @@ export function MarketWorkspace({
                 : "하단 랭킹·지수 보드에서 성별·연령별 순위를 볼 수 있습니다. 시세 종목은 다음 집계 주기에 채워집니다."}
             </p>
           </div>
-        ) : view === "treemap" ? (
-          <HeatmapErrorBoundary
-            resetKey={`${demoKey}-${timeframe}`}
-            fallback={<RankingTable items={sortedItems} timeframe={timeframe} lockOrder />}
-          >
-            <TreemapView
-              key={`${demoKey}-${timeframe}-${sortedItems.length}`}
-              items={sortedItems}
-              category={category}
-              timeframe={timeframe}
-              showSourceCaptions={!boardSlug}
-            />
-          </HeatmapErrorBoundary>
         ) : (
-          <RankingTable items={sortedItems} timeframe={timeframe} lockOrder />
+          <>
+            {view === "treemap" ? (
+              <HeatmapErrorBoundary
+                resetKey={`${demoKey}-${timeframe}`}
+                fallback={
+                  <p className="px-5 py-12 text-center text-sm text-muted">
+                    히트맵을 그리지 못했습니다. 리스트 탭에서 순위를 확인하세요.
+                  </p>
+                }
+              >
+                <TreemapView
+                  key={`${demoKey}-${timeframe}-${sortedItems.length}`}
+                  items={sortedItems}
+                  category={category}
+                  timeframe={timeframe}
+                  showSourceCaptions={!boardSlug}
+                />
+              </HeatmapErrorBoundary>
+            ) : null}
+            {/* Keep list mounted so 히트맵 → 리스트 never waits on remount/chunk. */}
+            <div
+              className={view === "list" ? "block" : "hidden"}
+              aria-hidden={view !== "list"}
+            >
+              <RankingTable items={listItems} timeframe={timeframe} lockOrder />
+            </div>
+          </>
         )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-panel px-4 py-2 font-sans text-[10px] text-muted">
         <span>
-          상승 초록 · 하락 빨강 · 보합 차콜 · 히트맵 {sortedItems.length} · 리스트 {sortedItems.length}
+          상승 초록 · 하락 빨강 · 보합 차콜 · 히트맵 {sortedItems.length} · 리스트 {listItems.length}
           종목
         </span>
         {view === "treemap" && sortedItems.length > 0 ? (
