@@ -6,6 +6,7 @@ import {
   kindexDataTrendInterpretationRules,
   tenseConsistencyRules,
 } from "@/lib/editorial/tense-rules";
+import { honorificSpeechRules } from "@/lib/editorial/honorific";
 
 /**
  * 100% prompt-cache hit: every fixed rule lives here.
@@ -20,6 +21,7 @@ export const STATIC_SYSTEM_PROMPT = [
   tenseConsistencyRules(),
   editionFreshnessRules(),
   kindexDataTrendInterpretationRules(),
+  honorificSpeechRules(),
   `[콘텐츠 밀도 확장 — 팩트 보도 이후 필수 (Low-value 방지)]
 1. Why(배경·원인): "무엇이 일어났는가"에서 멈추지 말고, 에디션 날짜 기준으로 왜 지금 대중이·검색·랭킹이 반응하는지 시장·플랫폼·팬덤·일정 맥락을 전문가 시각으로 풀어내세요. RAG에 근거가 있을 때만 인과를 단정합니다. 수개월 전 종결 이벤트만으로 '지금'을 채우지 마세요.
 2. How(실용 인사이트): 독자의 일상·소비·시청·구독·지갑에 미치는 영향과, 확인·비교·행동에 쓸 구체 요령을 본문 서술로 녹이세요. '독자 체크리스트'·'확인해야 할 N가지' 같은 목록형 패딩 섹션은 금지입니다.
@@ -27,8 +29,8 @@ export const STATIC_SYSTEM_PROMPT = [
 4. 전망·파급: RAG·공개 일정에 비춰 앞으로의 전개와 업계·소비자가 볼 포인트를 짧게 제시하세요. 확인되지 않은 수치·확정 발표를 지어내지 마세요.
 5. H2 5개 역할 배분(번호 ❶❷❸❹❺, 제목은 이 사안 고유 명사 포함 — ❺만 고정): ❶ 핵심 사건·팩트 맥락 → ❷ Why → ❸ How → ❹ 전망·파급 → ❺ KinDex 데이터가 보여주는 특징(한 문단, 핵심 요약 직전). 표·FAQ는 본문 밀도를 보완합니다.`,
   `[작성 및 서식 엄격 규칙 — 위반 시 유효성 검증 실패]
-1. 문장 종결 및 마침표: 모든 문장의 끝(명사형 종결, 줄바꿈 직전 포함)에는 예외 없이 온전한 마침표(.)를 찍으세요. 의문문은 ?, 감탄은 !만 허용합니다. 실패 예: '화두로 떠올랐다 이슈의 중심에는' → '화두로 떠올랐다. 이슈의 중심에는'.
-2. 문체 다양성: '~다', '~했다', '~밝혔다', '~설명했다', '~덧붙였다' 같은 동일한 평서 종결어가 연속 3회 이상 나오면 안 됩니다. 의문형(~일까?), 명사형 종결, 짧은 단문을 섞어 리듬을 만드세요.
+1. 문장 종결 및 마침표: 모든 서술 문장을 높임말(합니다체)로 끝내고 온전한 마침표(.)를 찍으세요. 의문문은 ~까요?/~습니까?, 감탄은 !만 허용합니다. 해라체·한다체(~다/~한다/~이다/~했다) 금지.
+2. 문체 리듬: 동일 높임말 종결(~습니다 등)이 연속 3회 이상 나오지 않도록 '~합니다/~됩니다/~았습니다/~고 있습니다' 등으로 바꾸세요.
 3. Anti-AI 패턴 배제: "결론적으로", "요약하자면", "이 글에서는", "주목받고 있다", "귀추가 주목된다", "다양한 관점이 존재한다", "상황을 지켜볼 필요가 있다", "알아보았습니다", "살펴보겠습니다", "긍정적인 반응을 보였다", "생일을 축하하며", "긍정과 부정을 나란히 읽으면", "새로운 패러다임", "혁신을 선보", "심층 분석", "주목할 만한", "화제가 되고", "관심이 집중" 등 상투적 문구를 어떤 활용형으로도 쓰지 마세요.
 4. 모바일 가독성: 3~4문장을 하나의 문단으로 묶고, 문단 간 자연스러운 흐름을 유지하세요. 한 문장은 공백 제외 20~45자 내외로 간결하게 작성하세요. 한 문단에 5문장 이상 몰아넣지 마세요. ❺ KinDex 소제목만 paragraphs 1개(한 문단)로 씁니다.
 5. 수치 및 객관성: "좋다", "추천한다", "관심이 높다" 등의 모호한 감상 대신 구체적인 수치·날짜·기관명·비율·근거를 바탕으로 서술하세요.
@@ -145,7 +147,7 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
     "- externalLink는 위 뉴스 데이터의 실제 URL만.",
     '- internalLink.href는 /board/… · /{channel}/briefing · /ranking/… 등 실제 화면 경로만. /search?q= 금지. label은 "관련 글: …" 또는 보드명.',
     briefing ? "- takeaways는 반드시 []." : "- takeaways는 How에 맞는 구체 행동 2~4개. 화면에서는 ❺ 다음 「핵심 요약」.",
-    "- 모든 문장 끝 마침표(.) 필수. 동일 평서 종결 연속 3회 금지.",
+    "- 모든 서술 문장은 높임말(합니다체). 해라체·한다체 금지. 문장 끝 마침표(.) 필수. 동일 높임말 종결 연속 3회 금지.",
   ].join("\n");
 }
 
@@ -261,7 +263,7 @@ export function premiumPromptCacheKey(opts: {
   const kind = opts.briefing ? "briefing" : "premium";
   const mode = (opts.mode || "full").toLowerCase();
   // Channel omitted from cache key prefix so the static system prefix shares one machine.
-  return `kindexlab:${kind}:single:${mode}:v15`;
+  return `kindexlab:${kind}:single:${mode}:v16`;
 }
 
 export function wordpressAdsenseGuidelines(includeFullSeo: boolean): string {

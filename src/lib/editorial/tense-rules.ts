@@ -168,5 +168,11 @@ export function editorialGroundingRules(): string {
     sentencePeriodRules(),
     "",
     kindexDataTrendInterpretationRules(),
+    "",
+    // Lazy require avoided — import at call sites that already pull honorific rules,
+    // and keep this file free of cycles by inlining the essential honorific mandate.
+    "[높임말(합니다체) 필수 — 모든 글]",
+    "- 본문·요약·FAQ·takeaways 서술 문장은 ~습니다/~합니다/~됩니다/~있습니다/~없습니다로 끝내세요.",
+    "- 해라체·한다체(~다/~한다/~이다/~했다/~된다) 문장 종결 금지.",
   ].join("\n");
 }

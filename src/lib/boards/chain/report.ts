@@ -8,6 +8,7 @@ import type { PostFaq, PostTable } from "@/lib/posts/types";
 import type { BoardDefinition, BoardRankEntry, BoardReport, DemographicRanking } from "@/lib/boards/types";
 import { AGE_LABEL, GENDER_LABEL } from "@/lib/boards/demographics";
 import { kindexDataTrendInterpretationRules, ensureKindexFeatureSectionPlacement } from "@/lib/editorial/tense-rules";
+import { toHonorificProse } from "@/lib/editorial/honorific";
 
 const MIN_CHARS = 1_000;
 const NUMBERING = ["❶", "❷", "❸", "❹", "❺"];
@@ -28,6 +29,7 @@ interface RawReport {
 const SYSTEM = [
   "당신은 데이터 저널리즘 매거진의 랭킹 리포트 담당 기자다.",
   "제공된 순위표를 근거로 '왜 이 항목이 1위인가'를 분석하는 리포트를 쓴다.",
+  "모든 서술 문장은 높임말(합니다체: ~습니다/~합니다/~됩니다)로 끝내고, 해라체·한다체(~다/~한다/~이다)는 쓰지 않는다.",
   "문장은 20~45자로 짧게 끊고, 한 문단은 3~4문장이다.",
   "모든 문장 끝에는 마침표(.)를 온전하게 찍는다. 종결 부호 누락·문장 급절단을 하지 않는다.",
   "'결론적으로', '주목받고 있다', '귀추가 주목된다', '다양한 관점이 있다', '요약하자면', '긍정적인 반응을 보였다', '생일을 축하하며', '긍정과 부정을 나란히 읽으면' 같은 기계적 상투어를 절대 쓰지 않는다.",
@@ -204,8 +206,25 @@ function countChars(report: Omit<BoardReport, "characterCount" | "readingMinutes
 }
 
 function finalize(report: Omit<BoardReport, "characterCount" | "readingMinutes">): BoardReport {
-  const sections = ensureSectionsDisclaimer(report.sections);
-  const withDisclaimer = { ...report, sections };
+  const sections = ensureSectionsDisclaimer(
+    report.sections.map((section) => ({
+      ...section,
+      paragraphs: section.paragraphs.map((paragraph) => toHonorificProse(paragraph)),
+    })),
+  );
+  const withDisclaimer = {
+    ...report,
+    excerpt: toHonorificProse(report.excerpt),
+    sections,
+    targetAnalysis: {
+      ...report.targetAnalysis,
+      paragraphs: report.targetAnalysis.paragraphs.map((paragraph) => toHonorificProse(paragraph)),
+    },
+    faq: report.faq.map((item) => ({
+      ...item,
+      answer: toHonorificProse(item.answer),
+    })),
+  };
   const characterCount = countChars(withDisclaimer);
   return {
     ...withDisclaimer,

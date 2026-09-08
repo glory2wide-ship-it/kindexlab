@@ -23,9 +23,6 @@ import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
 import { SITE } from "@/lib/site";
 import { rankingPath, rankingUrl } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
-import { KinDexAboutSections } from "@/components/about/KinDexAboutSections";
-import { channelFromLead } from "@/lib/posts/channels";
-import type { PostChannel } from "@/lib/posts/types";
 import type { EntityType, RankingEntity } from "@/lib/types";
 
 export const revalidate = 60;
@@ -177,31 +174,7 @@ export default async function RankingDetailPage({
       <Suspense fallback={null}>
         <RelatedSlot slug={slug} name={name} entity={entity} />
       </Suspense>
-      <EntityAboutRail entity={entity} />
     </div>
-  );
-}
-
-function aboutChannelForEntity(entity: RankingEntity): PostChannel {
-  if (entity.sourceChannel) return entity.sourceChannel;
-  const slug = entity.slug ?? "";
-  if (
-    slug.startsWith("food-restaurant") ||
-    slug.startsWith("domestic-travel") ||
-    slug.startsWith("overseas-travel") ||
-    slug.startsWith("weekend-outing") ||
-    slug.startsWith("travel-government")
-  ) {
-    return "travel";
-  }
-  return channelFromLead(entity, slug);
-}
-
-function EntityAboutRail({ entity }: { entity: RankingEntity }) {
-  return (
-    <aside className="rounded-2xl border border-line bg-panel px-5 py-6 md:px-8">
-      <KinDexAboutSections channel={aboutChannelForEntity(entity)} compact />
-    </aside>
   );
 }
 

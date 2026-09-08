@@ -11,6 +11,7 @@ import {
   polishProseText,
   type SeoSection,
 } from "@/lib/premium/seo-format";
+import { toHonorificProse } from "@/lib/editorial/honorific";
 import type { PostFaq } from "@/lib/posts/types";
 
 /** Collapses repeated whitespace and stray CJK spaces. */
@@ -50,15 +51,15 @@ export function scrubBoilerplatePhrases(text: string): string {
 export function scrubBannedPhraseStems(text: string): string {
   let out = text;
   const soft: { test: RegExp; to: string }[] = [
-    { test: /주목(받|되)고\s*(있|계)\S*/g, to: "화제가 됐다" },
-    { test: /귀추\S*\s*주목\S*/g, to: "후속 결과가 관건이다" },
-    { test: /다양한\s*(관점|시각)\S*\s*(존재|있)\S*/g, to: "해석이 갈린다" },
-    { test: /지켜볼\s*필요\S*\s*있\S*/g, to: "추가 확인이 필요하다" },
+    { test: /주목(받|되)고\s*(있|계)\S*/g, to: "화제가 됐습니다" },
+    { test: /귀추\S*\s*주목\S*/g, to: "후속 결과가 관건입니다" },
+    { test: /다양한\s*(관점|시각)\S*\s*(존재|있)\S*/g, to: "해석이 갈립니다" },
+    { test: /지켜볼\s*필요\S*\s*있\S*/g, to: "추가 확인이 필요합니다" },
     { test: /새로운\s*패러다임/g, to: "다른 흐름" },
     { test: /심층\s*분석/g, to: "분석" },
     { test: /주목할\s*만한/g, to: "눈에 띄는" },
     { test: /화제가\s*되(고|는)/g, to: "화제가 된" },
-    { test: /관심이\s*집중/g, to: "관심이 모였다" },
+    { test: /관심이\s*집중/g, to: "관심이 모였습니다" },
   ];
   for (const rule of soft) out = out.replace(rule.test, rule.to);
   return out;
@@ -79,8 +80,10 @@ export function scrubGenericPaddingProse(text: string): string {
 /** Full free post-process for a single prose field. */
 export function autoCorrectProse(text: string): string {
   return ensureSentencePunctuation(
-    scrubBannedPhraseStems(
-      scrubGenericPaddingProse(scrubBoilerplatePhrases(normalizeWhitespace(text))),
+    toHonorificProse(
+      scrubBannedPhraseStems(
+        scrubGenericPaddingProse(scrubBoilerplatePhrases(normalizeWhitespace(text))),
+      ),
     ),
   );
 }
@@ -105,14 +108,14 @@ export function autoCorrectArticleFields(input: {
         ? scrubBannedPhraseStems(scrubBoilerplatePhrases(normalizeWhitespace(section.heading)))
         : section.heading,
       paragraphs: section.paragraphs.map((paragraph) =>
-        scrubBannedPhraseStems(scrubBoilerplatePhrases(paragraph)),
+        toHonorificProse(scrubBannedPhraseStems(scrubBoilerplatePhrases(paragraph))),
       ),
     })),
   );
   const faq = polishFaq(
     input.faq.map((item) => ({
       question: scrubBoilerplatePhrases(item.question),
-      answer: scrubBannedPhraseStems(scrubBoilerplatePhrases(item.answer)),
+      answer: toHonorificProse(scrubBannedPhraseStems(scrubBoilerplatePhrases(item.answer))),
     })),
   );
   return {

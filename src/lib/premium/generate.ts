@@ -31,6 +31,7 @@ import {
   ensureKindexFeatureSectionPlacement,
   isKindexFeatureSectionHeading,
 } from "@/lib/editorial/tense-rules";
+import { toHonorificProse } from "@/lib/editorial/honorific";
 import { describePlacements, injectMonetization, type PremiumPlacement } from "@/lib/premium/widgets";
 import {
   dropRepeatedSentences,
@@ -658,7 +659,7 @@ export async function generatePremiumArticle(input: {
     headers: table.headers.map((header) => scrubBannedPhraseStems(header)),
     rows: table.rows.map((row) => row.map((cell) => scrubBannedPhraseStems(cell))),
   };
-  takeaways = takeaways.map((item) => scrubBannedPhraseStems(item));
+  takeaways = takeaways.map((item) => toHonorificProse(scrubBannedPhraseStems(item)));
   if (input.briefing && hasBriefingBoilerplate(title)) {
     title = `${keyword} 핵심 이슈 브리핑`;
   }
@@ -673,6 +674,14 @@ export async function generatePremiumArticle(input: {
       : (applySeoHeadingStructure(next) as PremiumSection[]);
 
   sections = finalizeSections(sections);
+  // Enforce 합니다체 even if the model slipped into plain endings.
+  sections = sections.map((section) => ({
+    ...section,
+    paragraphs: section.paragraphs.map((paragraph) => toHonorificProse(paragraph)),
+  }));
+  excerptText = toHonorificProse(excerptText);
+  faqText = faqText.map((item) => ({ ...item, answer: toHonorificProse(item.answer) }));
+  takeaways = takeaways.map((item) => toHonorificProse(item));
 
   const chars = premiumCharCount(
     lengthPlain(input.briefing, { title, excerpt: excerptText, sections, faq: faqText, takeaways, table }),
@@ -810,6 +819,7 @@ export async function generatePremiumArticle(input: {
     if (input.briefing && hasRepetitiveDeclarativeEndings(prosePlain)) {
       violations.push({ code: "repetitive-endings", detail: "평서 종결 연속 과다" });
     }
+    // Plain endings are auto-fixed below — not a hard reject.
     if (input.briefing && hasGenericPadding(prosePlain)) {
       violations.push({ code: "generic-padding", detail: "일반론·체크리스트 패딩" });
     }

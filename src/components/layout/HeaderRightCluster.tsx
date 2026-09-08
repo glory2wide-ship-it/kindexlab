@@ -42,19 +42,19 @@ const HeaderSearch = dynamic(
 );
 
 const LIVE_GREEN = "#22c55e";
-/** text-sm(14px) × 1.15 */
-const LIVE_FONT_SIZE = "16.1px";
+/** Previous 16.1px × 0.85 */
+const LIVE_FONT_SIZE = "13.685px";
 
 /** Green LIVE pill: dot + label blink together on a 3s cycle. */
 function LiveBadge() {
   return (
     <span
-      className="header-live-blink inline-flex shrink-0 rounded-full border-none bg-emerald-50 px-3 py-1 font-sans dark:bg-emerald-950/40"
+      className="header-live-blink inline-flex shrink-0 rounded-full border-none bg-emerald-50 px-2.5 py-0.5 font-sans dark:bg-emerald-950/40"
       aria-label="실시간 집계"
     >
-      <span className="flex w-full items-center justify-center gap-1.5 text-center">
+      <span className="flex w-full items-center justify-center gap-1 text-center">
         <span
-          className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full"
+          className="inline-flex h-[8.5px] w-[8.5px] shrink-0 rounded-full"
           style={{ backgroundColor: LIVE_GREEN }}
           aria-hidden
         />

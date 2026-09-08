@@ -4,10 +4,14 @@ import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 
-/** Previous gap 15.12px × 0.8 */
-const ICON_GAP_PX = 12.096;
-const TRACK_WIDTH_PX = 76;
-const THUMB_TRAVEL_PX = TRACK_WIDTH_PX - 36;
+/** Previous sizes × 0.85 (15% smaller). */
+const ICON_GAP_PX = 10.282;
+const TRACK_WIDTH_PX = 64.6;
+const TRACK_HEIGHT_PX = 28.9;
+const THUMB_SIZE_PX = 23.8;
+const THUMB_TRAVEL_PX = TRACK_WIDTH_PX - 30.6;
+const SUN_SIZE_PX = 12.75;
+const MOON_SIZE_PX = 11.9;
 
 const LIGHT_THUMB =
   "bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 shadow-md";
@@ -28,31 +32,36 @@ export function ThemeToggle() {
 
   return (
     <div
-      className="relative flex h-[34px] shrink-0 items-center justify-center rounded-full bg-[#e2e8f0] p-1 shadow-inner dark:bg-[#334155]"
-      style={{ width: TRACK_WIDTH_PX }}
+      className="relative flex shrink-0 items-center justify-center rounded-full bg-[#e2e8f0] p-0.5 shadow-inner dark:bg-[#334155]"
+      style={{ width: TRACK_WIDTH_PX, height: TRACK_HEIGHT_PX }}
       role="group"
       aria-label="테마 전환"
       suppressHydrationWarning
     >
       <span
         aria-hidden
-        className={`absolute top-1 left-1 flex h-7 w-7 items-center justify-center rounded-full transition-all duration-300 ease-in-out ${
+        className={`absolute top-0.5 left-0.5 flex items-center justify-center rounded-full transition-all duration-300 ease-in-out ${
           isDark ? DARK_THUMB : LIGHT_THUMB
         }`}
-        style={{ transform: isDark ? `translateX(${THUMB_TRAVEL_PX}px)` : "translateX(0)" }}
+        style={{
+          width: THUMB_SIZE_PX,
+          height: THUMB_SIZE_PX,
+          transform: isDark ? `translateX(${THUMB_TRAVEL_PX}px)` : "translateX(0)",
+        }}
       />
       <div className="relative z-10 flex items-center justify-center" style={{ gap: ICON_GAP_PX }}>
         <button
           type="button"
           disabled={!mounted}
           onClick={() => setTheme("light")}
-          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full"
+          className="flex cursor-pointer items-center justify-center rounded-full"
+          style={{ width: THUMB_SIZE_PX, height: THUMB_SIZE_PX }}
           aria-label="라이트 모드"
           aria-pressed={!isDark}
         >
           <Sun
-            className="h-[15px] w-[15px] stroke-[2.25]"
-            style={{ color: SUN_SKY }}
+            className="stroke-[2.25]"
+            style={{ color: SUN_SKY, width: SUN_SIZE_PX, height: SUN_SIZE_PX }}
             aria-hidden
           />
         </button>
@@ -60,13 +69,14 @@ export function ThemeToggle() {
           type="button"
           disabled={!mounted}
           onClick={() => setTheme("dark")}
-          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full"
+          className="flex cursor-pointer items-center justify-center rounded-full"
+          style={{ width: THUMB_SIZE_PX, height: THUMB_SIZE_PX }}
           aria-label="다크 모드"
           aria-pressed={isDark}
         >
           <Moon
-            className="h-[14px] w-[14px] stroke-[2.25]"
-            style={{ color: MOON_GOLD }}
+            className="stroke-[2.25]"
+            style={{ color: MOON_GOLD, width: MOON_SIZE_PX, height: MOON_SIZE_PX }}
             aria-hidden
           />
         </button>
