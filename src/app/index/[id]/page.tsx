@@ -6,7 +6,6 @@ import { BuzzChart } from "@/components/entity/BuzzChart";
 import { EntityHero } from "@/components/entity/EntityHero";
 import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
-import { StickyMobileCategoryBar } from "@/components/layout/StickyMobileCategoryBar";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
 import { isGeminiAnalysis } from "@/lib/analysis/quality";
@@ -21,7 +20,6 @@ import {
   indexPath,
   listIndexIds,
 } from "@/lib/indices";
-import { channelFromLead } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 import { parseTimeframeParam } from "@/lib/timeframes";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
@@ -75,11 +73,7 @@ export default async function IndexDetailPage({
   const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
 
   return (
-    <>
-      <StickyMobileCategoryBar
-        activeId={entity.sourceChannel ?? channelFromLead(entity, entity.slug)}
-      />
-      <div className="mt-3 space-y-8 md:mt-0">
+    <div className="space-y-8">
       <p className="text-sm text-muted">
         <Link href="/" className="hover:text-ink">
           지수(INDEX)
@@ -99,8 +93,7 @@ export default async function IndexDetailPage({
         <RelatedRankingDesk entity={entity} related={related} heading="구성 종목" />
       ) : null}
       <p className="sr-only">{SITE.name} 섹터 지수 상세</p>
-      </div>
-    </>
+    </div>
   );
 }
 

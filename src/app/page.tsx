@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { CategoryDeskGrid } from "@/components/dashboard/CategoryDeskGrid";
 import { UnifiedMarketBoard } from "@/components/dashboard/UnifiedMarketBoard";
 import { LandingDeskHeader } from "@/components/layout/LandingDeskHeader";
-import { StickyMobileCategoryBar } from "@/components/layout/StickyMobileCategoryBar";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
 import { BriefingRail } from "@/components/briefing/BriefingRail";
 import { slimBriefingsForCards } from "@/lib/briefing/card-dto";
@@ -120,11 +119,10 @@ async function HomeBriefingSection() {
 export default function HomePage() {
   return (
     <div className="space-y-8">
-      {/* Sticky chips under SiteHeader — outside flex-order so they stay while scrolling. */}
-      <StickyMobileCategoryBar />
       {/*
         Mobile order: ticker (1) → desktop-only header (2) → board (3).
         Desktop keeps header → ticker → board.
+        Category chips live in the root GlobalStickyMobileCategoryBar.
       */}
       <div className="flex flex-col gap-4">
         <div className="order-2 md:order-1">

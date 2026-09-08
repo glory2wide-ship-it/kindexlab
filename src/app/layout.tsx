@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
+import { GlobalStickyMobileCategoryBar } from "@/components/layout/GlobalStickyMobileCategoryBar";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -155,6 +156,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
         <ThemeProvider>
           <SiteHeader />
+          <GlobalStickyMobileCategoryBar />
           <main className="mx-auto w-full max-w-7xl px-4 py-4 max-md:pt-3">{children}</main>
           <SiteFooter />
         </ThemeProvider>
