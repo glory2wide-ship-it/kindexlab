@@ -15,8 +15,9 @@ export function CategoryChrome({
     <div className="flex flex-col gap-3 md:gap-4">
       {/*
         Mobile order: ticker (from children, order-1) → subnav/header (2) → desk (3).
+        Desktop: board H1 (ranking only) → sticky section tabs (same place on every
+        section page) → page body. Sticky tabs are desktop-only inside CategorySubNav.
         Children must be fragments/Suspense — not a single order:0 wrapper.
-        Category chips live in the root GlobalStickyMobileCategoryBar.
       */}
       <div className="order-2 space-y-2 md:order-1">
         <CategoryDeskHeader channel={channel} />
