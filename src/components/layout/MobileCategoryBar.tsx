@@ -5,9 +5,9 @@ import Link from "next/link";
 import { CHANNEL_SHORT_LABEL, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 
-const CHIP_H = 28;
-/** 11px × 1.1 */
-const CHIP_TEXT = "12.1px";
+const CHIP_H = 31;
+/** 12.1px × 1.1 */
+const CHIP_TEXT = "13.31px";
 
 const MobileCategorySearch = dynamic(
   () => import("@/components/layout/HeaderSearch").then((mod) => mod.HeaderSearch),
