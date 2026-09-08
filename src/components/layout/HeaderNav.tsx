@@ -17,12 +17,27 @@ function CategoryLabel({ children }: { children: string }) {
 export function HeaderNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const allActive = pathname === "/";
 
   return (
     <nav
       className="hidden min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto text-sm md:flex"
       aria-label="최상위 카테고리"
     >
+      <Link
+        href="/"
+        prefetch={false}
+        onPointerEnter={() => {
+          if (!allActive) router.prefetch("/");
+        }}
+        className={
+          allActive
+            ? "shrink-0 whitespace-nowrap rounded-md bg-panel px-2 py-1.5 font-medium text-ink md:px-3"
+            : "shrink-0 whitespace-nowrap rounded-md px-2 py-1.5 text-muted transition-colors hover:bg-panel hover:text-ink md:px-3"
+        }
+      >
+        <CategoryLabel>전체</CategoryLabel>
+      </Link>
       {POST_CHANNELS.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
