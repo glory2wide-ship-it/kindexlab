@@ -12,7 +12,7 @@ export const SITE_LANDING_HEADLINE =
 
 /** Desktop-only landing H1 / subcopy (mobile keeps SITE_INDEX_* / SITE_LANDING_*). */
 export const SITE_INDEX_HEADLINE_DESKTOP =
-  "킨덱스 / 세상 모든 이슈를 한눈에, 트렌드 이슈를 상장하다!";
+  "세상 모든 이슈를 한눈에, 트렌드 이슈를 상장하다!";
 export const SITE_LANDING_HEADLINE_DESKTOP =
   "엔터·정치·경제·문화·여행까지, 실시간 화제성과 대중의 관심 이슈의 흐름을 하나의 통합 지수 보드로 확인하세요!";
 
