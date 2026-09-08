@@ -103,7 +103,7 @@ export function BuzzChart({
                 </button>
               ))}
             </div>
-            <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-board p-1 [-ms-overflow-style:none] [scrollbar-width:none] md:flex-wrap [&::-webkit-scrollbar]:hidden">
+            <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-board px-2 py-1 [-ms-overflow-style:none] [scrollbar-width:none] md:flex-wrap [&::-webkit-scrollbar]:hidden">
               {TIMEFRAMES.map((option) => (
                 <button
                   key={option.id}
@@ -133,9 +133,9 @@ export function BuzzChart({
               initialVisibleBars={initialVisibleBars}
             />
           </div>
-          <dl className="grid grid-cols-2 gap-px border-t border-line bg-line lg:grid-cols-1 lg:border-l lg:border-t-0">
+          <dl className="grid grid-cols-3 gap-px border-t border-line bg-line lg:grid-cols-1 lg:border-l lg:border-t-0">
             {quote.map((item) => (
-              <div key={item.label} className="bg-panel px-4 py-3">
+              <div key={item.label} className="bg-panel px-3 py-2.5 md:px-4 md:py-3">
                 <dt className="text-[11px] text-muted">{item.label}</dt>
                 <dd
                   className={`mt-1 font-sans text-sm font-semibold tabular-nums ${item.className ?? ""}`}

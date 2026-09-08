@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   AreaSeries,
   CandlestickSeries,
@@ -37,6 +37,7 @@ function readCssVar(name: string, fallback: string): string {
 }
 
 const PRICE_MARGINS = { top: 0.04, bottom: 0.05 } as const;
+const MOBILE_MQ = "(max-width: 767px)";
 
 function lockPriceScale(
   series: ISeriesApi<"Candlestick"> | ISeriesApi<"Area">,
@@ -83,6 +84,11 @@ function fitPriceToVisibleRange(
   if (extremes) lockPriceScale(series, extremes.min, extremes.max);
 }
 
+function resolveChartHeight(desktop: number): number {
+  if (typeof window === "undefined") return desktop;
+  return window.matchMedia(MOBILE_MQ).matches ? Math.round(desktop * 0.75) : desktop;
+}
+
 export function TradingViewChart({
   candles,
   linePath,
@@ -115,19 +121,185 @@ export function TradingViewChart({
     lineValues: [],
   });
   const fitRafRef = useRef<number | null>(null);
-  const [resolvedHeight, setResolvedHeight] = useState(height);
-  const [chartEpoch, setChartEpoch] = useState(0);
+  const propsRef = useRef({
+    candles,
+    linePath,
+    timeframe,
+    style,
+    positive,
+    pricePrecision,
+    initialVisibleBars,
+  });
+  propsRef.current = {
+    candles,
+    linePath,
+    timeframe,
+    style,
+    positive,
+    pricePrecision,
+    initialVisibleBars,
+  };
+
+  const [resolvedHeight, setResolvedHeight] = useState(() => resolveChartHeight(height));
 
   // Mobile chart height is 25% shorter; desktop keeps the requested height.
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const apply = () => setResolvedHeight(mq.matches ? Math.round(height * 0.75) : height);
+    const mq = window.matchMedia(MOBILE_MQ);
+    const apply = () => setResolvedHeight(resolveChartHeight(height));
     apply();
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
   }, [height]);
 
-  useEffect(() => {
+  const applySeries = (chart: IChartApi) => {
+    const {
+      candles: nextCandles,
+      linePath: nextLinePath,
+      timeframe: nextTimeframe,
+      style: nextStyle,
+      positive: nextPositive,
+      pricePrecision: nextPrecision,
+      initialVisibleBars: nextVisibleBars,
+    } = propsRef.current;
+    if (nextCandles.length < 1) return;
+
+    const { ohlc, area, labelByTime, priceMin, priceMax } = toLwcSeries(
+      nextCandles,
+      nextTimeframe,
+      nextLinePath,
+    );
+    labelsRef.current = labelByTime;
+
+    // Prefer closes (1 point/bar). The OHLC walk path is 4× denser and can break the area series.
+    const lineValues =
+      nextLinePath && nextLinePath.length === nextCandles.length * 4
+        ? ohlc.map((bar) => bar.close)
+        : area.map((point) => point.value);
+
+    seriesDataRef.current = { style: nextStyle, ohlc, lineValues };
+
+    const autoscale = priceAutoscaleProvider(priceMin, priceMax);
+    const priceFormat = {
+      type: "price" as const,
+      precision: Math.min(Math.max(nextPrecision, 0), 4),
+      minMove: Number(`1e-${Math.min(Math.max(nextPrecision, 0), 4)}`),
+    };
+
+    markersRef.current = null;
+    if (priceRef.current) {
+      chart.removeSeries(priceRef.current);
+      priceRef.current = null;
+    }
+
+    const tone = nextPositive ? HTS_UP : HTS_DOWN;
+    const panel = readCssVar("--panel", "#fffdf8");
+
+    chart.timeScale().applyOptions({
+      barSpacing:
+        nextStyle === "candle"
+          ? Math.max(3, Math.min(9, 720 / Math.max(Math.min(ohlc.length, 80), 1)))
+          : 5,
+      rightOffset: 4,
+      fixLeftEdge: false,
+      fixRightEdge: false,
+    });
+
+    if (nextStyle === "candle") {
+      const candleSeries = chart.addSeries(
+        CandlestickSeries,
+        {
+          upColor: HTS_UP,
+          downColor: HTS_DOWN,
+          borderUpColor: HTS_UP,
+          borderDownColor: HTS_DOWN,
+          wickUpColor: HTS_UP,
+          wickDownColor: HTS_DOWN,
+          borderVisible: true,
+          wickVisible: true,
+          priceLineVisible: true,
+          lastValueVisible: true,
+          priceLineColor: tone,
+          priceLineWidth: 1,
+          priceFormat,
+          autoscaleInfoProvider: autoscale,
+        },
+        0,
+      );
+      candleSeries.setData(ohlc);
+      priceRef.current = candleSeries;
+    } else {
+      const areaData =
+        nextLinePath && nextLinePath.length === nextCandles.length * 4
+          ? ohlc.map((bar) => ({ time: bar.time, value: bar.close }))
+          : area;
+
+      const areaSeries = chart.addSeries(
+        AreaSeries,
+        {
+          lineColor: tone,
+          topColor: nextPositive ? "rgba(22, 163, 74, 0.38)" : "rgba(220, 38, 38, 0.34)",
+          bottomColor: nextPositive ? "rgba(22, 163, 74, 0.05)" : "rgba(220, 38, 38, 0.05)",
+          lineWidth: 3,
+          lineType: LineType.Curved,
+          relativeGradient: true,
+          priceLineVisible: true,
+          lastValueVisible: true,
+          priceLineColor: tone,
+          priceLineWidth: 1,
+          priceFormat,
+          crosshairMarkerVisible: true,
+          crosshairMarkerRadius: 5,
+          crosshairMarkerBorderColor: panel,
+          crosshairMarkerBackgroundColor: tone,
+          autoscaleInfoProvider: priceAutoscaleProvider(
+            Math.min(...lineValues),
+            Math.max(...lineValues),
+          ),
+        },
+        0,
+      );
+      areaSeries.setData(areaData);
+      priceRef.current = areaSeries;
+
+      const last = areaData[areaData.length - 1];
+      if (last) {
+        markersRef.current = createSeriesMarkers(areaSeries, [
+          {
+            time: last.time,
+            position: "inBar",
+            shape: "circle",
+            color: tone,
+            size: 1.5,
+          },
+        ]);
+      }
+    }
+
+    // Show a recent window first so the user can drag right (pan left) into
+    // earlier history instead of fitting every loaded bar into one screen.
+    const total = ohlc.length;
+    const preferred =
+      typeof nextVisibleBars === "number" && nextVisibleBars > 0
+        ? nextVisibleBars
+        : Math.min(80, total);
+    const visible = Math.max(12, Math.min(total, preferred));
+    if (total > visible + 2) {
+      chart.timeScale().setVisibleLogicalRange({
+        from: total - visible,
+        to: total - 1 + 3,
+      });
+    } else {
+      chart.timeScale().fitContent();
+    }
+
+    // fitContent / setVisibleLogicalRange can reset price scale — lock to the
+    // on-screen window so 분봉~월봉 moves read clearly (esp. KRW equities).
+    if (priceRef.current) {
+      fitPriceToVisibleRange(chart, priceRef.current, nextStyle, ohlc, lineValues);
+    }
+  };
+
+  useLayoutEffect(() => {
     const host = hostRef.current;
     if (!host) return;
 
@@ -135,10 +307,12 @@ export function TradingViewChart({
     const ink = readCssVar("--ink", "#141821");
     const muted = readCssVar("--muted", "#667085");
     const line = readCssVar("--line", "#e2dacb");
+    const nextHeight = resolveChartHeight(height);
 
     const chart = createChart(host, {
       autoSize: true,
-      height: resolvedHeight,
+      width: Math.max(host.clientWidth || host.parentElement?.clientWidth || 320, 1),
+      height: nextHeight,
       layout: {
         background: { type: ColorType.Solid, color: board },
         textColor: muted,
@@ -196,7 +370,9 @@ export function TradingViewChart({
     });
 
     chartRef.current = chart;
-    setChartEpoch((value) => value + 1);
+    // Paint series immediately so Strict Mode remounts and mobile height
+    // changes never leave an empty TradingView shell.
+    applySeries(chart);
 
     const scheduleFit = (logical?: LogicalRange | null) => {
       if (fitRafRef.current != null) window.cancelAnimationFrame(fitRafRef.current);
@@ -229,10 +405,7 @@ export function TradingViewChart({
       chartRef.current = null;
       priceRef.current = null;
     };
-    // Recreate only when price format changes — height updates via applyOptions
-    // so mobile 3m charts keep their series after the 25% height shrink.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- resolvedHeight applied below
-  }, [pricePrecision]);
+  }, [pricePrecision, height]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -242,144 +415,13 @@ export function TradingViewChart({
 
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || candles.length < 1) return;
-
-    const { ohlc, area, labelByTime, priceMin, priceMax } = toLwcSeries(
-      candles,
-      timeframe,
-      linePath,
-    );
-    labelsRef.current = labelByTime;
-
-    // Prefer closes (1 point/bar). The OHLC walk path is 4× denser and can break the area series.
-    const lineValues =
-      linePath && linePath.length === candles.length * 4
-        ? ohlc.map((bar) => bar.close)
-        : area.map((point) => point.value);
-
-    seriesDataRef.current = { style, ohlc, lineValues };
-
-    const autoscale = priceAutoscaleProvider(priceMin, priceMax);
-    const priceFormat = {
-      type: "price" as const,
-      precision: Math.min(Math.max(pricePrecision, 0), 4),
-      minMove: Number(`1e-${Math.min(Math.max(pricePrecision, 0), 4)}`),
-    };
-
-    markersRef.current = null;
-    if (priceRef.current) {
-      chart.removeSeries(priceRef.current);
-      priceRef.current = null;
-    }
-
-    const tone = positive ? HTS_UP : HTS_DOWN;
-    const panel = readCssVar("--panel", "#fffdf8");
-
-    chart.timeScale().applyOptions({
-      barSpacing: style === "candle" ? Math.max(3, Math.min(9, 720 / Math.max(Math.min(ohlc.length, 80), 1))) : 5,
-      rightOffset: 4,
-      fixLeftEdge: false,
-      fixRightEdge: false,
-    });
-
-    if (style === "candle") {
-      const candleSeries = chart.addSeries(
-        CandlestickSeries,
-        {
-          upColor: HTS_UP,
-          downColor: HTS_DOWN,
-          borderUpColor: HTS_UP,
-          borderDownColor: HTS_DOWN,
-          wickUpColor: HTS_UP,
-          wickDownColor: HTS_DOWN,
-          borderVisible: true,
-          wickVisible: true,
-          priceLineVisible: true,
-          lastValueVisible: true,
-          priceLineColor: tone,
-          priceLineWidth: 1,
-          priceFormat,
-          autoscaleInfoProvider: autoscale,
-        },
-        0,
-      );
-      candleSeries.setData(ohlc);
-      priceRef.current = candleSeries;
-    } else {
-      const areaData =
-        linePath && linePath.length === candles.length * 4
-          ? ohlc.map((bar) => ({ time: bar.time, value: bar.close }))
-          : area;
-
-      const areaSeries = chart.addSeries(
-        AreaSeries,
-        {
-          lineColor: tone,
-          topColor: positive ? "rgba(22, 163, 74, 0.38)" : "rgba(220, 38, 38, 0.34)",
-          bottomColor: positive ? "rgba(22, 163, 74, 0.05)" : "rgba(220, 38, 38, 0.05)",
-          lineWidth: 3,
-          lineType: LineType.Curved,
-          relativeGradient: true,
-          priceLineVisible: true,
-          lastValueVisible: true,
-          priceLineColor: tone,
-          priceLineWidth: 1,
-          priceFormat,
-          crosshairMarkerVisible: true,
-          crosshairMarkerRadius: 5,
-          crosshairMarkerBorderColor: panel,
-          crosshairMarkerBackgroundColor: tone,
-          autoscaleInfoProvider: priceAutoscaleProvider(
-            Math.min(...lineValues),
-            Math.max(...lineValues),
-          ),
-        },
-        0,
-      );
-      areaSeries.setData(areaData);
-      priceRef.current = areaSeries;
-
-      const last = areaData[areaData.length - 1];
-      if (last) {
-        markersRef.current = createSeriesMarkers(areaSeries, [
-          {
-            time: last.time,
-            position: "inBar",
-            shape: "circle",
-            color: tone,
-            size: 1.5,
-          },
-        ]);
-      }
-    }
-
-    // Show a recent window first so the user can drag right (pan left) into
-    // earlier history instead of fitting every loaded bar into one screen.
-    const total = ohlc.length;
-    const preferred =
-      typeof initialVisibleBars === "number" && initialVisibleBars > 0
-        ? initialVisibleBars
-        : Math.min(80, total);
-    const visible = Math.max(12, Math.min(total, preferred));
-    if (total > visible + 2) {
-      chart.timeScale().setVisibleLogicalRange({
-        from: total - visible,
-        to: total - 1 + 3,
-      });
-    } else {
-      chart.timeScale().fitContent();
-    }
-
-    // fitContent / setVisibleLogicalRange can reset price scale — lock to the
-    // on-screen window so 분봉~월봉 moves read clearly (esp. KRW equities).
-    if (priceRef.current) {
-      fitPriceToVisibleRange(chart, priceRef.current, style, ohlc, lineValues);
-    }
-  }, [candles, linePath, timeframe, style, positive, pricePrecision, initialVisibleBars, chartEpoch]);
+    if (!chart) return;
+    applySeries(chart);
+  }, [candles, linePath, timeframe, style, positive, pricePrecision, initialVisibleBars]);
 
   return (
     <div className="relative w-full overflow-hidden rounded-lg border border-line/50 bg-panel">
-      <div ref={hostRef} className="w-full" style={{ minHeight: resolvedHeight }} />
+      <div ref={hostRef} className="w-full" style={{ minHeight: resolvedHeight, height: resolvedHeight }} />
     </div>
   );
 }
