@@ -4,9 +4,9 @@ import { ContentSlot } from "@/components/monetization/ContentSlot";
 import type { PostChannel } from "@/lib/posts/types";
 
 /**
- * Category chrome: mobile section pills + desk header.
- * Desktop section tabs live in the root layout via
- * GlobalDesktopCategorySectionBar so every screen shares the same slot.
+ * Category chrome: desk header + page body.
+ * Section tabs live in the root layout (mobile + desktop) so every screen
+ * shares the same sticky slot.
  */
 export function CategoryChrome({
   channel,
@@ -18,8 +18,8 @@ export function CategoryChrome({
   return (
     <div className="flex flex-col gap-3 md:gap-4">
       {/*
-        Mobile: ticker (children order-1) → header/subnav (order-2) → desk (order-3).
-        Desktop tabs are site-wide above <main>; only the board H1 stays here.
+        Mobile: ticker (children order-1) → header (order-2) → desk (order-3).
+        Section tabs are site-wide above <main>; only the board H1 stays here.
       */}
       <div className="order-2 space-y-2 md:order-0">
         <CategoryDeskHeader channel={channel} />

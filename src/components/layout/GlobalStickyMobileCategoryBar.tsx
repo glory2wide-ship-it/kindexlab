@@ -1,36 +1,35 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { CategorySubNav } from "@/components/layout/CategorySubNav";
 import { MobileCategoryBar } from "@/components/layout/MobileCategoryBar";
 import { useActiveChannelOverride } from "@/components/providers/ActiveChannelProvider";
-import { isPostChannel } from "@/lib/posts/channels";
-import type { PostChannel } from "@/lib/posts/types";
-
-function activeChannelFromPath(pathname: string): PostChannel | undefined {
-  const segment = pathname.split("/").filter(Boolean)[0];
-  if (!segment) return undefined;
-  if (isPostChannel(segment)) return segment;
-  if (segment === "approval") return "politics";
-  return undefined;
-}
+import { resolveChannelFromPath } from "@/lib/posts/resolve-channel-from-path";
 
 /**
- * Site-wide mobile category chips under SiteHeader.
- * Lives in the root layout so every route keeps 전체/엔터/… pinned while scrolling.
- * Detail pages can override the active chip via SetActiveChannel.
+ * Site-wide mobile sticky stack under SiteHeader:
+ * 1) 전체/엔터/… category chips
+ * 2) 실시간 랭킹 / 일일브리핑 / 아카이브 / 소개 (when a channel is known)
+ *
+ * Lives in the root layout so ranking, briefing, and board pages keep the same slot.
  */
 export function GlobalStickyMobileCategoryBar() {
   const pathname = usePathname() || "/";
   const override = useActiveChannelOverride();
-  const activeId = override ?? activeChannelFromPath(pathname);
+  const channel = override ?? resolveChannelFromPath(pathname);
 
   return (
     <div
       className="sticky top-14 z-30 border-b border-line bg-board/95 backdrop-blur-md md:hidden"
       data-sticky-mobile-categories
     >
-      <div className="mx-auto max-w-7xl px-4 py-1.5">
-        <MobileCategoryBar activeId={activeId} />
+      <div className="mx-auto max-w-7xl space-y-1.5 px-4 py-1.5">
+        <MobileCategoryBar activeId={channel} />
+        {channel ? (
+          <div data-sticky-mobile-category-sections>
+            <CategorySubNav channel={channel} embedded />
+          </div>
+        ) : null}
       </div>
     </div>
   );
