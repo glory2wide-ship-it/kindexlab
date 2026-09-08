@@ -110,6 +110,16 @@ export function HeaderSearch() {
     inputRef.current?.focus();
   }, [mobileExpanded]);
 
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = () => {
+      if (mq.matches) setMobileExpanded(false);
+    };
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
   function go(href: string) {
     setOpen(false);
     setMobileExpanded(false);
@@ -125,16 +135,6 @@ export function HeaderSearch() {
     }
     router.push(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   }
-
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    const onChange = () => {
-      if (mq.matches) setMobileExpanded(false);
-    };
-    onChange();
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
 
   const dropdown =
     mounted && open && suggestions.length
