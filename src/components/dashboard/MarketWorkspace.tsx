@@ -359,7 +359,7 @@ export function MarketWorkspace({
                   onClick={() => setTimeframe(option.id)}
                   className={`rounded-md px-3 py-1.5 font-sans text-[13.2px] font-medium ${
                     timeframe === option.id
-                      ? "bg-ink text-board"
+                      ? "bg-ink text-board md:bg-accent md:text-black"
                       : "text-muted hover:bg-panel hover:text-ink"
                   }`}
                 >

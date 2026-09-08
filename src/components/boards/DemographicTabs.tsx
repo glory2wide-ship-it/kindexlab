@@ -13,7 +13,8 @@ const TAB_BASE =
   "rounded-md px-3 py-1.5 text-[13.2px] font-medium transition-[color,background-color,transform] duration-200 ease-out";
 const GENDER_ON = "bg-accent text-black scale-[1.03]";
 const GENDER_OFF = "text-muted hover:text-ink";
-const AGE_ON = "bg-ink text-board scale-[1.03]";
+/** Mobile keeps ink; desktop matches gender accent. */
+const AGE_ON = "bg-ink text-board scale-[1.03] md:bg-accent md:text-black";
 const AGE_OFF = "text-muted hover:bg-panel hover:text-ink";
 
 /**
