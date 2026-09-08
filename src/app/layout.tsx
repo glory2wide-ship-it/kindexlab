@@ -93,7 +93,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
         <link rel="preload" as="style" href={PRETENDARD_CSS} />
-        <link rel="stylesheet" href={PRETENDARD_CSS} media="print" id="font-pretendard" />
+        {/*
+         * media="print" → onload media="all" is a non-blocking CSS pattern.
+         * The inline script below mutates `media` before React hydrates, so
+         * suppressHydrationWarning is required on this node.
+         */}
+        <link
+          rel="stylesheet"
+          href={PRETENDARD_CSS}
+          media="print"
+          id="font-pretendard"
+          suppressHydrationWarning
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){var l=document.getElementById('font-pretendard');if(!l)return;var apply=function(){l.media='all'};if(l.addEventListener)l.addEventListener('load',apply);l.onload=apply;setTimeout(apply,2500);})();`,
