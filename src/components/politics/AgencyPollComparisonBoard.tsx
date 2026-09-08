@@ -26,8 +26,42 @@ export function AgencyPollComparisonBoard({ snapshot }: { snapshot: PollBoardSna
           {snapshot.subject} · {snapshot.live ? "뉴스 수집 반영" : "최근 공표 시드"} · 상승 초록 / 하락 빨강
         </p>
       </div>
-      <div className="overflow-x-auto rounded-xl border border-line bg-panel">
-        <table className="w-full min-w-[48rem] border-collapse text-sm">
+
+      {/* Mobile: stacked cards so six columns never force horizontal scroll. */}
+      <ul className="space-y-3 md:hidden">
+        {snapshot.polls.map((poll) => {
+          const posDelta = pollDelta(poll.positive, poll.previousPositive);
+          const negDelta = pollDelta(poll.negative, poll.previousNegative);
+          return (
+            <li key={poll.id} className="rounded-xl border border-line bg-panel p-3">
+              <p className="font-medium">{poll.agencyLabel}</p>
+              <p className="mt-1 text-[11px] text-muted">{poll.surveyedAt}</p>
+              <p className="mt-1 text-[11px] tabular-nums text-muted">
+                {formatCount(poll.sampleSize)}명 · ±{poll.marginOfError}%p
+              </p>
+              <dl className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px]">
+                <div>
+                  <dt className="text-muted">{labels.positive}율</dt>
+                  <dd className={`mt-0.5 font-semibold tabular-nums ${tone(posDelta)}`}>{poll.positive}%</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">{labels.negative}율</dt>
+                  <dd className={`mt-0.5 tabular-nums ${tone(negDelta)}`}>{poll.negative}%</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">직전 대비</dt>
+                  <dd className={`mt-0.5 font-semibold tabular-nums ${tone(posDelta)}`}>
+                    {formatPollDelta(posDelta)}
+                  </dd>
+                </div>
+              </dl>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="hidden overflow-x-visible rounded-xl border border-line bg-panel md:block md:overflow-x-auto">
+        <table className="w-full border-collapse text-sm md:min-w-[48rem]">
           <caption className="sr-only">{title}</caption>
           <thead>
             <tr>

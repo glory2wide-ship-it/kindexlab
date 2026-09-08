@@ -84,11 +84,12 @@ export function MarketOverview({
                 <FlipBoardNumber value={index.value} playToken={flashNonce} />
               </p>
               <p
-                className={`mt-1 font-sans text-[10px] font-semibold tabular-nums sm:text-[11px] ${
+                className={`mt-1 flex flex-col gap-0.5 font-sans text-[10px] font-semibold tabular-nums leading-tight sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-1.5 sm:text-[11px] ${
                   up ? "text-up" : down ? "text-down" : "text-muted"
                 }`}
               >
-                {formatRate(Number(index.changeRate))} {formatPoints(points)}
+                <span>{formatRate(Number(index.changeRate))}</span>
+                <span className="sm:opacity-90">{formatPoints(points)}</span>
               </p>
             </div>
           </Link>

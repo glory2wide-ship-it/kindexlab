@@ -122,12 +122,17 @@ export function PoliticsSeoSection({
 
       <section>
         <h2 className="mb-3 text-xl font-semibold tracking-tight">{table.caption}</h2>
-        <div className="overflow-x-auto rounded-xl border border-line bg-panel">
-          <table className="w-full min-w-[32rem] border-collapse text-sm">
+        <div className="overflow-x-visible rounded-xl border border-line bg-panel md:overflow-x-auto">
+          <table className="w-full border-collapse text-sm max-md:table-fixed md:min-w-[32rem]">
             <thead>
               <tr>
-                {table.headers.map((header) => (
-                  <th key={header} className="border-b border-line px-3 py-2 text-left font-semibold">
+                {table.headers.map((header, headerIndex) => (
+                  <th
+                    key={header}
+                    className={`border-b border-line px-3 py-2 text-left font-semibold max-md:break-words max-md:px-2 max-md:text-[12px] ${
+                      headerIndex === 0 ? "max-md:w-[32%]" : ""
+                    }`}
+                  >
                     {header}
                   </th>
                 ))}
@@ -137,7 +142,10 @@ export function PoliticsSeoSection({
               {table.rows.map((row, rowIndex) => (
                 <tr key={`${row[0]}-${rowIndex}`} className="odd:bg-transparent even:bg-board/50">
                   {row.map((cell, cellIndex) => (
-                    <td key={`${rowIndex}-${cellIndex}`} className="border-b border-line px-3 py-2">
+                    <td
+                      key={`${rowIndex}-${cellIndex}`}
+                      className="border-b border-line px-3 py-2 max-md:break-words max-md:px-2 max-md:text-[13px] max-md:leading-5"
+                    >
                       {cell}
                     </td>
                   ))}
@@ -147,7 +155,7 @@ export function PoliticsSeoSection({
           </table>
         </div>
         {table.markdown ? (
-          <pre className="mt-3 overflow-x-auto rounded-xl border border-dashed border-line bg-board p-3 font-mono text-[11px] leading-5 text-muted">
+          <pre className="mt-3 overflow-x-auto rounded-xl border border-dashed border-line bg-board p-3 font-mono text-[11px] leading-5 text-muted max-md:whitespace-pre-wrap max-md:break-words">
             {table.markdown}
           </pre>
         ) : null}

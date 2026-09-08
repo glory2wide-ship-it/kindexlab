@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { MobileCategoryBar } from "@/components/layout/MobileCategoryBar";
+import { useActiveChannelOverride } from "@/components/providers/ActiveChannelProvider";
 import { isPostChannel } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 
@@ -16,10 +17,12 @@ function activeChannelFromPath(pathname: string): PostChannel | undefined {
 /**
  * Site-wide mobile category chips under SiteHeader.
  * Lives in the root layout so every route keeps 전체/엔터/… pinned while scrolling.
+ * Detail pages can override the active chip via SetActiveChannel.
  */
 export function GlobalStickyMobileCategoryBar() {
   const pathname = usePathname() || "/";
-  const activeId = activeChannelFromPath(pathname);
+  const override = useActiveChannelOverride();
+  const activeId = override ?? activeChannelFromPath(pathname);
 
   return (
     <div

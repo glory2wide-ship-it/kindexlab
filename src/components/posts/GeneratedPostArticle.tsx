@@ -8,7 +8,6 @@ import { TrendDisclaimer } from "@/components/article/TrendDisclaimer";
 import { SITE } from "@/lib/site";
 import { channelHref, channelSectionHref, getPostChannel, inferPostChannel } from "@/lib/posts/channels";
 import type { GeneratedPost } from "@/lib/posts/types";
-import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
   const channel = getPostChannel(inferPostChannel(post));
@@ -80,9 +79,6 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
         <span className="mx-2">/</span>
         {post.editionDate}
       </p>
-      <DeskEyebrow variant="base">
-        {channel.eyebrow} · Magazine
-      </DeskEyebrow>
       <h1 className="max-w-3xl text-2xl font-semibold tracking-tight md:text-3xl">{post.title}</h1>
       <p className="article-prose article-prose-lead max-w-3xl whitespace-pre-line text-muted">
         {post.excerpt}

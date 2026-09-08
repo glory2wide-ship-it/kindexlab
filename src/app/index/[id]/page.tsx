@@ -7,6 +7,7 @@ import { EntityHero } from "@/components/entity/EntityHero";
 import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
+import { SetActiveChannel } from "@/components/providers/ActiveChannelProvider";
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
 import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import { getRankings } from "@/lib/api";
@@ -20,6 +21,7 @@ import {
   indexPath,
   listIndexIds,
 } from "@/lib/indices";
+import { channelFromLead } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 import { parseTimeframeParam } from "@/lib/timeframes";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
@@ -74,6 +76,7 @@ export default async function IndexDetailPage({
 
   return (
     <div className="space-y-8">
+      <SetActiveChannel channel={entity.sourceChannel ?? channelFromLead(entity, entity.slug)} />
       <p className="text-sm text-muted">
         <Link href="/" className="hover:text-ink">
           지수(INDEX)

@@ -9,6 +9,7 @@ import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
 import { SupportIndexChart } from "@/components/politics/SupportIndexChart";
+import { SetActiveChannel } from "@/components/providers/ActiveChannelProvider";
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
 import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import { getAllSlugs, getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
@@ -20,6 +21,7 @@ import {
 } from "@/lib/market/kospi-quotes";
 import { resolveMarketChartInstrument } from "@/lib/market/naver-chart";
 import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
+import { channelFromLead } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 import { rankingPath, rankingUrl } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
@@ -138,6 +140,7 @@ export default async function RankingDetailPage({
 
   return (
     <div className="space-y-8">
+      <SetActiveChannel channel={entity.sourceChannel ?? channelFromLead(entity, entity.slug)} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

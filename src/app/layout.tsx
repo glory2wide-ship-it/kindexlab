@@ -4,6 +4,7 @@ import Script from "next/script";
 import { GlobalStickyMobileCategoryBar } from "@/components/layout/GlobalStickyMobileCategoryBar";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { ActiveChannelProvider } from "@/components/providers/ActiveChannelProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { SITE } from "@/lib/site";
 import "./globals.css";
@@ -155,10 +156,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
         <ThemeProvider>
-          <SiteHeader />
-          <GlobalStickyMobileCategoryBar />
-          <main className="mx-auto w-full max-w-7xl px-4 py-4 max-md:pt-3">{children}</main>
-          <SiteFooter />
+          <ActiveChannelProvider>
+            <SiteHeader />
+            <GlobalStickyMobileCategoryBar />
+            <main className="mx-auto w-full max-w-7xl px-4 py-4 max-md:pt-3">{children}</main>
+            <SiteFooter />
+          </ActiveChannelProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -9,19 +9,19 @@ export function SiteHeader() {
     <>
       <RouteProgress />
       <header className="sticky top-0 z-40 overflow-visible border-b border-line bg-board/90 backdrop-blur-md">
-        <div className="mx-auto flex min-h-14 max-w-7xl items-center gap-2 overflow-visible px-4 py-1.5 md:h-14 md:justify-between md:gap-3 md:py-0">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 overflow-visible px-4 md:justify-between md:gap-3">
           <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2 md:gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-accent font-sans text-[11px] font-bold tracking-tight text-black">
               KD
             </span>
-            <span className="leading-tight">
-              <span className="block font-gothic text-sm font-semibold tracking-tight sm:text-base">
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate font-gothic text-sm font-semibold tracking-tight sm:text-base">
                 <span className="md:hidden">{SITE.name}</span>
                 <span className="hidden md:inline">
                   {SITE.nameKo} <span className="font-normal text-muted">/</span> {SITE.name}
                 </span>
               </span>
-              <span className="mt-0.5 block text-[10px] font-normal leading-none tracking-tight text-muted md:hidden">
+              <span className="mt-0.5 block truncate text-[10px] font-normal leading-none tracking-tight text-muted md:hidden">
                 실시간 관심이슈 랭킹
               </span>
             </span>
