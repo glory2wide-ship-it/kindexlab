@@ -125,17 +125,18 @@ export function MarketWorkspace({
 
   const [view, setView] = useState<ViewMode>("list");
   const [category, setCategory] = useState<CategoryId>(initialCategory);
-  const [timeframe, setTimeframe] = useState<Timeframe>("3m");
+  /** Mobile-first default matches heatmap dials (5분 · 전체 · 전체). Desktop flips to 3분. */
+  const [timeframe, setTimeframe] = useState<Timeframe>("5m");
   const [genderInternal, setGenderInternal] = useState<"all" | GenderSegment>("all");
   const [ageInternal, setAgeInternal] = useState<"all" | AgeSegment>("all");
   const [regionInternal, setRegionInternal] = useState<"all" | RegionSegment>("all");
   const [methodOpen, setMethodOpen] = useState(false);
   const [userPickedView, setUserPickedView] = useState(false);
 
-  /** Mobile dials open on 5분 centered; desktop toolbar keeps 3분 default. */
+  /** Desktop toolbar keeps 3분 default; mobile stays on the 5분 initial state. */
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
-    if (!mq.matches) setTimeframe("5m");
+    if (mq.matches) setTimeframe("3m");
   }, []);
 
   /** Mobile opens on list; desktop keeps caller initialView (usually treemap). */
@@ -173,15 +174,11 @@ export function MarketWorkspace({
     return () => mq.removeEventListener("change", sync);
   }, []);
 
-  /** Heatmap tile set (may be >10). List view slices to LIST_MAX_ITEMS. */
-  const sortedItems = useMemo(() => {
-    const desktopCap = Math.max(1, Math.min(maxItems, TREEMAP_MAX_ITEMS));
-    const cap = isMobileViewport
-      ? Math.max(1, Math.min(desktopCap, MOBILE_TREEMAP_MAX_ITEMS))
-      : desktopCap;
+  /** Heatmap tile set (may be >10). List is ranked from the same pool, capped at 10. */
+  const rankedPool = useMemo(() => {
     try {
       if (isHeadlineFeed(filtered)) {
-        return rankHeadlineFeed(filtered, { timeframe, gender, age }).slice(0, cap);
+        return rankHeadlineFeed(filtered, { timeframe, gender, age });
       }
       const byTime = rankItemsForTimeframe(filtered, timeframe);
       const ordered = skipDemographicSkew ? byTime : applyDemographicSkew(byTime, gender, age);
@@ -189,10 +186,8 @@ export function MarketWorkspace({
         showRegion && region !== "all"
           ? ordered.filter((item) => entityMatchesRegion(item, region))
           : ordered;
-      const sliced = uniqueHeatmapTiles(regionLocked)
-        .slice(0, cap)
-        .map((item, index) => ({ ...item, rank: index + 1 }));
-      if (sliced.length) return sliced;
+      const unique = uniqueHeatmapTiles(regionLocked);
+      if (unique.length) return unique;
     } catch {
       /* keep tiles from the region-locked payload so a bad combo never mixes 시/도 */
     }
@@ -200,23 +195,21 @@ export function MarketWorkspace({
       showRegion && region !== "all"
         ? filtered.filter((item) => entityMatchesRegion(item, region))
         : filtered;
-    return uniqueHeatmapTiles(fallback)
-      .slice(0, cap)
-      .map((item, index) => ({ ...item, rank: index + 1 }));
-  }, [
-    filtered,
-    timeframe,
-    gender,
-    age,
-    region,
-    showRegion,
-    skipDemographicSkew,
-    maxItems,
-    isMobileViewport,
-  ]);
+    return uniqueHeatmapTiles(fallback);
+  }, [filtered, timeframe, gender, age, region, showRegion, skipDemographicSkew]);
+
+  const sortedItems = useMemo(() => {
+    const desktopCap = Math.max(1, Math.min(maxItems, TREEMAP_MAX_ITEMS));
+    const cap = isMobileViewport
+      ? Math.max(1, Math.min(desktopCap, MOBILE_TREEMAP_MAX_ITEMS))
+      : desktopCap;
+    return rankedPool.slice(0, cap).map((item, index) => ({ ...item, rank: index + 1 }));
+  }, [rankedPool, maxItems, isMobileViewport]);
+
   const listItems = useMemo(
-    () => sortedItems.slice(0, LIST_MAX_ITEMS),
-    [sortedItems],
+    () =>
+      rankedPool.slice(0, LIST_MAX_ITEMS).map((item, index) => ({ ...item, rank: index + 1 })),
+    [rankedPool],
   );
   const demoKey = filterKey(gender, age, region);
   const demoActive = gender !== "all" || age !== "all" || region !== "all";

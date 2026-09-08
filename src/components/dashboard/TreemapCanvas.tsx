@@ -211,11 +211,13 @@ export function TreemapView({
           const sourceSize = Math.max(8, rankSize - 2) * 1.15;
           const showSource = showSourceCaptions && rank <= 10 && Boolean(sourceLabel) && w >= 52 && h >= 28;
           const displayTitle = isHeadline ? summarizeHeadlineTitle(entity.name) : (label?.name ?? lines.title);
-          /** Mobile: main title −25%; desktop unchanged. */
+          /** Mobile: main title −25%; rate/pt −30%. Desktop unchanged. */
           const titleScale = isMobileViewport ? 0.75 : 1;
+          const rateScale = isMobileViewport ? 0.7 : 1;
           const nameFontSize = (label?.nameSize ?? 16) * titleScale;
           const headlineFontSize =
             headlineTitleSize(w, h) * (rank >= 8 && rank <= 15 ? 0.8 : 1) * titleScale;
+          const rateFontSize = (label?.rateSize ?? 16.5) * rateScale;
           const href = entityHref(entity);
           const rankHeaderWidth = Math.min(164, w - 4);
           const rankHeaderX = isMobileViewport
@@ -353,7 +355,7 @@ export function TreemapView({
                       {h >= 48 ? (
                         <p
                           className="mt-1 font-bold tabular-nums"
-                          style={{ fontSize: label?.rateSize ?? 16.5 }}
+                          style={{ fontSize: rateFontSize }}
                         >
                           {label?.rate ?? rate}
                         </p>
@@ -391,7 +393,7 @@ export function TreemapView({
                       {h >= 48 ? (
                         <p
                           className="mt-1 font-bold tabular-nums"
-                          style={{ fontSize: label?.rateSize ?? 16.5 }}
+                          style={{ fontSize: rateFontSize }}
                         >
                           {label?.rate ?? rate}
                         </p>
@@ -449,7 +451,7 @@ export function TreemapView({
                       {label?.showRate !== false && h >= 28 ? (
                         <p
                           className="mt-1 font-bold tabular-nums"
-                          style={{ fontSize: label?.rateSize ?? 16.5 }}
+                          style={{ fontSize: rateFontSize }}
                         >
                           {label?.rate ?? rate}
                         </p>

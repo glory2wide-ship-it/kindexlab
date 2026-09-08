@@ -86,7 +86,7 @@ export function RankingTable({
   }
 
   return (
-    <div className="index-gothic max-h-[min(78vh,880px)] overflow-auto font-sans">
+    <div className="index-gothic font-sans md:max-h-[min(78vh,880px)] md:overflow-auto">
       <div className="hidden md:block">
         <table className="w-full font-sans text-sm">
           <thead className="sticky top-0 z-10 bg-panel text-left text-[11px] font-sans tracking-wider text-muted shadow-[inset_0_-1px_0_var(--color-line)]">
