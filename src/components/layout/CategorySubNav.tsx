@@ -1,15 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSelectedLayoutSegment } from "next/navigation";
+import { usePathname, useRouter, useSelectedLayoutSegment } from "next/navigation";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import {
   CHANNEL_SECTIONS,
   channelSectionHref,
   getPostChannel,
   resolveChannelSection,
+  type ChannelSectionId,
 } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
+
+function sectionFromPathname(pathname: string, channel: PostChannel): ChannelSectionId {
+  const base = `/${channel}`;
+  if (pathname === base || pathname === `${base}/`) return "board";
+  if (!pathname.startsWith(`${base}/`)) return "board";
+  const rest = pathname.slice(base.length + 1).split("/")[0] ?? "";
+  return resolveChannelSection(rest || null);
+}
 
 export function CategorySubNav({
   channel,
@@ -19,10 +28,15 @@ export function CategorySubNav({
   /** When true, render only the pill row (mobile, under H1). */
   embedded?: boolean;
 }) {
+  const pathname = usePathname() || "/";
   const segment = useSelectedLayoutSegment();
-  const active = resolveChannelSection(segment);
   const meta = getPostChannel(channel);
   const router = useRouter();
+
+  const active: ChannelSectionId =
+    pathname === `/${channel}` || pathname.startsWith(`/${channel}/`)
+      ? sectionFromPathname(pathname, channel)
+      : resolveChannelSection(segment);
 
   const nav = (
     <nav
@@ -59,13 +73,11 @@ export function CategorySubNav({
   }
 
   return (
-    <div className="sticky top-14 z-30 -mx-4 hidden border-b border-line bg-board/95 px-4 backdrop-blur-md md:block">
-      <div className="category-sub-nav-bar mx-auto max-w-7xl py-2">
-        <DeskEyebrow variant="subnav" className="category-sub-nav-eyebrow shrink-0">
-          {meta.eyebrow}
-        </DeskEyebrow>
-        {nav}
-      </div>
+    <div className="category-sub-nav-bar flex flex-wrap items-center gap-3 py-2">
+      <DeskEyebrow variant="subnav" className="category-sub-nav-eyebrow shrink-0">
+        {meta.eyebrow}
+      </DeskEyebrow>
+      {nav}
     </div>
   );
 }

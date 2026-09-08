@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
+import { GlobalDesktopCategorySectionBar } from "@/components/layout/GlobalDesktopCategorySectionBar";
 import { GlobalStickyMobileCategoryBar } from "@/components/layout/GlobalStickyMobileCategoryBar";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
@@ -159,6 +160,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <ActiveChannelProvider>
             <SiteHeader />
             <GlobalStickyMobileCategoryBar />
+            <GlobalDesktopCategorySectionBar />
             <main className="mx-auto w-full max-w-7xl px-4 py-4 max-md:pt-3">{children}</main>
             <SiteFooter />
           </ActiveChannelProvider>

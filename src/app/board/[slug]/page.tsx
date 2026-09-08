@@ -16,6 +16,7 @@ import {
 import { boardUsesRegionFilter } from "@/lib/boards/regions";
 import { getPostChannel } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
+import { SetActiveChannel } from "@/components/providers/ActiveChannelProvider";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 /** ISR — board rankings refresh on cron; never block the page on LLM. */
@@ -62,6 +63,7 @@ export default async function BoardDetailPage({ params }: { params: Promise<{ sl
   if (isDeskBoard(board)) {
     return (
       <div className="space-y-8">
+        <SetActiveChannel channel={board.channel} />
         <p className="text-sm text-muted">
           <Link href={categoryBoardPath(board.channel)}>{channel.label} 랭킹</Link>
           <span className="mx-2">/</span>
@@ -111,6 +113,7 @@ export default async function BoardDetailPage({ params }: { params: Promise<{ sl
 
   return (
     <div className="space-y-8">
+      <SetActiveChannel channel={board.channel} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

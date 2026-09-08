@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DailyBriefing } from "@/components/briefing/DailyBriefing";
+import { SetActiveChannel } from "@/components/providers/ActiveChannelProvider";
 import { listSeeded } from "@/lib/briefing/catalog";
 import { getBriefingBySlug, getEntitiesBySlugs } from "@/lib/api";
 import { SITE } from "@/lib/site";
@@ -60,6 +61,7 @@ export default async function BriefingArticlePage({
 
   return (
     <div className="space-y-6">
+      {briefing.channel ? <SetActiveChannel channel={briefing.channel} /> : null}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

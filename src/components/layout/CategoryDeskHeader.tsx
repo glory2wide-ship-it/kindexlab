@@ -9,7 +9,7 @@ import type { PostChannel } from "@/lib/posts/types";
  * Category board hero.
  * Mobile: submenu pills under the sticky category chips.
  * Desktop: board H1/description only on 실시간 랭킹. Section tabs live in the
- * sticky CategorySubNav so 일일브리핑/아카이브/소개 keep the same tab rail.
+ * root GlobalDesktopCategorySectionBar on every desktop screen.
  */
 export function CategoryDeskHeader({ channel }: { channel: PostChannel }) {
   const meta = getPostChannel(channel);
