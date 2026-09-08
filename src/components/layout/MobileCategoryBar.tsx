@@ -15,8 +15,8 @@ const MobileCategorySearch = dynamic(
     ssr: false,
     loading: () => (
       <span
-        className="inline-flex shrink-0 items-center justify-center rounded-md border border-line bg-panel text-ink"
-        style={{ height: CHIP_H, width: CHIP_H }}
+        className="inline-flex min-w-0 flex-1 items-center justify-center rounded-md border border-line bg-panel text-ink"
+        style={{ height: CHIP_H }}
         aria-hidden
       >
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -29,7 +29,7 @@ const MobileCategorySearch = dynamic(
 );
 
 /**
- * Centered category chips + matching search chip. Mobile-only.
+ * Centered category chips + search chip of equal size. Mobile-only.
  */
 export function MobileCategoryBar({
   activeId,
@@ -63,13 +63,14 @@ export function MobileCategoryBar({
               </Link>
             );
           })}
+          {/* Same flex-1 slot as category chips so width/height match */}
+          <div
+            className="flex min-w-0 flex-1 items-stretch [&_form]:flex [&_form]:h-full [&_form]:w-full [&_form]:min-w-0 [&_button[aria-label=검색]]:h-full [&_button[aria-label=검색]]:w-full [&_button[aria-label=검색]]:min-w-0 [&_button[aria-label=검색]]:rounded-md [&_button[aria-label=검색]]:border-line [&_button[aria-label=검색]]:bg-panel"
+            style={{ height: CHIP_H }}
+          >
+            <MobileCategorySearch inputId="category-bar-search" mobileOnly />
+          </div>
         </nav>
-        <div
-          className="flex shrink-0 items-stretch [&_form]:h-full [&_button[aria-label=검색]]:h-full [&_button[aria-label=검색]]:w-auto [&_button[aria-label=검색]]:min-w-[2rem] [&_button[aria-label=검색]]:rounded-md [&_button[aria-label=검색]]:border-line [&_button[aria-label=검색]]:bg-panel"
-          style={{ height: CHIP_H }}
-        >
-          <MobileCategorySearch inputId="category-bar-search" mobileOnly />
-        </div>
       </div>
     </div>
   );

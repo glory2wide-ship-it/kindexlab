@@ -131,9 +131,9 @@ export function MobileDialPicker<T extends string>({
         })}
         <span className="w-[32%] shrink-0" aria-hidden />
       </div>
-      {/* Center selection frame */}
+      {/* Center selection face — fill only, no border */}
       <div
-        className="pointer-events-none absolute inset-y-0.5 left-1/2 w-[38%] -translate-x-1/2 rounded border border-accent/80 bg-accent/15"
+        className="pointer-events-none absolute inset-y-0.5 left-1/2 w-[38%] -translate-x-1/2 rounded bg-accent/25"
         aria-hidden
       />
     </div>

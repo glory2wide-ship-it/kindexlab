@@ -136,6 +136,12 @@ export function MarketWorkspace({
   const [regionInternal, setRegionInternal] = useState<"all" | RegionSegment>("all");
   const [methodOpen, setMethodOpen] = useState(false);
 
+  /** Mobile dials open on 5분 centered; desktop toolbar keeps 3분 default. */
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    if (!mq.matches) setTimeframe("5m");
+  }, []);
+
   const gender = genderProp ?? genderInternal;
   const age = ageProp ?? ageInternal;
   const region = regionProp ?? regionInternal;

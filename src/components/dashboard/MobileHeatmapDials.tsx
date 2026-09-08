@@ -31,16 +31,20 @@ export function MobileHeatmapDials({
   hideTimeframes?: boolean;
 }) {
   const ages = visibleAgeSegments(boardSlug);
+  const beforeAll = ages.filter((key) => ["kids", "10s", "20s", "30s"].includes(key));
+  const afterAll = ages.filter((key) => !["kids", "10s", "20s", "30s"].includes(key));
 
   const timeOptions = TIMEFRAMES.map((item) => ({ id: item.id, label: item.label }));
   const genderOptions = [
     { id: "male" as const, label: GENDER_LABEL.male },
-    { id: "all" as const, label: "성별전체" },
+    { id: "all" as const, label: "전체" },
     { id: "female" as const, label: GENDER_LABEL.female },
   ];
+  /** 전체 sits between 30대 and 40대 (mock order). */
   const ageOptions = [
-    { id: "all" as const, label: "연령전체" },
-    ...ages.map((key) => ({ id: key, label: AGE_LABEL[key] })),
+    ...beforeAll.map((key) => ({ id: key, label: AGE_LABEL[key] })),
+    { id: "all" as const, label: "전체" },
+    ...afterAll.map((key) => ({ id: key, label: AGE_LABEL[key] })),
   ];
 
   return (
