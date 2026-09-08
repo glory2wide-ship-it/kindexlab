@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-08T17:29:04.788Z",
+  "updatedAt": "2026-09-08T17:44:43.165Z",
   "status": "open",
   "sources": [
     {
@@ -72,9 +72,8 @@
     },
     {
       "id": "nielsen-cable",
-      "ok": false,
-      "count": 0,
-      "error": "fetch failed"
+      "ok": true,
+      "count": 20
     },
     {
       "id": "news-ent",
@@ -104,7 +103,7 @@
       "id": "google-trends",
       "ok": false,
       "count": 0,
-      "error": "fetch failed"
+      "error": "HTTP 404 for https://trends.google.com/trends/trendingsearches/daily/rss?geo=KR"
     },
     {
       "id": "naver-webtoon-daily",
@@ -122,19 +121,19 @@
       "id": "kakao-webtoon",
       "ok": false,
       "count": 0,
-      "error": "fetch failed"
+      "error": "HTTP 404 for https://gateway-kw.kakao.com/section/v1/pages/general-ranking"
     },
     {
       "id": "youtube-trending",
       "ok": false,
       "count": 0,
-      "error": "fetch failed"
+      "error": "HTTP 400 for https://www.youtube.com/youtubei/v1/browse?prettyPrint=false"
     },
     {
       "id": "youtube-trending-html",
       "ok": false,
       "count": 0,
-      "error": "fetch failed"
+      "error": "empty"
     },
     {
       "id": "shorts-watchlist",
@@ -167,14 +166,8 @@
     },
     {
       "id": "playstation-store",
-      "ok": false,
-      "count": 0,
-      "error": "fetch failed"
-    },
-    {
-      "id": "console-watchlist",
       "ok": true,
-      "count": 12
+      "count": 21
     },
     {
       "id": "news-politics",
@@ -276,7 +269,7 @@
       "id": "ticketlink-rank",
       "ok": false,
       "count": 0,
-      "error": "fetch failed"
+      "error": "HTTP 404 for https://www.ticketlink.co.kr/home/main"
     },
     {
       "id": "kopis-boxoffice",
