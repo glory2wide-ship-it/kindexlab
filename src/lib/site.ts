@@ -10,6 +10,12 @@ export const SITE_INDEX_HEADLINE = "킨덱스! / KinDex";
 export const SITE_LANDING_HEADLINE =
   "엔터·정치·경제·문화·여행 데스크를 한 판에 올린 통합 지수 보드입니다. 타일 우측 상단이 출처 데스크입니다.";
 
+/** Desktop-only landing H1 / subcopy (mobile keeps SITE_INDEX_* / SITE_LANDING_*). */
+export const SITE_INDEX_HEADLINE_DESKTOP =
+  "킨덱스 / 대한민국 모든 이슈를 한눈에, 대한민국 이슈를 상장하다!";
+export const SITE_LANDING_HEADLINE_DESKTOP =
+  "엔터·정치·경제·문화·여행까지, 실시간 화제성과 이슈의 흐름을 하나의 통합 지수 보드로 확인하세요.";
+
 export const SITE = {
   name: "KinDex",
   nameKo: "킨덱스",
