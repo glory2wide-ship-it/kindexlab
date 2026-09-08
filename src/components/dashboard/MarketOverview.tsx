@@ -56,7 +56,7 @@ export function MarketOverview({
   const indices = Array.isArray(indicesProp) ? indicesProp : [];
 
   return (
-    <section className="index-gothic grid grid-cols-2 gap-3 font-sans sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 xl:gap-2">
+    <section className="index-gothic grid grid-cols-3 gap-2 font-sans sm:gap-3 lg:grid-cols-4 xl:grid-cols-6 xl:gap-2">
       {indices.map((index) => {
         const resolved = withIndexPoints(index);
         const up = resolved.changeRate > 0;
@@ -68,7 +68,7 @@ export function MarketOverview({
             key={`${index.id}-${resolved.value}-${resolved.changeRate}`}
             href={index.href ?? indexPath(index.id)}
             aria-label={`${index.label} ${resolved.value.toFixed(2)} ${formatRate(Number(resolved.changeRate))}`}
-            className={`relative min-w-0 overflow-hidden rounded-xl border bg-panel p-3 shadow-sm transition-colors hover:border-accent/50 @container ${
+            className={`relative min-w-0 overflow-hidden rounded-xl border bg-panel p-2 shadow-sm transition-colors hover:border-accent/50 @container sm:p-3 ${
               composite ? "border-accent/50 ring-1 ring-accent/25" : "border-line"
             }`}
           >
@@ -78,7 +78,7 @@ export function MarketOverview({
                 className="market-live-flash pointer-events-none absolute inset-0 rounded-xl ring-1 ring-accent/35"
               />
             ) : null}
-            <div className="relative z-[1] flex items-start justify-between gap-2 text-xs text-muted">
+            <div className="relative z-[1] flex items-start justify-between gap-1 text-[10px] text-muted sm:gap-2 sm:text-xs">
               <span className="min-w-0 truncate">{index.label}</span>
               <span
                 className={`shrink-0 whitespace-nowrap font-sans tabular-nums ${
@@ -88,10 +88,10 @@ export function MarketOverview({
                 {formatRate(Number(index.changeRate))} {formatPoints(points)}
               </span>
             </div>
-            <p className="kpi-score mt-2 font-sans font-semibold tracking-tight">
+            <p className="kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2">
               <FlipBoardNumber value={index.value} playToken={flashNonce} />
             </p>
-            <p className="mt-1 truncate text-[11px] text-muted">{index.note}</p>
+            <p className="mt-1 truncate text-[10px] text-muted sm:text-[11px]">{index.note}</p>
           </Link>
         );
       })}
