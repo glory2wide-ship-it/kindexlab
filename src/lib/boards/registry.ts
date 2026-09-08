@@ -1568,7 +1568,7 @@ export const BOARDS: BoardDefinition[] = [
     channel: "entertainment",
     title: "영화",
     shortTitle: "영화",
-    criteria: "현재 상영작 박스오피스(KOBIS)·포털 영화 순위와 검색·예매 화제성을 합산. 반드시 실제 영화 제목",
+    criteria: "현재 상영작 박스오피스(KOBIS)·포털 영화 순위와 검색·예매 화제성을 합산한 실제 영화 제목",
     affiliateCategory: "빔프로젝터 · 홈시네마",
     queries: [
       "박스오피스 순위",
