@@ -10,7 +10,6 @@ import {
   isPostChannel,
 } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
-import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 /** ISR — archive is persisted data; soft-nav should not wait on a dynamic render. */
 export const revalidate = 180;

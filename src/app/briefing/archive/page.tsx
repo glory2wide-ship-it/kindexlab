@@ -9,7 +9,6 @@ import {
 } from "@/lib/api";
 import { categoryLabel } from "@/lib/briefing/metrics";
 import { SITE } from "@/lib/site";
-import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 export const metadata: Metadata = {
   title: "브리핑 아카이브",

@@ -4,7 +4,6 @@ import { BriefingDateGroup } from "@/components/briefing/BriefingDateGroup";
 import { getArchiveBriefings, groupBriefingsByDate } from "@/lib/api";
 import { briefingMatchesChannel, channelSectionHref } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
-import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 export const revalidate = 180;
 
