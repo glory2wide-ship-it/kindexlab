@@ -15,7 +15,8 @@ export type SourceStrategy =
   | "news-first"
   | "youtube-community"
   | "official-grant"
-  | "travel-ugc";
+  | "travel-ugc"
+  | "review-web";
 
 export interface SourceStrategyPlan {
   strategy: SourceStrategy;
@@ -40,6 +41,7 @@ const YOUTUBE_BOARDS = new Set([
   "political-influencer-power",
   "finance-youtube-power",
   "entertain-youtuber-ranking",
+  "political-pundit-ranking",
 ]);
 
 const GRANT_BOARDS = new Set([
@@ -55,6 +57,14 @@ const TRAVEL_UGC_BOARDS = new Set([
   "overseas-travel-ranking",
   "weekend-outing-ranking",
   "food-restaurant-ranking",
+]);
+
+/** Product/service review boards — blogs, portals, YouTube over thin RSS. */
+const REVIEW_WEB_BOARDS = new Set([
+  "ott-buzz-ranking",
+  "housing-subscription-hotspot",
+  "health-info-ranking",
+  "car-review-ranking",
 ]);
 
 function cleanKeyword(keyword: string): string {
@@ -87,6 +97,23 @@ function travelQueries(keyword: string): string[] {
   return [...new Set([base, `${base} 여행`, `${base} 후기`, `${base} 여행기`, `${base} 가볼만한곳`, `${base} 코스`])];
 }
 
+function reviewQueries(keyword: string, boardSlug: string): string[] {
+  const base = cleanKeyword(keyword);
+  if (boardSlug === "ott-buzz-ranking") {
+    return [...new Set([base, `${base} 넷플릭스`, `${base} OTT`, `${base} 리뷰`, `${base} 시청`])];
+  }
+  if (boardSlug === "housing-subscription-hotspot") {
+    return [...new Set([base, `${base} 분양`, `${base} 청약`, `${base} 부동산`, `${base} 시세`])];
+  }
+  if (boardSlug === "health-info-ranking") {
+    return [...new Set([base, `${base} 건강`, `${base} 증상`, `${base} 병원`, `${base} 정보`])];
+  }
+  if (boardSlug === "car-review-ranking") {
+    return [...new Set([base, `${base} 시승`, `${base} 리뷰`, `${base} 연비`, `${base} 자동차`])];
+  }
+  return [...new Set([base, `${base} 리뷰`, `${base} 후기`, `${base} 정보`])];
+}
+
 export function resolveSourceStrategy(input: {
   keyword: string;
   boardSlug?: string | null;
@@ -110,7 +137,8 @@ export function resolveSourceStrategy(input: {
   if (
     YOUTUBE_BOARDS.has(boardSlug) ||
     type === "political_influencer" ||
-    /TV$|연구소|시사탱크|공감TV|유튜브/i.test(keyword)
+    type === "political_pundit" ||
+    /TV$|연구소|시사탱크|공감TV|유튜브|평론가|시사평론/i.test(keyword)
   ) {
     plan = {
       strategy: "youtube-community",
@@ -164,6 +192,23 @@ export function resolveSourceStrategy(input: {
       youtubeLimit: 2,
       blogLimit: 2,
       webLimit: 10,
+    };
+  } else if (
+    REVIEW_WEB_BOARDS.has(boardSlug) ||
+    /시승기|분양|청약|넷플릭스|디즈니\+|티빙|혈압|혈당|콜레스테롤/i.test(keyword)
+  ) {
+    plan = {
+      strategy: "review-web",
+      queries: reviewQueries(keyword, boardSlug),
+      promptHint:
+        "[소스 전략: 리뷰·포털·웹문서 중심] 뉴스 RSS가 얇을 때 공식 안내·포털·블로그·유튜브 리뷰를 1차 근거로 쓰세요. 확인된 고유명사·제품명·단지명만 랭킹에 넣고, URL에 없는 수치·효능은 지어내지 마세요.",
+      prioritizeYoutube: boardSlug === "ott-buzz-ranking",
+      prioritizeBlog: true,
+      prioritizeOfficial: boardSlug === "housing-subscription-hotspot",
+      allowUgc: true,
+      youtubeLimit: boardSlug === "ott-buzz-ranking" ? 6 : 3,
+      blogLimit: 8,
+      webLimit: 8,
     };
   } else if (/여행|관광|맛집|핫플|밤바다|휴양림|축제|카페거리/i.test(keyword)) {
     plan = {

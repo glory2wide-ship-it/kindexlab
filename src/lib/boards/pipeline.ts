@@ -5,6 +5,7 @@ import { rankBoard } from "@/lib/boards/chain/rank";
 import { emptyBoardReport, writeBoardReport } from "@/lib/boards/chain/report";
 import { polishBoardReport } from "@/lib/boards/chain/polish";
 import { buildBoardPump } from "@/lib/boards/chain/pump";
+import { collectBoardSources } from "@/lib/boards/collect-board-sources";
 import { BOARDS, boardPath, getBoard, isDeskBoard } from "@/lib/boards/registry";
 import { EXHIBITION_BOARD_SLUG, PERFORMANCE_BOARD_SLUG } from "@/lib/boards/region-catalogs";
 import { buildSampleBoard } from "@/lib/boards/seed";
@@ -22,8 +23,6 @@ import {
   ticketRowsToBoardSeeds,
   ticketRowsToNewsLines,
 } from "@/lib/ingestion/sources/tickets";
-import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
-import type { NewsDoc } from "@/lib/news/types";
 import { SITE } from "@/lib/site";
 
 export interface BoardResult {
@@ -40,66 +39,6 @@ function pipelineEnabled(): boolean {
   return process.env.BOARDS_CHAIN_ENABLED !== "0";
 }
 
-/**
- * Boards are thematic rather than event-driven, so they pull a wider window than
- * the entity columns: a "베스트셀러" board still needs context on a quiet day.
- */
-const LOOKBACK_HOURS = 168;
-
-async function retrieveForBoard(
-  board: BoardDefinition,
-  logger: ReturnType<typeof analysisLogger>,
-): Promise<{ docs: NewsDoc[]; publishers: string[] }> {
-  const settled = await Promise.allSettled(
-    board.queries.map((query) =>
-      retrieveNewsForKeyword(query, {
-        limit: board.channel === "entertainment" ? 8 : 5,
-        lookbackHours: LOOKBACK_HOURS,
-        trustedOnly: false,
-        allowMarketTape: true,
-        skipAliasFilter: true,
-      }),
-    ),
-  );
-
-  const docs: NewsDoc[] = [];
-  const seen = new Set<string>();
-  for (const [index, result] of settled.entries()) {
-    const query = board.queries[index] ?? board.focusKeyword;
-    if (result.status !== "fulfilled") {
-      logger.warn("board:rss-failed", {
-        query,
-        error: result.reason instanceof Error ? result.reason.message : "unknown",
-      });
-      continue;
-    }
-    logger.step("board:rss", {
-      query,
-      fetched: result.value.stats.fetched,
-      kept: result.value.stats.kept,
-      providers: result.value.providers.join(","),
-    });
-    console.log(
-      `[rebuild:rss] channel=${board.channel} board=${board.slug} query="${query}" fetched=${result.value.stats.fetched} kept=${result.value.stats.kept}`,
-    );
-    for (const doc of result.value.docs) {
-      const key = doc.link ?? doc.title;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      docs.push(doc);
-    }
-  }
-
-  const publishers = [...new Set(docs.map((doc) => doc.publisher).filter(Boolean))] as string[];
-  logger.step("board:retrieve", {
-    queries: board.queries.length,
-    docs: docs.length,
-    publishers: publishers.slice(0, 4).join(","),
-  });
-
-  return { docs: docs.slice(0, board.channel === "entertainment" ? 24 : 10), publishers };
-}
-
 async function generate(board: BoardDefinition, editionDate: string): Promise<CachedBoard> {
   const logger = analysisLogger(board.title);
   const deadline = Date.now() + budgetMs();
@@ -107,7 +46,8 @@ async function generate(board: BoardDefinition, editionDate: string): Promise<Ca
 
   logger.step("board:start", { slug: board.slug, channel: board.channel });
 
-  const { docs, publishers } = await retrieveForBoard(board, logger);
+  const collected = await collectBoardSources(board, logger);
+  const { docs, publishers } = collected;
   const previous = await readBoard(board.slug);
   const enabled = pipelineEnabled() && llmConfigured();
 
@@ -150,6 +90,8 @@ async function generate(board: BoardDefinition, editionDate: string): Promise<Ca
     previousRanking: previous?.ranking,
     ticketChartLines,
     ticketSeeds,
+    strategyHint: collected.strategyHint,
+    sourceStrategy: collected.strategy,
   });
 
   const { report: drafted, fromLlm } = await writeBoardReport({
@@ -217,6 +159,8 @@ async function generate(board: BoardDefinition, editionDate: string): Promise<Ca
     rows: entry.ranking.length,
     demographics: ranked.demographicsFromLlm ? "llm" : "derived",
     ms: provenance.buildMs,
+    strategy: collected.strategy,
+    expanded: collected.expanded,
     file: saved.file,
     supabase: saved.supabase,
   });

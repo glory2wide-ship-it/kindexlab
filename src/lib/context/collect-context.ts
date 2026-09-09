@@ -349,11 +349,9 @@ export async function collectArticleContext(
           allowUgc: plan.allowUgc,
           preferOfficial: plan.prioritizeOfficial,
         }),
-        plan.prioritizeOfficial
-          ? fetchGoogleCustomSearch(query, 8)
-          : plan.strategy === "news-first"
-            ? fetchGoogleCustomSearch(query, 8)
-            : Promise.resolve([] as ContextSource[]),
+        plan.prioritizeOfficial || plan.strategy === "review-web" || plan.strategy === "news-first"
+          ? fetchGoogleCustomSearch(query, plan.prioritizeOfficial ? 8 : 6)
+          : Promise.resolve([] as ContextSource[]),
       ]);
       if (naverWeb.length) providers.push(`naver-web+${query}`);
       if (serperWeb.length) providers.push(`serper-web+${query}`);

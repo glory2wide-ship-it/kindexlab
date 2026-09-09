@@ -71,7 +71,8 @@ const SCORE_MAX = 100;
 
 const SYSTEM = [
   "당신은 한국 트렌드 데이터를 다루는 정량 애널리스트다.",
-  "제공된 뉴스 스니펫에서 언급량·검색 관심도·감성(긍정/부정) 신호를 읽어 순위와 지수를 산출한다.",
+  "제공된 뉴스·공식 페이지·블로그·웹문서·유튜브 스니펫에서 언급량·검색 관심도·감성(긍정/부정) 신호를 읽어 순위와 지수를 산출한다.",
+  "소스 전략 힌트가 있으면 그 우선순위를 따르되, URL·스니펫에 없는 금액·자격·효능·시청 수치를 지어내지 않는다.",
   "지수는 100점 만점 척도로 매기고, 1위가 가장 높다. 소수점 둘째 자리까지 쓴다.",
   "각 항목의 note는 20~45자 한 문장으로, 그 순위가 나온 근거를 적는다. 광고 문구를 쓰지 않는다.",
   "네이버·구글 검색 트렌드의 성별/연령 통계 특성을 반영해 세그먼트별 순위를 다르게 구성한다.",
@@ -306,13 +307,17 @@ export async function rankBoard(input: {
   ticketChartLines?: string[];
   /** `[지역] 공연/행사명` 씨드 — 랭킹 상단에 우선 반영. */
   ticketSeeds?: string[];
+  /** Board crawl strategy label (official-grant, travel-ugc, …). */
+  sourceStrategy?: string;
+  /** Prompt hint from resolveSourceStrategy / collectBoardSources. */
+  strategyHint?: string;
 }): Promise<RankResult> {
   const { board, docs, logger } = input;
   const totalN = rankLimitForBoard(board);
   const segmentN = segmentLimitForBoard(board);
 
   const context = docs
-    .slice(0, 16)
+    .slice(0, 20)
     .map((doc, index) => `${index + 1}. [${doc.publisher ?? "출처미상"}] ${doc.title} — ${doc.snippet ?? ""}`)
     .join("\n");
 
@@ -324,18 +329,30 @@ export async function rankBoard(input: {
       ].join("\n")
     : "";
 
+  const strategyBlock = [
+    input.sourceStrategy ? `소스 전략: ${input.sourceStrategy}` : "",
+    input.strategyHint?.trim() || "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   const user = [
     `보드: ${board.title}`,
     `산출 기준: ${board.criteria}`,
     `랭킹 단위: ${board.unitLabel}`,
     `참고 키워드: ${board.queries.join(", ")}`,
     board.rankGuidance ? `추가 규칙: ${board.rankGuidance}` : "",
+    strategyBlock,
     boardUsesRegionFilter(board.slug)
       ? "지역 메타: 각 name은 `[시/도] 상호/음식` 형식이며, demographic_ranking.region에 시/도별 목록을 넣는다. 시/도 키는 seoul,gyeonggi,incheon,busan,daegu,gwangju,daejeon,ulsan,sejong,gangwon,chungbuk,chungnam,jeonbuk,jeonnam,gyeongbuk,gyeongnam,jeju 이다."
       : "",
     "",
     ticketBlock,
-    context ? `수집된 최신 보도:\n${context}` : ticketBlock ? "" : "수집된 보도가 없다. 통상적인 한국 시장 상황을 근거로 추정하라.",
+    context
+      ? `수집된 최신 자료(뉴스·공식·블로그·웹·유튜브):\n${context}`
+      : ticketBlock
+        ? ""
+        : "수집된 보도가 없다. 통상적인 한국 시장 상황을 근거로 추정하라.",
     "",
     `전체 1~${totalN}위와 성별(남/여) · 연령(${boardUsesKidsAgeTab(board.slug) ? "아동/유치원·" : ""}10대~70대 이상, JSON 키 ${boardUsesKidsAgeTab(board.slug) ? "kids·" : ""}70s_plus)${boardUsesRegionFilter(board.slug) ? " · 지역(시/도)" : ""} 각 1~${segmentN}위를 아래 JSON 스키마로 반환하라.\n${schemaHint(board)}`,
   ]

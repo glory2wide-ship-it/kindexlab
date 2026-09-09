@@ -172,5 +172,57 @@ export function officialUrlSeeds(input: {
     return [visitKoreaSearchSource(keyword), naverBlogSearchSource(keyword)].slice(0, 3);
   }
 
+  if (strategy === "review-web") {
+    const subject = parseBracketLabel(keyword)?.subject?.trim() || keyword.replace(/^\[[^\]]+\]\s*/, "");
+    const q = encodeURIComponent(subject);
+    const boardSlug = input.boardSlug?.trim() || "";
+    if (boardSlug === "housing-subscription-hotspot") {
+      return [
+        {
+          title: `${subject} 부동산·분양 정보 검색`,
+          url: `https://search.naver.com/search.naver?where=webkr&query=${encodeURIComponent(`${subject} 분양 청약`)}`,
+          publisher: "네이버 웹문서",
+          snippet: `${subject} 분양·청약·시세 관련 웹문서. 확인된 단지명만 인용하세요.`,
+          tier: "web",
+        },
+        {
+          title: `${subject} 블로그·후기 검색`,
+          url: `https://search.naver.com/search.naver?where=blog&query=${q}`,
+          publisher: "네이버 블로그",
+          snippet: `${subject} 거주·분양 후기 검색. 주관적 평가는 언급 수준으로만 쓰세요.`,
+          tier: "web",
+        },
+      ];
+    }
+    if (boardSlug === "ott-buzz-ranking") {
+      return [
+        youtubeSearchSource(subject),
+        {
+          title: `${subject} OTT·리뷰 검색`,
+          url: `https://search.naver.com/search.naver?where=webkr&query=${encodeURIComponent(`${subject} OTT 리뷰`)}`,
+          publisher: "네이버 웹문서",
+          snippet: `${subject} 작품·시청 반응 검색. 확인된 작품명만 랭킹에 넣으세요.`,
+          tier: "web",
+        },
+      ];
+    }
+    return [
+      {
+        title: `${subject} 정보·리뷰 검색`,
+        url: `https://search.naver.com/search.naver?where=webkr&query=${q}`,
+        publisher: "네이버 웹문서",
+        snippet: `${subject} 관련 웹문서·공식 안내. URL에 없는 수치·효능은 쓰지 마세요.`,
+        tier: "web",
+      },
+      {
+        title: `${subject} 블로그 후기 검색`,
+        url: `https://search.naver.com/search.naver?where=blog&query=${q}`,
+        publisher: "네이버 블로그",
+        snippet: `${subject} 블로그 후기. 확인된 고유명사만 인용하세요.`,
+        tier: "web",
+      },
+    ];
+  }
+
   return [];
 }
