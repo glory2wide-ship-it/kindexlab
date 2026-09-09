@@ -185,6 +185,8 @@ export function TreemapView({
           const priceLabel = heatmapPriceLabel(entity);
           const rank = displayRankById.get(entity.id) ?? leaf.rank ?? entity.rank;
           const rankBadge = formatHeatmapRank(rank);
+          /** Mobile ranks 8+: hide ±% so the ticker name stays readable in small tiles. */
+          const omitRate = isMobileViewport && rank >= 8;
           const group = groupLabel(entity);
           const lines = heatmapNameLines(entity);
           const label = layoutTreemapLabel({
@@ -197,6 +199,7 @@ export function TreemapView({
             // Finviz-style: show ±% only — no index point (pt) suffix on tiles.
             typeLabel: "",
             heatmapRank: rank,
+            omitRate,
           });
           const fill = heatText(change);
           const baseRankSize = w >= 120 && h >= 56 ? 16.5 : 13.5;
@@ -217,31 +220,28 @@ export function TreemapView({
             showSourceCaptions && rank <= 10 && Boolean(sourceLabel) && w >= 52 && h >= 28;
           const displayTitle = isHeadline ? summarizeHeadlineTitle(entity.name) : (label?.name ?? lines.title);
           /**
-           * Mobile title: 1–7 → −10%, 8–12 → −15%.
+           * Mobile title: 1–7 → −10%. Ranks 8+ omit the rate and keep full name size.
            * Mobile rate: −10%. Desktop unchanged.
            */
           const layoutNameSize = label?.nameSize ?? 16;
-          const nameBase =
-            isMobileViewport && rank >= 8 && rank <= 15 ? layoutNameSize / 0.8 : layoutNameSize;
-          const mobileTitleScale =
-            !isMobileViewport ? 1 : rank <= 7 ? 0.9 : rank <= 12 ? 0.85 : 1;
-          const nameFontSize = nameBase * mobileTitleScale;
+          const mobileTitleScale = !isMobileViewport ? 1 : rank <= 7 ? 0.9 : 1;
+          const nameFontSize = layoutNameSize * mobileTitleScale;
           const headlineFontSize = isMobileViewport
             ? headlineTitleSize(w, h) * mobileTitleScale
             : headlineTitleSize(w, h) * (rank >= 8 && rank <= 15 ? 0.8 : 1);
           const rateFontSize = (label?.rateSize ?? 16.5) * (isMobileViewport ? 0.9 : 1);
+          const showTileRate = !omitRate && label?.showRate !== false;
           const href = entityHref(entity);
           const rankHeaderWidth = Math.min(164, w - 4);
-          const rankHeaderX = isMobileViewport
-            ? leaf.x0 + 2
-            : Math.max(leaf.x0, leaf.x1 - 168);
+          // Rank badge sits top-right on both viewports (mobile previously top-left).
+          const rankHeaderX = Math.max(leaf.x0 + 2, leaf.x1 - rankHeaderWidth - 2);
           return (
             <Link
               key={`${entity.id}-${rank}`}
               href={href}
               prefetch={false}
               className="cursor-pointer"
-              aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name}${priceLabel ? ` ${priceLabel}` : ""} ${rate}`}
+              aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name}${priceLabel ? ` ${priceLabel}` : ""}${omitRate ? "" : ` ${rate}`}`}
               data-heatmap-rank={rank}
               onPointerDown={() => {
                 router.prefetch(href);
@@ -277,11 +277,7 @@ export function TreemapView({
                     height={showSource ? 64 : 28}
                   >
                     <div
-                      className={`pointer-events-none flex h-full w-full flex-col justify-start ${
-                        isMobileViewport
-                          ? "items-start pl-1 text-left"
-                          : "items-end pr-1 text-right"
-                      }`}
+                      className="pointer-events-none flex h-full w-full flex-col items-end justify-start pr-1 text-right"
                       style={{ color: fill }}
                     >
                       <span className="flex items-center gap-1 leading-none">
@@ -302,9 +298,7 @@ export function TreemapView({
                       </span>
                       {showSource && sourceLabel ? (
                         <span
-                          className={`mt-0.5 max-w-full font-medium leading-tight opacity-90 ${
-                            isMobileViewport ? "text-left" : "text-right"
-                          }`}
+                          className="mt-0.5 max-w-full text-right font-medium leading-tight opacity-90"
                           style={{
                             fontSize: sourceSize,
                             display: "-webkit-box",
@@ -364,7 +358,7 @@ export function TreemapView({
                       >
                         {lines.artist}
                       </p>
-                      {h >= 48 ? (
+                      {showTileRate && h >= 48 ? (
                         <p
                           className="mt-1 font-bold tabular-nums"
                           style={{ fontSize: rateFontSize }}
@@ -402,7 +396,7 @@ export function TreemapView({
                       >
                         {displayTitle}
                       </p>
-                      {h >= 48 ? (
+                      {showTileRate && h >= 48 ? (
                         <p
                           className="mt-1 font-bold tabular-nums"
                           style={{ fontSize: rateFontSize }}
@@ -460,7 +454,7 @@ export function TreemapView({
                           {label.meta}
                         </p>
                       ) : null}
-                      {label?.showRate !== false && h >= 28 ? (
+                      {showTileRate && h >= 28 ? (
                         <p
                           className="mt-1 font-bold tabular-nums"
                           style={{ fontSize: rateFontSize }}

@@ -105,11 +105,13 @@ export function layoutTreemapLabel(input: {
   rank?: string;
   /** Display rank on the heatmap (1-based). Ranks 8–15 use 20% smaller names. */
   heatmapRank?: number;
+  /** Skip ±% so the name can use the full tile (mobile ranks 8+). */
+  omitRate?: boolean;
   artist?: string;
   metaLabel?: string;
   forceType?: boolean;
 }): TreemapLabelLayout | null {
-  const { width: w, height: h, y, name, rate, typeLabel, artist, heatmapRank } = input;
+  const { width: w, height: h, y, name, rate, typeLabel, artist, heatmapRank, omitRate } = input;
   if (w < 28 || h < 18) return null;
 
   const innerW = Math.max(12, w - 20);
@@ -119,11 +121,12 @@ export function layoutTreemapLabel(input: {
   const minName = w < 72 || h < 44 ? MIN_NAME : 14;
 
   let nameSize = clamp(areaScale * 0.145, minName, MAX_NAME);
-  nameSize = Math.min(nameSize, innerH * 0.42, innerW * 0.28);
+  // Without a rate row, let the title claim more of the tile height.
+  nameSize = Math.min(nameSize, innerH * (omitRate ? 0.55 : 0.42), innerW * 0.28);
   nameSize = fitWrappedSize(name, nameSize, innerW, minName, maxLines);
 
   const nameLines = Math.min(maxLines, wrapLineCount(name, nameSize, innerW));
-  const showRate = h >= 30;
+  const showRate = !omitRate && h >= 30;
   const combine = Boolean(typeLabel) && w >= 88 && h >= 56;
   const rateText = combine ? `${rate}  ${typeLabel}` : rate;
   let rateSize = showRate ? clamp(Math.min(nameSize * 0.58, 17), MIN_RATE, MAX_RATE) : 0;
@@ -160,7 +163,8 @@ export function layoutTreemapLabel(input: {
     }
   }
 
-  if (heatmapRank != null && heatmapRank >= 8 && heatmapRank <= 15) {
+  // Compact tiles with a rate row shrink mid-ranks; omitRate tiles keep full size.
+  if (!omitRate && heatmapRank != null && heatmapRank >= 8 && heatmapRank <= 15) {
     nameSize *= 0.8;
   }
 
