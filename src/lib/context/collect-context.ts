@@ -1,3 +1,8 @@
+import {
+  boardSensePromptBlock,
+  rankSourcesByBoardSense,
+  resolveBoardSense,
+} from "@/lib/boards/sense";
 import { crawlKeywordNewsRss, publisherLinksFromDescription } from "@/lib/context/crawl-news-rss";
 import { fetchGoogleCustomSearch } from "@/lib/context/fallback-google-cse";
 import { fetchNaverWebFallback } from "@/lib/context/fallback-naver";
@@ -245,16 +250,25 @@ export async function collectArticleContext(
     entity,
     channel: options.channel,
   });
+  const sense = resolveBoardSense({
+    boardSlug: options.boardSlug,
+    entitySlug: entity?.slug,
+    keyword,
+  });
+  // Prefer a sense-qualified query first so ambiguous names (e.g. 코스모스=책)
+  // do not fill RAG with the dominant seasonal homonym.
+  const primaryQuery = plan.queries[0]?.trim() || keyword;
 
   const signal = await buildSignalBrief({ keyword, entity, related });
 
   const [crawled, news] = await Promise.all([
-    crawlKeywordNewsRss(keyword, DEFAULT_LIMIT),
-    newsSourcesFromRetrieval(keyword, options),
+    crawlKeywordNewsRss(primaryQuery, DEFAULT_LIMIT),
+    newsSourcesFromRetrieval(primaryQuery, options),
   ]);
 
   let sources = mergeSources(crawled, news.sources);
   sources = mergeSources(sources, signal.rssSources);
+  sources = rankSourcesByBoardSense(sources, sense);
 
   const providers = [...news.providers, `strategy:${plan.strategy}`];
   let unwrapped = news.unwrapped;
@@ -384,6 +398,9 @@ export async function collectArticleContext(
 
   const score = computeContextScore(signal.facts, sources);
 
+  const senseHint = boardSensePromptBlock(sense);
+  const strategyHint = [plan.promptHint, senseHint].filter(Boolean).join("\n\n") || undefined;
+
   const ctx: CollectedContext = {
     keyword,
     sources,
@@ -397,7 +414,7 @@ export async function collectArticleContext(
     sourceTextChars: sourceSnippetChars(sources),
     tierCounts: tierCounts(sources),
     sourceStrategy: plan.strategy,
-    sourceStrategyHint: plan.promptHint || undefined,
+    sourceStrategyHint: strategyHint,
   };
   ctx.block = renderContextBlock(ctx, { asOfDate: options.asOfDate });
   return ctx;

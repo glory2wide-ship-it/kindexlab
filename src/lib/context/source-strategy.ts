@@ -1,4 +1,5 @@
 import { boardSlugFromEntitySlug } from "@/lib/analysis/briefing-boards";
+import { boardSenseQueries, resolveBoardSense } from "@/lib/boards/sense";
 import { parseBracketLabel } from "@/lib/politics/labeled-rank";
 import type { RankingEntity } from "@/lib/types";
 
@@ -180,10 +181,20 @@ export function resolveSourceStrategy(input: {
     };
   }
 
+  const sense = resolveBoardSense({
+    boardSlug,
+    entitySlug: input.entity?.slug,
+    keyword,
+  });
+  const senseQueries = boardSenseQueries(keyword, sense);
+  const senseHint = sense
+    ? `[보드 의미] ${sense.senseLabel} — 검색·인용도 이 의미에 맞춰 주세요. ${sense.promptRules[0] ?? ""}`
+    : "";
+
   return {
     strategy: "news-first",
-    queries: [keyword],
-    promptHint: "",
+    queries: senseQueries.length ? senseQueries : [keyword],
+    promptHint: senseHint,
     prioritizeYoutube: false,
     prioritizeBlog: false,
     prioritizeOfficial: false,

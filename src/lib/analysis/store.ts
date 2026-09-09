@@ -201,24 +201,25 @@ async function supabaseGet(slug: string): Promise<CachedAnalysis | undefined> {
 }
 
 export async function readAnalysis(slug: string): Promise<CachedAnalysis | undefined> {
+  // Prefer the on-disk shard when it is newer than this process's memory.
+  // Overnight / CLI regenerations write shards from another Node process; without
+  // this check a long-lived Next server keeps serving the pre-regen column.
+  const shard = await readShard(slug);
   const cached = memory.get(slug);
-  if (cached) {
-    return isPublicEditorialContent({
-      editionDate: cached.editionDate || cached.article?.editionDate,
-      generatedAt: cached.generatedAt,
-    })
-      ? cached
-      : undefined;
+  const freshest =
+    shard && (!cached || (shard.generatedAt || "") >= (cached.generatedAt || ""))
+      ? shard
+      : cached;
+  if (shard && freshest === shard) {
+    memory.set(slug, shard);
   }
 
-  const shard = await readShard(slug);
-  if (shard) {
-    memory.set(slug, shard);
+  if (freshest) {
     return isPublicEditorialContent({
-      editionDate: shard.editionDate || shard.article?.editionDate,
-      generatedAt: shard.generatedAt,
+      editionDate: freshest.editionDate || freshest.article?.editionDate,
+      generatedAt: freshest.generatedAt,
     })
-      ? shard
+      ? freshest
       : undefined;
   }
 

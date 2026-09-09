@@ -74,6 +74,8 @@ export interface BriefingInputParams {
   maxChars?: number;
   /** KST calendar date for this edition (YYYY-MM-DD). Anchors tense and freshness. */
   editionDate?: string;
+  /** Board sense / homonym guard block. */
+  boardSenseBlock?: string;
 }
 
 /**
@@ -92,6 +94,7 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
     minChars,
     maxChars,
     editionDate,
+    boardSenseBlock,
   } = params;
 
   const related =
@@ -125,6 +128,7 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
     `- 글 유형: ${briefing ? "일일브리핑/Update 키워드" : "프리미엄 SEO 칼럼"}`,
     `- 브리핑 모드: ${mode.toUpperCase()} — ${modeGuide}`,
     "",
+    ...(boardSenseBlock?.trim() ? [boardSenseBlock.trim(), ""] : []),
     "[최신 뉴스 데이터 (RAG Context)]",
     newsContext?.trim() ||
       "수집된 뉴스 데이터가 없습니다. 포커스 키워드의 랭킹·검색 유입 현상만 밀도 있게 작성하세요.",

@@ -422,6 +422,8 @@ export function buildDataJournalistUserPrompt(params: {
   maxChars?: number;
   /** Editorial interest signals — meaning only, no score pedagogy. */
   kindexSignals?: string;
+  /** Board sense / homonym guard (e.g. 코스모스 = book, not flower). */
+  boardSenseBlock?: string;
 }): string {
   const floor = params.minChars ?? 1000;
   const ceiling = params.maxChars ?? 1800;
@@ -456,6 +458,7 @@ export function buildDataJournalistUserPrompt(params: {
     `- 4번 소제목 권장안: ${outlookHeading}`,
     `- 5번 소제목(고정): ${HYBRID_FIXED_HEADINGS.kindexFeature} — paragraphs 1개, 핵심 요약 직전`,
     "",
+    ...(params.boardSenseBlock?.trim() ? [params.boardSenseBlock.trim(), ""] : []),
     "[KinDex 관심 신호 — 산출 공식 강의 금지. 숫자가 보여주는 관심·화제 트렌드(방향·속도·상대 위치)를 ❺ 한 문단에서 해석]",
     params.kindexSignals?.trim() ||
       "별도 수치 블록 없음 — RAG·연관 키워드만으로 작성하세요.",
@@ -484,5 +487,6 @@ export function buildDataJournalistUserPrompt(params: {
     "- table caption은 '팩트 체크' 또는 '핵심 팩트 요약'. FAQ 3개+. takeaways 3개(높임말) — 화면의 「핵심 요약」.",
     "- 확인되지 않은 사건·수치를 지어내지 마세요.",
     "- 본문에 AdSense/SEO/글자 수 메타 문구를 절대 넣지 마세요.",
+    "- 보드 의미·동음이의어 금지 규칙이 있으면 그 해석을 최우선으로 지키세요.",
   ].join("\n");
 }

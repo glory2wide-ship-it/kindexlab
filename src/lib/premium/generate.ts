@@ -2,6 +2,12 @@ import { BRIEFING_LLM, chatJson, briefingLlmConfigured } from "@/lib/analysis/ch
 import type { AnalysisLogger } from "@/lib/analysis/log";
 import { boardSlugFromEntitySlug } from "@/lib/analysis/briefing-boards";
 import {
+  boardSenseCategoryHint,
+  boardSensePromptBlock,
+  detectBoardSenseMismatch,
+  resolveBoardSense,
+} from "@/lib/boards/sense";
+import {
   buildSparseEnrichmentPrompt,
   canGenerateContext,
   collectPremiumContext,
@@ -108,6 +114,7 @@ export type PremiumFailure =
   | "malformed"
   | "too-short"
   | "banned-copy"
+  | "sense-mismatch"
   | "keyword-stuffing"
   | "fabricated-url";
 
@@ -423,12 +430,24 @@ export async function generatePremiumArticle(input: {
     input.editionDate?.trim() ||
     (slug.match(/^(\d{4}-\d{2}-\d{2})/)?.[1] ?? undefined);
 
+  const boardSlug = boardSlugFromEntitySlug(input.entity?.slug ?? input.slug);
+  const boardSense = resolveBoardSense({
+    boardSlug,
+    entitySlug: input.entity?.slug ?? input.slug,
+    keyword,
+  });
+  const boardSenseBlock = boardSensePromptBlock(boardSense);
+  const categoryHint = boardSenseCategoryHint(
+    boardSense,
+    input.category ?? input.channel ?? "general",
+  );
+
   const context = await collectPremiumContext(keyword, {
     entity: input.entity,
     related: input.relatedEntities,
     relatedKeywords: input.related,
     asOfDate: editionDate,
-    boardSlug: boardSlugFromEntitySlug(input.entity?.slug ?? input.slug),
+    boardSlug,
     channel: input.channel,
   });
   logger.step("premium-rag", {
@@ -524,7 +543,7 @@ export async function generatePremiumArticle(input: {
   const user = dataJournalist
     ? buildDataJournalistUserPrompt({
         channel: input.channel ?? "economy",
-        categoryHint: input.category ?? input.channel ?? "general",
+        categoryHint,
         focusKeyword: keyword,
         relatedKeywords: filteredRelated,
         newsContext: context.block,
@@ -532,12 +551,13 @@ export async function generatePremiumArticle(input: {
         minChars,
         maxChars,
         kindexSignals,
+        boardSenseBlock,
       })
     : buildSinglePassUserPrompt({
         briefing: Boolean(input.briefing),
         mode,
         channel: input.channel ?? "entertainment",
-        categoryHint: input.category ?? input.channel ?? "general",
+        categoryHint,
         focusKeyword: keyword,
         relatedKeywords: filteredRelated,
         newsContext: context.block,
@@ -549,6 +569,7 @@ export async function generatePremiumArticle(input: {
         minChars,
         maxChars,
         editionDate,
+        boardSenseBlock,
       });
 
   logger.step("premium-single-pass", {
@@ -1074,6 +1095,15 @@ export async function generatePremiumArticle(input: {
   const banned = findBannedPhrases(plainAfter);
   if (banned.length) {
     return { ok: false, reason: "banned-copy", detail: banned.join(",") };
+  }
+  const senseMismatch = detectBoardSenseMismatch({
+    plainText: plainAfter,
+    boardSlug,
+    entitySlug: input.entity?.slug ?? input.slug,
+    keyword,
+  });
+  if (senseMismatch) {
+    return { ok: false, reason: "sense-mismatch", detail: senseMismatch };
   }
   if (input.briefing && hasBriefingBoilerplate(plainAfter)) {
     return {
