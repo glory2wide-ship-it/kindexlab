@@ -66,8 +66,8 @@ export function scrubBannedPhraseStems(text: string): string {
 }
 
 /**
- * Repair truncated Korean endings like "시점맙니다" that models sometimes emit
- * mid-clause. Prefer joining particles over a bare "입니다" when the next clause continues.
+ * Repair truncated Korean endings like "시점맙니다" / "다시 습니다"
+ * that models sometimes emit mid-clause.
  */
 export function scrubBrokenPredicateEndings(text: string): string {
   let out = text;
@@ -99,6 +99,18 @@ export function scrubBrokenPredicateEndings(text: string): string {
     { test: /지자체맙니다\.\s*/g, to: "지자체마다 " },
     // Fallback: noun+맙니다 → noun+입니다 (never a valid Korean predicate by itself).
     { test: /([\uac00-\ud7a3])맙니다/g, to: "$1입니다" },
+    // Detached "습니다" (missing verb stem): "다시 습니다", "마케팅이 습니다"
+    { test: /다시\s+습니다/g, to: "다시 살아나고 있습니다" },
+    { test: /으로서\s+습니다/g, to: "으로서 자리매김하고 있습니다" },
+    { test: /로서\s+습니다/g, to: "로서 자리매김하고 있습니다" },
+    { test: /큰\s+습니다/g, to: "큰 관심을 얻고 있습니다" },
+    { test: /([이가은는도만])\s+습니다/g, to: "$1 이어지고 있습니다" },
+    { test: /([\uac00-\ud7a3])\s+습니다/g, to: "$1과 함께하고 있습니다" },
+    { test: /(?<![\uac00-\ud7a3])습니다/g, to: "이어지고 있습니다" },
+    { test: /습니습니다/g, to: "습니다" },
+    { test: /합니습니다/g, to: "합니다" },
+    { test: /됩니습니다/g, to: "됩니다" },
+    { test: /입니습니다/g, to: "입니다" },
   ];
   for (const rule of contextual) out = out.replace(rule.test, rule.to);
   return out;

@@ -195,9 +195,15 @@ export function hasLeakedMetadata(text: string): boolean {
   return METADATA_LEAK.test(text);
 }
 
-/** Truncated predicate typo that models sometimes emit (시점맙니다 등). */
+/** Truncated / detached predicate endings models sometimes emit. */
 export function hasBrokenPredicateEndings(text: string): boolean {
-  return /[\uac00-\ud7a3]맙니다/.test(text);
+  // "시점맙니다" — stem collapsed into 맙니다
+  if (/[\uac00-\ud7a3]맙니다/.test(text)) return true;
+  // "다시 습니다" / "마케팅이 습니다" — 습니다 detached from its verb stem
+  if (/(?<![\uac00-\ud7a3])습니다/.test(text)) return true;
+  // doubled honorific artifact
+  if (/습니습니다|합니습니다|됩니습니다|입니습니다/.test(text)) return true;
+  return false;
 }
 
 /** Numbered heading with 년 but missing the year digits (❶ 년 …). */

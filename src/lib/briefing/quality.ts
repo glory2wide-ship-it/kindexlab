@@ -1,4 +1,4 @@
-import { hasBriefingBoilerplate, hasGenericPadding, hasLeakedMetadata, hasRepetitiveDeclarativeEndings, hasTemplateConnectiveSpam } from "@/lib/editorial/rules";
+import { hasBriefingBoilerplate, hasBrokenPredicateEndings, hasGenericPadding, hasLeakedMetadata, hasRepetitiveDeclarativeEndings, hasTemplateConnectiveSpam } from "@/lib/editorial/rules";
 import { detectHomonymSenseStitch } from "@/lib/boards/sense";
 import { BRIEFING_SHORTS_MIN_CHARS } from "@/lib/premium/briefing-editorial";
 import { premiumCharCount } from "@/lib/premium/prompt";
@@ -37,6 +37,7 @@ export function isPersistableBriefing(article: BriefingArticle): boolean {
   if (hasRepetitiveDeclarativeEndings(prose)) return false;
   if (hasGenericPadding(prose)) return false;
   if (hasLeakedMetadata(prose)) return false;
+  if (hasBrokenPredicateEndings(prose)) return false;
   if (detectHomonymSenseStitch(prose)) return false;
   if (premiumCharCount(plain) < BRIEFING_SHORTS_MIN_CHARS) return false;
   return true;

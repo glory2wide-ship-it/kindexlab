@@ -15,6 +15,7 @@ import { withGeminiBatchChat } from "@/lib/gemini/batch-chat";
 import {
   dropRepeatedSentences,
   hasBriefingBoilerplate,
+  hasBrokenPredicateEndings,
   hasGenericPadding,
   hasLeakedMetadata,
   hasRepetitiveDeclarativeEndings,
@@ -93,6 +94,7 @@ function passesBriefingQualityGate(plain: string): boolean {
   if (hasRepetitiveDeclarativeEndings(plain)) return false;
   if (hasGenericPadding(plain)) return false;
   if (hasLeakedMetadata(plain)) return false;
+  if (hasBrokenPredicateEndings(plain)) return false;
   if (detectHomonymSenseStitch(plain)) return false;
   return true;
 }
