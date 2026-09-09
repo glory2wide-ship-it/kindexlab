@@ -12,7 +12,7 @@ import { uniqueHeatmapTiles } from "@/lib/boards/unique-tiles";
 import { TYPE_LABEL, formatRate } from "@/lib/format";
 import { heatFill, heatText } from "@/lib/heatmap";
 import { formatHeatmapRank } from "@/lib/boards/limits";
-import { heatmapNameLines } from "@/lib/musicTitle";
+import { heatmapTileLabel } from "@/lib/heatmap-display-name";
 import { CHANNEL_SHORT_LABEL } from "@/lib/posts/channels";
 import { CULTURE_GRANT_TITLE } from "@/lib/boards/culture-grants";
 import { heatmapSourceCaption, summarizeHeadlineTitle } from "@/lib/news/headline-title";
@@ -132,12 +132,16 @@ export function TreemapView({
       if (!visible.length) return [];
       const byId = new Map(visible.map((entity) => [entity.id, entity]));
       return layoutHeatmapLeaves(
-        visible.map((entity, index) => ({
-          id: entity.id,
-          rank: index + 1,
-          score: scoreForTimeframe(entity, timeframe),
-          name: heatmapNameLines(entity).title || entity.name,
-        })),
+        visible.map((entity, index) => {
+          const tile = heatmapTileLabel(entity);
+          return {
+            id: entity.id,
+            rank: index + 1,
+            score: scoreForTimeframe(entity, timeframe),
+            // Area nudge uses the short paint label length — not the canonical name.
+            name: tile.title,
+          };
+        }),
         width,
         height,
         2,
@@ -189,13 +193,14 @@ export function TreemapView({
           /** Mobile ranks 8+: hide ±% so the ticker name stays readable in small tiles. */
           const omitRate = isMobileViewport && rank >= 8;
           const group = groupLabel(entity);
-          const lines = heatmapNameLines(entity);
+          const tile = heatmapTileLabel(entity);
+          const isHeadline = entity.type === "headline_news";
           const label = layoutTreemapLabel({
             width: w,
             height: h,
             y: leaf.y0,
-            name: lines.title,
-            artist: priceLabel ?? lines.artist,
+            name: isHeadline ? summarizeHeadlineTitle(entity.name, 16) : tile.title,
+            artist: priceLabel ?? tile.secondary,
             rate,
             // Finviz-style: show ±% only — no index point (pt) suffix on tiles.
             typeLabel: "",
@@ -212,14 +217,15 @@ export function TreemapView({
               ? CHANNEL_SHORT_LABEL[entity.sourceChannel as PostChannel]
               : undefined;
           const showChannelTag = Boolean(channelTag) && w >= 74 && h >= 26;
-          const isHeadline = entity.type === "headline_news";
           const isGrantTwoLine =
-            entity.heatmapGroup === CULTURE_GRANT_TITLE && Boolean(lines.artist);
+            entity.heatmapGroup === CULTURE_GRANT_TITLE && Boolean(tile.secondary);
           const sourceLabel = heatmapSourceCaption(entity);
           const sourceSize = Math.max(8, rankSize - 2) * 1.15;
           const showSource =
             showSourceCaptions && rank <= 10 && Boolean(sourceLabel) && w >= 52 && h >= 28;
-          const displayTitle = isHeadline ? summarizeHeadlineTitle(entity.name) : (label?.name ?? lines.title);
+          const displayTitle = isHeadline
+            ? summarizeHeadlineTitle(entity.name)
+            : (label?.name ?? tile.title);
           /**
            * Mobile title: 1–7 → −10%. Ranks 8+ omit the rate and keep full name size.
            * Mobile rate: −10%. Desktop unchanged.
@@ -342,7 +348,7 @@ export function TreemapView({
                           wordBreak: "break-all",
                         }}
                       >
-                        {lines.title}
+                        {tile.title}
                       </p>
                       <p
                         className="mt-0.5 w-full font-semibold"
@@ -358,7 +364,7 @@ export function TreemapView({
                           wordBreak: "keep-all",
                         }}
                       >
-                        {lines.artist}
+                        {tile.secondary}
                       </p>
                       {showTileRate && h >= 48 ? (
                         <p
@@ -435,7 +441,7 @@ export function TreemapView({
                             wordBreak: "break-all",
                           }}
                         >
-                          {label?.name ?? lines.title}
+                          {label?.name ?? tile.title}
                         </p>
                       ) : null}
                       {label?.showMeta && label.meta ? (
