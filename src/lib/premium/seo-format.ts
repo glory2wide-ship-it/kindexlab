@@ -3,6 +3,7 @@ import {
   isCoreSummaryHeading,
   KINDEX_FEATURE_SECTION_HEADING,
   scrubSectionHeadingNoise,
+  stripNumberedHeadingPrefix,
 } from "@/lib/editorial/tense-rules";
 import type { PostFaq, PostLink, PostTable } from "@/lib/posts/types";
 
@@ -17,6 +18,12 @@ export const SEO_MIN_WORDS = 400;
 export const SEO_MIN_CHARS = 1_000;
 
 const H2_SYMBOLS = ["❶", "❷", "❸", "❹", "❺", "❻", "❼", "❽"] as const;
+
+export function formatNumberedH2(index: number, heading: string): string {
+  const symbol = H2_SYMBOLS[index] ?? `${index + 1}.`;
+  const clean = stripNumberedHeadingPrefix(heading);
+  return `${symbol} ${clean}`;
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -75,12 +82,6 @@ export function ensureSentencePunctuation(text: string): string {
     })
     .filter(Boolean)
     .join(" ");
-}
-
-export function formatNumberedH2(index: number, heading: string): string {
-  const symbol = H2_SYMBOLS[index] ?? `${index + 1}.`;
-  const clean = heading.replace(/^[❶❷❸❹❺❻❼❽\d.\s]+/, "").trim();
-  return `${symbol} ${clean}`;
 }
 
 /** Applies H2 numbering to main sections; keeps FAQ/table as separate H2/H3 blocks. */

@@ -38,6 +38,7 @@ import {
   ensureMinBodySections,
   isKindexFeatureMetaBoilerplate,
   isKindexFeatureSectionHeading,
+  stripNumberedHeadingPrefix,
 } from "@/lib/editorial/tense-rules";
 import { toHonorificProse } from "@/lib/editorial/honorific";
 import { describePlacements, injectMonetization, type PremiumPlacement } from "@/lib/premium/widgets";
@@ -333,7 +334,7 @@ function parseSections(value: unknown): PremiumSection[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
     const row = item as { heading?: unknown; headingLevel?: unknown; paragraphs?: unknown };
-    const heading = text(row.heading).replace(/^[❶❷❸❹❺\d.\s]+/, "").trim();
+    const heading = stripNumberedHeadingPrefix(text(row.heading));
     const paragraphs = stringList(row.paragraphs);
     if (!heading || !paragraphs.length) return [];
     const level = row.headingLevel === 3 ? 3 : 2;

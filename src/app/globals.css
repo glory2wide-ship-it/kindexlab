@@ -336,7 +336,7 @@ nav[aria-label$="서브 메뉴"] {
  */
 :root {
   --article-font-size: 17.45px;
-  --article-line-height: 1.599rem;
+  --article-line-height: 1.48rem;
 }
 
 .article-prose {

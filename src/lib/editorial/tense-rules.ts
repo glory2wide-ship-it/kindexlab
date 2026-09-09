@@ -60,14 +60,22 @@ export const KINDEX_FEATURE_SECTION_HEADING = "KinDex 데이터가 보여주는 
 export const KINDEX_FEATURE_META_BOILERPLATE =
   "KinDex 관심 신호는 이 이슈로 검색·화제가 모이는 방향과 속도를 가리키며, 산출 공식이 아니라 관심의 상대 위치로 읽습니다.";
 
-/** Strip numbered H2 prefixes so heading matching stays stable. */
-export function scrubSectionHeadingNoise(heading: string): string {
+/**
+ * Strip only numbering prefixes (❶ / "1. " / "2) ").
+ * Never strip content digits such as 100만 · 2026년 · 1위.
+ */
+export function stripNumberedHeadingPrefix(heading: string): string {
   return heading
     .replace(/^#{1,6}\s*/, "")
     .replace(/^[❶❷❸❹❺❻❼❽❾]\s*/, "")
-    .replace(/^\d+[.\s]+/, "")
-    .replace(/\.$/, "")
+    // Ordinal markers only: 1. / 2) / 10. — not "100만" or "2026년".
+    .replace(/^(?:[1-9]|1[0-2])[.)]\s+/, "")
     .trim();
+}
+
+/** Strip numbered H2 prefixes so heading matching stays stable. */
+export function scrubSectionHeadingNoise(heading: string): string {
+  return stripNumberedHeadingPrefix(heading).replace(/\.$/, "").trim();
 }
 
 export function isKindexFeatureSectionHeading(heading: string): boolean {

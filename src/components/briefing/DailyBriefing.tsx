@@ -87,7 +87,7 @@ export function DailyBriefing({
         </Link>
       </nav>
 
-      <div className="article-prose prose-board mt-8 max-w-3xl space-y-8">
+      <div className="article-prose prose-board mt-6 max-w-3xl space-y-6">
         {(tapeSections.length ? tapeSections : briefing.sections.slice(0, 1)).map((section, index) => {
           const minor = section.headingLevel === 3;
           return (
@@ -100,7 +100,7 @@ export function DailyBriefing({
               {section.paragraphs.map((paragraph, paragraphIndex) => (
                 <p
                   key={`tape-${index}-${paragraphIndex}`}
-                  className="article-prose-text mb-4 whitespace-pre-line text-ink/90"
+                  className="article-prose-text mb-2.5 whitespace-pre-line text-ink/90"
                 >
                   {paragraph}
                 </p>
@@ -128,7 +128,7 @@ export function DailyBriefing({
                 {section.paragraphs.map((paragraph, paragraphIndex) => (
                   <p
                     key={`${index}-${paragraphIndex}`}
-                    className="article-prose-text mb-4 whitespace-pre-line text-ink/90"
+                    className="article-prose-text mb-2.5 whitespace-pre-line text-ink/90"
                   >
                     {paragraph}
                   </p>

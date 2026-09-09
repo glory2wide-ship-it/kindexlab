@@ -24,6 +24,7 @@ import {
   ensureKindexFeatureSectionPlacement,
   isCoreSummaryHeading,
   scrubSectionHeadingNoise,
+  stripNumberedHeadingPrefix,
 } from "@/lib/editorial/tense-rules";
 import { formatNumberedH2 } from "@/lib/premium/seo-format";
 import {
@@ -207,7 +208,7 @@ export function evaluateTodayAnalysis(article: TodayAnalysisArticle): TodayAnaly
  */
 function normalizeOverrideSections(sections: TodayAnalysisSection[]): TodayAnalysisSection[] {
   return sections.slice(0, 5).map((section, index) => ({
-    heading: numberedHeading(index, section.heading.replace(/^[❶❷❸❹❺\d.\s]+/, "").trim()),
+    heading: numberedHeading(index, stripNumberedHeadingPrefix(section.heading)),
     headingLevel: index % 2 === 0 ? 2 : 3,
     paragraphs: [...section.paragraphs],
   }));

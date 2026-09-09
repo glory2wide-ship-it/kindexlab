@@ -96,7 +96,7 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
             {section.paragraphs.map((paragraph, paragraphIndex) => (
               <p
                 key={`tape-${index}-${paragraphIndex}`}
-                className="article-prose-text mb-3 whitespace-pre-line text-ink"
+                className="article-prose-text mb-2.5 whitespace-pre-line text-ink"
               >
                 {paragraph}
               </p>
@@ -117,7 +117,7 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
                 {section.paragraphs.map((paragraph, paragraphIndex) => (
                   <p
                     key={`${index}-${paragraphIndex}`}
-                    className="article-prose-text mb-3 whitespace-pre-line text-ink"
+                    className="article-prose-text mb-2.5 whitespace-pre-line text-ink"
                   >
                     {paragraph}
                   </p>

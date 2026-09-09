@@ -170,5 +170,5 @@ function AnalysisParagraph({
       </p>
     );
   }
-  return <p className="article-prose-text mb-3 whitespace-pre-line">{text}</p>;
+  return <p className="article-prose-text mb-2.5 whitespace-pre-line">{text}</p>;
 }

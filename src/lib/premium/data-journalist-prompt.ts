@@ -16,6 +16,7 @@ import {
   isKindexFeatureMetaBoilerplate,
   isKindexFeatureSectionHeading,
   KINDEX_FEATURE_SECTION_HEADING,
+  stripNumberedHeadingPrefix,
   tenseConsistencyRules,
 } from "@/lib/editorial/tense-rules";
 import { bannedPhraseReminder } from "@/lib/premium/prompt";
@@ -54,6 +55,13 @@ const AWKWARD_READER_HEADINGS = [
   "독자에게 미치는 영향",
   "독자 관점의 시사점",
   "실질적 파급력과 독자 관점의 시사점",
+  "지원금을 신청하는 방법",
+  "여행·외식 소비자에게 끼치는 영향",
+  "투자자에게 의미하는 변화",
+  "팬들에게 끼치는 영향",
+  "시민·유권자에게 미치는 영향",
+  "소비자에게 끼치는 영향",
+  "일상에서 달라지는 점",
 ];
 
 const AWKWARD_OUTLOOK_HEADINGS = [
@@ -63,18 +71,35 @@ const AWKWARD_OUTLOOK_HEADINGS = [
   "향후 전망과 파급",
   "전망과 파급",
   "향후 과제",
+  "다음 모집·쿠폰 일정을 확인하는 법",
+  "실적·수급에서 확인할 포인트",
+  "다음 일정과 반응을 보는 법",
+  "예약·성수기 전에 확인할 변수",
+  "추가 발표와 일정에서 볼 점",
+  "출시·판매 일정에서 볼 점",
+  "앞으로 확인할 일정과 변수",
 ];
 
 /** Headings that already sound like a real audience/action label. */
 const NATURAL_READER_HINT =
-  /투자자|소비자|신청|지원금|팬|유권자|시민|여행|외식|시청자|구독자|이용자|직장인|학부모|주민/;
+  /투자자|소비자|신청|지원금|팬|유권자|시민|여행|외식|시청자|구독자|이용자|직장인|학부모|주민|자격|혜택|동선|판단|힌트|확인|포인트|변화/;
 
 /** Headings that already sound like a concrete outlook/check label. */
 const NATURAL_OUTLOOK_HINT =
-  /일정|모집|쿠폰|실적|변수|확인|다음|추가|신청|발표|반응|수급|예약|혜택|포인트|관전/;
+  /일정|모집|쿠폰|실적|변수|확인|다음|추가|신청|발표|반응|수급|예약|혜택|포인트|관전|지급|읽는|보는/;
+
+function focusCoreLabel(focusKeyword?: string): string {
+  return (
+    (focusKeyword || "")
+      .replace(/^\[[^\]]+\]\s*/, "")
+      .replace(/\s*이슈\s*$/u, "")
+      .trim() || "이 사업"
+  );
+}
 
 /**
  * Pick a natural 3rd H2 for the reader-impact section from channel / category / keyword.
+ * Returns a keyword-flavored hint — models must still rewrite with unique nouns.
  */
 export function resolveHybridReaderHeading(input: {
   channel?: string;
@@ -83,35 +108,36 @@ export function resolveHybridReaderHeading(input: {
 }): string {
   const channel = (input.channel || "").toLowerCase();
   const blob = `${input.categoryHint || ""} ${input.focusKeyword || ""}`.toLowerCase();
+  const focus = focusCoreLabel(input.focusKeyword);
 
   if (/지원금|보조금|바우처|상품권|수당|환급|신청|자격|혜택|복지|숙박 지원|관광숙박/.test(blob)) {
-    return "지원금을 신청하는 방법";
+    return `${focus} 신청·자격에서 놓치기 쉬운 점`;
   }
   if (
     channel === "economy" ||
     /주식|종목|코스피|코스닥|증시|증권|펀드|환율|금리|채권|투자|반도체|시총/.test(blob)
   ) {
-    return "투자자에게 의미하는 변화";
+    return `${focus}가 투자 판단에 주는 힌트`;
   }
   if (
     channel === "entertainment" ||
     /아이돌|팬덤|팬|콘서트|앨범|컴백|배우|드라마|예능|유튜버|인플루언서/.test(blob)
   ) {
-    return "팬들에게 끼치는 영향";
+    return `${focus} 팬·시청자가 바로 느끼는 변화`;
   }
   if (channel === "travel" || /여행|맛집|카페|호텔|항공|관광|주말나들이|숙소/.test(blob)) {
-    return "여행·외식 소비자에게 끼치는 영향";
+    return `${focus} 여행·외식 동선에서 달라지는 점`;
   }
   if (channel === "politics" || /정당|의원|대통령|선거|국회|정책|법안/.test(blob)) {
-    return "시민·유권자에게 미치는 영향";
+    return `${focus}가 시민 생활에 미치는 영향`;
   }
   if (
     channel === "culture" ||
     /공연|전시|도서|웹툰|레시피|건강|자동차|팝업|구매|가격|출시|가전/.test(blob)
   ) {
-    return "소비자에게 끼치는 영향";
+    return `${focus}를 고를 때 확인할 포인트`;
   }
-  return "일상에서 달라지는 점";
+  return `${focus} 일상에서 달라지는 점`;
 }
 
 /**
@@ -124,32 +150,33 @@ export function resolveHybridOutlookHeading(input: {
 }): string {
   const channel = (input.channel || "").toLowerCase();
   const blob = `${input.categoryHint || ""} ${input.focusKeyword || ""}`.toLowerCase();
+  const focus = focusCoreLabel(input.focusKeyword);
 
   if (/지원금|보조금|바우처|상품권|수당|환급|신청|모집|쿠폰|숙박 지원|관광숙박/.test(blob)) {
-    return "다음 모집·쿠폰 일정을 확인하는 법";
+    return `${focus} 다음 모집·지급 일정을 읽는 법`;
   }
   if (
     channel === "economy" ||
     /주식|종목|코스피|코스닥|증시|증권|펀드|환율|금리|채권|투자|반도체|시총/.test(blob)
   ) {
-    return "실적·수급에서 확인할 포인트";
+    return `${focus} 실적·수급에서 확인할 포인트`;
   }
   if (
     channel === "entertainment" ||
     /아이돌|팬덤|팬|콘서트|앨범|컴백|배우|드라마|예능|유튜버|인플루언서/.test(blob)
   ) {
-    return "다음 일정과 반응을 보는 법";
+    return `${focus} 다음 일정과 반응을 보는 법`;
   }
   if (channel === "travel" || /여행|맛집|카페|호텔|항공|관광|주말나들이|숙소|예약/.test(blob)) {
-    return "예약·성수기 전에 확인할 변수";
+    return `${focus} 예약·성수기 전에 확인할 변수`;
   }
   if (channel === "politics" || /정당|의원|대통령|선거|국회|정책|법안/.test(blob)) {
-    return "추가 발표와 일정에서 볼 점";
+    return `${focus} 추가 발표와 일정에서 볼 점`;
   }
   if (channel === "culture" || /공연|전시|도서|웹툰|레시피|건강|자동차|팝업|구매|가격|출시|가전/.test(blob)) {
-    return "출시·판매 일정에서 볼 점";
+    return `${focus} 출시·판매 일정에서 볼 점`;
   }
-  return "앞으로 확인할 일정과 변수";
+  return `${focus} 앞으로 확인할 일정과 변수`;
 }
 
 /**
@@ -172,11 +199,12 @@ heading 앞에 반드시 ❶❷❸❹❺ 번호를 붙이세요 (레거시 애�
    - "A가 1위"만으로 끝내지 마세요. 자세한 숫자 트렌드 해석은 ❺에 모으세요.
 2. ❷ 왜 지금 관심이 높아졌나  ← 본문 역할 고정, 번호 필수
    - 사건·뉴스·사회적 맥락 분석. RAG에 확인된 일정·보도만 인과로 연결하세요.
-3. ❸ [독자·주제별 자연 소제목]  ← "사용자에게 의미하는 변화" 금지
-   - 예: "❸ 투자자에게 의미하는 변화" / "❸ 지원금을 신청하는 방법" / "❸ 팬들에게 끼치는 영향"
+3. ❸ [독자·주제별 자연 소제목]  ← "사용자에게 의미하는 변화"·"지원금을 신청하는 방법" 같은 공통 템플릿 금지
+   - 포커스 키워드·사업명·지역명을 넣은 이 글만의 소제목으로 새로 지으세요.
+   - 예: "❸ 국민취업지원제도 신청 전 확인할 자격" / "❸ 관광두레 참가자가 챙길 혜택"
    - 본문: 해당 독자 관점의 실질 핵심. 목록형 체크리스트 금지. KinDex 숫자 해석은 ❺로.
-4. ❹ [글에 맞는 전망 소제목]  ← "앞으로 지켜볼 흐름" 금지. 주제별로 새로 지으세요.
-   - 예: 지원금 → "❹ 다음 모집·쿠폰 일정을 확인하는 법"
+4. ❹ [글에 맞는 전망 소제목]  ← "앞으로 지켜볼 흐름"·"다음 모집·쿠폰 일정을 확인하는 법" 공통 템플릿 금지
+   - 예: 지원금 → "❹ 청년내일저축계좌 다음 모집창을 읽는 법"
    - 예: 주식 → "❹ 실적·수급에서 확인할 포인트"
    - 예: 팬덤 → "❹ 다음 일정과 반응을 보는 법"
    - 예: 여행·맛집 → "❹ 예약·성수기 전에 확인할 변수"
@@ -274,17 +302,12 @@ export function buildHybridAnalysisSystemPrompt(channel?: string): string {
 export const DATA_JOURNALIST_SYSTEM_PROMPT = buildHybridAnalysisSystemPrompt();
 
 function scrubHeadingNoise(heading: string): string {
-  return heading
-    .replace(/^#{1,6}\s*/, "")
-    .replace(/^[❶❷❸❹❺❻❼❽❾]\s*/, "")
-    .replace(/^\d+[.\s]+/, "")
-    .replace(/\.$/, "")
-    .trim();
+  return stripNumberedHeadingPrefix(heading).replace(/\.$/, "").trim();
 }
 
 function isAwkwardReaderHeading(heading: string): boolean {
   const clean = scrubHeadingNoise(heading);
-  if (!clean || clean.length < 6 || clean.length > 28) return true;
+  if (!clean || clean.length < 6 || clean.length > 42) return true;
   if (AWKWARD_READER_HEADINGS.some((item) => clean === item || clean.includes(item))) return true;
   if (/사용자|독자 관점|실질적 파급|시사점/.test(clean)) return true;
   if (!NATURAL_READER_HINT.test(clean)) return true;
@@ -293,7 +316,7 @@ function isAwkwardReaderHeading(heading: string): boolean {
 
 function isAwkwardOutlookHeading(heading: string): boolean {
   const clean = scrubHeadingNoise(heading);
-  if (!clean || clean.length < 6 || clean.length > 32) return true;
+  if (!clean || clean.length < 6 || clean.length > 44) return true;
   if (AWKWARD_OUTLOOK_HEADINGS.some((item) => clean === item || clean.includes(item))) return true;
   if (/지켜볼 흐름|지켜볼 점|향후 전망$/.test(clean)) return true;
   if (!NATURAL_OUTLOOK_HINT.test(clean)) return true;
@@ -489,16 +512,16 @@ export function buildDataJournalistUserPrompt(params: {
     "- sections heading 순서(번호 필수):",
     `  1) ❶ ${HYBRID_FIXED_HEADINGS.conclusion}`,
     `  2) ❷ ${HYBRID_FIXED_HEADINGS.whyNow}`,
-    `  3) ❸ ${readerHeading} (독자·주제별 자연 표현 / "${HYBRID_LEGACY_READER_HEADING}" 금지)`,
-    `  4) ❹ ${outlookHeading} (전망 자연 표현 / "${HYBRID_LEGACY_OUTLOOK_HEADING}" 금지)`,
+    `  3) ❸ ${readerHeading} (권장 예시일 뿐 — 포커스 키워드·사업명을 넣어 새로 지을 것 / "${HYBRID_LEGACY_READER_HEADING}"·"지원금을 신청하는 방법" 금지)`,
+    `  4) ❹ ${outlookHeading} (권장 예시일 뿐 — 이 사안 고유 일정·변수로 새로 지을 것 / "${HYBRID_LEGACY_OUTLOOK_HEADING}"·"다음 모집·쿠폰 일정을 확인하는 법" 금지)`,
     `  5) ❺ ${HYBRID_FIXED_HEADINGS.kindexFeature} (고정 제목 · paragraphs 정확히 1개 · takeaways/핵심 요약 직전)`,
     "- 오늘의 결론: 오늘 뉴스와 KinDex 데이터에서 가장 중요한 변화와 의미",
     "- 왜 지금 관심이 높아졌나: 사건·뉴스·사회적 맥락 분석",
-    "- 3번 섹션: 실제 독자 관점의 실질 핵심",
-    "- 4번 섹션: 뉴스·데이터 기반의 신중 전망(일정·변수·확인 포인트)",
+    "- 3번 섹션: 실제 독자 관점의 실질 핵심 (소제목·본문 모두 이 키워드 고유 정보)",
+    "- 4번 섹션: 뉴스·데이터 기반의 신중 전망(일정·변수·확인 포인트, 공통 템플릿 소제목 금지)",
     "- 5번 섹션: 포커스 키워드의 KinDex 순위·변동·상대 관심만 한 문단으로 해석 (KinDex 개념 정의 문장 금지)",
     "- KinDex 산출 방식·점수 척도 강의 금지. 있는 숫자는 ❺에서 관심 트렌드로 해석.",
-    "- ❶~❹ paragraphs 3~4개. ❺ paragraphs 1개. 문장 45~90자, 높임말(합니다체) 필수.",
+    "- ❶~❹ paragraphs 3~4개(각 문단 2~4문장). ❺ paragraphs 1개. 문장 45~90자, 단문 연속·한 문장 문단 연달아 쓰기 금지. 높임말(합니다체) 필수.",
     `- 포커스 핵심어 "${focusCore}"를 title·excerpt·본문·FAQ 합쳐 5~6회만 자연 배치하세요.`,
     "- table caption은 '팩트 체크' 또는 '핵심 팩트 요약'. FAQ 3개+. takeaways 3개(높임말) — 화면의 「핵심 요약」.",
     "- 확인되지 않은 사건·수치를 지어내지 마세요.",

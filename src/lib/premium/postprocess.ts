@@ -145,6 +145,79 @@ export function scrubGenericPaddingProse(text: string): string {
   return parts.join(" ").replace(/\s{2,}/g, " ").trim();
 }
 
+/**
+ * Merge consecutive one-sentence paragraphs so body rhythm stays 2~4 sentences
+ * per paragraph (fixes stiff "한 문장 = 한 문단" briefing copy).
+ */
+export function coalesceThinParagraphs(
+  paragraphs: string[],
+  opts?: { targetSentences?: number; skip?: boolean },
+): string[] {
+  if (opts?.skip) return paragraphs;
+  const target = opts?.targetSentences ?? 3;
+  const out: string[] = [];
+  let buffer: string[] = [];
+
+  const flush = () => {
+    if (!buffer.length) return;
+    out.push(buffer.join(" ").replace(/\s+/g, " ").trim());
+    buffer = [];
+  };
+
+  for (const raw of paragraphs) {
+    const text = raw.replace(/\s+/g, " ").trim();
+    if (!text) continue;
+    const sentenceCount = (text.match(/[.!?…](?=\s|$)/g) ?? []).length || 1;
+    if (sentenceCount >= 2) {
+      flush();
+      out.push(text);
+      continue;
+    }
+    buffer.push(text);
+    if (buffer.length >= target) flush();
+  }
+  flush();
+  return out;
+}
+
+/**
+ * Recover content digits wrongly stripped from numbered H2s
+ * (e.g. "❶ 만 인파" ← "100만", using body evidence).
+ */
+export function recoverStrippedHeadingDigits(
+  heading: string,
+  evidenceText: string,
+): string {
+  const markMatch = heading.match(/^([❶❷❸❹❺❻❼❽❾])\s+/);
+  if (!markMatch) return heading;
+  const mark = markMatch[1]!;
+  const rest = heading.slice(markMatch[0].length).trim();
+  const evidence = evidenceText.replace(/\s+/g, " ");
+
+  const tryPatterns: Array<{ head: RegExp; find: RegExp }> = [
+    { head: /^만\s/, find: /(\d[\d,]*)\s*만/ },
+    { head: /^억\s/, find: /(\d[\d,]*)\s*억/ },
+    { head: /^천\s/, find: /(\d[\d,]*)\s*천/ },
+    { head: /^위\s/, find: /(\d{1,3})\s*위/ },
+    { head: /^명\s/, find: /(\d[\d,]*)\s*명/ },
+    { head: /^원\s/, find: /(\d[\d,]*)\s*원/ },
+    { head: /^회\s/, find: /(\d[\d,]*)\s*회/ },
+    { head: /^개월\s/, find: /(\d{1,2})\s*개월/ },
+    { head: /^주년\s/, find: /(\d{1,3})\s*주년/ },
+    { head: /^년\s/, find: /(20\d{2})\s*년/ },
+    { head: /^년까지/, find: /(20\d{2})\s*년까지/ },
+    { head: /^년생\s/, find: /(\d{2,4})\s*년생/ },
+  ];
+
+  for (const rule of tryPatterns) {
+    if (!rule.head.test(rest)) continue;
+    const hit = evidence.match(rule.find)?.[1];
+    if (!hit) continue;
+    return `${mark} ${hit}${rest}`;
+  }
+  return heading;
+}
+
 /** Full free post-process for a single prose field. */
 export function autoCorrectProse(
   text: string,
@@ -182,26 +255,34 @@ export function autoCorrectArticleFields(input: {
   );
   const excerpt = autoCorrectProse(input.excerpt, yearOpts);
   const sections = polishArticleSections(
-    input.sections.map((section) => ({
-      ...section,
-      heading: section.heading
+    input.sections.map((section) => {
+      const bodyEvidence = (section.paragraphs ?? []).join(" ");
+      const headingRaw = section.heading
         ? repairMissingYearDigits(
             scrubBannedPhraseStems(scrubBoilerplatePhrases(normalizeWhitespace(section.heading))),
             yearOpts,
           )
-        : section.heading,
-      paragraphs: section.paragraphs
-        .map((paragraph) =>
-          toHonorificProse(
-            scrubBannedPhraseStems(
-              scrubGenericPaddingProse(
-                scrubBoilerplatePhrases(scrubBrokenPredicateEndings(paragraph)),
+        : section.heading;
+      const heading = headingRaw
+        ? recoverStrippedHeadingDigits(headingRaw, `${input.title} ${bodyEvidence}`)
+        : headingRaw;
+      const isKindex = /KinDex\s*데이터가\s*보여주는/.test(heading ?? "");
+      const paragraphs = coalesceThinParagraphs(
+        section.paragraphs
+          .map((paragraph) =>
+            toHonorificProse(
+              scrubBannedPhraseStems(
+                scrubGenericPaddingProse(
+                  scrubBoilerplatePhrases(scrubBrokenPredicateEndings(paragraph)),
+                ),
               ),
             ),
-          ),
-        )
-        .filter((paragraph) => paragraph.trim().length > 0),
-    })),
+          )
+          .filter((paragraph) => paragraph.trim().length > 0),
+        { skip: isKindex },
+      );
+      return { ...section, heading, paragraphs };
+    }),
   );
   const faq = polishFaq(
     input.faq.map((item) => ({
