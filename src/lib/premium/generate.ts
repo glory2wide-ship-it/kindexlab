@@ -29,9 +29,7 @@ import {
   buildDataJournalistUserPrompt,
 } from "@/lib/premium/data-journalist-prompt";
 import {
-  ensureKindexFeatureSectionPlacement,
   ensureMinBodySections,
-  isKindexFeatureSectionHeading,
 } from "@/lib/editorial/tense-rules";
 import { toHonorificProse } from "@/lib/editorial/honorific";
 import { describePlacements, injectMonetization, type PremiumPlacement } from "@/lib/premium/widgets";
