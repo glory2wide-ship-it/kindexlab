@@ -158,6 +158,8 @@ function demographicsForStorage(demo: DemographicRanking) {
 }
 
 const FILE_REL = path.join("src", "data", "boards", "cache.json");
+/** Committed fallback so production deploys ship LLM/chain rankings without Supabase. */
+const PUBLISHED_REL = path.join("src", "data", "boards", "published.json");
 const memory = new Map<string, CachedBoard>();
 /** mtime of the last file we merged, so a write by another module instance is seen. */
 let loadedMtimeMs = -1;
@@ -179,23 +181,34 @@ function supabaseConfig(): { url: string; key: string } | null {
   return { url, key };
 }
 
+async function readEntriesFile(rel: string): Promise<{ entries: CachedBoard[]; mtimeMs: number }> {
+  const file = path.join(process.cwd(), rel);
+  try {
+    const info = await stat(file);
+    const raw = await readFile(file, "utf8");
+    const parsed = JSON.parse(raw) as { entries?: CachedBoard[] };
+    return { entries: parsed.entries ?? [], mtimeMs: info.mtimeMs };
+  } catch {
+    return { entries: [], mtimeMs: 0 };
+  }
+}
+
 async function loadDisk(): Promise<void> {
   if (boardLoadPromise) return boardLoadPromise;
   boardLoadPromise = (async () => {
-    const file = path.join(process.cwd(), FILE_REL);
-    try {
-      const info = await stat(file);
-      if (info.mtimeMs === loadedMtimeMs) return;
-      const raw = await readFile(file, "utf8");
-      const parsed = JSON.parse(raw) as { entries?: CachedBoard[] };
-      memory.clear();
-      for (const entry of parsed.entries ?? []) {
-        if (entry?.slug) memory.set(entry.slug, normalizeCachedBoard(entry));
-      }
-      loadedMtimeMs = info.mtimeMs;
-    } catch {
-      // No cache file yet; the store starts empty.
+    const published = await readEntriesFile(PUBLISHED_REL);
+    const local = await readEntriesFile(FILE_REL);
+    const stamp = Math.max(published.mtimeMs, local.mtimeMs);
+    if (stamp === loadedMtimeMs && stamp > 0) return;
+    memory.clear();
+    // Published first (deployed), then local cache overlays (dev / CI writes).
+    for (const entry of published.entries) {
+      if (entry?.slug) memory.set(entry.slug, normalizeCachedBoard(entry));
     }
+    for (const entry of local.entries) {
+      if (entry?.slug) memory.set(entry.slug, normalizeCachedBoard(entry));
+    }
+    loadedMtimeMs = stamp;
   })().finally(() => {
     boardLoadPromise = null;
   });

@@ -45,7 +45,14 @@ export async function seedBoardIfMissing(board: BoardDefinition): Promise<Cached
     return buildSampleBoard(board);
   }
   const existing = await readBoard(board.slug);
-  if (existing) return existing;
+  // Expired template shells never move — rebuild so TTL/editionDate stay honest.
+  // Chain/LLM boards past expiry are still served (overlay / cron refresh them).
+  if (existing) {
+    const expired = new Date(existing.expiresAt).getTime() <= Date.now();
+    if (!(expired && existing.provenance?.kind === "template")) {
+      return existing;
+    }
+  }
   const entry = buildSampleBoard(board);
   await writeBoard(entry);
   analysisLogger("boards:seed").step("seeded", {

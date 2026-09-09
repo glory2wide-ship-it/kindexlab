@@ -1,6 +1,5 @@
 import { buildHeatmapItems, withoutHeadlineHeatmapItems, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
-import { loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
-import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
+import { loadChannelHeatmapPayloads, loadHeatmapLivePayload, toTileEntity } from "@/lib/boards/heatmap-server";
 import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
 import { itemsForChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
@@ -12,6 +11,8 @@ import type { RankingEntity, RankingsPayload } from "@/lib/types";
 export const UNIFIED_HEATMAP_TILES = 20;
 /** Rows shown on each desk summary card. */
 export const DESK_TOP_N = 3;
+/** Prefer live ingest once a desk has at least this many rows. */
+const MIN_LIVE_CHANNEL_ROWS = 3;
 
 export interface ChannelDesk {
   channel: PostChannel;
@@ -29,7 +30,7 @@ export interface UnifiedMarket {
 
 /**
  * Ordering within one channel desk / heatmap pool.
- * Prefer absolute 3m move so politics·economy cards show movers, not score ties at 999.
+ * Prefer absolute 3m move so politics·economy cards show movers, not score ties.
  */
 function byHeat(a: RankingEntity, b: RankingEntity): number {
   const heat = heatForTimeframe(b, "3m") - heatForTimeframe(a, "3m");
@@ -42,13 +43,7 @@ function byHeat(a: RankingEntity, b: RankingEntity): number {
 }
 
 /**
- * Round-robin merge across the four desks.
- *
- * Taking a global top 25 would not produce a cross-category board: the channels
- * carry very different pool sizes (엔터 40 vs 정치 10) and their scores tie at the
- * ceiling, so one desk would crowd out the rest. Drawing one name from each desk
- * per pass guarantees every category is represented near the top while still
- * spending the remaining slots on the channels that have more to show.
+ * Round-robin merge across desks so every category stays visible near the top.
  */
 function interleave(pools: RankingEntity[][], limit: number): RankingEntity[] {
   const merged: RankingEntity[] = [];
@@ -98,17 +93,18 @@ async function boardPool(channel: PostChannel): Promise<RankingEntity[]> {
   return boards.length ? buildHeatmapItems({ boards, gender: "all", age: "all" }) : [];
 }
 
-/** Cross-category heatmap — prefers the ingest snapshot when a channel has live rows. */
+/**
+ * Cross-category heatmap pool — prefers the ingest snapshot when a channel has
+ * live rows, otherwise falls back to board seeds (with per-board live overlays).
+ */
 async function channelHeatmapPool(
   channel: PostChannel,
   market?: RankingsPayload,
 ): Promise<RankingEntity[]> {
-  // Board-driven channels (incl. politics) never surface retired headline tiles.
-  if (channelUsesBoardHeatmap(channel)) {
-    return boardPool(channel);
-  }
-  const live = market ? withoutHeadlineHeatmapItems(itemsForChannel(market.items, channel)) : [];
-  if (live.length) return live;
+  const live = market
+    ? withoutHeadlineHeatmapItems(itemsForChannel(market.items, channel)).map(attachTimeframeMetrics)
+    : [];
+  if (live.length >= MIN_LIVE_CHANNEL_ROWS) return live;
   return boardPool(channel);
 }
 
@@ -121,26 +117,17 @@ function deskTopItem(item: RankingEntity): RankingEntity {
 /**
  * The landing page's cross-category board.
  *
- * Prefers the ingest snapshot, which the trends workflow refreshes every three
- * minutes. The board payloads this used to read exclusively cannot move at all
- * in production: `src/data/boards/` is gitignored and Supabase is unset, so no
- * cached board ships with the deploy and every channel falls through to
- * `buildSampleBoard`, whose rows come from a hardcoded seed list ordered by
- * index. That renders identically on every request forever.
- *
- * 경제·여행 still fall back to boards when the snapshot has no channel rows;
- * synthetic 3m rates rotate each refresh window so desk cards are not frozen.
- *
- * Naver quotes attach only to tiles that actually ship (heatmap + desk tops),
- * not every board row — that cut cold TTFB without changing first paint for
- * stock/FX cells.
+ * Prefers the ingest snapshot (refreshed every ~3 minutes by the trends
+ * workflow). Board seeds only fill desks the snapshot does not cover yet
+ * (mainly 경제·문화·여행). Per-board live overlays still replace music, politics,
+ * games, etc. inside those board payloads.
  */
 export async function loadUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMarket> {
+  const resolved = market?.items?.length ? market : loadHeatmapLivePayload();
+
   const loaded = await Promise.all(
     POST_CHANNELS.map(async (meta) => {
-      // One board load per channel (heatmap + desk used to double-fetch).
-      const pool = await channelHeatmapPool(meta.id, market);
-      // Defer quote attach until after ranking/interleave — see below.
+      const pool = await channelHeatmapPool(meta.id, resolved);
       const ranked = tagChannel([...pool].sort(byHeat), meta.id);
       return { meta, ranked };
     }),
@@ -159,11 +146,7 @@ export async function loadUnifiedMarket(market?: RankingsPayload): Promise<Unifi
     ranked.slice(0, DESK_TOP_N).map(deskTopItem),
   );
 
-  // One quote pass for every entity the landing actually renders.
-  const quoteTargets = [
-    ...itemsRaw,
-    ...deskTopsRaw.flat(),
-  ];
+  const quoteTargets = [...itemsRaw, ...deskTopsRaw.flat()];
   const quoted = await attachKospiStockQuotes(quoteTargets);
   const byId = new Map(quoted.map((item) => [item.id, item]));
 

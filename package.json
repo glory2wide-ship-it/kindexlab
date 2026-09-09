@@ -26,6 +26,8 @@
     "analysis:heatmap": "tsx scripts/generate-heatmap-analysis.ts",
         "analysis:heatmap:local": "tsx --env-file=.env.local scripts/generate-heatmap-analysis.ts",
         "boards:generate": "tsx --env-file=.env.local scripts/generate-boards.ts",
+        "boards:refresh-stale": "tsx --env-file=.env.local scripts/refresh-stale-boards.ts",
+        "boards:publish": "tsx --env-file=.env.local scripts/publish-boards.ts",
         "boards:audit": "tsx scripts/audit-boards.ts",
         "premium:generate": "tsx --env-file=.env.local scripts/generate-premium.ts",
         "premium:check": "tsx --env-file=.env.local scripts/check-premium-pipeline.ts",

@@ -1,7 +1,11 @@
-import { getChannelBriefingEdition, getRankings, splitChannelEdition } from "@/lib/api";
+import { getChannelBriefingEdition, splitChannelEdition } from "@/lib/api";
 import { buildHeatmapItems, stripBoardDemographics, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
-import { channelLiveMarket, loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
-import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
+import {
+  channelLiveMarket,
+  loadChannelHeatmapPayloads,
+  loadHeatmapLivePayload,
+  toTileEntity,
+} from "@/lib/boards/heatmap-server";
 import { slimBriefingForCard, slimBriefingsForCards } from "@/lib/briefing/card-dto";
 import { COMMODITIES_FX_BOARD_SLUG } from "@/lib/market/market-index-codes";
 import {
@@ -24,6 +28,9 @@ export const MARKET_QUOTE_BOARD_SLUGS = [
 
 export { isMarketQuoteBoardSlug };
 
+/** Prefer live ingest on the channel 종합 once enough rows exist. */
+const MIN_LIVE_COMPOSITE = 3;
+
 /** Heatmap rows for one board (or channel 종합) — quotes applied in a later batch. */
 function rawHeatmapItems(
   channel: PostChannel,
@@ -31,23 +38,20 @@ function rawHeatmapItems(
   liveItems: RankingEntity[],
   board?: string,
 ): RankingEntity[] {
-  const boardDriven = channelUsesBoardHeatmap(channel) && boards.length > 0;
+  const preferLive = !board && liveItems.length >= MIN_LIVE_COMPOSITE;
   return buildHeatmapItems({
     boards,
     liveItems,
     board,
     gender: "all",
     age: "all",
-    preferLive: !boardDriven && !board,
+    preferLive,
   });
 }
 
 /**
  * Preload 종합 + 주식/해외/원자재·환율 so tab switches never flash KinDex scores.
  * Key `""` is the channel composite.
- *
- * Builds every board's rows first, then one Naver quote pass over unique
- * entities — avoids N parallel quote crawls that serialized on the finance host.
  */
 async function loadQuotedItemsByBoard(
   channel: PostChannel,
@@ -72,7 +76,14 @@ async function loadQuotedItemsByBoard(
   const map: Record<string, RankingEntity[]> = {};
   for (const [key, rows] of rawEntries) {
     if (!rows.length) continue;
-    map[key] = rows.map((row) => toTileEntity(byId.get(row.id) ?? row));
+    let next = rows.map((row) => toTileEntity(byId.get(row.id) ?? row));
+    // Market quote boards: re-rank by absolute day-change so order tracks the tape.
+    if (key && isMarketQuoteBoardSlug(key)) {
+      next = [...next]
+        .sort((a, b) => Math.abs(b.fluctuationRate) - Math.abs(a.fluctuationRate))
+        .map((row, index) => ({ ...row, rank: index + 1, previousRank: index + 1 }));
+    }
+    map[key] = next;
   }
   return map;
 }
@@ -84,40 +95,25 @@ const EMPTY_MARKET = (): RankingsPayload => ({
   items: [],
 });
 
-function emptyLiveMarket() {
-  return {
-    updatedAt: new Date().toISOString(),
-    status: "open" as const,
-    items: [] as RankingsPayload["items"],
-    indices: [] as RankingsPayload["indices"],
-  };
-}
-
 /**
  * Parallel desk bootstrap for `/{channel}` navigations.
  *
- * Board-driven channels (엔터·정치·경제·문화·여행) never paint live rankings on
- * first paint — skip getRankings() so soft-nav is not gated on polls + metrics.
+ * Always hydrates the ingest snapshot so 종합 heatmaps track crawls. Board tabs
+ * keep seed shells with live overlays from `loadChannelHeatmapPayloads`.
  */
 export async function loadChannelPageData(channel: PostChannel) {
   const boardsPromise = loadChannelHeatmapPayloads(channel);
   const editionPromise = getChannelBriefingEdition(channel).catch(() => undefined);
 
   const boards = stripBoardDemographics(await boardsPromise);
-  const boardDriven = channelUsesBoardHeatmap(channel) && boards.length > 0;
-
-  const [market, edition] = await Promise.all([
-    boardDriven ? Promise.resolve(EMPTY_MARKET()) : getRankings().catch(() => EMPTY_MARKET()),
-    editionPromise,
-  ]);
+  const market = loadHeatmapLivePayload() ?? EMPTY_MARKET();
+  const edition = await editionPromise;
 
   const split = edition
     ? splitChannelEdition(edition)
     : { main: undefined, dives: [] };
 
-  const liveMarket = boardDriven
-    ? emptyLiveMarket()
-    : channelLiveMarket(market, channel, boards);
+  const liveMarket = channelLiveMarket(market, channel, boards);
   const initialQuotedByBoard = await loadQuotedItemsByBoard(channel, boards, liveMarket.items);
   const initialItems = initialQuotedByBoard[""] ?? [];
 
@@ -134,17 +130,7 @@ export async function loadChannelPageData(channel: PostChannel) {
 /** Desk-only bootstrap when briefing loads in a separate Suspense boundary. */
 export async function loadChannelDeskData(channel: PostChannel) {
   const boards = stripBoardDemographics(await loadChannelHeatmapPayloads(channel));
-  if (channelUsesBoardHeatmap(channel) && boards.length > 0) {
-    const liveMarket = emptyLiveMarket();
-    const initialQuotedByBoard = await loadQuotedItemsByBoard(channel, boards, liveMarket.items);
-    return {
-      boards,
-      liveMarket,
-      initialItems: initialQuotedByBoard[""] ?? [],
-      initialQuotedByBoard,
-    };
-  }
-  const market = await getRankings().catch(() => EMPTY_MARKET());
+  const market = loadHeatmapLivePayload() ?? EMPTY_MARKET();
   const liveMarket = channelLiveMarket(market, channel, boards);
   const initialQuotedByBoard = await loadQuotedItemsByBoard(channel, boards, liveMarket.items);
   return {

@@ -9,7 +9,6 @@ import {
   stripRowQualifier,
 } from "@/lib/boards/heatmap";
 import { loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
-import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
 import { menuBoardsForChannel } from "@/lib/boards/registry";
 import {
   CHANNEL_ENTITY_TYPES,
@@ -88,6 +87,9 @@ function rankHeatmapSlice(items: RankingEntity[], channel: PostChannel): Ranking
 
 async function loadLiveItems(channel: PostChannel): Promise<RankingEntity[]> {
   try {
+    const { loadHeatmapLivePayload } = await import("@/lib/boards/heatmap-server");
+    const snapshot = loadHeatmapLivePayload();
+    if (snapshot?.items?.length) return itemsForChannel(snapshot.items, channel);
     const market = await getRankings();
     return itemsForChannel(market.items ?? [], channel);
   } catch {
@@ -101,7 +103,8 @@ async function loadLiveItems(channel: PostChannel): Promise<RankingEntity[]> {
  */
 export async function collectHeatmapTopics(channel: PostChannel): Promise<HeatmapTopicPool> {
   const boards = await loadChannelHeatmapPayloads(channel);
-  const liveItems = !channelUsesBoardHeatmap(channel) ? await loadLiveItems(channel) : [];
+  const liveItems = await loadLiveItems(channel);
+  const preferLive = liveItems.length >= 3;
 
   const compositeRaw = buildHeatmapItems({
     boards,
@@ -109,7 +112,7 @@ export async function collectHeatmapTopics(channel: PostChannel): Promise<Heatma
     gender: "all",
     age: "all",
     region: "all",
-    preferLive: false,
+    preferLive,
   });
   const composite = rankHeatmapSlice(compositeRaw, channel);
 

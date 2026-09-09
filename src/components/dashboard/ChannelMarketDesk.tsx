@@ -125,6 +125,7 @@ export function ChannelMarketDesk({
     boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
   );
   const liveItems = liveMarket.items;
+  const preferLiveComposite = (boardSlug: string) => !boardSlug && liveItems.length >= 3;
   const quotedCacheRef = useRef<Map<string, RankingEntity[]>>(
     seedQuoteMap(initialQuotedByBoard, initialItems),
   );
@@ -142,7 +143,7 @@ export function ChannelMarketDesk({
       gender: "all",
       age: "all",
       region: boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
-      preferLive: !boardHeatmap && !initialBoardSlug,
+      preferLive: preferLiveComposite(initialBoardSlug),
     });
   });
   const [title, setTitle] = useState(() => heatmapBoardTitle(boards, initialBoardSlug || undefined));
@@ -172,13 +173,13 @@ export function ChannelMarketDesk({
         gender: nextGender,
         age: nextAge,
         region: boardUsesRegionFilter(board) ? nextRegion : "all",
-        preferLive: !boardHeatmap && !board,
+        preferLive: preferLiveComposite(board),
       });
       setItems(next);
       setTitle(heatmapBoardTitle(boards, board || undefined));
       setFlashNonce((value) => value + 1);
     },
-    [boards, liveItems, boardHeatmap],
+    [boards, liveItems],
   );
 
   /** Paint quoted SSR/API cache immediately — never KinDex-only for quote boards. */

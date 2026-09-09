@@ -4,8 +4,7 @@ import { clampAgeForBoard } from "@/lib/boards/age-tabs";
 import { isAgeSegment, isGenderSegment } from "@/lib/boards/demographics";
 import { parseRegionQuery } from "@/lib/boards/regions";
 import { buildHeatmapItems, heatmapBoardTitle } from "@/lib/boards/heatmap";
-import { loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
-import { channelUsesBoardHeatmap } from "@/lib/boards/limits";
+import { loadChannelHeatmapPayloads, loadHeatmapLivePayload, toTileEntity } from "@/lib/boards/heatmap-server";
 import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
 import { itemsForChannel, isPostChannel } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
@@ -39,16 +38,19 @@ export async function GET(request: Request) {
 
   const boards = await loadChannelHeatmapPayloads(category);
   let liveItems: RankingEntity[] = [];
-  // Live feed only when the channel is not board-driven (politics now uses boards).
-  if (!channelUsesBoardHeatmap(category)) {
-    try {
-      const market = await getRankings();
+  try {
+    const market = loadHeatmapLivePayload();
+    if (market?.items?.length) {
       liveItems = itemsForChannel(market.items, category);
-    } catch {
-      liveItems = [];
+    } else {
+      const rankings = await getRankings();
+      liveItems = itemsForChannel(rankings.items, category);
     }
+  } catch {
+    liveItems = [];
   }
 
+  const preferLive = !board && liveItems.length >= 3;
   const items = (
     await attachKospiStockQuotes(
       buildHeatmapItems({
@@ -58,7 +60,7 @@ export async function GET(request: Request) {
         gender,
         age,
         region,
-        preferLive: false,
+        preferLive,
       }),
       board,
     )
@@ -74,7 +76,7 @@ export async function GET(request: Request) {
       region,
       board: selected?.slug ?? null,
       title: heatmapBoardTitle(boards, board),
-      source: selected || boards.length ? "demographic_ranking" : "live",
+      source: preferLive ? "live" : selected || boards.length ? "demographic_ranking" : "live",
       count: items.length,
       items,
     },

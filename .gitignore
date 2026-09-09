@@ -42,7 +42,10 @@ yarn-error.log*
 
 # on-demand analysis cache (TTL data; Supabase is the durable store)
 /src/data/analysis/
-/src/data/boards/
+# Local board cache stays gitignored; published.json is committed for deploys.
+/src/data/boards/cache.json
+/src/data/boards/*
+!/src/data/boards/published.json
 
 # Google News handle→publisher URL cache. Local rebuild accelerator only:
 # `flushUnwrapCache` refuses to write when VERCEL=1 and the resolver has no

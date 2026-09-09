@@ -174,6 +174,12 @@ export function resolveSiteSection(pathname: string): ChannelSectionId {
   return "board";
 }
 
+/**
+ * Live ingest types that feed each desk heatmap.
+ *
+ * Keep this aligned with menu boards (엔터 = 음원·팬덤·방송·웹툰·게임·숏폼),
+ * not the older culture-bucket that stranded games/shorts off the 엔터 desk.
+ */
 export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
   entertainment: [
     "kpop",
@@ -183,9 +189,13 @@ export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
     "music_chart",
     "tv_rating",
     "movie",
-    "subsidy",
+    "webtoon",
+    "shorts",
+    "mobile_game",
+    "pc_game",
+    "console_game",
   ],
-  culture: ["culture_board", "webtoon", "shorts", "mobile_game", "pc_game", "console_game"],
+  culture: ["culture_board"],
   /** Travel desks are board-seeded; no dedicated ingest entity type yet. */
   travel: [],
   economy: ["economy_board"],
