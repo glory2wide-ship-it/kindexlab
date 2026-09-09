@@ -45,13 +45,19 @@ function toSource(
 }
 
 /**
- * Tier 2a — trusted web pages via Serper organic search.
- * UGC hosts are dropped; only non-UGC results pass through.
+ * Tier 2a — web pages via Serper organic search.
+ * By default UGC hosts are dropped; pass `allowUgc` for blog/community strategies.
  */
-export async function fetchSerperWeb(keyword: string, limit = 5): Promise<ContextSource[]> {
+export async function fetchSerperWeb(
+  keyword: string,
+  limit = 5,
+  options?: { allowUgc?: boolean; preferOfficial?: boolean },
+): Promise<ContextSource[]> {
   if (!process.env.SERPER_API_KEY) return [];
 
   const market = activeMarket();
+  const allowUgc = Boolean(options?.allowUgc);
+  const preferOfficial = Boolean(options?.preferOfficial);
   try {
     const data = await fetchJson<{ organic?: SerperOrganic[] }>("https://google.serper.dev/search", {
       method: "POST",
@@ -69,9 +75,22 @@ export async function fetchSerperWeb(keyword: string, limit = 5): Promise<Contex
 
     const out: ContextSource[] = [];
     const seen = new Set<string>();
-    for (const row of data.organic ?? []) {
+    const rows = [...(data.organic ?? [])];
+    if (preferOfficial) {
+      rows.sort((a, b) => {
+        const score = (link?: string) => {
+          const host = (link ?? "").toLowerCase();
+          if (/\.go\.kr|\.or\.kr|\.korea\.kr|visitkorea|forest\.go\.kr|mof\.go\.kr|mcst\.go\.kr/.test(host)) {
+            return 0;
+          }
+          return 1;
+        };
+        return score(a.link) - score(b.link);
+      });
+    }
+    for (const row of rows) {
       const kind = classifyPublisher(market, undefined, row.link);
-      if (kind === "ugc") continue;
+      if (!allowUgc && kind === "ugc") continue;
       const source = toSource(
         { title: row.title, link: row.link, snippet: row.snippet, date: row.date },
         "web",

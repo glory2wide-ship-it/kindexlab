@@ -10,6 +10,7 @@ import {
   NEWS_FALLBACK_THRESHOLD,
 } from "@/lib/context/score";
 import { buildSignalBrief } from "@/lib/context/signal-brief";
+import { resolveSourceStrategy } from "@/lib/context/source-strategy";
 import type { CollectedContext, ContextSource } from "@/lib/context/types";
 import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
 import { isGoogleNewsUrl, publisherFromUrl, unwrapNewsUrls } from "@/lib/news/unwrap";
@@ -164,6 +165,11 @@ export function renderContextBlock(
     lines.push("");
   }
 
+  if (ctx.sourceStrategyHint) {
+    lines.push(ctx.sourceStrategyHint);
+    lines.push("");
+  }
+
   if (ctx.signalFacts.length) {
     lines.push("[실시간 신호 — URL 없음, 배경·맥락 근거로만 사용]");
     ctx.signalFacts.forEach((fact, index) => {
@@ -212,23 +218,32 @@ export interface CollectContextOptions {
   entity?: RankingEntity;
   related?: RankingEntity[];
   relatedKeywords?: string[];
+  /** Ranking-board slug (e.g. political-influencer-power) for source bias. */
+  boardSlug?: string;
+  channel?: string;
   /** KST edition date — used to label RAG freshness in the prompt block. */
   asOfDate?: string;
 }
 
 /**
- * 4-Tier hybrid collector for 오늘의 분석 / premium columns.
+ * Hybrid collector for 오늘의 분석 / premium columns.
  *
- * Tier 0: Signal Brief (entity, board note, RSS match)
- * Tier 1: News RSS/API with widened lookback ladder (+ related-name queries)
- * Tier 2: Serper/Naver/CSE web + YouTube (when news is thin or missing)
- * Tier 3: Intent hints (structure only)
+ * Tier 0: Signal Brief
+ * Tier 1: News RSS/API (always attempted; may be thin for YouTube/grant/travel)
+ * Tier 2+: Strategy-biased YouTube / official pages / blogs / community
+ * Final: Intent hints
  */
 export async function collectArticleContext(
   keyword: string,
   options: CollectContextOptions = {},
 ): Promise<CollectedContext> {
   const { entity, related = [], relatedKeywords = [] } = options;
+  const plan = resolveSourceStrategy({
+    keyword,
+    boardSlug: options.boardSlug,
+    entity,
+    channel: options.channel,
+  });
 
   const signal = await buildSignalBrief({ keyword, entity, related });
 
@@ -241,20 +256,21 @@ export async function collectArticleContext(
   sources = mergeSources(sources, signal.rssSources);
 
   let newsCount = countNewsSources(sources);
-  const providers = [...news.providers];
+  const providers = [...news.providers, `strategy:${plan.strategy}`];
   let unwrapped = news.unwrapped;
   let lookbackHours = news.lookbackHours;
 
   // When the focus keyword is too niche, widen with related names / entity aliases.
   if (sources.length === 0 || newsCount <= NEWS_FALLBACK_THRESHOLD) {
     const extraQueries = [
+      ...plan.queries.slice(1, 4),
       ...relatedKeywords.slice(0, 3),
       ...related.map((item) => item.name).slice(0, 3),
       entity?.nameEn?.trim(),
     ]
       .map((item) => item?.trim())
       .filter((item): item is string => Boolean(item && item !== keyword));
-    for (const query of [...new Set(extraQueries)].slice(0, 3)) {
+    for (const query of [...new Set(extraQueries)].slice(0, 4)) {
       const extra = await newsSourcesFromRetrieval(query, {
         limit: DEFAULT_LIMIT,
         lookbackHours: options.lookbackHours,
@@ -273,26 +289,65 @@ export async function collectArticleContext(
     }
   }
 
-  if (newsCount <= NEWS_FALLBACK_THRESHOLD || sources.length < 3) {
-    const [naverWeb, serperWeb, googleCse] = await Promise.all([
-      fetchNaverWebFallback(keyword, 10),
-      fetchSerperWeb(keyword, 10),
-      fetchGoogleCustomSearch(keyword, 8),
-    ]);
-    if (naverWeb.length) providers.push("naver-web");
-    if (serperWeb.length) providers.push("serper-web");
-    if (googleCse.length) providers.push("google-cse");
-    sources = mergeSources(sources, mergeSources(mergeSources(naverWeb, serperWeb), googleCse));
+  const needsAltSources =
+    plan.strategy !== "news-first" ||
+    newsCount <= NEWS_FALLBACK_THRESHOLD ||
+    sources.length < 3;
+
+  if (needsAltSources) {
+    // Strategy-first collectors run before / instead of waiting on news density.
+    if (plan.prioritizeYoutube) {
+      for (const query of plan.queries.slice(0, 2)) {
+        const videos = await fetchYoutubeFallback(query, plan.youtubeLimit);
+        if (videos.length) {
+          providers.push(`youtube-fallback+${query}`);
+          sources = mergeSources(sources, videos);
+        }
+        if (sources.filter((item) => item.tier === "youtube").length >= plan.youtubeLimit) break;
+      }
+    }
+
+    const searchQueries =
+      plan.strategy === "news-first"
+        ? [keyword]
+        : [...new Set([keyword, ...plan.queries])].slice(0, 3);
+
+    for (const query of searchQueries) {
+      const [naverWeb, serperWeb, googleCse] = await Promise.all([
+        fetchNaverWebFallback(query, plan.blogLimit + plan.webLimit, {
+          preferBlog: plan.prioritizeBlog,
+          preferOfficial: plan.prioritizeOfficial,
+        }),
+        fetchSerperWeb(query, plan.webLimit, {
+          allowUgc: plan.allowUgc,
+          preferOfficial: plan.prioritizeOfficial,
+        }),
+        plan.prioritizeOfficial
+          ? fetchGoogleCustomSearch(query, 8)
+          : plan.strategy === "news-first"
+            ? fetchGoogleCustomSearch(query, 8)
+            : Promise.resolve([] as ContextSource[]),
+      ]);
+      if (naverWeb.length) providers.push(`naver-web+${query}`);
+      if (serperWeb.length) providers.push(`serper-web+${query}`);
+      if (googleCse.length) providers.push(`google-cse+${query}`);
+      sources = mergeSources(sources, mergeSources(mergeSources(naverWeb, serperWeb), googleCse));
+      if (sources.length >= 6) break;
+    }
     newsCount = countNewsSources(sources);
   }
 
   const webCount = sources.filter((source) => source.tier === "web").length;
+  const youtubeCount = sources.filter((source) => source.tier === "youtube").length;
   const snippetCharsAfterWeb = sourceSnippetChars(sources);
   if (
-    sources.length === 0 ||
-    (newsCount <= NEWS_FALLBACK_THRESHOLD && (webCount <= 3 || snippetCharsAfterWeb < 320))
+    !plan.prioritizeYoutube &&
+    (sources.length === 0 ||
+      (newsCount <= NEWS_FALLBACK_THRESHOLD &&
+        (webCount <= 3 || snippetCharsAfterWeb < 320) &&
+        youtubeCount < 2))
   ) {
-    const videos = await fetchYoutubeFallback(keyword, 5);
+    const videos = await fetchYoutubeFallback(keyword, plan.youtubeLimit);
     if (videos.length) providers.push("youtube-fallback");
     sources = mergeSources(sources, videos);
   }
@@ -328,6 +383,8 @@ export async function collectArticleContext(
     intentHints,
     sourceTextChars: sourceSnippetChars(sources),
     tierCounts: tierCounts(sources),
+    sourceStrategy: plan.strategy,
+    sourceStrategyHint: plan.promptHint || undefined,
   };
   ctx.block = renderContextBlock(ctx, { asOfDate: options.asOfDate });
   return ctx;

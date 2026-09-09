@@ -34,4 +34,7 @@ export interface CollectedContext {
   sourceTextChars: number;
   /** Source counts by tier for debugging and prompt branching. */
   tierCounts: Partial<Record<ContextTier, number>>;
+  /** Non-news grounding mode label for the prompt block. */
+  sourceStrategy?: string;
+  sourceStrategyHint?: string;
 }

@@ -73,16 +73,44 @@ async function searchNaver(
  * Tier 2 — Naver blog + web document search when news RSS is thin.
  * Blog posts are intentional UGC sources for Korean lifestyle/policy keywords.
  */
-export async function fetchNaverWebFallback(keyword: string, limit = 5): Promise<ContextSource[]> {
-  const perSource = Math.ceil(limit / 2);
+export async function fetchNaverWebFallback(
+  keyword: string,
+  limit = 5,
+  options?: { preferBlog?: boolean; preferOfficial?: boolean },
+): Promise<ContextSource[]> {
+  const preferBlog = Boolean(options?.preferBlog);
+  const preferOfficial = Boolean(options?.preferOfficial);
+  const blogLimit = preferBlog ? Math.max(limit - 1, Math.ceil(limit * 0.75)) : preferOfficial ? 1 : Math.ceil(limit / 2);
+  const webLimit = Math.max(1, limit - blogLimit);
   const [blogs, web] = await Promise.all([
-    searchNaver("blog", keyword, perSource, "네이버 블로그"),
-    searchNaver("webkr", keyword, perSource, "네이버 웹문서"),
+    preferOfficial && !preferBlog
+      ? Promise.resolve([] as ContextSource[])
+      : searchNaver("blog", keyword, blogLimit, "네이버 블로그"),
+    searchNaver("webkr", keyword, preferOfficial ? limit : webLimit, "네이버 웹문서"),
   ]);
+  const ordered = preferBlog ? [...blogs, ...web] : preferOfficial ? [...web, ...blogs] : [...blogs, ...web];
   const merged: ContextSource[] = [];
   const seen = new Set<string>();
-  for (const source of [...blogs, ...web]) {
+  for (const source of ordered) {
     if (seen.has(source.url)) continue;
+    if (preferOfficial) {
+      const host = (() => {
+        try {
+          return new URL(source.url).hostname.toLowerCase();
+        } catch {
+          return "";
+        }
+      })();
+      // Keep official-looking hosts first; still allow other webkr hits to fill.
+      if (
+        merged.length < Math.ceil(limit / 2) &&
+        host &&
+        !/\.go\.kr|\.or\.kr|\.korea\.kr|visitkorea|tour\.go\.kr/.test(host) &&
+        /blog\.naver|tistory|post\.naver/.test(host)
+      ) {
+        continue;
+      }
+    }
     seen.add(source.url);
     merged.push(source);
     if (merged.length >= limit) break;

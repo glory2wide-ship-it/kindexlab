@@ -1,5 +1,6 @@
 import { BRIEFING_LLM, chatJson, briefingLlmConfigured } from "@/lib/analysis/chain/llm";
 import type { AnalysisLogger } from "@/lib/analysis/log";
+import { boardSlugFromEntitySlug } from "@/lib/analysis/briefing-boards";
 import {
   buildSparseEnrichmentPrompt,
   canGenerateContext,
@@ -428,6 +429,8 @@ export async function generatePremiumArticle(input: {
     related: input.relatedEntities,
     relatedKeywords: input.related,
     asOfDate: editionDate,
+    boardSlug: boardSlugFromEntitySlug(input.entity?.slug ?? input.slug),
+    channel: input.channel,
   });
   logger.step("premium-rag", {
     keyword,

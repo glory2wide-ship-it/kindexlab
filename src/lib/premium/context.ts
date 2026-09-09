@@ -157,6 +157,8 @@ export async function collectPremiumContext(
     entity?: RankingEntity;
     related?: RankingEntity[];
     relatedKeywords?: string[];
+    boardSlug?: string;
+    channel?: string;
     asOfDate?: string;
   } = {},
 ): Promise<PremiumContext> {
