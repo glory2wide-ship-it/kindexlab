@@ -6,6 +6,10 @@ name: Daily briefings
 #
 # Cron is 04:00 KST so Batch + auto-commit + Vercel build can finish
 # before readers hit the site around 07:00 KST.
+#
+# Email report → glory2wide@gmail.com after generation. Requires repo secrets:
+#   RESEND_API_KEY  (preferred)  OR  SMTP_USER + SMTP_PASS (Gmail app password)
+# Without those secrets the job opens a GitHub Issue instead — Gmail is never sent.
 on:
   schedule:
     - cron: "0 19 * * *"
@@ -82,8 +86,16 @@ jobs:
           TRENDS_DATA_SOURCE: live
           REPORT_EMAIL_TO: glory2wide@gmail.com
 
+      # Persist edition first so a missing mail secret cannot block publish.
+      - name: Commit and push briefings
+        if: success()
+        run: |
+          chmod +x scripts/ci-commit-push.sh
+          scripts/ci-commit-push.sh "chore: publish KST daily briefings" src/data/briefings/extra.json
+
       - name: Email briefing generation report
         if: always() && steps.generate.outcome != 'skipped'
+        # Fail visibly when Gmail secrets are missing; publish already finished above.
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -101,9 +113,3 @@ jobs:
           scripts/ci-email-report.sh \
             "artifacts/generation-reports/briefings-${EDITION}.html" \
             "[KindexLab] 브리핑·심층분석 생성 보고 · ${EDITION}"
-
-      # ingest-trends pushes every few minutes; plain auto-commit push races and drops the edition.
-      - name: Commit and push briefings
-        run: |
-          chmod +x scripts/ci-commit-push.sh
-          scripts/ci-commit-push.sh "chore: publish KST daily briefings" src/data/briefings/extra.json

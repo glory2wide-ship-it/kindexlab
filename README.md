@@ -60,17 +60,24 @@ git merge github/main
 
 ## 일일 브리핑 자동화
 
-매일 KST 07:00(`0 22 * * *` UTC)에 종합 1편 + Update 키워드(급등·급락 분석, H2/H3, 1,000단어 이상)를 생성합니다. 본문은 랭킹 스냅샷을 넣는 결정론적 작성기를 기본으로 하고, `OPENAI_API_KEY`가 있으면 OpenAI로 윤문한 뒤 1,000단어 미만이면 작성기로 되돌립니다. 날짜가 바뀌면 전날 기사는 `/briefing/archive`에서 검색됩니다.
+GitHub Actions `Daily briefings`가 **매일 04:00 KST**(`0 19 * * *` UTC)에 채널 종합·하위 메뉴 심층 브리핑을 Gemini Batch로 생성해 `src/data/briefings/extra.json`에 커밋합니다. `Heatmap today's analysis`는 **05:00 KST**에 이어집니다.
+
+생성 직후 **성공/실패 목록 + Gemini API 추정 비용** 보고서를 `glory2wide@gmail.com`으로 보냅니다. Gmail 수신을 쓰려면 저장소 **Settings → Secrets and variables → Actions**에 아래 중 하나를 넣어야 합니다.
+
+| Secret | 용도 |
+| --- | --- |
+| `RESEND_API_KEY` | [Resend](https://resend.com) API (권장). 미인증 도메인이면 From은 `onboarding@resend.dev`, 수신은 Resend 가입 메일과 같아야 합니다. |
+| `SMTP_USER` + `SMTP_PASS` | Gmail SMTP. `SMTP_USER`는 Gmail 주소, `SMTP_PASS`는 [앱 비밀번호](https://myaccount.google.com/apppasswords) (계정 비밀번호 아님). |
+| `REPORT_EMAIL_FROM` | (선택) From 표시명. SMTP 사용 시 보통 `SMTP_USER`와 동일. |
+
+시크릿이 없으면 Gmail은 **발송되지 않고**, 같은 내용이 GitHub Issue(`generation-report` 라벨)로만 남습니다. 예: [#7 2026-09-09 보고](https://github.com/glory2wide-ship-it/kindexlab/issues/7).
 
 ```bash
 npm run briefing:generate
 npm run briefing:generate -- --force 2026-08-25
 ```
 
-성공 시 `src/data/briefings/extra.json`에 병합됩니다. Vercel 서버리스 파일시스템은 유지되지 않으므로, 장기 SEO 아카이브는 GitHub Actions(`.github/workflows/daily-briefings.yml`)로 커밋하거나 같은 명령을 CI에서 돌리면 됩니다. 런타임에 오늘 날짜 에디션이 시드에 없으면 요청 시 생성해 1시간 캐시합니다.
-
-정기 실행은 GitHub Actions가 전담합니다. Vercel Cron은 생성 결과를 저장할 수 없어(런타임 파일시스템이 읽기 전용) 매번 만든 것을 그대로 버리므로 `vercel.json`에서 제거했습니다. 같은 잡을 `/api/cron/briefings`로 직접 호출할 수는 있으며, 이때는 `CRON_SECRET`이 필요합니다. 이미 같은 날짜 슬러그가 있으면 건너뜁니다(`?force=1`로 재생성).
-
+성공 시 `src/data/briefings/extra.json`에 병합됩니다. Vercel 서버리스 파일시스템은 유지되지 않으므로, 장기 SEO 아카이브는 GitHub Actions로 커밋합니다.
 ## 이슈 칼럼 (종료)
 
 이슈 칼럼(=premium columns) 메뉴·생성 파이프라인은 종료했습니다. 관련 스케줄 워크플로와 생성 스크립트는 비활성화되어 있으며, 예전 `/posts` URL은 홈/채널 보드로 리다이렉트됩니다.

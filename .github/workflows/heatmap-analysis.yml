@@ -5,6 +5,10 @@ name: Heatmap today's analysis
 # First-click on a cold slug still uses Live API in the Next.js app (immediate).
 #
 # Cron: 05:00 KST (after 04:00 briefings start; before morning traffic).
+#
+# Email report → glory2wide@gmail.com after generation. Requires repo secrets:
+#   RESEND_API_KEY  OR  SMTP_USER + SMTP_PASS (Gmail app password)
+# Without those secrets a GitHub Issue is opened instead of sending Gmail.
 on:
   schedule:
     - cron: "0 20 * * *"
@@ -81,6 +85,12 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           REPORT_EMAIL_TO: glory2wide@gmail.com
 
+      - name: Commit and push analysis cache
+        if: success()
+        run: |
+          chmod +x scripts/ci-commit-push.sh
+          scripts/ci-commit-push.sh "chore: publish heatmap today's analysis" src/data/analysis/cache.json
+
       - name: Email heatmap analysis report
         if: always() && steps.generate.outcome != 'skipped'
         continue-on-error: true
@@ -100,8 +110,3 @@ jobs:
           scripts/ci-email-report.sh \
             "artifacts/generation-reports/heatmap-analysis-${EDITION}.html" \
             "[KindexLab] 오늘의 분석 생성 보고 · ${EDITION}"
-
-      - name: Commit and push analysis cache
-        run: |
-          chmod +x scripts/ci-commit-push.sh
-          scripts/ci-commit-push.sh "chore: publish heatmap today's analysis" src/data/analysis/cache.json

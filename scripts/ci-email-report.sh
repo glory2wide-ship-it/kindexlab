@@ -11,7 +11,8 @@ FROM="${REPORT_EMAIL_FROM:-}"
 
 if [ -z "$HTML_PATH" ] || [ ! -f "$HTML_PATH" ]; then
   echo "[report] missing html: ${HTML_PATH:-<empty>}"
-  exit 0
+  echo "::error::Generation report HTML missing — cannot email ${TO}."
+  exit 1
 fi
 
 export REPORT_HTML_PATH="$HTML_PATH"
@@ -86,13 +87,15 @@ PY
 fi
 
 # Fallback: GitHub Issue → notification email to repo watchers (owner).
+echo "::error::Gmail was NOT sent to ${TO}. Add GitHub Actions secrets RESEND_API_KEY or SMTP_USER+SMTP_PASS (Gmail app password). Falling back to a GitHub Issue."
 if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
   export GH_TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
   BODY_FILE="$(mktemp)"
   {
     echo "수신 예정: **${TO}**"
     echo
-    echo "SMTP/Resend 시크릿이 없어 GitHub Issue로 보고합니다. Gmail 직접 수신을 쓰려면 \`SMTP_USER\`+\`SMTP_PASS\`(앱 비밀번호) 또는 \`RESEND_API_KEY\`를 추가하세요."
+    echo "> ⚠️ SMTP/Resend 시크릿이 없어 **Gmail로 발송되지 않았습니다.**"
+    echo "> Settings → Secrets and variables → Actions 에 \`SMTP_USER\`+\`SMTP_PASS\`(앱 비밀번호) 또는 \`RESEND_API_KEY\`를 추가하세요."
     echo
     echo '```'
     head -c 120000 "$TXT_PATH"
@@ -106,9 +109,11 @@ if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; t
   fi
   rm -f "$BODY_FILE"
   echo "[report] opened GitHub Issue for ${TO}: ${ISSUE_URL}"
-  exit 0
+  # Non-zero so the Actions step surfaces as failed (workflows use continue-on-error
+  # after commit, so generation still publishes).
+  exit 1
 fi
 
 echo "[report] no mail transport configured for ${TO}, and GitHub issue fallback is unavailable"
-echo "::warning::Add GitHub secrets SMTP_USER + SMTP_PASS (Gmail app password) or RESEND_API_KEY for direct email delivery."
-exit 0
+echo "::error::Add GitHub secrets SMTP_USER + SMTP_PASS (Gmail app password) or RESEND_API_KEY for direct email delivery."
+exit 1
