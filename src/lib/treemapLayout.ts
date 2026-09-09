@@ -12,8 +12,8 @@ export interface TreemapBox {
   y1: number;
 }
 
-/** Rank 1 always occupies this share of the map's area. */
-export const RANK_1_AREA_RATIO = 0.1;
+/** Rank 1 target share of the map's area (within the 12–15% band). */
+export const RANK_1_AREA_RATIO = 0.14;
 export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
 /**
  * Rank 2+ must stay strictly below the rank-1 share, otherwise the leader stops
@@ -21,6 +21,8 @@ export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
  * apart when the share is retuned.
  */
 export const RANK_BELOW_CAP = RANK_1_AREA_RATIO - 0.001;
+/** Soft ceiling for rank-1 box aspect (max(w,h)/min(w,h)). */
+export const RANK_1_MAX_ASPECT = 1.2;
 
 export interface HeatmapSizeInput {
   id: string;
@@ -63,7 +65,7 @@ function enforceDescending(leaderShare: number, rest: number[]): number[] {
   const out = [...rest];
   let previous = leaderShare;
   // ~6% step-down per rank keeps 2 > 3 > … visible while still filling the
-  // remaining 90% pool at typical heatmap counts (15–20 tiles).
+  // remaining ~86% pool at typical heatmap counts (15–20 tiles).
   const step = 0.94;
   for (let i = 0; i < out.length; i++) {
     const ceiling = previous * step;
@@ -73,7 +75,7 @@ function enforceDescending(leaderShare: number, rest: number[]): number[] {
   return out;
 }
 
-/** Split a pool by weight, capping every tile below the rank-1 10% share. */
+/** Split a pool by weight, capping every tile below the rank-1 share. */
 function allocatePool(weights: number[], pool = REMAINING_AREA_RATIO, cap = RANK_BELOW_CAP): number[] {
   const n = weights.length;
   if (!n) return [];
@@ -123,13 +125,52 @@ interface PanelNode {
   value: number;
 }
 
-/** Pixel box for rank 1: a full-height left column of exactly 10% of the map. */
+/**
+ * Near-square pixel size for rank 1 at `areaRatio` of the map.
+ * Prefers a true square; softens to at most `RANK_1_MAX_ASPECT` when clamped.
+ */
+export function nearSquareRank1Size(
+  width: number,
+  height: number,
+  areaRatio = RANK_1_AREA_RATIO,
+): { w: number; h: number } {
+  const mapArea = Math.max(width * height, 1);
+  const targetArea = mapArea * areaRatio;
+  // Leave room for the L-shaped remainder on both axes.
+  const maxW = Math.max(24, width * 0.62);
+  const maxH = Math.max(24, height * 0.62);
+  let side = Math.min(Math.sqrt(targetArea), maxW, maxH);
+  let w = side;
+  let h = targetArea / Math.max(w, 1);
+
+  if (h > maxH) {
+    h = maxH;
+    w = targetArea / h;
+  }
+  if (w > maxW) {
+    w = maxW;
+    h = targetArea / w;
+  }
+
+  const aspect = Math.max(w / Math.max(h, 1), h / Math.max(w, 1));
+  if (aspect > RANK_1_MAX_ASPECT) {
+    const s = Math.sqrt(Math.max(w * h, 1));
+    w = Math.min(s, maxW);
+    h = Math.min(s, maxH);
+  }
+
+  w = Math.max(16, Math.min(Math.round(w), Math.max(16, width - 16)));
+  h = Math.max(16, Math.min(Math.round(h), Math.max(16, height - 16)));
+  return { w, h };
+}
+
+/** Pixel box for rank 1: near-square block in the top-left (≈12–15% area). */
 export function rank1Rectangle(
   width: number,
   height: number,
 ): { x0: number; y0: number; x1: number; y1: number } {
-  const w = Math.max(1, Math.round(Math.max(width, 1) * RANK_1_AREA_RATIO));
-  return { x0: 0, y0: 0, x1: Math.min(w, width), y1: height };
+  const { w, h } = nearSquareRank1Size(width, height);
+  return { x0: 0, y0: 0, x1: Math.min(w, width), y1: Math.min(h, height) };
 }
 
 function rowWorstAspect(row: PanelNode[], rowValue: number, shortSide: number): number {
@@ -286,9 +327,9 @@ function squarifyFill(
 }
 
 /**
- * Squarified treemap over the full canvas. Rank 1 is still the largest tile;
- * packing against the shorter side keeps neighbors close to squares instead of
- * stretching #2 into a leftover column and #3+ into full-height strips.
+ * Rank 1 is placed as a near-square (≈14% of the map). Rank 2+ fill the
+ * remaining L-shaped region via squarified panels, still strictly smaller than
+ * the tile above them.
  */
 export function layoutHeatmapLeaves(
   items: HeatmapSizeInput[],
@@ -308,7 +349,81 @@ export function layoutHeatmapLeaves(
     rank: item.rank ?? index + 1,
     value: Math.max(allocation.ratios.get(item.id) ?? 0, 1e-6),
   }));
-  return squarifyPanel(nodes, 0, 0, width, height, padding);
+
+  const gap = Math.max(0, padding);
+  const leader = nodes[0]!;
+  const rest = nodes.slice(1);
+  const { w: leadW, h: leadH } = nearSquareRank1Size(width, height);
+  const leaderBox: TreemapBox = {
+    id: leader.id,
+    rank: leader.rank,
+    x0: 0,
+    y0: 0,
+    x1: leadW,
+    y1: leadH,
+  };
+
+  if (!rest.length) {
+    return [{ ...leaderBox, x1: width, y1: height }];
+  }
+
+  const rightX0 = Math.min(leadW + gap, width);
+  const bottomY0 = Math.min(leadH + gap, height);
+  const rightW = width - rightX0;
+  const bottomH = height - bottomY0;
+  const usableRight = rightW >= 24 && leadH >= 24;
+  const usableBottom = width >= 24 && bottomH >= 24;
+
+  if (!usableRight && !usableBottom) {
+    return squarifyPanel(nodes, 0, 0, width, height, gap);
+  }
+
+  const restTotal = rest.reduce((sum, node) => sum + node.value, 0) || rest.length;
+  const rightArea = Math.max(rightW, 0) * Math.max(leadH, 0);
+  const bottomArea = Math.max(width, 0) * Math.max(bottomH, 0);
+
+  let rightNodes: PanelNode[] = [];
+  let bottomNodes: PanelNode[] = [];
+
+  if (usableRight && usableBottom) {
+    const targetRight = restTotal * (rightArea / Math.max(rightArea + bottomArea, 1));
+    let acc = 0;
+    for (let i = 0; i < rest.length; i++) {
+      const node = rest[i]!;
+      const remainingAfter = rest.length - i - 1;
+      // Keep at least one tile for the bottom panel when possible.
+      if (rightNodes.length && (acc >= targetRight || remainingAfter === 0)) {
+        bottomNodes.push(node);
+      } else {
+        rightNodes.push(node);
+        acc += node.value;
+      }
+    }
+    if (!bottomNodes.length && rightNodes.length > 1) {
+      bottomNodes.push(rightNodes.pop()!);
+    }
+    if (!rightNodes.length && bottomNodes.length > 1) {
+      rightNodes.push(bottomNodes.shift()!);
+    }
+  } else if (usableRight) {
+    rightNodes = rest;
+  } else {
+    bottomNodes = rest;
+  }
+
+  const boxes: TreemapBox[] = [leaderBox];
+  if (rightNodes.length && usableRight) {
+    boxes.push(...squarifyPanel(rightNodes, rightX0, 0, width, leadH, gap));
+  }
+  if (bottomNodes.length && usableBottom) {
+    boxes.push(...squarifyPanel(bottomNodes, 0, bottomY0, width, height, gap));
+  }
+
+  // If a panel was empty after partitioning, fall back so we never leave a hole.
+  if (boxes.length < nodes.length) {
+    return squarifyPanel(nodes, 0, 0, width, height, gap);
+  }
+  return boxes;
 }
 
 function fillRestPool(leaderShare: number, rest: number[], pool: number): number[] {
@@ -327,9 +442,9 @@ function fillRestPool(leaderShare: number, rest: number[], pool: number): number
 }
 
 /**
- * Rank 1 is always 10% of the map. Rank 2+ share the other 90% by rank × index
- * score, each capped below 10% and strictly smaller than the tile above it so
- * box size steps down with rank. Incoming order is the display rank (same as the list).
+ * Rank 1 is always ~14% of the map (12–15% band). Rank 2+ share the rest by
+ * rank × index score, each capped below rank 1 and strictly smaller than the
+ * tile above it so box size steps down with rank.
  */
 export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSizeAllocation {
   const ratios = new Map<string, number>();
@@ -345,7 +460,7 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
   const packed = items.length >= 20;
   // Stronger Zipf decay → clearer size drop from 2 → 3 → … even when scores bunch.
   const exponent = packed ? 1.12 : 1.2;
-  const cap = packed ? Math.min(0.09, RANK_BELOW_CAP) : RANK_1_AREA_RATIO * 0.88;
+  const cap = packed ? Math.min(0.12, RANK_BELOW_CAP) : RANK_1_AREA_RATIO * 0.88;
   const peak = Math.max(...rest.map((item) => safeScore(item.score)), 1);
   const weights = rest.map((item, index) =>
     rankScoreWeight(item.rank ?? index + 2, item.score, peak, exponent),

@@ -51,9 +51,13 @@ async function main() {
   console.log(`\nRANK_1_AREA_RATIO = ${RANK_1_AREA_RATIO}`);
   console.log(`픽셀 1위 ${(leadShare * 100).toFixed(2)}%  타일 ${painted.length}개`);
   console.log(`종횡비 중앙값 ${medianAspect.toFixed(2)}  최악 ${worstAspect.toFixed(2)}`);
+  console.log(`1위 종횡비 ${aspect(r1).toFixed(2)}`);
 
-  if (leadShare < 0.07 || leadShare > 0.14) {
-    throw new Error(`rank-1 pixel share ${leadShare} should stay near 10%`);
+  if (leadShare < 0.12 || leadShare > 0.16) {
+    throw new Error(`rank-1 pixel share ${leadShare} should stay in the 12–15% band`);
+  }
+  if (aspect(r1) > 1.25) {
+    throw new Error(`rank-1 aspect ${aspect(r1)} should stay near square`);
   }
   const missing = Array.from({ length: 15 }, (_, i) => i + 1).filter(
     (rank) => !painted.some((box) => box.rank === rank && box.x1 - box.x0 >= 8 && box.y1 - box.y0 >= 8),
