@@ -9,7 +9,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { uniqueHeatmapTiles } from "@/lib/boards/unique-tiles";
-import { TYPE_LABEL, formatIndexPoints, formatRate } from "@/lib/format";
+import { TYPE_LABEL, formatRate } from "@/lib/format";
 import { heatFill, heatText } from "@/lib/heatmap";
 import { formatHeatmapRank } from "@/lib/boards/limits";
 import { heatmapNameLines } from "@/lib/musicTitle";
@@ -178,7 +178,6 @@ export function TreemapView({
           const w = leaf.x1 - leaf.x0;
           const h = leaf.y1 - leaf.y0;
           const rate = formatRate(change);
-          const scoreLabel = formatIndexPoints(scoreForTimeframe(entity, timeframe));
           const priceLabel = heatmapPriceLabel(entity);
           const rank = displayRankById.get(entity.id) ?? leaf.rank ?? entity.rank;
           const rankBadge = formatHeatmapRank(rank);
@@ -191,7 +190,8 @@ export function TreemapView({
             name: lines.title,
             artist: priceLabel ?? lines.artist,
             rate,
-            typeLabel: priceLabel ? "" : scoreLabel,
+            // Finviz-style: show ±% only — no index point (pt) suffix on tiles.
+            typeLabel: "",
             heatmapRank: rank,
           });
           const fill = heatText(change);
@@ -213,7 +213,7 @@ export function TreemapView({
           const displayTitle = isHeadline ? summarizeHeadlineTitle(entity.name) : (label?.name ?? lines.title);
           /**
            * Mobile title: 1–7 → −10%, 8–12 → −15%.
-           * Mobile rate/pt: −10%. Desktop unchanged.
+           * Mobile rate: −10%. Desktop unchanged.
            */
           const layoutNameSize = label?.nameSize ?? 16;
           const nameBase =
@@ -236,7 +236,7 @@ export function TreemapView({
               href={href}
               prefetch={false}
               className="cursor-pointer"
-              aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name}${priceLabel ? ` ${priceLabel}` : ""} ${rate}${priceLabel ? "" : ` ${scoreLabel}`}`}
+              aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name}${priceLabel ? ` ${priceLabel}` : ""} ${rate}`}
               data-heatmap-rank={rank}
               onPointerDown={() => {
                 router.prefetch(href);
