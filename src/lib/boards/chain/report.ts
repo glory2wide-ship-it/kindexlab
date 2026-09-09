@@ -293,6 +293,13 @@ export async function writeBoardReport(input: {
       ...section,
       heading: section.heading.replace(/^[❶❷❸❹❺]\s*/, "").trim(),
     })),
+    {
+      keyword: board.focusKeyword,
+      signalFacts: ranking.slice(0, 8).map(
+        (row) =>
+          `${row.name}은(는) ${row.rank}위(변동 ${row.changeRate.toFixed(2)}%)에 있으며 ${row.note}`.trim(),
+      ),
+    },
   ).map((section, index) => ({
     ...section,
     heading: `${NUMBERING[index] ?? "❺"} ${section.heading.replace(/^[❶❷❸❹❺]\s*/, "").trim()}`,

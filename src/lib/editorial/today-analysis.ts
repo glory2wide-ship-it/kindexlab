@@ -596,7 +596,9 @@ export function composePremiumTodayAnalysis(options: {
     headingLevel: 2 as const,
     paragraphs: [...section.paragraphs],
   }));
-  const ordered = ensureKindexFeatureSectionPlacement(mapped);
+  const ordered = ensureKindexFeatureSectionPlacement(mapped, {
+    keyword: focus,
+  });
   const body = ordered.filter((section) => !isCoreSummaryHeading(section.heading));
   const sections: TodayAnalysisSection[] = body.map((section, index) => ({
     ...section,

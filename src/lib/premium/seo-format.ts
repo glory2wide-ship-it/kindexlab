@@ -84,7 +84,10 @@ export function formatNumberedH2(index: number, heading: string): string {
 }
 
 /** Applies H2 numbering to main sections; keeps FAQ/table as separate H2/H3 blocks. */
-export function applySeoHeadingStructure(sections: SeoSection[]): SeoSection[] {
+export function applySeoHeadingStructure(
+  sections: SeoSection[],
+  options?: { keyword?: string; signalFacts?: string[] },
+): SeoSection[] {
   const placed = ensureKindexFeatureSectionPlacement(
     sections.map((section) => ({
       ...section,
@@ -92,6 +95,10 @@ export function applySeoHeadingStructure(sections: SeoSection[]): SeoSection[] {
       paragraphs: section.paragraphs ?? [],
       headingLevel: (section.headingLevel === 3 ? 3 : 2) as 2 | 3,
     })),
+    {
+      keyword: options?.keyword,
+      signalFacts: options?.signalFacts,
+    },
   );
 
   let h2Index = 0;

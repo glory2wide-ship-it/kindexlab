@@ -9,9 +9,11 @@
  */
 import { TREND_ANALYSIS_DISCLAIMER } from "@/lib/editorial/disclaimer";
 import {
+  buildKindexFeatureParagraph,
   editionFreshnessRules,
   editorialGroundingRules,
   ensureKindexFeatureSectionPlacement,
+  isKindexFeatureMetaBoilerplate,
   isKindexFeatureSectionHeading,
   KINDEX_FEATURE_SECTION_HEADING,
   tenseConsistencyRules,
@@ -181,7 +183,8 @@ heading 앞에 반드시 ❶❷❸❹❺ 번호를 붙이세요 (레거시 애�
    - 본문: 뉴스와 데이터 기반의 신중 전망. "가능성이 있습니다", "확인이 필요합니다" 수준.
    - 본 섹션 마지막 문단의 마지막 문장은 필수 디스클레이머로 끝내세요.
 5. ❺ KinDex 데이터가 보여주는 특징  ← 제목 고정, 번호 필수, paragraphs 정확히 1개
-   - 순위·변동·관심·열기 숫자가 가리키는 관심·화제 특징만 한 문단으로 해석하세요.
+   - 포커스 키워드의 순위·변동·관심·열기 숫자가 가리키는 특징만 한 문단으로 해석하세요.
+   - KinDex가 무엇인지 정의하는 일반론(관심 신호는 방향·속도… / 산출 공식이 아니라…)만 쓰는 것은 실패입니다.
    - 산출 공식·점수 척도 강의 금지. 입력에 없는 수치 금지.
    - takeaways(핵심 요약) 바로 앞에 둡니다.`;
 
@@ -217,7 +220,8 @@ const LIGHT_JOURNALIST_BLOCK = `[독창 앵글 — 가벼운 보강만 · 비중
 4) 앞으로 어떤 일정·변수·반응을 확인하면 좋은가 (❹, 상투적 "지켜볼 흐름" 금지)
 5) KinDex 순위·변동·관심이 보여주는 특징 한 문단 (❺, 핵심 요약 직전)
 금지: KinDex/킨덱스 산출 방식, 점수 척도(100점·999점 등) 장문 해설, 등락률·시세 나열, 순위표를 그대로 문장으로 옮기기.
-KinDex 숫자가 있으면 관심의 방향·속도·상대 위치를 ❺에서 해석하세요. 입력에 없는 수치는 만들지 마세요.`;
+금지: KinDex 개념 정의만 쓰는 문장(예: "관심 신호는 … 방향과 속도를 가리키며, 산출 공식이 아니라…").
+KinDex 숫자가 있으면 이 키워드의 관심 방향·속도·상대 위치를 ❺에서 해석하세요. 입력에 없는 수치는 만들지 마세요.`;
 
 /**
  * Hybrid system prompt used when `dataJournalist: true` (오늘의 분석 / heatmap columns).
@@ -302,9 +306,22 @@ function isAwkwardOutlookHeading(heading: string): boolean {
  */
 export function applyHybridAnalysisHeadings<T extends { heading: string; headingLevel?: 2 | 3; paragraphs: string[] }>(
   sections: T[],
-  context?: { channel?: string; categoryHint?: string; focusKeyword?: string },
+  context?: {
+    channel?: string;
+    categoryHint?: string;
+    focusKeyword?: string;
+    signalFacts?: string[];
+  },
 ): Array<T & { heading: string; headingLevel: 2 }> {
-  const placed = ensureKindexFeatureSectionPlacement(sections);
+  const kindexFallback = buildKindexFeatureParagraph({
+    keyword: context?.focusKeyword ?? "",
+    signalFacts: context?.signalFacts,
+  });
+  const placed = ensureKindexFeatureSectionPlacement(sections, {
+    keyword: context?.focusKeyword,
+    signalFacts: context?.signalFacts,
+    fallbackParagraph: kindexFallback,
+  });
   const cleaned = placed
     .filter((section) => !section.heading.includes("핵심 요약"))
     .map((section) => ({
@@ -367,10 +384,8 @@ export function applyHybridAnalysisHeadings<T extends { heading: string; heading
       .filter(Boolean)
       .join(" ")
       .trim();
-    return [
-      merged ||
-        "KinDex 관심 신호는 이 이슈로 검색·화제가 모이는 방향과 속도를 가리키며, 산출 공식이 아니라 관심의 상대 위치로 읽습니다.",
-    ];
+    const usable = merged && !isKindexFeatureMetaBoilerplate(merged) ? merged : kindexFallback;
+    return [usable];
   })();
 
   const ordered = [
@@ -481,7 +496,7 @@ export function buildDataJournalistUserPrompt(params: {
     "- 왜 지금 관심이 높아졌나: 사건·뉴스·사회적 맥락 분석",
     "- 3번 섹션: 실제 독자 관점의 실질 핵심",
     "- 4번 섹션: 뉴스·데이터 기반의 신중 전망(일정·변수·확인 포인트)",
-    "- 5번 섹션: KinDex 순위·변동·관심이 보여주는 특징만 한 문단으로 해석",
+    "- 5번 섹션: 포커스 키워드의 KinDex 순위·변동·상대 관심만 한 문단으로 해석 (KinDex 개념 정의 문장 금지)",
     "- KinDex 산출 방식·점수 척도 강의 금지. 있는 숫자는 ❺에서 관심 트렌드로 해석.",
     "- ❶~❹ paragraphs 3~4개. ❺ paragraphs 1개. 문장 45~90자, 높임말(합니다체) 필수.",
     `- 포커스 핵심어 "${focusCore}"를 title·excerpt·본문·FAQ 합쳐 5~6회만 자연 배치하세요.`,

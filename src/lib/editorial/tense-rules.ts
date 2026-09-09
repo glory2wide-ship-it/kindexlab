@@ -53,7 +53,11 @@ export function sentencePeriodRules(): string {
 /** Fixed H2 title for the dedicated KinDex trend-feature section. */
 export const KINDEX_FEATURE_SECTION_HEADING = "KinDex 데이터가 보여주는 특징";
 
-const KINDEX_FEATURE_FALLBACK_PARAGRAPH =
+/**
+ * Legacy meta-definition copy (what KinDex *is*), wrongly used as ❺ body.
+ * Never publish this as the feature section — it is not keyword-specific data.
+ */
+export const KINDEX_FEATURE_META_BOILERPLATE =
   "KinDex 관심 신호는 이 이슈로 검색·화제가 모이는 방향과 속도를 가리키며, 산출 공식이 아니라 관심의 상대 위치로 읽습니다.";
 
 /** Strip numbered H2 prefixes so heading matching stays stable. */
@@ -80,6 +84,100 @@ export function isCoreSummaryHeading(heading: string): boolean {
 }
 
 /**
+ * True when ❺ only defines KinDex generally, without this keyword's rank/trend.
+ * Empty strings are unusable for placement, but callers that only want to detect
+ * the legacy meta sentence should prefer `isKindexFeatureMetaDefinition`.
+ */
+export function isKindexFeatureMetaDefinition(text: string): boolean {
+  const t = text.replace(/\s+/g, " ").trim();
+  if (!t) return false;
+  if (t === KINDEX_FEATURE_META_BOILERPLATE) return true;
+  if (t.includes("KinDex 관심 신호는 이 이슈로 검색·화제가 모이는")) return true;
+  if (t.includes("산출 공식이 아니라 관심의 상대 위치로 읽습니다")) return true;
+  const explainsKinDex =
+    /KinDex\s*(관심\s*)?(신호|데이터)는/.test(t) &&
+    /(방향과\s*속도|상대\s*위치|산출\s*공식)/.test(t);
+  const hasConcreteSignal =
+    /\d+\s*위/.test(t) ||
+    /(올랐|내렸|급등|급락|상위권|하위권|횡보|머물|변동|관심도|검색·신청|스냅샷)/.test(t);
+  return explainsKinDex && !hasConcreteSignal;
+}
+
+/** Empty or meta-definition — not a publishable ❺ body. */
+export function isKindexFeatureMetaBoilerplate(text: string): boolean {
+  const t = text.replace(/\s+/g, " ").trim();
+  if (!t) return true;
+  return isKindexFeatureMetaDefinition(t);
+}
+
+function toHonorificSignalClause(raw: string): string {
+  let text = raw.replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  if (!/[.!?…]$/u.test(text)) text = `${text}.`;
+  // Already 합니다체 — do not touch (avoids 있습니다. → 있습니습니다.).
+  if (/(습니다|합니다|됩니다|입니다|습니까|입니까)\.?$/u.test(text)) {
+    return text.endsWith(".") ? text : `${text}.`;
+  }
+  text = text
+    .replace(/했다\.$/u, "했습니다.")
+    .replace(/됐다\.$/u, "됐습니다.")
+    .replace(/되었다\.$/u, "되었습니다.")
+    .replace(/였다\.$/u, "였습니다.")
+    .replace(/올랐다\.$/u, "올랐습니다.")
+    .replace(/내렸다\.$/u, "내렸습니다.")
+    .replace(/있다\.$/u, "있습니다.")
+    .replace(/없다\.$/u, "없습니다.")
+    .replace(/다\.$/u, "습니다.");
+  return text;
+}
+
+function topicParticle(word: string): "은" | "는" {
+  const last = word.trim().slice(-1);
+  if (!last) return "은";
+  const code = last.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return "는";
+  return (code - 0xac00) % 28 === 0 ? "는" : "은";
+}
+
+/**
+ * Build a keyword-specific ❺ paragraph from KinDex signal facts (rank/trend/peers).
+ * Never returns the meta-definition boilerplate.
+ */
+export function buildKindexFeatureParagraph(options: {
+  keyword: string;
+  signalFacts?: string[];
+}): string {
+  const keyword = options.keyword.replace(/^\[[^\]]+\]\s*/, "").trim() || "이 이슈";
+  const particle = topicParticle(keyword);
+  const facts = (options.signalFacts ?? []).map((item) => item.trim()).filter(Boolean);
+  const preferred = facts.filter(
+    (fact) =>
+      /\d+\s*위/.test(fact) ||
+      /(추세|올랐|내렸|머물|상위권|함께 올라|관심도|검색·신청|변동|스냅샷)/.test(fact),
+  );
+  const pool = (preferred.length ? preferred : facts).slice(0, 3).map(toHonorificSignalClause).filter(Boolean);
+
+  if (pool.length) {
+    const glue =
+      pool.length === 1
+        ? `${pool[0]} 이 숫자는 ${keyword}${particle} 관심이 모이는 상대 위치와 속도를 보여 줍니다.`
+        : `${pool.join(" ")} 종합하면 ${keyword} 관심은 보드 안 상대 순위·움직임으로 읽습니다.`;
+    return glue.replace(/\s+/g, " ").trim();
+  }
+
+  return `${keyword}${particle} 같은 보드에서 확인된 순위·변동 신호가 제한적이어서, 카테고리 상위권 대비 상대 위치만으로 관심 흐름을 가늠합니다.`;
+}
+
+function resolveKindexParagraph(
+  candidate: string | undefined,
+  fallback: string,
+): string {
+  const cleaned = candidate?.replace(/\s+/g, " ").trim() ?? "";
+  if (!cleaned || isKindexFeatureMetaBoilerplate(cleaned)) return fallback;
+  return cleaned;
+}
+
+/**
  * Force one numbered「KinDex 데이터가 보여주는 특징」section (single paragraph)
  * immediately before「핵심 요약」, after all other body sections.
  */
@@ -87,9 +185,14 @@ export function ensureKindexFeatureSectionPlacement<
   T extends { heading: string; paragraphs: string[]; headingLevel?: 2 | 3 },
 >(
   sections: T[],
-  options?: { fallbackParagraph?: string },
+  options?: { fallbackParagraph?: string; keyword?: string; signalFacts?: string[] },
 ): T[] {
-  const fallback = options?.fallbackParagraph?.trim() || KINDEX_FEATURE_FALLBACK_PARAGRAPH;
+  const fallback =
+    options?.fallbackParagraph?.trim() ||
+    buildKindexFeatureParagraph({
+      keyword: options?.keyword ?? "",
+      signalFacts: options?.signalFacts,
+    });
   const summary: T[] = [];
   const body: T[] = [];
   let kindex: T | undefined;
@@ -110,7 +213,7 @@ export function ensureKindexFeatureSectionPlacement<
         ...(kindex ?? {}),
         heading: KINDEX_FEATURE_SECTION_HEADING,
         headingLevel: 2 as const,
-        paragraphs: [merged || fallback],
+        paragraphs: [resolveKindexParagraph(merged, fallback)],
       } as T;
       continue;
     }
@@ -123,12 +226,11 @@ export function ensureKindexFeatureSectionPlacement<
       headingLevel: 2 as const,
       paragraphs: [fallback],
     } as T;
-  } else if (!kindex.paragraphs.length || !kindex.paragraphs[0]?.trim()) {
-    kindex = { ...kindex, paragraphs: [fallback] };
-  } else if (kindex.paragraphs.length > 1) {
+  } else {
+    const bodyText = kindex.paragraphs.map((item) => item.trim()).filter(Boolean).join(" ").trim();
     kindex = {
       ...kindex,
-      paragraphs: [kindex.paragraphs.map((item) => item.trim()).filter(Boolean).join(" ").trim() || fallback],
+      paragraphs: [resolveKindexParagraph(bodyText, fallback)],
     };
   }
 
@@ -152,7 +254,10 @@ export function ensureMinBodySections<
   const minSections = options.minSections ?? 5;
   const keyword = options.keyword.trim() || "이 이슈";
   const facts = (options.signalFacts ?? []).map((item) => item.trim()).filter(Boolean);
-  let next = ensureKindexFeatureSectionPlacement(sections);
+  let next = ensureKindexFeatureSectionPlacement(sections, {
+    keyword,
+    signalFacts: facts,
+  });
 
   const stubTemplates: Array<{ heading: string; paragraph: string }> = [
     {
@@ -198,7 +303,7 @@ export function ensureMinBodySections<
       paragraphs: [stub.paragraph.endsWith(".") ? stub.paragraph : `${stub.paragraph}.`],
     } as T;
     next = [...next.slice(0, insertAt), node, ...next.slice(insertAt)];
-    next = ensureKindexFeatureSectionPlacement(next);
+    next = ensureKindexFeatureSectionPlacement(next, { keyword, signalFacts: facts });
   }
 
   return next;
@@ -217,6 +322,9 @@ export function kindexDataTrendInterpretationRules(): string {
     "- 상승·하락·급등·정체·상대적 관심 쏠림처럼 ‘방향과 속도, 다른 이슈 대비 위치’를 문장으로 풀어 쓴다.",
     "- 점수 산식·100점 만점·999 스케일 강의는 하지 않는다. 숫자는 관심의 세기와 움직임을 읽는 신호로만 쓴다.",
     "- 입력에 없는 수치를 지어내지 않는다. 있는 숫자만 트렌드로 해석한다.",
+    "[❺ 금지 — 메타 정의 문구]",
+    "- KinDex가 무엇인지 설명하는 일반론(예: '관심 신호는 … 방향과 속도를 가리키며, 산출 공식이 아니라…')만 쓰는 것은 실패다.",
+    "- 포커스 키워드의 순위·변동·같은 보드 상대 위치 등 구체 신호를 한 문단에 반드시 넣는다.",
     "[필수 소제목 배치 — 모든 글]",
     `- 본문 sections에 번호 달린 소제목 \`KinDex 데이터가 보여주는 특징\`을 반드시 둔다 (오늘의 분석·하이브리드는 ❺, 그 외 글은 본문 H2 중 마지막 번호).`,
     "- 이 소제목 그룹의 paragraphs는 정확히 1개(한 문단)만 쓴다. 2개 이상 금지.",

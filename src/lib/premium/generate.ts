@@ -36,6 +36,8 @@ import {
 } from "@/lib/premium/data-journalist-prompt";
 import {
   ensureMinBodySections,
+  isKindexFeatureMetaBoilerplate,
+  isKindexFeatureSectionHeading,
 } from "@/lib/editorial/tense-rules";
 import { toHonorificProse } from "@/lib/editorial/honorific";
 import { describePlacements, injectMonetization, type PremiumPlacement } from "@/lib/premium/widgets";
@@ -698,8 +700,12 @@ export async function generatePremiumArticle(input: {
           channel: input.channel,
           categoryHint: input.category ?? input.channel,
           focusKeyword: keyword,
+          signalFacts: context.signalFacts,
         }) as PremiumSection[])
-      : (applySeoHeadingStructure(next) as PremiumSection[]);
+      : (applySeoHeadingStructure(next, {
+          keyword,
+          signalFacts: context.signalFacts,
+        }) as PremiumSection[]);
 
   sections = finalizeSections(sections);
   // Enforce 합니다체 even if the model slipped into plain endings.
@@ -1123,6 +1129,13 @@ export async function generatePremiumArticle(input: {
   }
   if (hasBrokenPredicateEndings(plainAfter)) {
     return { ok: false, reason: "banned-copy", detail: "broken-predicate-ending" };
+  }
+  const kindexFeatureBody = sections
+    .filter((section) => isKindexFeatureSectionHeading(section.heading))
+    .flatMap((section) => section.paragraphs)
+    .join(" ");
+  if (isKindexFeatureMetaBoilerplate(kindexFeatureBody)) {
+    return { ok: false, reason: "banned-copy", detail: "kindex-feature-boilerplate" };
   }
   const headingScan = sections.map((section) => section.heading).join("\n");
   if (hasMissingYearDigitsInHeadings(headingScan)) {
