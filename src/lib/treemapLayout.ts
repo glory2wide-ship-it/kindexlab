@@ -327,9 +327,9 @@ function squarifyFill(
 }
 
 /**
- * Rank 1 is placed as a near-square (≈14% of the map). Rank 2+ fill the
- * remaining L-shaped region via squarified panels, still strictly smaller than
- * the tile above them.
+ * Rank 1 is a near-square in the top-left. Rank 2 always sits directly under
+ * it in the same left column (same width). Ranks 3+ fill the remaining
+ * L-shaped region (right of the #1+#2 stack, plus any strip below).
  */
 export function layoutHeatmapLeaves(
   items: HeatmapSizeInput[],
@@ -352,46 +352,100 @@ export function layoutHeatmapLeaves(
 
   const gap = Math.max(0, padding);
   const leader = nodes[0]!;
-  const rest = nodes.slice(1);
-  const { w: leadW, h: leadH } = nearSquareRank1Size(width, height);
+  const second = nodes[1]!;
+  const others = nodes.slice(2);
+  const mapArea = Math.max(width * height, 1);
+
+  const { w: squareSide } = nearSquareRank1Size(width, height);
+  const colW = Math.min(squareSide, Math.max(24, width - 24));
+  const leadH = Math.min(squareSide, Math.max(24, height - 24));
+
   const leaderBox: TreemapBox = {
     id: leader.id,
     rank: leader.rank,
     x0: 0,
     y0: 0,
-    x1: leadW,
+    x1: colW,
     y1: leadH,
   };
 
-  if (!rest.length) {
-    return [{ ...leaderBox, x1: width, y1: height }];
+  const belowY0 = Math.min(leadH + gap, height);
+  if (belowY0 >= height - 8) {
+    return squarifyPanel(nodes, 0, 0, width, height, gap);
   }
 
-  const rightX0 = Math.min(leadW + gap, width);
-  const bottomY0 = Math.min(leadH + gap, height);
+  // #2 directly under #1, same column width; height from its area share.
+  const secondRatio = Math.max(allocation.ratios.get(second.id) ?? second.value, 1e-6);
+  let secondH = (secondRatio * mapArea) / Math.max(colW, 1);
+  const maxSecondH = height - belowY0;
+  secondH = Math.max(24, Math.min(secondH, maxSecondH));
+  // If only a thin sliver would remain under #2 in the column, absorb it.
+  if (maxSecondH - secondH < 24) secondH = maxSecondH;
+
+  const secondY1 = belowY0 + secondH;
+  const secondBox: TreemapBox = {
+    id: second.id,
+    rank: second.rank,
+    x0: 0,
+    y0: belowY0,
+    x1: colW,
+    y1: secondY1,
+  };
+
+  const boxes: TreemapBox[] = [leaderBox, secondBox];
+  const stackBottom = secondY1;
+  const rightX0 = Math.min(colW + gap, width);
   const rightW = width - rightX0;
+  const bottomY0 = Math.min(stackBottom + gap, height);
   const bottomH = height - bottomY0;
-  const usableRight = rightW >= 24 && leadH >= 24;
-  const usableBottom = width >= 24 && bottomH >= 24;
+  const usableRight = rightW >= 24;
+  const usableBottom = bottomH >= 24;
+
+  if (!others.length) {
+    // Two tiles: keep #2 under #1; stretch both to full width only when there
+    // is no right/bottom room left to paint.
+    if (!usableRight && !usableBottom) {
+      leaderBox.x1 = width;
+      secondBox.x1 = width;
+    } else if (usableRight && !usableBottom) {
+      // Expand #2 downward already filled; give right strip to #2 by widening
+      // both? Prefer widening the stack to full width so #2 stays under #1.
+      leaderBox.x1 = width;
+      secondBox.x1 = width;
+      const topH = Math.min(leadH, Math.max(24, Math.round((RANK_1_AREA_RATIO * mapArea) / width)));
+      leaderBox.y1 = topH;
+      secondBox.y0 = Math.min(topH + gap, height);
+      secondBox.y1 = height;
+    } else if (!usableRight && usableBottom) {
+      secondBox.y1 = height;
+    } else {
+      // Room on the right: widen stack to avoid an empty right column when n=2.
+      leaderBox.x1 = width;
+      secondBox.x1 = width;
+      const topH = Math.min(leadH, Math.max(24, Math.round((RANK_1_AREA_RATIO * mapArea) / width)));
+      leaderBox.y1 = topH;
+      secondBox.y0 = Math.min(topH + gap, height);
+      secondBox.y1 = height;
+    }
+    return [leaderBox, secondBox];
+  }
 
   if (!usableRight && !usableBottom) {
     return squarifyPanel(nodes, 0, 0, width, height, gap);
   }
 
-  const restTotal = rest.reduce((sum, node) => sum + node.value, 0) || rest.length;
-  const rightArea = Math.max(rightW, 0) * Math.max(leadH, 0);
-  const bottomArea = Math.max(width, 0) * Math.max(bottomH, 0);
-
   let rightNodes: PanelNode[] = [];
   let bottomNodes: PanelNode[] = [];
 
   if (usableRight && usableBottom) {
+    const rightArea = rightW * Math.max(stackBottom, 1);
+    const bottomArea = width * bottomH;
+    const restTotal = others.reduce((sum, node) => sum + node.value, 0) || others.length;
     const targetRight = restTotal * (rightArea / Math.max(rightArea + bottomArea, 1));
     let acc = 0;
-    for (let i = 0; i < rest.length; i++) {
-      const node = rest[i]!;
-      const remainingAfter = rest.length - i - 1;
-      // Keep at least one tile for the bottom panel when possible.
+    for (let i = 0; i < others.length; i++) {
+      const node = others[i]!;
+      const remainingAfter = others.length - i - 1;
       if (rightNodes.length && (acc >= targetRight || remainingAfter === 0)) {
         bottomNodes.push(node);
       } else {
@@ -399,27 +453,24 @@ export function layoutHeatmapLeaves(
         acc += node.value;
       }
     }
-    if (!bottomNodes.length && rightNodes.length > 1) {
-      bottomNodes.push(rightNodes.pop()!);
-    }
-    if (!rightNodes.length && bottomNodes.length > 1) {
-      rightNodes.push(bottomNodes.shift()!);
-    }
+    if (!bottomNodes.length && rightNodes.length > 1) bottomNodes.push(rightNodes.pop()!);
+    if (!rightNodes.length && bottomNodes.length > 1) rightNodes.push(bottomNodes.shift()!);
   } else if (usableRight) {
-    rightNodes = rest;
+    rightNodes = others;
   } else {
-    bottomNodes = rest;
+    bottomNodes = others;
   }
 
-  const boxes: TreemapBox[] = [leaderBox];
   if (rightNodes.length && usableRight) {
-    boxes.push(...squarifyPanel(rightNodes, rightX0, 0, width, leadH, gap));
+    // Right panel aligns with the #1+#2 stack height when a bottom strip exists;
+    // otherwise it spans the full map height.
+    const rightY1 = bottomNodes.length && usableBottom ? stackBottom : height;
+    boxes.push(...squarifyPanel(rightNodes, rightX0, 0, width, rightY1, gap));
   }
   if (bottomNodes.length && usableBottom) {
     boxes.push(...squarifyPanel(bottomNodes, 0, bottomY0, width, height, gap));
   }
 
-  // If a panel was empty after partitioning, fall back so we never leave a hole.
   if (boxes.length < nodes.length) {
     return squarifyPanel(nodes, 0, 0, width, height, gap);
   }

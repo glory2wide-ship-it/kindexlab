@@ -53,6 +53,16 @@ async function main() {
   console.log(`종횡비 중앙값 ${medianAspect.toFixed(2)}  최악 ${worstAspect.toFixed(2)}`);
   console.log(`1위 종횡비 ${aspect(r1).toFixed(2)}`);
 
+  const r2 = painted.find((box) => box.rank === 2);
+  if (!r2) throw new Error("rank-2 tile missing");
+  if (r2.y0 + 1 < r1.y1) {
+    throw new Error(`rank-2 must sit below rank-1 (r1.y1=${r1.y1} r2.y0=${r2.y0})`);
+  }
+  if (r2.x1 <= r1.x0 || r2.x0 >= r1.x1) {
+    throw new Error("rank-2 should share the left column under rank-1");
+  }
+  console.log(`2위 위치 y0=${r2.y0.toFixed(0)} (1위 y1=${r1.y1.toFixed(0)})`);
+
   if (leadShare < 0.12 || leadShare > 0.16) {
     throw new Error(`rank-1 pixel share ${leadShare} should stay in the 12–15% band`);
   }
