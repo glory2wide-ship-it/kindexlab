@@ -8,8 +8,8 @@ import { attachTimeframeMetrics, heatForTimeframe } from "@/lib/timeframes";
 import { tickerChangeRate } from "@/lib/ticker/rank";
 import type { RankingEntity, RankingsPayload } from "@/lib/types";
 
-/** Tiles on the unified landing heatmap. */
-export const UNIFIED_HEATMAP_TILES = 15;
+/** Tiles on the unified landing heatmap (desktop shows all; mobile caps at 15). */
+export const UNIFIED_HEATMAP_TILES = 20;
 /** Rows shown on each desk summary card. */
 export const DESK_TOP_N = 3;
 
