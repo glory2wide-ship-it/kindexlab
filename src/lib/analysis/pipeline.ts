@@ -2,6 +2,7 @@ import { analysisPromptChannel } from "@/lib/analysis/briefing-boards";
 import { analysisLlmConfigured, BRIEFING_LLM } from "@/lib/analysis/chain/llm";
 import { analysisLogger } from "@/lib/analysis/log";
 import { isGeminiAnalysis } from "@/lib/analysis/quality";
+import { sanitizeCachedAnalysisArticle } from "@/lib/analysis/sanitize-cached";
 import {
   analysisTtlHours,
   isExpired,
@@ -205,20 +206,29 @@ export async function getOrCreateAnalysis(options: {
   const editionDate = options.editionDate ?? kstDateString();
   const cached = options.force ? undefined : await readAnalysis(options.entity.slug);
 
+  const serveCached = (entry: CachedAnalysis, cache: "hit" | "stale") => {
+    const sanitized = sanitizeCachedAnalysisArticle(entry, options.entity);
+    if (sanitized !== entry) {
+      // Persist repair to Supabase/disk so the next request does not re-sanitize.
+      void writeAnalysis(sanitized).catch(() => undefined);
+    }
+    return { entry: sanitized, cache };
+  };
+
   // Manual / Gemini imports keep a long TTL and must not be overwritten by the
   // on-demand chain when a visitor opens the detail page.
   if (cached?.provenance.model?.startsWith("import:")) {
-    return { entry: cached, cache: isExpired(cached) ? "stale" : "hit" };
+    return serveCached(cached, isExpired(cached) ? "stale" : "hit");
   }
 
   // Same name within the 3-day TTL: reuse Gemini columns only.
   if (cached && isGeminiAnalysis(cached) && !isExpired(cached)) {
-    return { entry: cached, cache: "hit" };
+    return serveCached(cached, "hit");
   }
 
   if (cached && isGeminiAnalysis(cached)) {
     void generateOnce({ ...options, editionDate }).catch(() => undefined);
-    return { entry: cached, cache: "stale" };
+    return serveCached(cached, "stale");
   }
 
   // Miss or stale template cache — queue Gemini, leave the slot empty for readers.
