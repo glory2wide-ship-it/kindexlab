@@ -264,7 +264,6 @@ async function fetchTicketlinkRank(): Promise<SourceResult> {
   const urls = [
     "https://www.ticketlink.co.kr/ranking/daily/genre/0001",
     "https://www.ticketlink.co.kr/ranking",
-    "https://www.ticketlink.co.kr/home/main",
   ];
   const errors: string[] = [];
   for (const url of urls) {

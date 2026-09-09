@@ -1,5 +1,5 @@
 import { kstDateString } from "@/lib/briefing/dates";
-import { fetchJson, nowIso } from "@/lib/ingestion/http";
+import { fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
 import type { ChartRow, SourceResult } from "@/lib/ingestion/types";
 
 const NAVER_WEEKS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun", "dailyPlus"] as const;
@@ -161,12 +161,26 @@ interface KakaoCard {
 
 export async function fetchKakaoWebtoonRanking(): Promise<SourceResult> {
   const urls = [
+    "https://webtoon.kakao.com/original-webtoon?tab=ranking",
+    "https://webtoon.kakao.com/?tab=ranking",
     "https://gateway-kw.kakao.com/decorator/v2/decorator/contents-home/ranking?tab=now",
     "https://gateway-kw.kakao.com/section/v1/pages/general-ranking",
   ];
   const errors: string[] = [];
   for (const url of urls) {
     try {
+      if (url.includes("webtoon.kakao.com")) {
+        const html = await fetchText(url, {
+          headers: {
+            Accept: "text/html,*/*",
+            Referer: "https://webtoon.kakao.com/",
+          },
+        });
+        const items = kakaoRowsFromNextData(html);
+        if (items.length) return result("kakao-webtoon", "카카오웹툰 랭킹", items.slice(0, 40));
+        errors.push("next-data empty");
+        continue;
+      }
       const data = await fetchJson<unknown>(url, {
         headers: {
           Accept: "application/json",
@@ -183,10 +197,22 @@ export async function fetchKakaoWebtoonRanking(): Promise<SourceResult> {
   return result("kakao-webtoon", "카카오웹툰 랭킹", [], errors.at(-1) ?? "empty");
 }
 
+function kakaoRowsFromNextData(html: string): ChartRow[] {
+  const match = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+  if (!match?.[1]) return [];
+  try {
+    return kakaoRows(JSON.parse(match[1]) as unknown);
+  } catch {
+    return [];
+  }
+}
+
 function kakaoRows(node: unknown): ChartRow[] {
   const found: ChartRow[] = [];
+  const skip =
+    /인기순|최신순|조회순|전체|여성|남성|FREE|EVENT|up|new|more|랭킹|웹툰|카카오/i;
   const visit = (value: unknown) => {
-    if (!value) return;
+    if (!value || found.length >= 60) return;
     if (Array.isArray(value)) {
       value.forEach(visit);
       return;
@@ -196,18 +222,29 @@ function kakaoRows(node: unknown): ChartRow[] {
     const title =
       (typeof record.title === "string" && record.title) ||
       (typeof record.contentTitle === "string" && record.contentTitle) ||
+      (typeof record.seriesTitle === "string" && record.seriesTitle) ||
       undefined;
-    if (title && title.length >= 1 && title.length <= 40) {
-      const thumb =
-        typeof record.thumbnail === "string"
-          ? record.thumbnail
-          : typeof record.imageUrl === "string"
-            ? record.imageUrl
-            : undefined;
+    const author =
+      typeof record.author === "string"
+        ? record.author
+        : Array.isArray(record.authors)
+          ? record.authors
+              .map((item) => (typeof item === "string" ? item : (item as { name?: string })?.name))
+              .filter(Boolean)
+              .join(", ")
+          : undefined;
+    const thumb =
+      typeof record.thumbnail === "string"
+        ? record.thumbnail
+        : typeof record.imageUrl === "string"
+          ? record.imageUrl
+          : undefined;
+    const looksLikeCard = Boolean(author || thumb || record.seoId || record.contentId || record.id);
+    if (title && title.length >= 2 && title.length <= 40 && looksLikeCard && !skip.test(title)) {
       found.push({
         rank: found.length + 1,
         title,
-        subtitle: typeof record.author === "string" ? record.author : undefined,
+        subtitle: author,
         metric: typeof record.score === "number" ? record.score : undefined,
         imageUrl: thumb,
         tags: ["카카오웹툰"],

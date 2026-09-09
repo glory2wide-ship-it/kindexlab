@@ -1,4 +1,5 @@
 import { fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
+import { parseNumber, stripTags } from "@/lib/ingestion/parse";
 import type { ChartRow, SourceResult } from "@/lib/ingestion/types";
 
 function result(id: string, label: string, items: ChartRow[], error?: string): SourceResult {
@@ -158,22 +159,67 @@ async function fetchYoutubeTrending(): Promise<SourceResult> {
 }
 
 async function fetchYoutubeHtmlFallback(): Promise<SourceResult> {
+  const urls = [
+    "https://www.youtube.com/gaming/trending?gl=KR&hl=ko",
+    "https://www.youtube.com/feed/trending?gl=KR&hl=ko",
+  ];
+  const errors: string[] = [];
+  for (const url of urls) {
+    try {
+      const html = await fetchText(url, {
+        headers: { Referer: "https://www.youtube.com/" },
+      });
+      const jsonMatch =
+        html.match(/ytInitialData\s*=\s*(\{[\s\S]+?\});\s*</) ??
+        html.match(/ytInitialData"\s*:\s*(\{[\s\S]+?\})\s*[,;]/);
+      if (!jsonMatch?.[1]) {
+        errors.push(`no ytInitialData ${url}`);
+        continue;
+      }
+      const data = JSON.parse(jsonMatch[1]) as unknown;
+      const items: ChartRow[] = [];
+      walkVideos(data, items, new Set());
+      if (items.length) {
+        return result("youtube-trending-html", "유튜브 인기 HTML", items.slice(0, 30));
+      }
+      errors.push(`empty ${url}`);
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : "html error");
+    }
+  }
+  return result("youtube-trending-html", "유튜브 인기 HTML", [], errors.at(-1) ?? "empty");
+}
+
+async function fetchKworbYoutubeTrending(): Promise<SourceResult> {
   try {
-    const html = await fetchText("https://www.youtube.com/feed/trending?gl=KR&hl=ko", {
-      headers: { Referer: "https://www.youtube.com/" },
+    const html = await fetchText("https://kworb.net/youtube/trending.html", {
+      headers: { Accept: "text/html,*/*" },
     });
-    const jsonMatch = html.match(/ytInitialData\s*=\s*(\{[\s\S]+?\});\s*</);
-    if (!jsonMatch?.[1]) return result("youtube-trending-html", "유튜브 인기 HTML", [], "no ytInitialData");
-    const data = JSON.parse(jsonMatch[1]) as unknown;
     const items: ChartRow[] = [];
-    walkVideos(data, items, new Set());
-    return result("youtube-trending-html", "유튜브 인기 HTML", items.slice(0, 30));
+    const seen = new Set<string>();
+    for (const row of html.matchAll(/<tr>([\s\S]*?)<\/tr>/gi)) {
+      const cells = [...row[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map((m) =>
+        stripTags(m[1] ?? "").trim(),
+      );
+      if (cells.length < 2) continue;
+      const rank = parseNumber(cells[0]);
+      const title = (cells.find((cell, index) => index > 0 && cell.length >= 3 && !/^\d[\d,.]*$/.test(cell)) ?? "").trim();
+      if (!rank || !title || rank > 40 || seen.has(title) || /^(pos|rank|#|views)$/i.test(title)) continue;
+      seen.add(title);
+      items.push({
+        rank,
+        title,
+        tags: ["유튜브", "kworb", "트렌딩"],
+        metric: Math.max(1, 41 - rank),
+      });
+    }
+    return result("youtube-trending-kworb", "유튜브 트렌딩(kworb)", items.slice(0, 30));
   } catch (error) {
     return result(
-      "youtube-trending-html",
-      "유튜브 인기 HTML",
+      "youtube-trending-kworb",
+      "유튜브 트렌딩(kworb)",
       [],
-      error instanceof Error ? error.message : "html error",
+      error instanceof Error ? error.message : "kworb error",
     );
   }
 }
@@ -181,13 +227,20 @@ async function fetchYoutubeHtmlFallback(): Promise<SourceResult> {
 export async function fetchShortsSources(): Promise<SourceResult[]> {
   const primary = await fetchYoutubeTrending();
   if (primary.ok) return [primary];
-  const fallback = await fetchYoutubeHtmlFallback();
-  if (fallback.ok) return [primary, fallback];
-  return [primary, fallback, result("shorts-watchlist", "숏폼 인기 관측", shortsFallbackRows())];
+  const htmlFallback = await fetchYoutubeHtmlFallback();
+  if (htmlFallback.ok) return [primary, htmlFallback];
+  const kworb = await fetchKworbYoutubeTrending();
+  if (kworb.ok) return [primary, htmlFallback, kworb];
+  return [
+    primary,
+    htmlFallback,
+    kworb,
+    result("shorts-watchlist", "숏폼 인기 관측", shortsFallbackRows()),
+  ];
 }
 
 export function pickPrimaryShorts(sources: SourceResult[]): SourceResult | undefined {
-  const order = ["youtube-trending", "youtube-trending-html", "shorts-watchlist"];
+  const order = ["youtube-trending", "youtube-trending-html", "youtube-trending-kworb", "shorts-watchlist"];
   return order.map((id) => sources.find((item) => item.id === id && item.ok)).find(Boolean);
 }
 

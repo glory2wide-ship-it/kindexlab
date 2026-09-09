@@ -1,5 +1,5 @@
 import { kstDateString } from "@/lib/briefing/dates";
-import { fetchFormJson, fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
+import { fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
 import { normalizeName } from "@/lib/ingestion/names";
 import { parseNumber, stripTags } from "@/lib/ingestion/parse";
 import type { ChartRow, SourceResult } from "@/lib/ingestion/types";
@@ -49,7 +49,7 @@ function pickString(record: Record<string, unknown>, keys: string[]): string | u
 function asRowsFromUnknown(data: unknown): ChartRow[] {
   const found: ChartRow[] = [];
   const visit = (node: unknown) => {
-    if (!node) return;
+    if (!node || found.length >= 50) return;
     if (Array.isArray(node)) {
       if (node.length > 0 && typeof node[0] === "object") {
         const parsed = node
@@ -63,17 +63,52 @@ function asRowsFromUnknown(data: unknown): ChartRow[] {
       node.forEach(visit);
       return;
     }
-    if (typeof node === "object") Object.values(node as Record<string, unknown>).forEach(visit);
+    if (typeof node === "object") {
+      const record = node as Record<string, unknown>;
+      // Circle returns List as {"0": row, "1": row, ...} rather than an array.
+      const numericKeys = Object.keys(record).filter((key) => /^\d+$/.test(key));
+      if (numericKeys.length >= 3) {
+        const parsed = numericKeys
+          .sort((a, b) => Number(a) - Number(b))
+          .map((key, index) => rowFromRecord(record[key] as Record<string, unknown>, index))
+          .filter((item): item is ChartRow => Boolean(item));
+        if (parsed.length >= 3) {
+          found.push(...parsed);
+          return;
+        }
+      }
+      Object.values(record).forEach(visit);
+    }
   };
   visit(data);
   return found.slice(0, 50);
 }
 
 function rowFromRecord(record: Record<string, unknown>, index: number): ChartRow | undefined {
-  const title = pickString(record, ["TITLE", "title", "SONG", "song", "ALBUM", "album", "name"]);
-  const artist = pickString(record, ["ARTIST", "artist", "SINGER", "singer", "artistName"]);
+  const title = pickString(record, [
+    "TITLE",
+    "title",
+    "SONG_NAME",
+    "SONG",
+    "song",
+    "ALBUM_NAME",
+    "ALBUM",
+    "album",
+    "name",
+  ]);
+  const artist = pickString(record, [
+    "ARTIST_NAME",
+    "ARTIST",
+    "artist",
+    "SINGER",
+    "singer",
+    "artistName",
+  ]);
   if (!title) return undefined;
-  const rank = parseNumber(pickString(record, ["RANK", "rank", "ranking", "NO", "no"])) ?? index + 1;
+  const rank =
+    parseNumber(
+      pickString(record, ["SERVICE_RANKING", "RANK", "rank", "ranking", "NO", "no", "ROW_NUM"]),
+    ) ?? index + 1;
   const previous =
     parseNumber(pickString(record, ["PRE_RANK", "preRank", "previousRank", "LAST_RANK"])) ??
     (parseNumber(pickString(record, ["RankChange", "rankChange"])) != null
@@ -89,20 +124,42 @@ function rowFromRecord(record: Record<string, unknown>, index: number): ChartRow
 }
 
 export async function fetchAppleMusicKr(): Promise<SourceResult> {
-  try {
-    const data = await fetchJson<{ feed?: { results?: { name: string; artistName: string }[] } }>(
-      "https://rss.applemarketingtools.com/api/v2/kr/music/most-played/50/songs.json",
-    );
-    const items = (data.feed?.results ?? []).map((row, index) => ({
-      rank: index + 1,
-      title: row.name,
-      subtitle: row.artistName,
-      tags: ["Apple Music KR"],
-    }));
-    return result("apple-music", "Apple Music 한국 차트", items);
-  } catch (error) {
-    return result("apple-music", "Apple Music 한국 차트", [], error instanceof Error ? error.message : "failed");
+  const urls = [
+    "https://rss.applemarketingtools.com/api/v2/kr/music/most-played/25/songs.json",
+    "https://rss.applemarketingtools.com/api/v2/kr/music/most-played/50/songs.json",
+    "https://itunes.apple.com/kr/rss/topsongs/limit=50/json",
+  ];
+  const errors: string[] = [];
+  for (const url of urls) {
+    try {
+      if (url.includes("itunes.apple.com")) {
+        const data = await fetchJson<{
+          feed?: { entry?: { "im:name": { label: string }; "im:artist": { label: string } }[] };
+        }>(url);
+        const items = (data.feed?.entry ?? []).map((row, index) => ({
+          rank: index + 1,
+          title: row["im:name"]?.label,
+          subtitle: row["im:artist"]?.label,
+          tags: ["Apple Music KR", "iTunes fallback"],
+        }));
+        if (items.length) return result("apple-music", "Apple Music 한국 차트", items);
+        errors.push("itunes empty");
+        continue;
+      }
+      const data = await fetchJson<{ feed?: { results?: { name: string; artistName: string }[] } }>(url);
+      const items = (data.feed?.results ?? []).map((row, index) => ({
+        rank: index + 1,
+        title: row.name,
+        subtitle: row.artistName,
+        tags: ["Apple Music KR"],
+      }));
+      if (items.length) return result("apple-music", "Apple Music 한국 차트", items);
+      errors.push("empty");
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : "failed");
+    }
   }
+  return result("apple-music", "Apple Music 한국 차트", [], errors.at(-1) ?? "failed");
 }
 
 export async function fetchItunesKr(): Promise<SourceResult> {
@@ -124,28 +181,45 @@ export async function fetchItunesKr(): Promise<SourceResult> {
 
 export async function fetchCircleDigital(): Promise<SourceResult> {
   const { year, week, month } = isoWeek();
+  const weekNums = [0, 1, 2, 3, 4].map((offset) =>
+    String(Math.max(1, Number(week) - offset)).padStart(2, "0"),
+  );
   const payloads = [
-    { nationGbn: "T", serviceGbn: "ALL", termGbn: "week", hitYear: year, targetTime: week, yearTime: "3" },
-    { nationGbn: "T", serviceGbn: "ALL", termGbn: "week", hitYear: year, targetTime: String(Math.max(1, Number(week) - 1)).padStart(2, "0"), yearTime: "3" },
-    { nationGbn: "T", serviceGbn: "ALL", termGbn: "month", hitYear: year, targetTime: month, yearTime: "3" },
+    ...weekNums.map((targetTime) => ({
+      nationGbn: "T",
+      serviceGbn: "ALL",
+      termGbn: "week",
+      hitYear: year,
+      targetTime,
+      yearTime: "3",
+      curUrl: "/page_chart/onoff.circle",
+    })),
+    {
+      nationGbn: "T",
+      serviceGbn: "ALL",
+      termGbn: "month",
+      hitYear: year,
+      targetTime: month,
+      yearTime: "3",
+      curUrl: "/page_chart/onoff.circle",
+    },
   ];
   const errors: string[] = [];
+  const circleHeaders = {
+    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+    Referer: "https://circlechart.kr/page_chart/onoff.circle",
+    Origin: "https://circlechart.kr",
+  };
   for (const body of payloads) {
     try {
-      const jsonPosted = await fetchJson<unknown>("https://circlechart.kr/data/api/chart/onoff", {
+      const data = await fetchJson<unknown>("https://circlechart.kr/data/api/chart/onoff", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        headers: circleHeaders,
+        body: new URLSearchParams(body).toString(),
       });
-      const fromJson = asRowsFromUnknown(jsonPosted);
-      if (fromJson.length) return result("circle", "써클차트 디지털", fromJson);
-    } catch (error) {
-      errors.push(error instanceof Error ? error.message : "json post failed");
-    }
-    try {
-      const data = await fetchFormJson<unknown>("https://circlechart.kr/data/api/chart/onoff", body);
       const items = asRowsFromUnknown(data);
       if (items.length) return result("circle", "써클차트 디지털", items);
+      errors.push(`empty week/month ${body.targetTime}`);
     } catch (error) {
       errors.push(error instanceof Error ? error.message : "failed");
     }
@@ -276,16 +350,18 @@ export async function fetchYoutubeMusicKr(): Promise<SourceResult> {
     for (const row of rows) {
       const chunk = row[1] ?? "";
       const cells = [...chunk.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => stripTags(m[1] ?? ""));
-      if (cells.length < 2) continue;
+      if (cells.length < 3) continue;
       const rank = parseNumber(cells[0]);
-      // Layout varies: often rank | video title | artist | views
-      const title = (cells[1] ?? "").trim();
-      const artist = (cells[2] ?? "").trim();
-      if (!rank || !title || rank > 50 || /^(pos|rank|#)$/i.test(title)) continue;
+      // Live layout: rank | Δ | "Artist - Title" | views | Δviews
+      const combined = (cells[2] ?? "").trim();
+      const split = combined.match(/^(.+?)\s+-\s+(.+)$/);
+      const artist = (split?.[1] ?? "").trim();
+      const title = (split?.[2] ?? combined).trim();
+      if (!rank || !title || rank > 50 || /^(pos|rank|#|=|\+?\d+)$/i.test(title)) continue;
       items.push({
         rank,
         title,
-        subtitle: artist && !/^\d/.test(artist) ? artist : undefined,
+        subtitle: artist || undefined,
         tags: ["YouTube Music KR"],
         metric: Math.max(1, 51 - rank),
       });
