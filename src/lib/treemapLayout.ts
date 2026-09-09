@@ -13,7 +13,7 @@ export interface TreemapBox {
 }
 
 /** Rank 1 always occupies this share of the map's area. */
-export const RANK_1_AREA_RATIO = 0.08;
+export const RANK_1_AREA_RATIO = 0.1;
 export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
 /**
  * Rank 2+ must stay strictly below the rank-1 share, otherwise the leader stops
@@ -62,9 +62,9 @@ function rankScoreWeight(
 function enforceDescending(leaderShare: number, rest: number[]): number[] {
   const out = [...rest];
   let previous = leaderShare;
-  // Keep a visible step-down, but allow the 92% remainder pool to fill when
-  // rank-1 is only 8% (a stricter 0.9 chain cannot reach 92%).
-  const step = 0.97;
+  // ~6% step-down per rank keeps 2 > 3 > … visible while still filling the
+  // remaining 90% pool at typical heatmap counts (15–20 tiles).
+  const step = 0.94;
   for (let i = 0; i < out.length; i++) {
     const ceiling = previous * step;
     if (out[i] >= ceiling) out[i] = ceiling;
@@ -73,7 +73,7 @@ function enforceDescending(leaderShare: number, rest: number[]): number[] {
   return out;
 }
 
-/** Split a pool by weight, capping every tile below the rank-1 8% share. */
+/** Split a pool by weight, capping every tile below the rank-1 10% share. */
 function allocatePool(weights: number[], pool = REMAINING_AREA_RATIO, cap = RANK_BELOW_CAP): number[] {
   const n = weights.length;
   if (!n) return [];
@@ -123,7 +123,7 @@ interface PanelNode {
   value: number;
 }
 
-/** Pixel box for rank 1: a full-height left column of exactly 8% of the map. */
+/** Pixel box for rank 1: a full-height left column of exactly 10% of the map. */
 export function rank1Rectangle(
   width: number,
   height: number,
@@ -327,9 +327,9 @@ function fillRestPool(leaderShare: number, rest: number[], pool: number): number
 }
 
 /**
- * Rank 1 is always 8% of the map. Rank 2+ share the other 92% by rank × index
- * score, each capped below 8% and strictly smaller than the tile above it.
- * Incoming order is the display rank (same as the list).
+ * Rank 1 is always 10% of the map. Rank 2+ share the other 90% by rank × index
+ * score, each capped below 10% and strictly smaller than the tile above it so
+ * box size steps down with rank. Incoming order is the display rank (same as the list).
  */
 export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSizeAllocation {
   const ratios = new Map<string, number>();
@@ -343,8 +343,9 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
   ratios.set(items[0].id, RANK_1_AREA_RATIO);
   const rest = items.slice(1);
   const packed = items.length >= 20;
-  const exponent = packed ? 1.02 : 1.08;
-  const cap = packed ? Math.min(0.07, RANK_BELOW_CAP) : RANK_1_AREA_RATIO * 0.88;
+  // Stronger Zipf decay → clearer size drop from 2 → 3 → … even when scores bunch.
+  const exponent = packed ? 1.12 : 1.2;
+  const cap = packed ? Math.min(0.09, RANK_BELOW_CAP) : RANK_1_AREA_RATIO * 0.88;
   const peak = Math.max(...rest.map((item) => safeScore(item.score)), 1);
   const weights = rest.map((item, index) =>
     rankScoreWeight(item.rank ?? index + 2, item.score, peak, exponent),

@@ -12,7 +12,7 @@ export function TreemapSkeleton() {
   return (
     <div className={TREEMAP_FRAME_CLASS} role="status" aria-label="히트맵을 불러오는 중">
       <div className="flex h-full w-full gap-0.5 p-0.5">
-        <div className="h-full w-[8%] animate-pulse rounded-sm bg-board/60" />
+        <div className="h-full w-[10%] animate-pulse rounded-sm bg-board/60" />
         <div className="grid h-full flex-1 grid-cols-4 grid-rows-5 gap-0.5">
           {Array.from({ length: 16 }, (_, index) => (
             <div

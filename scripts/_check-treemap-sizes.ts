@@ -52,8 +52,8 @@ async function main() {
   console.log(`픽셀 1위 ${(leadShare * 100).toFixed(2)}%  타일 ${painted.length}개`);
   console.log(`종횡비 중앙값 ${medianAspect.toFixed(2)}  최악 ${worstAspect.toFixed(2)}`);
 
-  if (leadShare < 0.05 || leadShare > 0.12) {
-    throw new Error(`rank-1 pixel share ${leadShare} should stay near 8%`);
+  if (leadShare < 0.07 || leadShare > 0.14) {
+    throw new Error(`rank-1 pixel share ${leadShare} should stay near 10%`);
   }
   const missing = Array.from({ length: 15 }, (_, i) => i + 1).filter(
     (rank) => !painted.some((box) => box.rank === rank && box.x1 - box.x0 >= 8 && box.y1 - box.y0 >= 8),
