@@ -357,10 +357,10 @@ export function ChannelMarketDesk({
 
   return (
     <>
-      <div className="order-1 -mx-4 md:order-2">
+      <div className="order-2 -mx-4">
         {tickerItems.length ? <TickerTape items={tickerItems} /> : null}
       </div>
-      <div className="order-3 space-y-3 md:order-3">
+      <div className="order-3 space-y-3">
         {boardRail}
         {deskKind === "headlines" ? (
           <HeadlineNewsRanking channel={channel} onItems={setHeadlineItems} />

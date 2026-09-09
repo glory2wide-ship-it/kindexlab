@@ -76,11 +76,11 @@ export function LiveMarketBoard({
 
   return (
     <>
-      {children ? <div className="order-3 md:order-3">{children}</div> : null}
-      <div className="order-1 -mx-4 md:order-2">
+      {children ? <div className="order-3">{children}</div> : null}
+      <div className="order-2 -mx-4">
         {boardItems.length ? <TickerTape items={boardItems} /> : null}
       </div>
-      <div className="order-3 space-y-3 md:order-3">
+      <div className="order-3 space-y-3">
         <MarketWorkspace
           key={channel ?? initialCategory}
           items={boardItems}

@@ -121,17 +121,16 @@ export default function HomePage() {
   return (
     <div className="space-y-8">
       {/*
-        Mobile order: ticker (1) → desktop-only header (2) → board (3).
-        Desktop keeps header → ticker → board.
+        Headcopy → ticker → board on every breakpoint.
         Category chips live in the root GlobalStickyMobileCategoryBar.
       */}
       <div className="flex flex-col gap-4">
-        <div className="order-2 md:order-1">
+        <div className="order-1">
           <LandingDeskHeader />
         </div>
         <Suspense
           fallback={
-            <div className="order-3 md:order-3">
+            <div className="order-3">
               <HeatmapSkeleton />
             </div>
           }

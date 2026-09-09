@@ -14,16 +14,8 @@ export function SiteHeader() {
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-accent font-sans text-[11px] font-bold tracking-tight text-black">
               KD
             </span>
-            <span className="min-w-0 leading-tight">
-              <span className="block truncate font-gothic text-sm font-semibold tracking-tight">
-                <span className="md:hidden">{SITE.name}</span>
-                <span className="hidden text-[22.46px] leading-tight md:inline">
-                  {SITE.nameKo} <span className="font-normal text-muted">/</span> {SITE.name}
-                </span>
-              </span>
-              <span className="mt-0.5 block truncate text-[10px] font-normal leading-none tracking-tight text-muted md:hidden">
-                실시간 관심이슈 랭킹
-              </span>
+            <span className="min-w-0 truncate font-gothic text-[18px] font-semibold leading-tight tracking-tight md:text-[22.46px]">
+              {SITE.nameKo} <span className="font-normal text-muted">/</span> {SITE.name}
             </span>
           </Link>
 

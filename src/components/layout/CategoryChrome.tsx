@@ -17,15 +17,12 @@ export function CategoryChrome({
 }) {
   return (
     <div className="flex flex-col gap-3 md:gap-4">
-      {/*
-        Mobile: ticker (children order-1) → header (order-2) → desk (order-3).
-        Section tabs are site-wide above <main>; only the board H1 stays here.
-      */}
-      <div className="order-2 space-y-2 md:order-0">
+      {/* Headcopy → ticker/desk body → footer */}
+      <div className="order-1 space-y-2">
         <CategoryDeskHeader channel={channel} />
       </div>
       {children}
-      <div className="order-3 md:order-3">
+      <div className="order-3">
         <ContentSlot placement="footer" adFormat="auto" />
       </div>
     </div>
