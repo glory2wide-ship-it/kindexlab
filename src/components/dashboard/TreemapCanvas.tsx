@@ -136,6 +136,7 @@ export function TreemapView({
           id: entity.id,
           rank: index + 1,
           score: scoreForTimeframe(entity, timeframe),
+          name: heatmapNameLines(entity).title || entity.name,
         })),
         width,
         height,
@@ -224,11 +225,12 @@ export function TreemapView({
            * Mobile rate: −10%. Desktop unchanged.
            */
           const layoutNameSize = label?.nameSize ?? 16;
-          const mobileTitleScale = !isMobileViewport ? 1 : rank <= 7 ? 0.9 : 1;
+          /** Mobile: slight dampen so dense 15-tile maps stay legible; size still tracks the box. */
+          const mobileTitleScale = !isMobileViewport ? 1 : 0.94;
           const nameFontSize = layoutNameSize * mobileTitleScale;
           const headlineFontSize = isMobileViewport
             ? headlineTitleSize(w, h) * mobileTitleScale
-            : headlineTitleSize(w, h) * (rank >= 8 && rank <= 15 ? 0.8 : 1);
+            : headlineTitleSize(w, h);
           const rateFontSize = (label?.rateSize ?? 16.5) * (isMobileViewport ? 0.9 : 1);
           const showTileRate = !omitRate && label?.showRate !== false;
           const href = entityHref(entity);

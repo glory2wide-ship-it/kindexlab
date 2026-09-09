@@ -1,10 +1,10 @@
-const MIN_NAME = 12;
-const MAX_NAME = 28;
-const MIN_RATE = 13;
+const MIN_NAME = 11;
+const MAX_NAME = 34;
+const MIN_RATE = 12;
 const MAX_RATE = 20;
 const MIN_ARTIST = 11;
 const MAX_ARTIST = 16;
-const NAME_LINE_HEIGHT = 1.22;
+const NAME_LINE_HEIGHT = 1.18;
 
 export interface TreemapLabelLayout {
   showName: boolean;
@@ -71,6 +71,46 @@ function fitWrappedSize(text: string, start: number, maxWidth: number, min: numb
   return next;
 }
 
+/**
+ * Grow toward the largest size that still fits width/height — Finviz fills the
+ * cell with ticker text rather than leaving a small caption in the middle.
+ */
+function maximizeReadableNameSize(
+  text: string,
+  maxWidth: number,
+  maxHeight: number,
+  min: number,
+  max: number,
+  maxLines: number,
+): { size: number; lines: number } {
+  let lo = min;
+  let hi = max;
+  let best = min;
+  let bestLines = 1;
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2;
+    const lines = Math.min(maxLines, wrapLineCount(text, mid, maxWidth));
+    const block = nameBlockHeight(mid, lines);
+    const fitsWidth = wrapLineCount(text, mid, maxWidth) <= maxLines;
+    const fitsHeight = block <= maxHeight + 0.5;
+    if (fitsWidth && fitsHeight) {
+      best = mid;
+      bestLines = lines;
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  // Final safety pass if binary search landed slightly over.
+  best = fitWrappedSize(text, best, maxWidth, min, maxLines);
+  bestLines = Math.min(maxLines, wrapLineCount(text, best, maxWidth));
+  while (best > min && nameBlockHeight(best, bestLines) > maxHeight) {
+    best -= 0.35;
+    bestLines = Math.min(maxLines, wrapLineCount(text, best, maxWidth));
+  }
+  return { size: best, lines: bestLines };
+}
+
 function ellipsize(text: string, fontSize: number, maxWidth: number): string {
   if (measureTextWidth(text, fontSize) <= maxWidth) return text;
   const ellipsis = "…";
@@ -87,13 +127,13 @@ function nameBlockHeight(size: number, lines: number): number {
 }
 
 function maxLinesForTile(width: number, height: number): number {
-  if (height >= 56 && width >= 64) return 2;
+  if (height >= 48 && width >= 56) return 2;
   return 1;
 }
 
 /**
- * Moderate type: scales with the tile, then wraps to two lines.
- * Does not fill leftover height — that made names huge and clipped.
+ * Finviz-style label: name size tracks tile area so the ticker stays readable.
+ * Larger boxes get larger type; small boxes shrink/ellipsize rather than clip.
  */
 export function layoutTreemapLabel(input: {
   width: number;
@@ -103,7 +143,7 @@ export function layoutTreemapLabel(input: {
   rate: string;
   typeLabel: string;
   rank?: string;
-  /** Display rank on the heatmap (1-based). Ranks 8–15 use 20% smaller names. */
+  /** Display rank on the heatmap (1-based). Reserved for callers; size follows the box. */
   heatmapRank?: number;
   /** Skip ±% so the name can use the full tile (mobile ranks 8+). */
   omitRate?: boolean;
@@ -111,31 +151,44 @@ export function layoutTreemapLabel(input: {
   metaLabel?: string;
   forceType?: boolean;
 }): TreemapLabelLayout | null {
-  const { width: w, height: h, y, name, rate, typeLabel, artist, heatmapRank, omitRate } = input;
+  const { width: w, height: h, y, name, rate, typeLabel, artist, omitRate } = input;
   if (w < 28 || h < 18) return null;
 
-  const innerW = Math.max(12, w - 20);
-  const innerH = Math.max(12, h - (h >= 90 ? 28 : 16));
+  const padX = w >= 100 ? 10 : 6;
+  const padY = h >= 90 ? 14 : h >= 56 ? 10 : 6;
+  const innerW = Math.max(12, w - padX * 2);
+  const innerH = Math.max(12, h - padY * 2);
   const maxLines = maxLinesForTile(w, h);
   const areaScale = Math.sqrt(Math.max(1, w * h));
-  const minName = w < 72 || h < 44 ? MIN_NAME : 14;
 
-  let nameSize = clamp(areaScale * 0.145, minName, MAX_NAME);
-  // Without a rate row, let the title claim more of the tile height.
-  nameSize = Math.min(nameSize, innerH * (omitRate ? 0.55 : 0.42), innerW * 0.28);
-  nameSize = fitWrappedSize(name, nameSize, innerW, minName, maxLines);
+  // Seed from tile geometry — Finviz names dominate the cell.
+  const minName = w < 64 || h < 40 ? MIN_NAME : w < 100 || h < 64 ? 13 : 15;
+  const maxName = clamp(areaScale * 0.22, 18, MAX_NAME);
+  let seed = clamp(areaScale * 0.185, minName, maxName);
+  seed = Math.min(seed, innerH * (omitRate ? 0.72 : 0.58), innerW * 0.42);
+
+  const showRate = !omitRate && h >= 32;
+  const rateBudget = showRate ? Math.min(MAX_RATE + 4, innerH * 0.22) : 0;
+  const nameBudget = Math.max(minName, innerH - (showRate ? rateBudget + 4 : 0));
+
+  const fitted = maximizeReadableNameSize(name, innerW, nameBudget, minName, maxName, maxLines);
+  let nameSize = fitted.size;
+  // Prefer the larger of seed vs fitted when fitted under-fills a big tile.
+  if (fitted.size < seed * 0.92) {
+    const retry = maximizeReadableNameSize(name, innerW, nameBudget, minName, maxName, maxLines);
+    nameSize = Math.max(fitted.size, Math.min(seed, retry.size));
+  }
 
   const nameLines = Math.min(maxLines, wrapLineCount(name, nameSize, innerW));
-  const showRate = !omitRate && h >= 30;
   const combine = Boolean(typeLabel) && w >= 88 && h >= 56;
   const rateText = combine ? `${rate}  ${typeLabel}` : rate;
-  let rateSize = showRate ? clamp(Math.min(nameSize * 0.58, 17), MIN_RATE, MAX_RATE) : 0;
+  let rateSize = showRate ? clamp(Math.min(nameSize * 0.55, 17), MIN_RATE, MAX_RATE) : 0;
   if (showRate) rateSize = fitSizeToWidth(rateText, rateSize, innerW, MIN_RATE);
 
   const showArtist = Boolean(artist) && w >= 72 && h >= 72;
   let artistSize = 0;
   if (showArtist && artist) {
-    artistSize = clamp(nameSize * 0.55, MIN_ARTIST, MAX_ARTIST);
+    artistSize = clamp(nameSize * 0.5, MIN_ARTIST, MAX_ARTIST);
     artistSize = fitSizeToWidth(artist, artistSize, innerW, MIN_ARTIST);
   }
 
@@ -163,9 +216,12 @@ export function layoutTreemapLabel(input: {
     }
   }
 
-  // Compact tiles with a rate row shrink mid-ranks; omitRate tiles keep full size.
-  if (!omitRate && heatmapRank != null && heatmapRank >= 8 && heatmapRank <= 15) {
-    nameSize *= 0.8;
+  // If the stack still overflows, shrink the name — keep it visible first.
+  while (stack > innerH && nameSize > minName) {
+    nameSize -= 0.4;
+    stack = nameH();
+    if (usedArtist) stack += gap + artistSize;
+    if (usedRate) stack += gap + rateSize;
   }
 
   const fittedLines = Math.min(maxLines, wrapLineCount(name, nameSize, innerW));
@@ -208,7 +264,7 @@ export function layoutTreemapLabel(input: {
     typeSize: Math.round(rateSize * 10) / 10,
     metaSize: Math.round(artistSize * 10) / 10,
     nameLines: fittedLines,
-    padX: 6,
+    padX,
     padY: 4,
     nameY: Math.round(nameY * 10) / 10,
     rateY: Math.round(rateY * 10) / 10,

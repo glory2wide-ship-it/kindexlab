@@ -24,6 +24,8 @@ export interface HeatmapSizeInput {
   id: string;
   score: number;
   rank?: number;
+  /** Optional display name — longer labels get a mild area boost for readability. */
+  name?: string;
 }
 
 export interface HeatmapSizeAllocation {
@@ -39,40 +41,55 @@ function safeScore(value: number): number {
 
 /** Milder Zipf on denser boards — Finviz market maps step down smoothly, not cliff-like. */
 function zipfExponent(count: number): number {
-  if (count >= 20) return 0.82;
-  if (count >= 15) return 0.88;
-  if (count >= 10) return 0.95;
-  return 1.05;
+  if (count >= 20) return 0.92;
+  if (count >= 15) return 0.98;
+  if (count >= 10) return 1.05;
+  return 1.15;
 }
 
 /** Soft max share for the largest tile so one box does not dominate the map. */
 function maxLeaderShare(count: number): number {
-  if (count <= 6) return 0.3;
-  if (count <= 10) return 0.24;
-  if (count <= 15) return 0.18;
-  return 0.15;
+  if (count <= 4) return 0.38;
+  if (count <= 6) return 0.34;
+  if (count <= 10) return 0.26;
+  if (count <= 15) return 0.2;
+  return 0.17;
 }
 
 /**
- * Finviz-like area weight: score-dominant with mild rank assist.
- * Higher index → larger tile; ranks still break ties when scores bunch.
+ * Rank-primary Finviz weight: higher rank → larger tile.
+ * Score only nudges neighbors; it must not let #3 outsize #2.
  */
 function finvizWeight(rank: number, score: number, peakScore: number, exponent: number): number {
   const place = Math.max(Math.round(rank), 1);
   const peak = Math.max(peakScore, 1);
   const scoreNorm = Math.min(1, safeScore(score) / peak);
-  // Concave score curve keeps mid-pack tiles readable (like market-cap maps).
-  const scorePart = Math.pow(0.12 + 0.88 * scoreNorm, 0.8);
+  // Mild assist (±12%) so ties break toward hotter names without flipping order.
+  const scoreAssist = 0.88 + 0.12 * Math.pow(scoreNorm, 0.85);
   const rankPart = 1 / place ** exponent;
-  return Math.max(scorePart * rankPart, 1e-6);
+  return Math.max(rankPart * scoreAssist, 1e-6);
 }
 
-/** Keep 1 ≥ 2 ≥ 3 … with a gentle step so neighbors stay visually related. */
-function enforceSoftDescending(values: number[]): number[] {
+/** Longer Korean names need a slightly larger cell so the title stays readable. */
+function readabilityAreaBoost(name?: string): number {
+  if (!name) return 1;
+  const chars = name.replace(/\s+/g, "").length;
+  if (chars <= 4) return 1;
+  if (chars <= 8) return 1.04;
+  if (chars <= 12) return 1.1;
+  if (chars <= 18) return 1.16;
+  return 1.22;
+}
+
+/**
+ * Strict 1 ≥ 2 ≥ 3 … with a visible step so each next rank is smaller on screen.
+ * `step` is the max share of the previous tile (e.g. 0.94 → at most 94% of #n-1).
+ */
+function enforceStrictDescending(values: number[], step = 0.94): number[] {
   const out = [...values];
   for (let i = 1; i < out.length; i++) {
-    const ceiling = out[i - 1]! * 0.98;
-    if (out[i]! > ceiling) out[i] = ceiling;
+    const ceiling = out[i - 1]! * step;
+    if (out[i]! > ceiling) out[i] = Math.max(ceiling, 1e-9);
   }
   return out;
 }
@@ -226,9 +243,10 @@ function squarifyPanel(
 
   const total = nodes.reduce((sum, node) => sum + Math.max(node.value, 0), 0) || nodes.length;
   const area = Math.max(w * h, 1);
+  // Preserve rank-area order — do not inflate tiny nodes enough to outsize mid ranks.
   const scaled = nodes.map((node) => ({
     ...node,
-    value: (Math.max(node.value, total / (nodes.length * 6)) / total) * area,
+    value: (Math.max(node.value, 1e-9) / total) * area,
   }));
   const scaleTotal = scaled.reduce((sum, node) => sum + node.value, 0) || 1;
   const normalized = scaled.map((node) => ({ ...node, value: (node.value / scaleTotal) * area }));
@@ -320,7 +338,7 @@ export function layoutHeatmapLeaves(
 
 /**
  * Continuous Finviz-like area shares for every tile (including rank 1).
- * Weights follow score with a mild Zipf assist, then soft descending + caps.
+ * Rank order is strict (1 > 2 > 3 …). Score and name length only nudge sizes.
  */
 export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSizeAllocation {
   const ratios = new Map<string, number>();
@@ -331,27 +349,46 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
     return { ratios, leftover: 0 };
   }
 
-  const n = items.length;
-  const peak = Math.max(...items.map((item) => safeScore(item.score)), 1);
+  // Work in display-rank order so descending enforcement matches on-screen #1…#N.
+  const ordered = items
+    .map((item, index) => ({ item, index, rank: item.rank ?? index + 1 }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index);
+
+  const n = ordered.length;
+  const peak = Math.max(...ordered.map(({ item }) => safeScore(item.score)), 1);
   const exponent = zipfExponent(n);
-  let values = items.map((item, index) =>
-    finvizWeight(item.rank ?? index + 1, item.score, peak, exponent),
+  let values = ordered.map(({ item, rank }) =>
+    finvizWeight(rank, item.score, peak, exponent) * readabilityAreaBoost(item.name),
   );
-  values = renormalize(enforceSoftDescending(renormalize(values)));
+  values = renormalize(enforceStrictDescending(renormalize(values), 0.94));
 
   const leaderCap = maxLeaderShare(n);
-  if (values[0]! > leaderCap) {
+  for (let guard = 0; guard < 8 && values[0]! > leaderCap + 1e-9; guard += 1) {
     const excess = values[0]! - leaderCap;
     values[0] = leaderCap;
     const restSum = values.slice(1).reduce((sum, value) => sum + value, 0) || 1;
     for (let i = 1; i < values.length; i++) {
       values[i] = values[i]! + excess * (values[i]! / restSum);
     }
-    values = renormalize(enforceSoftDescending(values));
+    values = renormalize(enforceStrictDescending(values, 0.94));
+  }
+  // Final hard clamp — never let #1 reclaim share above the cap.
+  if (values[0]! > leaderCap) {
+    const scale = (1 - leaderCap) / Math.max(1e-9, 1 - values[0]!);
+    const head = leaderCap;
+    const tail = values.slice(1).map((value) => value * scale);
+    values = [head, ...tail];
+    values = renormalize(enforceStrictDescending(values, 0.94));
+    values[0] = Math.min(values[0]!, leaderCap);
+    const used = values.reduce((sum, value) => sum + value, 0) || 1;
+    if (Math.abs(used - 1) > 1e-6) {
+      const fix = (1 - values[0]!) / Math.max(1e-9, used - values[0]!);
+      for (let i = 1; i < values.length; i++) values[i] = values[i]! * fix;
+    }
   }
 
-  // Tiny-tile floor so the tail stays clickable without flattening the leaders.
-  const minShare = Math.min(0.018, 0.55 / n);
+  // Tiny-tile floor so the tail stays clickable — then re-assert rank order.
+  const minShare = Math.min(0.016, 0.48 / n);
   let deficit = 0;
   for (let i = 0; i < values.length; i++) {
     if (values[i]! < minShare) {
@@ -360,15 +397,15 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
     }
   }
   if (deficit > 0) {
-    const head = values.slice(0, Math.max(1, Math.ceil(n * 0.35)));
-    const headSum = head.reduce((sum, value) => sum + value, 0) || 1;
-    for (let i = 0; i < head.length; i++) {
+    const headLen = Math.max(1, Math.ceil(n * 0.35));
+    const headSum = values.slice(0, headLen).reduce((sum, value) => sum + value, 0) || 1;
+    for (let i = 0; i < headLen; i++) {
       values[i] = Math.max(minShare, values[i]! - deficit * (values[i]! / headSum));
     }
-    values = renormalize(enforceSoftDescending(values));
   }
+  values = renormalize(enforceStrictDescending(values, 0.94));
 
-  items.forEach((item, index) => {
+  ordered.forEach(({ item }, index) => {
     ratios.set(item.id, values[index] ?? 0);
   });
   const used = [...ratios.values()].reduce((sum, value) => sum + value, 0);
