@@ -20,7 +20,8 @@ import {
   hasRepetitiveDeclarativeEndings,
   hasTemplateConnectiveSpam,
 } from "@/lib/editorial/rules";
-import type { BriefingArticle, BriefingSection } from "@/lib/types";
+import { detectHomonymSenseStitch } from "@/lib/boards/sense";
+import type { BriefingArticle, BriefingSection, RankingEntity } from "@/lib/types";
 
 function mapSections(
   sections: { heading: string; headingLevel: 2 | 3; paragraphs: string[] }[],
@@ -92,6 +93,7 @@ function passesBriefingQualityGate(plain: string): boolean {
   if (hasRepetitiveDeclarativeEndings(plain)) return false;
   if (hasGenericPadding(plain)) return false;
   if (hasLeakedMetadata(plain)) return false;
+  if (detectHomonymSenseStitch(plain)) return false;
   return true;
 }
 
@@ -112,6 +114,30 @@ export async function enrichBriefingWithAi(
 
   const keyword = options?.leadKeyword?.trim() || enrichmentLeadKeyword(draft);
   const logger = analysisLogger(`briefing:${draft.slug}`);
+  const relatedSlug = draft.relatedEntitySlugs?.find((item) => item.includes("--")) ?? draft.relatedEntitySlugs?.[0];
+  const senseEntity: RankingEntity | undefined = relatedSlug
+    ? {
+        id: relatedSlug,
+        slug: relatedSlug,
+        name: keyword.replace(/\s*이슈\s*$/u, "").trim() || keyword,
+        nameEn: "",
+        type: relatedSlug.includes("boxoffice") || relatedSlug.includes("movie")
+          ? "movie"
+          : relatedSlug.includes("webtoon")
+            ? "webtoon"
+            : "headline_news",
+        rank: 0,
+        previousRank: 0,
+        buzzScore: 0,
+        openScore: 0,
+        fluctuationRate: 0,
+        volume: 0,
+        sparkline: [],
+        history: [],
+        tags: [],
+        summary: "",
+      }
+    : undefined;
   const request = () =>
     generatePremiumArticle({
       keyword,
@@ -120,6 +146,7 @@ export async function enrichBriefingWithAi(
       deskId: draft.deskId,
       category: options?.categoryHint ?? enrichmentCategoryHint(draft),
       related: options?.relatedKeywords,
+      entity: senseEntity,
       preferredInternalLink: draft.internalLink,
       logger,
       timeoutMs: 360_000,
@@ -131,9 +158,11 @@ export async function enrichBriefingWithAi(
   let result = await request();
   if (!result.ok) {
     logger.warn("briefing-enrich-fail", { reason: result.reason, detail: result.detail });
-    // Full regenerate only for empty/malformed LLM shells — banned-copy is
-    // already error-patched inside generatePremiumArticle.
-    const retryable = result.reason === "llm-empty" || result.reason === "malformed";
+    // Full regenerate for empty shells and sense/homonym mismatches.
+    const retryable =
+      result.reason === "llm-empty" ||
+      result.reason === "malformed" ||
+      result.reason === "sense-mismatch";
     if (retryable) {
       await delay(8_000);
       result = await request();

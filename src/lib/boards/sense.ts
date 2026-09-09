@@ -97,11 +97,14 @@ const UNIT_PRESETS: Record<string, UnitSensePreset> = {
     promptRules: [
       "이 키워드는 영화 보드의 작품명입니다.",
       "동명의 책·공연·일반 명사·여행지로 바꾸지 마세요.",
+      "작품명과 글자가 같다는 이유만으로 구독자 이탈·채널 탈주·탈옥·도주 사건 등 다른 의미와 한 이야기로 묶지 마세요.",
+      "동음이의어·이중적 의미를 글의 축으로 삼아 '두 트렌드를 함께 읽는다'는 식의 구성은 금지합니다.",
     ],
     offSense: {
-      wrong: NATURE_LEAK,
-      required: /영화|개봉|박스오피스|관객|영화관|스크린|감독|배우/,
-      label: "movie-vs-nature",
+      wrong:
+        /구독자\s*(이탈|탈주|취소)|구독\s*취소|유튜브.{0,16}(이탈|탈주)|채널.{0,16}(이탈|탈주|구독\s*취소)|커뮤니티\s*이탈|구독\s*탈주/,
+      required: /영화|개봉|박스오피스|관객|영화관|스크린|감독|배우|OTT|극장/,
+      label: "movie-vs-churn-noun",
     },
   },
   공연: {
@@ -430,6 +433,34 @@ const KEYWORD_OVERRIDES: Record<string, Partial<UnitSensePreset>> = {
     searchQualifiers: ["웹툰", "만화", "원피스", "점프"],
     promptRules: ["원피스는 웹툰/만화 작품입니다. 의류 원피스 해석은 금지합니다."],
   },
+  "boxoffice-expectation::탈주": {
+    senseLabel: "영화 《탈주》",
+    searchQualifiers: ["영화 탈주", "탈주 영화", "이제훈", "구교환", "박스오피스"],
+    promptRules: [
+      "『탈주』는 영화 작품명입니다. 일반 명사 '탈주'(도주·탈옥)나 구독자 이탈·채널 탈주 의미로 쓰지 마세요.",
+      "영화 흥행·배우·OTT·TV 편성 맥락만 다루세요. 유튜버 구독 취소·지자체 채널 이탈과 한 이야기로 묶지 마세요.",
+      "동음이의어를 연결해 '미디어 트렌드로 읽는 탈주'처럼 두 의미를 종합하는 구성은 실패입니다.",
+    ],
+    offSense: {
+      wrong:
+        /구독자\s*(이탈|탈주|취소)|구독\s*취소|유튜브.{0,16}(이탈|탈주)|충주맨|먹방\s*유튜버|커뮤니티\s*이탈|구독\s*탈주|탈옥|북한이탈/,
+      required: /영화|개봉|박스오피스|관객|배우|감독|이제훈|구교환|OTT|극장|스크린/,
+      label: "talju-movie-vs-churn",
+    },
+  },
+  "realtime-webtoon-rank::캐슬": {
+    senseLabel: "웹툰 《캐슬》",
+    searchQualifiers: ["웹툰 캐슬", "캐슬 웹툰", "연재", "네이버웹툰"],
+    promptRules: [
+      "『캐슬』은 웹툰 작품명입니다. 동명의 아파트·부동산 단지 보도와 한 이야기로 묶지 마세요.",
+      "동음이의어를 언급해 두 분야를 나란히 읽는 구성은 금지합니다.",
+    ],
+    offSense: {
+      wrong: /아파트|부동산|분양|신고가|단지\s*보도|동명의\s*명칭을\s*쓰는\s*유명\s*아파트/,
+      required: /웹툰|연재|회차|작가|만화|네이버|카카오페이지|조회수|독자/,
+      label: "castle-webtoon-vs-realty",
+    },
+  },
 };
 
 /** Domains that should reject nature/season-dominated copy even without a unit offSense. */
@@ -466,7 +497,11 @@ const NATURE_REQUIRED_BY_DOMAIN: Partial<Record<SenseDomain, RegExp>> = {
 };
 
 function cleanKeyword(keyword: string): string {
-  return keyword.replace(/^\[[^\]]+\]\s*/, "").replace(/\s+/g, " ").trim();
+  return keyword
+    .replace(/^\[[^\]]+\]\s*/, "")
+    .replace(/\s*이슈\s*$/u, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function overrideKey(boardSlug: string, keyword: string): string {
@@ -583,9 +618,51 @@ function mismatchFromPair(
 }
 
 /**
+ * Reject articles that treat unrelated homonym senses as one story
+ * (e.g. movie 《탈주》 + YouTube subscriber churn, webtoon 《캐슬》 + apartment).
+ */
+export function detectHomonymSenseStitch(
+  plainText: string,
+  sense?: BoardSense | null,
+): string | null {
+  const text = plainText.replace(/\s+/g, " ");
+  if (!text.trim()) return null;
+
+  const metaStitch =
+    /이중적\s*의미|차별화된\s*의미로\s*등장|동음이의어로\s*인해|동음이의어나\s*유의어로|서로\s*다른\s*(산업\s*)?분야의\s*(뉴스|이슈).{0,48}(동시에|함께|복합)|동명의\s*(명칭|이름).{0,40}(보도|단지|이슈|아파트).{0,24}(함께|또한)|두\s*트렌드를\s*함께\s*읽|미디어\s*트렌드로\s*읽는.{0,12}이슈|문화\s*콘텐츠\s*명칭과\s*플랫폼\s*이탈/.test(
+      text,
+    );
+  if (metaStitch) return "homonym-stitch-meta";
+
+  const movieMarks = (text.match(/영화|개봉|박스오피스|관객|배우|감독|극장|스크린/g) ?? []).length;
+  const churnMarks = (
+    text.match(
+      /구독자\s*(이탈|탈주|취소)|구독\s*취소|유튜브.{0,20}(이탈|탈주)|채널.{0,20}(구독\s*취소|이탈)|구독\s*탈주|커뮤니티\s*이탈/g,
+    ) ?? []
+  ).length;
+  if ((sense?.domain === "movie" || /영화\s*[『“‘']?탈주|영화\s*탈주/.test(text)) && churnMarks >= 2 && movieMarks >= 1) {
+    return "homonym-stitch:movie-vs-churn";
+  }
+
+  const titleMarks = (text.match(/웹툰|연재|회차|만화|작품/g) ?? []).length;
+  const realtyMarks = (text.match(/아파트|부동산|분양|신고가|단지/g) ?? []).length;
+  if (
+    (sense?.domain === "general" || /웹툰/.test(text)) &&
+    realtyMarks >= 2 &&
+    titleMarks >= 1 &&
+    /동음|동명의/.test(text)
+  ) {
+    return "homonym-stitch:title-vs-realty";
+  }
+
+  return null;
+}
+
+/**
  * Detects board-sense mismatches:
  * 1) unit/keyword-specific offSense
  * 2) cross-domain nature leaks on non-nature boards
+ * 3) homonym-sense stitch framing
  */
 export function detectBoardSenseMismatch(input: {
   plainText: string;
@@ -594,8 +671,12 @@ export function detectBoardSenseMismatch(input: {
   keyword?: string | null;
 }): string | null {
   const sense = resolveBoardSense(input);
-  if (!sense) return null;
   const text = input.plainText.replace(/\s+/g, " ");
+
+  const stitch = detectHomonymSenseStitch(text, sense);
+  if (stitch) return stitch;
+
+  if (!sense) return null;
 
   if (sense.offSense) {
     const specific = mismatchFromPair(

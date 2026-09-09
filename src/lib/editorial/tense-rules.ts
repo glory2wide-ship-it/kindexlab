@@ -33,9 +33,10 @@ export function editionFreshnessRules(): string {
 export function prefixNoisePreventionRules(): string {
   return [
     "[이종 산업 키워드 혼선(노이즈) 방지]",
-    "1. 키워드 단독 매칭 오인 차단: 'FLOAT', 'Counter-', '몰아보기'처럼 다의어이거나 여러 산업·일상에서 독립적으로 쓰이는 단어가 실시간 검색어에 올랐을 때, 포털 검색 매칭만 믿고 무관한 이종 산업 소식(예: 패스트푸드 신메뉴 · 조선업 해상 데이터센터 · 미술 전시)을 하나의 맥락·인과로 묶지 마세요.",
+    "1. 키워드 단독 매칭 오인 차단: 'FLOAT', 'Counter-', '몰아보기', '탈주', '캐슬'처럼 다의어이거나 여러 산업·일상에서 독립적으로 쓰이는 단어가 실시간 검색어에 올랐을 때, 포털 검색 매칭만 믿고 무관한 이종 산업 소식(예: 영화 작품명과 유튜브 구독 이탈 · 웹툰과 아파트 단지 · 패스트푸드 신메뉴 · 조선업 해상 데이터센터)을 하나의 맥락·인과로 묶지 마세요.",
     "2. 독립 단락 분리 및 팩트 서술: 수집 소스 사이에 실질적 연계·인과가 확인되지 않으면 각 산업·사건별 팩트를 독립 단락으로 분리해 객관 요약만 하고, '그래서/때문에/이어져'로 억지 연결하지 마세요. 연계가 없으면 현상 분석(왜 검색·랭킹에 올랐는지)만 짧게 다루세요.",
     "3. 포커스 키워드의 실제 의미·채널 분야와 맞지 않는 기사는 본문·표·FAQ에 인용하지 마세요. 단순 알파벳·부분 문자열 일치만으로는 동일 주제로 취급하지 마세요.",
+    "4. 동음이의어 종합 금지: '이중적 의미', '차별화된 의미로 등장', '영화와 구독 탈주를 함께 읽는다'처럼 글자만 같은 두 의미를 한 편의 테마로 엮는 구성은 실패입니다. 보드·작품 의미 하나만 깊게 다루세요.",
   ].join("\n");
 }
 
@@ -175,6 +176,14 @@ function toHonorificSignalClause(raw: string): string {
   return text;
 }
 
+function subjectParticle(word: string): "이" | "가" {
+  const last = word.trim().slice(-1);
+  if (!last) return "이";
+  const code = last.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return "가";
+  return (code - 0xac00) % 28 === 0 ? "가" : "이";
+}
+
 function topicParticle(word: string): "은" | "는" {
   const last = word.trim().slice(-1);
   if (!last) return "은";
@@ -214,11 +223,13 @@ export function extractStoryBeatsFromSections(
 function pickStoryTheme(storyBeats: string[]): string {
   const blob = storyBeats.join(" ");
   const themes: Array<{ re: RegExp; label: string; weight: number }> = [
+    { re: /영화|개봉|박스오피스|관객|배우|감독|OTT|극장|스크린/, label: "영화 흥행·편성·플랫폼 일정", weight: 3 },
     { re: /관광|여행|휴양|웰니스|클러스터|특화|치유/, label: "관광·휴양 정책과 현장 일정", weight: 3 },
     { re: /신청|자격|모집|접수|지원금|쿠폰/, label: "신청·자격·모집 일정", weight: 2 },
     { re: /공연|축제|티켓|예매|관람/, label: "공연·축제 일정과 예매", weight: 2 },
     { re: /투자|주가|공시|실적/, label: "투자·공시 이슈", weight: 2 },
     { re: /채용|취업|자격증/, label: "채용·자격 이슈", weight: 2 },
+    { re: /웹툰|연재|회차|만화/, label: "웹툰 연재·독자 반응", weight: 3 },
   ];
   let best: { label: string; score: number } | undefined;
   for (const theme of themes) {
@@ -283,7 +294,7 @@ export function buildKindexFeatureParagraph(options: {
     sentences.push(toHonorificSignalClause(agencyHint));
   }
   sentences.push(
-    `앞서 본문의 ${theme}이 관심의 축인 만큼, 숫자만 나열하기보다 ‘보드 안 상대 위치’로 ${keyword} 흐름을 읽는 편이 맞습니다.`,
+    `앞서 본문의 ${theme}${subjectParticle(theme)} 관심의 축인 만큼, 숫자만 나열하기보다 ‘보드 안 상대 위치’로 ${keyword} 흐름을 읽는 편이 맞습니다.`,
   );
 
   return sentences
