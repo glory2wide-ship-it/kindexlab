@@ -197,11 +197,20 @@ export async function fetchMelonChart(): Promise<SourceResult> {
     const blocks = [...html.matchAll(/<tr[^>]*class="[^"]*lst(?:50|100)[^"]*"[\s\S]*?<\/tr>/gi)];
     for (const block of blocks) {
       const chunk = block[0];
-      const rank = parseNumber(chunk.match(/<span class="rank">\s*(\d+)\s*<\/span>/i)?.[1]);
-      const title = stripTags(chunk.match(/class="ellipsis rank01"[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i)?.[1] ?? "");
-      const artist = stripTags(chunk.match(/class="ellipsis rank02"[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i)?.[1] ?? "");
+      // Melon currently renders `class="rank "` (trailing space).
+      const rank =
+        parseNumber(chunk.match(/<span class="rank\s*">\s*(\d+)\s*<\/span>/i)?.[1]) ??
+        parseNumber(chunk.match(/class="rank[^"]*"[\s\S]*?>\s*(\d+)\s*</i)?.[1]);
+      const title = stripTags(
+        chunk.match(/class="ellipsis rank01"[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i)?.[1] ??
+          chunk.match(/<a[^>]*title="([^"]+?)\s*곡정보"/i)?.[1] ??
+          "",
+      );
+      const artist = stripTags(
+        chunk.match(/class="ellipsis rank02"[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i)?.[1] ?? "",
+      );
       if (rank && title) {
-        items.push({ rank, title, subtitle: artist, tags: ["멜론 차트"] });
+        items.push({ rank, title, subtitle: artist || undefined, tags: ["멜론 차트"] });
       }
     }
     return result("melon", "멜론 차트", items.slice(0, 50));

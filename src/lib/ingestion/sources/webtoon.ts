@@ -5,8 +5,10 @@ import type { ChartRow, SourceResult } from "@/lib/ingestion/types";
 const NAVER_WEEKS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun", "dailyPlus"] as const;
 
 const NAVER_HEADERS = {
-  Accept: "application/json",
+  Accept: "application/json,text/plain,*/*",
+  "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
   Referer: "https://comic.naver.com/webtoon/weekday",
+  Origin: "https://comic.naver.com",
 };
 
 interface NaverTitle {

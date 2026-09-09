@@ -1,6 +1,6 @@
 import { kstDateString } from "@/lib/briefing/dates";
 import { fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
-import { parseNumber, stripTags, tableRows } from "@/lib/ingestion/parse";
+import { parseNumber, parseRssItems, stripTags } from "@/lib/ingestion/parse";
 import { normalizeName } from "@/lib/ingestion/names";
 import type { ChartRow, SourceResult } from "@/lib/ingestion/types";
 
@@ -94,76 +94,89 @@ export async function fetchKobisDailyBoxOffice(): Promise<SourceResult> {
 }
 
 export async function fetchNaverMovieRank(): Promise<SourceResult> {
+  // Legacy /movie/sdb/rank/rmovie.naver now redirects to a generic search shell.
+  // Fall back to the Naver "박스오피스" search module's currently-showing list.
   try {
-    const html = await fetchText("https://movie.naver.com/movie/sdb/rank/rmovie.naver");
+    const html = await fetchText(
+      "https://search.naver.com/search.naver?where=nexearch&query=%EB%B0%95%EC%8A%A4%EC%98%A4%ED%94%BC%EC%8A%A4",
+      { headers: { Referer: "https://www.naver.com/" } },
+    );
     const items: ChartRow[] = [];
-    const rows = tableRows(html);
-    for (const cells of rows) {
-      const rank = parseNumber(cells.find((cell) => /^\d+$/.test(cell.trim())) ?? "");
-      const title =
-        cells.find((cell) => cell.length >= 1 && !/^\d+$/.test(cell) && !/^변동|순위|영화명/.test(cell)) ??
-        "";
-      if (!rank || !title || title.length > 80) continue;
+    const seen = new Set<string>();
+    const skip =
+      /이런 영화|박스오피스|기본정보|브라우저|숏텐츠|뉴스|위키|지식|검색|더보기|예매|무비차트|클래식/;
+    for (const match of html.matchAll(/class="[^"]*title[^"]*"[^>]*>([\s\S]{0,120}?)<\//gi)) {
+      const title = stripTags(match[1] ?? "")
+        .replace(/\s+/g, " ")
+        .replace(/\.{2,}$/, "")
+        .trim();
+      if (!title || title.length < 2 || title.length > 40 || skip.test(title)) continue;
+      const key = normalizeName(title);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
       items.push({
-        rank,
-        title: title.replace(/\s+/g, " ").trim(),
-        tags: ["네이버 영화", "박스오피스"],
-        metric: Math.max(1, 40 - rank),
+        rank: items.length + 1,
+        title,
+        tags: ["네이버 영화", "현재상영"],
+        metric: Math.max(1, 40 - items.length),
       });
       if (items.length >= 20) break;
     }
-    if (!items.length) {
-      const anchors = [
-        ...html.matchAll(/class="tit[0-9]"[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/gi),
-      ];
-      anchors.forEach((match, index) => {
-        const title = stripTags(match[1] ?? "");
-        if (!title) return;
-        items.push({
-          rank: index + 1,
-          title,
-          tags: ["네이버 영화", "박스오피스"],
-          metric: Math.max(1, 40 - index),
-        });
-      });
-    }
-    return result("naver-movie", "네이버 영화 랭킹", items.slice(0, 20));
+    return result("naver-movie", "네이버 영화 랭킹", items);
   } catch (error) {
     return result("naver-movie", "네이버 영화 랭킹", [], error instanceof Error ? error.message : "failed");
   }
 }
 
-/** CGV / portal buzz scrape — complements official box-office ranks. */
+/** Google News / portal movie buzz — fills gaps when KOBIS key is unavailable. */
 export async function fetchMaxmovieBoxOffice(): Promise<SourceResult> {
-  try {
-    const html = await fetchText("https://www.maxmovie.com/chart/movie");
-    const items: ChartRow[] = [];
-    const blocks = [
-      ...html.matchAll(
-        /class="[^"]*(?:rank|chart)[^"]*"[\s\S]{0,400}?<(?:a|strong|p)[^>]*>([\s\S]*?)<\/(?:a|strong|p)>/gi,
-      ),
-    ];
-    const titles = blocks
-      .map((match) => stripTags(match[1] ?? ""))
-      .filter((title) => title.length >= 1 && title.length <= 60 && !/순위|예매|관객|박스/.test(title));
-    const unique: string[] = [];
-    for (const title of titles) {
-      if (unique.some((item) => normalizeName(item) === normalizeName(title))) continue;
-      unique.push(title);
-      if (unique.length >= 15) break;
-    }
-    unique.forEach((title, index) => {
-      items.push({
-        rank: index + 1,
-        title,
-        tags: ["맥스무비", "예매"],
-        metric: Math.max(1, 30 - index),
+  const urls = [
+    "https://news.google.com/rss/search?q=%EB%B0%95%EC%8A%A4%EC%98%A4%ED%94%BC%EC%8A%A4%20OR%20%EC%98%88%EB%A7%A4%EC%9C%A8&hl=ko&gl=KR&ceid=KR:ko",
+    "https://news.google.com/rss/search?q=%EC%98%81%ED%99%94%20%ED%9D%A5%ED%96%89&hl=ko&gl=KR&ceid=KR:ko",
+  ];
+  const errors: string[] = [];
+  for (const url of urls) {
+    try {
+      const xml = await fetchText(url, {
+        headers: { Accept: "application/rss+xml,application/xml,text/xml,*/*" },
       });
-    });
-    return result("maxmovie", "맥스무비 영화 차트", items);
-  } catch (error) {
-    return result("maxmovie", "맥스무비 영화 차트", [], error instanceof Error ? error.message : "failed");
+      const items: ChartRow[] = [];
+      const seen = new Set<string>();
+      for (const item of parseRssItems(xml)) {
+        const quoted = [...item.title.matchAll(/[「『“"'‘]([^」』”"'’]{2,30})[」』”"'’]/g)].map(
+          (match) => match[1] ?? "",
+        );
+        const cleaned = item.title
+          .replace(/\s+[-–|]\s+[^-–|]+$/, "")
+          .replace(/^[\[【].*?[\]】]\s*/, "")
+          .trim();
+        const candidates = quoted.length
+          ? quoted
+          : [cleaned.replace(/[…]|(\.\.\.)/g, "").slice(0, 40)];
+        for (const raw of candidates) {
+          const title = stripTags(raw).replace(/\s+/g, " ").trim();
+          if (!title || title.length < 2 || /박스|관객|예매율|박스오피스|영화진흥/.test(title)) continue;
+          const key = normalizeName(title);
+          if (!key || seen.has(key)) continue;
+          seen.add(key);
+          items.push({
+            rank: items.length + 1,
+            title,
+            tags: ["영화 뉴스", "흥행"],
+            metric: Math.max(1, 30 - items.length),
+            subtitle: cleaned.slice(0, 80),
+          });
+          if (items.length >= 15) break;
+        }
+        if (items.length >= 15) break;
+      }
+      if (items.length) return result("maxmovie", "영화 흥행 뉴스", items);
+      errors.push("empty");
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : "failed");
+    }
   }
+  return result("maxmovie", "영화 흥행 뉴스", [], errors.at(-1) ?? "empty");
 }
 
 export async function fetchMovieSources(): Promise<SourceResult[]> {

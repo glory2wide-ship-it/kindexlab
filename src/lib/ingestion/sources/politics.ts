@@ -93,7 +93,10 @@ function cleanHeadline(title: string): string {
 async function fetchFeed(feed: (typeof FEEDS)[number]): Promise<SourceResult> {
   try {
     const xml = await fetchText(feed.url, {
-      headers: { Accept: "application/rss+xml,application/xml,text/xml" },
+      headers: {
+        Accept: "application/rss+xml,application/xml,text/xml,*/*",
+        Referer: "https://news.google.com/",
+      },
     });
     const counts = new Map<string, ChartRow>();
     let headlineRank = 0;

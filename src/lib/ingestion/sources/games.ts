@@ -128,20 +128,37 @@ interface SteamRank {
   peak_in_game?: number;
 }
 
+async function resolveSteamAppName(appid: number): Promise<string | undefined> {
+  try {
+    const data = await fetchJson<Record<string, { success?: boolean; data?: { name?: string } }>>(
+      `https://store.steampowered.com/api/appdetails?appids=${appid}&l=koreana`,
+      { headers: { Accept: "application/json" } },
+    );
+    const name = data[String(appid)]?.data?.name?.trim();
+    return name || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function fetchSteamCharts(): Promise<SourceResult> {
   try {
     const data = await fetchJson<{ response?: { ranks?: SteamRank[] } }>(
       "https://api.steampowered.com/ISteamChartsService/GetMostPlayedGames/v1/",
     );
     const ranks = data.response?.ranks ?? [];
-    const items = ranks.slice(0, 30).map((row, index) => {
+    const top = ranks.slice(0, 30);
+    const names = await Promise.all(
+      top.map(async (row) => (row.appid ? resolveSteamAppName(row.appid) : undefined)),
+    );
+    const items = top.map((row, index) => {
       const appid = row.appid;
       const rank = row.rank ?? index + 1;
       const peak = row.peak_in_game ?? 0;
       return {
         rank,
         previousRank: row.last_week_rank,
-        title: appid ? `Steam ${appid}` : `PC Game ${rank}`,
+        title: names[index] || (appid ? `Steam ${appid}` : `PC Game ${rank}`),
         metric: peak > 0 ? Math.log10(peak + 1) : undefined,
         volume: peak > 0 ? peak : undefined,
         measurement:

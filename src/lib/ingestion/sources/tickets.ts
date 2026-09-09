@@ -68,6 +68,7 @@ type InterparkRankRow = {
   displayGenre?: string;
   goodsCode?: string;
   imageUrl?: string;
+  posterImageUrl?: string;
 };
 
 type InterparkRankingPayload = Record<string, InterparkRankRow[] | undefined>;
@@ -78,10 +79,11 @@ const INTERPARK_HEADERS = {
   Origin: "https://tickets.interpark.com",
 };
 
-async function fetchInterparkGenre(rankingTypes: string, tag: string): Promise<ChartRow[]> {
-  const url = `https://tickets.interpark.com/contents/api/ranking?period=D&page=1&pageSize=50&rankingTypes=${encodeURIComponent(rankingTypes)}`;
-  const data = await fetchJson<InterparkRankingPayload>(url, { headers: INTERPARK_HEADERS });
-  const rows = Object.values(data).flatMap((group) => (Array.isArray(group) ? group : []));
+function rowsFromInterparkPayload(data: InterparkRankingPayload): InterparkRankRow[] {
+  return Object.values(data).flatMap((group) => (Array.isArray(group) ? group : []));
+}
+
+function chartRowsFromInterpark(rows: InterparkRankRow[], tag: string, rankingTypes: string): ChartRow[] {
   const items: ChartRow[] = [];
   for (const [index, row] of rows.entries()) {
     const title = cleanShowTitle(row.goodsName ?? "");
@@ -89,6 +91,7 @@ async function fetchInterparkGenre(rankingTypes: string, tag: string): Promise<C
     const rank = Number(row.rank) || index + 1;
     const prev = Number(row.previousRank);
     const pct = Number(row.bookingPercent);
+    const image = row.imageUrl ?? row.posterImageUrl;
     items.push({
       rank,
       previousRank: Number.isFinite(prev) && prev > 0 ? prev : undefined,
@@ -99,11 +102,61 @@ async function fetchInterparkGenre(rankingTypes: string, tag: string): Promise<C
       measurement: Number.isFinite(pct)
         ? { value: pct, unit: "%", label: "예매율", source: "NOL 인터파크" }
         : undefined,
-      imageUrl: row.imageUrl?.startsWith("//") ? `https:${row.imageUrl}` : row.imageUrl,
+      imageUrl: image?.startsWith("//") ? `https:${image}` : image,
       tags: ["NOL", "인터파크", tag, row.displayGenre ?? rankingTypes].filter(Boolean) as string[],
     });
   }
   return items;
+}
+
+/** Ranking page embeds escaped JSON (`\"goodsName\":\"…\"`) when the API enum rejects the client. */
+function parseInterparkRankingHtml(html: string, genreKey: string): InterparkRankRow[] {
+  const key = genreKey.toLowerCase();
+  const re = new RegExp(
+    `\\\\"${key}\\\\":\\[([\\s\\S]*?)\\](?=,\\\\"(?:musical|concert|drama|classic|exhibit|all)\\\\":|\\})`,
+    "i",
+  );
+  const block = html.match(re)?.[1] ?? html;
+  const rows: InterparkRankRow[] = [];
+  for (const match of block.matchAll(
+    /\\"goodsName\\":\\"((?:[^"\\]|\\.)*)\\"[\\s\\S]{0,420}?\\"placeName\\":\\"((?:[^"\\]|\\.)*)\\"[\\s\\S]{0,220}?\\"rank\\":(\d+)/g,
+  )) {
+    rows.push({
+      goodsName: match[1]?.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))).replace(/\\"/g, '"'),
+      placeName: match[2]?.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))).replace(/\\"/g, '"'),
+      rank: Number(match[3]),
+      displayGenre: undefined,
+    });
+    if (rows.length >= 50) break;
+  }
+  if (rows.length) return rows;
+  // Whole-page fallback: keep unique goodsName in document order.
+  const seen = new Set<string>();
+  for (const match of html.matchAll(/\\"goodsName\\":\\"((?:[^"\\]|\\.)*)\\"/g)) {
+    const goodsName = match[1]
+      ?.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+      .replace(/\\"/g, '"');
+    if (!goodsName || seen.has(goodsName)) continue;
+    seen.add(goodsName);
+    rows.push({ goodsName, rank: rows.length + 1 });
+    if (rows.length >= 40) break;
+  }
+  return rows;
+}
+
+async function fetchInterparkGenre(rankingTypes: string, tag: string): Promise<ChartRow[]> {
+  const url = `https://tickets.interpark.com/contents/api/ranking?period=D&page=1&pageSize=50&rankingTypes=${encodeURIComponent(rankingTypes)}`;
+  try {
+    const data = await fetchJson<InterparkRankingPayload>(url, { headers: INTERPARK_HEADERS });
+    const items = chartRowsFromInterpark(rowsFromInterparkPayload(data), tag, rankingTypes);
+    if (items.length) return items;
+  } catch {
+    // Fall through to HTML scrape.
+  }
+  const html = await fetchText("https://tickets.interpark.com/contents/ranking", {
+    headers: { Accept: "text/html,*/*", Referer: "https://tickets.interpark.com/" },
+  });
+  return chartRowsFromInterpark(parseInterparkRankingHtml(html, rankingTypes), tag, rankingTypes);
 }
 
 async function fetchInterparkSources(): Promise<SourceResult[]> {

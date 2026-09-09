@@ -61,7 +61,12 @@ export async function fetchGoogleNewsFeeds(): Promise<SourceResult[]> {
   return Promise.all(
     FEEDS.map(async (feed) => {
       try {
-        const xml = await fetchText(feed.url, { headers: { Accept: "application/rss+xml,application/xml,text/xml" } });
+        const xml = await fetchText(feed.url, {
+          headers: {
+            Accept: "application/rss+xml,application/xml,text/xml,*/*",
+            Referer: "https://news.google.com/",
+          },
+        });
         const counts = new Map<string, ChartRow>();
         for (const item of parseRssItems(xml)) {
           const names = extractNames(item.title).filter((name) => {
@@ -70,8 +75,15 @@ export async function fetchGoogleNewsFeeds(): Promise<SourceResult[]> {
             if (/\s/.test(name) && name.length > 8) return false;
             return name.length >= 2 && name.length <= 14;
           });
-          if (!names.length) continue;
-          for (const name of names) {
+          // Always keep at least the cleaned headline when catalog extraction is thin.
+          const fallback = cleanHeadline(item.title);
+          const keys = names.length
+            ? names
+            : fallback.length >= 6 && fallback.length <= 40
+              ? [fallback]
+              : [];
+          if (!keys.length) continue;
+          for (const name of keys) {
             const current = counts.get(name);
             counts.set(name, {
               rank: 0,
@@ -95,6 +107,7 @@ export async function fetchGoogleNewsFeeds(): Promise<SourceResult[]> {
 }
 
 export async function fetchGoogleTrendsKr(): Promise<SourceResult> {
+  // Daily RSS path 404s; the /trending/rss endpoint is the live one.
   const urls = [
     "https://trends.google.com/trending/rss?geo=KR",
     "https://trends.google.com/trends/trendingsearches/daily/rss?geo=KR",
@@ -102,7 +115,9 @@ export async function fetchGoogleTrendsKr(): Promise<SourceResult> {
   const errors: string[] = [];
   for (const url of urls) {
     try {
-      const xml = await fetchText(url, { headers: { Accept: "application/rss+xml,application/xml" } });
+      const xml = await fetchText(url, {
+        headers: { Accept: "application/rss+xml,application/xml,text/xml,*/*" },
+      });
       const items = parseRssItems(xml).map((item, index) => {
         const traffic = parseNumber(xml.match(new RegExp(`${item.title}[\\s\\S]{0,200}?([\\d,]+)\\+?`))?.[1]);
         return {
