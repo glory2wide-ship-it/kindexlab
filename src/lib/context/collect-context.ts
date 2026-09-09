@@ -1,5 +1,5 @@
 import {
-  boardSensePromptBlock,
+  filterSourcesByBoardSense,
   rankSourcesByBoardSense,
   resolveBoardSense,
 } from "@/lib/boards/sense";
@@ -268,7 +268,7 @@ export async function collectArticleContext(
 
   let sources = mergeSources(crawled, news.sources);
   sources = mergeSources(sources, signal.rssSources);
-  sources = rankSourcesByBoardSense(sources, sense);
+  sources = filterSourcesByBoardSense(rankSourcesByBoardSense(sources, sense), sense);
 
   const providers = [...news.providers, `strategy:${plan.strategy}`];
   let unwrapped = news.unwrapped;
@@ -380,6 +380,7 @@ export async function collectArticleContext(
   }
 
   const sparse = newsCount <= NEWS_FALLBACK_THRESHOLD || sources.length <= 3;
+  sources = filterSourcesByBoardSense(rankSourcesByBoardSense(sources, sense), sense);
   const intentHints = sparse
     ? buildSparseIntentHints({
         keyword,
@@ -398,9 +399,6 @@ export async function collectArticleContext(
 
   const score = computeContextScore(signal.facts, sources);
 
-  const senseHint = boardSensePromptBlock(sense);
-  const strategyHint = [plan.promptHint, senseHint].filter(Boolean).join("\n\n") || undefined;
-
   const ctx: CollectedContext = {
     keyword,
     sources,
@@ -414,7 +412,8 @@ export async function collectArticleContext(
     sourceTextChars: sourceSnippetChars(sources),
     tierCounts: tierCounts(sources),
     sourceStrategy: plan.strategy,
-    sourceStrategyHint: strategyHint,
+    // plan.promptHint already includes board-sense lock from resolveSourceStrategy.
+    sourceStrategyHint: plan.promptHint || undefined,
   };
   ctx.block = renderContextBlock(ctx, { asOfDate: options.asOfDate });
   return ctx;

@@ -1,5 +1,9 @@
 import { boardSlugFromEntitySlug } from "@/lib/analysis/briefing-boards";
-import { boardSenseQueries, resolveBoardSense } from "@/lib/boards/sense";
+import {
+  boardSensePromptBlock,
+  mergeSenseQueries,
+  resolveBoardSense,
+} from "@/lib/boards/sense";
 import { parseBracketLabel } from "@/lib/politics/labeled-rank";
 import type { RankingEntity } from "@/lib/types";
 
@@ -101,12 +105,14 @@ export function resolveSourceStrategy(input: {
     /지원금|지원사업|이용권|바우처|휴가지원|도약계좌|공모|보조금|장려금/i.test(keyword) ||
     /부$|청$|공단$|공사$|진흥원$|위원회$/.test(labeled?.org ?? "");
 
+  let plan: SourceStrategyPlan;
+
   if (
     YOUTUBE_BOARDS.has(boardSlug) ||
     type === "political_influencer" ||
     /TV$|연구소|시사탱크|공감TV|유튜브/i.test(keyword)
   ) {
-    return {
+    plan = {
       strategy: "youtube-community",
       queries: youtubeQueries(keyword),
       promptHint:
@@ -119,17 +125,15 @@ export function resolveSourceStrategy(input: {
       blogLimit: 6,
       webLimit: 6,
     };
-  }
-
-  // Travel place boards before generic "[기관] 사업" detection — regional labels
-  // like "[전남] 여수 밤바다" are places, not grant programs.
-  if (
+  } else if (
+    // Travel place boards before generic "[기관] 사업" detection — regional labels
+    // like "[전남] 여수 밤바다" are places, not grant programs.
     TRAVEL_UGC_BOARDS.has(boardSlug) ||
     ((channel === "travel" || boardSlug.startsWith("travel-") || boardSlug.includes("travel")) &&
       !GRANT_BOARDS.has(boardSlug) &&
       !looksLikeGrantCopy)
   ) {
-    return {
+    plan = {
       strategy: "travel-ugc",
       queries: travelQueries(labeled?.subject ? `${labeled.subject}` : keyword),
       promptHint:
@@ -142,15 +146,13 @@ export function resolveSourceStrategy(input: {
       blogLimit: 8,
       webLimit: 6,
     };
-  }
-
-  if (
+  } else if (
     GRANT_BOARDS.has(boardSlug) ||
     type === "subsidy" ||
     looksLikeGrantCopy ||
     (labeled && /부$|청$|공단$|공사$|진흥원$|위원회$/.test(labeled.org))
   ) {
-    return {
+    plan = {
       strategy: "official-grant",
       queries: grantQueries(keyword),
       promptHint:
@@ -163,10 +165,8 @@ export function resolveSourceStrategy(input: {
       blogLimit: 2,
       webLimit: 10,
     };
-  }
-
-  if (/여행|관광|맛집|핫플|밤바다|휴양림|축제|카페거리/i.test(keyword)) {
-    return {
+  } else if (/여행|관광|맛집|핫플|밤바다|휴양림|축제|카페거리/i.test(keyword)) {
+    plan = {
       strategy: "travel-ugc",
       queries: travelQueries(labeled?.subject || keyword),
       promptHint:
@@ -179,28 +179,31 @@ export function resolveSourceStrategy(input: {
       blogLimit: 8,
       webLimit: 6,
     };
+  } else {
+    plan = {
+      strategy: "news-first",
+      queries: [keyword],
+      promptHint: "",
+      prioritizeYoutube: false,
+      prioritizeBlog: false,
+      prioritizeOfficial: false,
+      allowUgc: false,
+      youtubeLimit: 5,
+      blogLimit: 5,
+      webLimit: 8,
+    };
   }
 
+  // Every strategy inherits board-sense query bias + prompt lock so homonyms
+  // (코스모스/원피스/애플 …) stay in the heatmap board's unit meaning.
   const sense = resolveBoardSense({
     boardSlug,
     entitySlug: input.entity?.slug,
     keyword,
   });
-  const senseQueries = boardSenseQueries(keyword, sense);
-  const senseHint = sense
-    ? `[보드 의미] ${sense.senseLabel} — 검색·인용도 이 의미에 맞춰 주세요. ${sense.promptRules[0] ?? ""}`
-    : "";
-
   return {
-    strategy: "news-first",
-    queries: senseQueries.length ? senseQueries : [keyword],
-    promptHint: senseHint,
-    prioritizeYoutube: false,
-    prioritizeBlog: false,
-    prioritizeOfficial: false,
-    allowUgc: false,
-    youtubeLimit: 5,
-    blogLimit: 5,
-    webLimit: 8,
+    ...plan,
+    queries: mergeSenseQueries(keyword, plan.queries, sense),
+    promptHint: [plan.promptHint, boardSensePromptBlock(sense)].filter(Boolean).join("\n\n"),
   };
 }
