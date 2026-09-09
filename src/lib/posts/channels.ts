@@ -196,8 +196,8 @@ export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
     "console_game",
   ],
   culture: ["culture_board"],
-  /** Travel desks are board-seeded; no dedicated ingest entity type yet. */
-  travel: [],
+  /** Travel board-tape rows use culture_board + sourceChannel=travel. */
+  travel: ["culture_board"],
   economy: ["economy_board"],
   politics: POLITICS_TYPE_ORDER.filter((type) => type !== "headline_news"),
 };
@@ -231,8 +231,11 @@ export function channelFromLead(lead: RankingEntity, slug?: string): PostChannel
 
 export function itemsForChannel(items: RankingEntity[], channel: PostChannel): RankingEntity[] {
   const types = CHANNEL_ENTITY_TYPES[channel];
-  if (!types.length) return [];
-  return items.filter((item) => types.includes(item.type));
+  return items.filter((item) => {
+    if (item.sourceChannel) return item.sourceChannel === channel;
+    if (!types.length) return false;
+    return types.includes(item.type);
+  });
 }
 
 export function inferPostChannel(

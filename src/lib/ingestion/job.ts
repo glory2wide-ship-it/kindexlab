@@ -107,6 +107,31 @@ export async function ingestLivePayload(options?: {
     usedPreviousSnapshot = true;
   }
 
+  // Economy/culture/travel desks have no crawler tape — fold LLM board rankings
+  // into the snapshot on an hourly window so heatmaps move with the same commit.
+  try {
+    const { mergeBoardTape, refreshBoardTape, shouldRefreshBoardsDuringIngest } = await import(
+      "@/lib/ingestion/board-tape"
+    );
+    if (shouldRefreshBoardsDuringIngest()) {
+      const { entities, refreshed } = await refreshBoardTape(2);
+      if (entities.length) {
+        items = mergeBoardTape(items, entities);
+        console.info("[kindexlab:ingest] board tape", refreshed.join(", "));
+      }
+    } else {
+      const prior = (previous?.items ?? []).filter(
+        (item) => item.type === "economy_board" || item.type === "culture_board",
+      );
+      if (prior.length) items = mergeBoardTape(items, prior);
+    }
+  } catch (error) {
+    console.warn(
+      "[kindexlab:ingest] board tape skipped",
+      error instanceof Error ? error.message : error,
+    );
+  }
+
   const snapshot: IngestSnapshot = {
     updatedAt,
     status: items.length ? "open" : "closed",
