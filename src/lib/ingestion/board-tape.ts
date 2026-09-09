@@ -1,19 +1,21 @@
 import { spawnSync } from "node:child_process";
+import {
+  entityTypeForBoardChannel,
+  heatmapGroupForBoardSlug,
+  isBoardDeskEntityType,
+} from "@/lib/boards/entity-type";
 import { pickStaleBoards, refreshBoard } from "@/lib/boards/pipeline";
 import { menuBoardsForChannel, isHeadlineNewsBoard } from "@/lib/boards/registry";
 import { readBoard } from "@/lib/boards/store";
 import type { CachedBoard } from "@/lib/boards/types";
 import type { PostChannel } from "@/lib/posts/types";
-import type { EntityType, RankingEntity } from "@/lib/types";
+import type { RankingEntity } from "@/lib/types";
 
 const BOARD_CHANNELS: PostChannel[] = ["economy", "culture", "travel"];
 
-function entityTypeForChannel(channel: PostChannel): EntityType {
-  return channel === "economy" ? "economy_board" : "culture_board";
-}
-
 function boardToEntities(entry: CachedBoard, channel: PostChannel): RankingEntity[] {
-  const type = entityTypeForChannel(channel);
+  const type = entityTypeForBoardChannel(entry.slug, channel);
+  const heatmapGroup = heatmapGroupForBoardSlug(entry.slug) ?? entry.title;
   return (entry.ranking ?? []).slice(0, 12).map((row, index) => ({
     id: `${entry.slug}--${index + 1}`,
     slug: `${entry.slug}--${(row.name ?? "item").replace(/\s+/g, "-").toLowerCase()}`,
@@ -28,24 +30,25 @@ function boardToEntities(entry: CachedBoard, channel: PostChannel): RankingEntit
     volume: Math.max(100, Math.round((row.score ?? 50) * 120)),
     sparkline: [],
     history: [],
-    tags: [entry.slug, channel],
+    tags: [entry.slug, channel, "board-tape"],
     summary: row.note?.slice(0, 96) ?? "",
     sourceChannel: channel,
-    heatmapGroup: entry.title,
+    heatmapGroup,
   }));
 }
 
 function isLiveChartRow(item: RankingEntity): boolean {
-  return (
-    (item.type === "economy_board" || item.type === "culture_board") &&
-    Boolean(item.tags?.includes("live-chart"))
-  );
+  return Boolean(item.tags?.includes("live-chart"));
 }
 
 function isBoardTapeRow(item: RankingEntity): boolean {
+  if (isLiveChartRow(item)) return false;
+  if (item.tags?.includes("board-tape")) return true;
+  if (!isBoardDeskEntityType(item.type) && item.type !== "subsidy") return false;
   return (
-    (item.type === "economy_board" || item.type === "culture_board") &&
-    !item.tags?.includes("live-chart")
+    item.sourceChannel === "economy" ||
+    item.sourceChannel === "culture" ||
+    item.sourceChannel === "travel"
   );
 }
 

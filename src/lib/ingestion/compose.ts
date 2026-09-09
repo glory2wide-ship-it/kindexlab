@@ -15,6 +15,7 @@ import {
   sparklineFromHistory,
   volumeFromRank,
 } from "@/lib/ingestion/score";
+import { entityTypeForBoardChannel, heatmapGroupForBoardSlug } from "@/lib/boards/entity-type";
 import { classifyBuzzType, fetchNaverNewsBoost } from "@/lib/ingestion/sources/buzz";
 import { pickBestsellerRows } from "@/lib/ingestion/sources/books";
 import { pickConsoleGames, pickMobileGames, pickPcGames } from "@/lib/ingestion/sources/games";
@@ -288,8 +289,9 @@ function toEntity(
 }
 
 /**
- * Culture/economy board chart rows (tickets, bestsellers) — keep board slug
- * prefix + live-chart tag so heatmap overlays can replace seed rankings.
+ * Culture/economy/travel board chart rows (tickets, bestsellers) — keep board
+ * slug prefix + live-chart tag + dedicated EntityType so heatmap overlays stay
+ * menu-scoped (공연 ≠ 도서 ≠ 전시).
  */
 function toBoardChartEntity(
   row: ChartRow,
@@ -301,7 +303,7 @@ function toBoardChartEntity(
 ): RankingEntity {
   const title = cleanTitle(row.title);
   const slug = `${boardSlug}--${slugify(title) || `item-${row.rank}`}`;
-  const type: EntityType = channel === "economy" ? "economy_board" : "culture_board";
+  const type = entityTypeForBoardChannel(boardSlug, channel);
   const span = listSize && listSize > 1 ? listSize : 30;
   const score = scoreFromRank(row.rank, span, 900, 1680);
   const history = previous?.scoreHistory?.[slug] ?? [];
@@ -675,13 +677,34 @@ export async function composeLiveSnapshot(
     ...pcRows.map((row, _i, all) => toEntity(row, "pc_game", previous, row.tags ?? [], false, all.length)),
     ...consoleRows.map((row, _i, all) => toEntity(row, "console_game", previous, row.tags ?? [], false, all.length)),
     ...performanceRows.map((row, _i, all) =>
-      toBoardChartEntity(row, "performance-ticket-ranking", "culture", "공연", previous, all.length),
+      toBoardChartEntity(
+        row,
+        "performance-ticket-ranking",
+        "culture",
+        heatmapGroupForBoardSlug("performance-ticket-ranking") ?? "공연",
+        previous,
+        all.length,
+      ),
     ),
     ...exhibitionRows.map((row, _i, all) =>
-      toBoardChartEntity(row, "exhibition-popup-ranking", "culture", "전시·팝업스토어", previous, all.length),
+      toBoardChartEntity(
+        row,
+        "exhibition-popup-ranking",
+        "culture",
+        heatmapGroupForBoardSlug("exhibition-popup-ranking") ?? "전시·팝업스토어",
+        previous,
+        all.length,
+      ),
     ),
     ...bookRows.map((row, _i, all) =>
-      toBoardChartEntity(row, "bestseller-surge-index", "culture", "도서·베스트셀러", previous, all.length),
+      toBoardChartEntity(
+        row,
+        "bestseller-surge-index",
+        "culture",
+        heatmapGroupForBoardSlug("bestseller-surge-index") ?? "도서·베스트셀러",
+        previous,
+        all.length,
+      ),
     ),
     ...buzzEntities,
     ...composePoliticsEntities(sources, previous),

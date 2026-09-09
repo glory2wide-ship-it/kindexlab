@@ -35,7 +35,7 @@ import {
   ensureCultureGrantRanking,
   isCultureGrantBoard,
 } from "@/lib/boards/culture-grants";
-import { entityTypeForBoardSlug } from "@/lib/boards/entity-type";
+import { entityTypeForBoardChannel, entityTypeForBoardSlug } from "@/lib/boards/entity-type";
 import { isHeadlineNewsBoard } from "@/lib/boards/registry";
 import {
   ensureTravelGrantRanking,
@@ -169,16 +169,7 @@ export function toHeatmapPayload(def: BoardDefinition, cached: CachedBoard): Hea
 }
 
 function entityTypeForBoard(board: HeatmapBoardPayload): EntityType {
-  return (
-    entityTypeForBoardSlug(board.slug) ??
-    (board.channel === "economy"
-      ? "economy_board"
-      : board.channel === "culture" || board.channel === "travel"
-        ? "culture_board"
-        : board.channel === "politics"
-          ? "political_search"
-          : "influencer")
-  );
+  return entityTypeForBoardChannel(board.slug, board.channel);
 }
 
 export function boardRowSlug(boardSlug: string, name: string): string {

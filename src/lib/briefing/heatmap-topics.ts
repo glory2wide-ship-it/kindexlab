@@ -73,6 +73,7 @@ export function passesChannelBoundary(item: RankingEntity, channel: PostChannel)
   if (channelFromEntityType(item.type) === channel) return true;
   const allowed = CHANNEL_ENTITY_TYPES[channel];
   if (allowed.length && allowed.includes(item.type)) return true;
+  // Legacy buckets before type split
   if (channel === "economy" && item.type === "economy_board") return true;
   if ((channel === "culture" || channel === "travel") && item.type === "culture_board") return true;
   // Board tiles always originate from this channel's menu when loaded via loadChannelHeatmapPayloads.

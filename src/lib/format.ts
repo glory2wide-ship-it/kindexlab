@@ -94,6 +94,25 @@ export const TYPE_LABEL: Record<string, string> = {
   subsidy: "지원금",
   economy_board: "경제 지수",
   culture_board: "문화/생활",
+  housing: "부동산",
+  finance_product: "금융",
+  stock_market: "주식",
+  overseas_stock: "해외 주식",
+  commodities_fx: "원자재·환율",
+  inflation: "소비자 물가",
+  startup_franchise: "창업·프랜차이즈",
+  economy_issue: "이슈 키워드",
+  performance: "공연",
+  exhibition: "전시·팝업스토어",
+  book: "도서·베스트셀러",
+  health_info: "건강정보",
+  recipe: "요리 레시피",
+  car_review: "자동차",
+  culture_issue: "이슈 키워드",
+  travel_spot: "국내 여행",
+  overseas_travel: "해외 여행",
+  outing: "주말 나들이",
+  restaurant: "음식/맛집",
 };
 
 export function scoreLabel(type: string): string {
@@ -115,6 +134,22 @@ export function scoreLabel(type: string): string {
   if (type === "subsidy") return "지원금 지수";
   if (type === "economy_board") return "경제 지수";
   if (type === "culture_board") return "문화/생활 지수";
+  if (type === "housing") return "부동산 지수";
+  if (type === "finance_product") return "금융 지수";
+  if (type === "stock_market" || type === "overseas_stock") return "주식 지수";
+  if (type === "commodities_fx") return "원자재·환율 지수";
+  if (type === "inflation") return "물가 지수";
+  if (type === "startup_franchise") return "창업 지수";
+  if (type === "economy_issue" || type === "culture_issue") return "이슈 지수";
+  if (type === "performance") return "공연 지수";
+  if (type === "exhibition") return "전시 지수";
+  if (type === "book") return "도서 지수";
+  if (type === "health_info") return "건강 지수";
+  if (type === "recipe") return "레시피 지수";
+  if (type === "car_review") return "자동차 지수";
+  if (type === "travel_spot" || type === "overseas_travel") return "여행 지수";
+  if (type === "outing") return "나들이 지수";
+  if (type === "restaurant") return "맛집 지수";
   return "버즈 점수";
 }
 

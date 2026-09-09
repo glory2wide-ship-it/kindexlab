@@ -1,5 +1,10 @@
 import type { CategoryId, EntityType, RankingEntity } from "@/lib/types";
 import { boardSlugFromEntitySlug } from "@/lib/analysis/briefing-boards";
+import {
+  CULTURE_ENTITY_TYPES,
+  ECONOMY_ENTITY_TYPES,
+  TRAVEL_ENTITY_TYPES,
+} from "@/lib/boards/entity-type";
 import { getBoard } from "@/lib/boards/registry";
 import type { GeneratedPost, PostChannel } from "@/lib/posts/types";
 import { isPoliticsEntityType, POLITICS_TYPE_ORDER } from "@/lib/politics/types";
@@ -179,6 +184,8 @@ export function resolveSiteSection(pathname: string): ChannelSectionId {
  *
  * Keep this aligned with visible category submenu boards only
  * (엔터 = 음원·팬덤·방송·웹툰·게임·영화·유튜버 — retired 숏폼 밈 excluded).
+ * Economy/culture/travel use split types (housing, book, performance, …)
+ * so each menu board owns its live tape — same pattern as entertainment.
  */
 export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
   entertainment: [
@@ -194,18 +201,19 @@ export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
     "pc_game",
     "console_game",
   ],
-  culture: ["culture_board"],
-  /** Travel board-tape rows use culture_board + sourceChannel=travel. */
-  travel: ["culture_board"],
-  economy: ["economy_board"],
+  culture: CULTURE_ENTITY_TYPES,
+  travel: TRAVEL_ENTITY_TYPES,
+  economy: ECONOMY_ENTITY_TYPES,
   politics: POLITICS_TYPE_ORDER.filter((type) => type !== "headline_news"),
 };
 
 export function channelFromEntityType(type: EntityType): PostChannel {
-  if (type === "economy_board") return "economy";
-  if (type === "culture_board" || CHANNEL_ENTITY_TYPES.culture.includes(type)) return "culture";
-  if (type === "headline_news") return "politics";
+  // Politics first — `subsidy` is shared with economy/travel grant boards and
+  // must not pin politics programmes onto the economy desk.
   if (isPoliticsEntityType(type)) return "politics";
+  if (CHANNEL_ENTITY_TYPES.economy.includes(type) || type === "economy_board") return "economy";
+  if (CHANNEL_ENTITY_TYPES.travel.includes(type)) return "travel";
+  if (CHANNEL_ENTITY_TYPES.culture.includes(type) || type === "culture_board") return "culture";
   return "entertainment";
 }
 

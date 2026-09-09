@@ -23,7 +23,29 @@ export type EntityType =
   | "local_policy"
   | "subsidy"
   | "economy_board"
-  | "culture_board";
+  | "culture_board"
+  /** Economy menus */
+  | "housing"
+  | "finance_product"
+  | "stock_market"
+  | "overseas_stock"
+  | "commodities_fx"
+  | "inflation"
+  | "startup_franchise"
+  | "economy_issue"
+  /** Culture menus */
+  | "performance"
+  | "exhibition"
+  | "book"
+  | "health_info"
+  | "recipe"
+  | "car_review"
+  | "culture_issue"
+  /** Travel menus */
+  | "travel_spot"
+  | "overseas_travel"
+  | "outing"
+  | "restaurant";
 
 export type CategoryId = "all" | EntityType;
 

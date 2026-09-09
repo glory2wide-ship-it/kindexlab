@@ -137,8 +137,11 @@ export async function ingestLivePayload(options?: {
     } else {
       const prior = (previous?.items ?? []).filter(
         (item) =>
-          (item.type === "economy_board" || item.type === "culture_board") &&
-          !item.tags?.includes("live-chart"),
+          item.tags?.includes("board-tape") ||
+          ((item.sourceChannel === "economy" ||
+            item.sourceChannel === "culture" ||
+            item.sourceChannel === "travel") &&
+            !item.tags?.includes("live-chart")),
       );
       if (prior.length) items = mergeBoardTape(items, prior);
     }
