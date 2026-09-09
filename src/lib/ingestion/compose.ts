@@ -16,10 +16,15 @@ import {
   volumeFromRank,
 } from "@/lib/ingestion/score";
 import { classifyBuzzType, fetchNaverNewsBoost } from "@/lib/ingestion/sources/buzz";
+import { pickBestsellerRows } from "@/lib/ingestion/sources/books";
 import { pickConsoleGames, pickMobileGames, pickPcGames } from "@/lib/ingestion/sources/games";
 import { pickPrimaryMusic } from "@/lib/ingestion/sources/music";
 import { pickPrimaryMovie } from "@/lib/ingestion/sources/movies";
 import { pickPrimaryShorts } from "@/lib/ingestion/sources/shorts";
+import {
+  pickExhibitionTicketRows,
+  pickPerformanceTicketRows,
+} from "@/lib/ingestion/sources/tickets";
 import { pickPrimaryWebtoon } from "@/lib/ingestion/sources/webtoon";
 import { attachTimeframeMetrics, changeForEntity, volumeForTimeframe } from "@/lib/timeframes";
 import type {
@@ -282,6 +287,55 @@ function toEntity(
   };
 }
 
+/**
+ * Culture/economy board chart rows (tickets, bestsellers) — keep board slug
+ * prefix + live-chart tag so heatmap overlays can replace seed rankings.
+ */
+function toBoardChartEntity(
+  row: ChartRow,
+  boardSlug: string,
+  channel: "culture" | "travel" | "economy",
+  heatmapGroup: string,
+  previous: IngestSnapshot | undefined,
+  listSize?: number,
+): RankingEntity {
+  const title = cleanTitle(row.title);
+  const slug = `${boardSlug}--${slugify(title) || `item-${row.rank}`}`;
+  const type: EntityType = channel === "economy" ? "economy_board" : "culture_board";
+  const span = listSize && listSize > 1 ? listSize : 30;
+  const score = scoreFromRank(row.rank, span, 900, 1680);
+  const history = previous?.scoreHistory?.[slug] ?? [];
+  const previousScore = history.at(-1);
+  const fluctuationRate = row.previousRank
+    ? Number((((row.previousRank - row.rank) / Math.max(row.previousRank, 1)) * 12).toFixed(2))
+    : changeFromScores(score, previousScore);
+  const sparkline = sparklineFromHistory(history, score);
+  const volume = row.volume ?? volumeFromRank(row.rank, 85_000);
+  const tags = [...new Set([boardSlug, "live-chart", ...(row.tags ?? [])])].slice(0, 5);
+  return {
+    id: `live-${slug}`,
+    slug,
+    name: title,
+    nameEn: row.subtitle && row.subtitle.length <= 32 ? row.subtitle : title,
+    type,
+    rank: row.rank,
+    previousRank: row.previousRank ?? row.rank,
+    buzzScore: score,
+    openScore: previousScore ?? Number((score / (1 + fluctuationRate / 100)).toFixed(2)),
+    fluctuationRate,
+    volume,
+    sparkline,
+    history: historyPoints(sparkline),
+    tags,
+    summary: `${title}은(는) ${heatmapGroup} 실시간 ${row.rank}위입니다.`,
+    analysis: `${title}은(는) 공개 티켓몰·서점 랭킹을 합산한 ${heatmapGroup} 실시간 스냅샷입니다.`,
+    products: defaultProducts(title, type),
+    sourceChannel: channel,
+    heatmapGroup,
+    imageUrl: row.imageUrl,
+  };
+}
+
 interface PromotedRow {
   row: ChartRow;
   type: EntityType;
@@ -520,6 +574,9 @@ export async function composeLiveSnapshot(
     30,
   );
   const consoleRows = takeTop(pickConsoleGames(sources), 24);
+  const performanceRows = takeTop(pickPerformanceTicketRows(sources), 30);
+  const exhibitionRows = takeTop(pickExhibitionTicketRows(sources), 24);
+  const bookRows = takeTop(pickBestsellerRows(sources), 30);
 
   const terrestrial = byId("nielsen-terrestrial")?.items ?? [];
   const cable = byId("nielsen-cable")?.items ?? [];
@@ -617,6 +674,15 @@ export async function composeLiveSnapshot(
     ...mobileRows.map((row, _i, all) => toEntity(row, "mobile_game", previous, row.tags ?? [], false, all.length)),
     ...pcRows.map((row, _i, all) => toEntity(row, "pc_game", previous, row.tags ?? [], false, all.length)),
     ...consoleRows.map((row, _i, all) => toEntity(row, "console_game", previous, row.tags ?? [], false, all.length)),
+    ...performanceRows.map((row, _i, all) =>
+      toBoardChartEntity(row, "performance-ticket-ranking", "culture", "공연", previous, all.length),
+    ),
+    ...exhibitionRows.map((row, _i, all) =>
+      toBoardChartEntity(row, "exhibition-popup-ranking", "culture", "전시·팝업스토어", previous, all.length),
+    ),
+    ...bookRows.map((row, _i, all) =>
+      toBoardChartEntity(row, "bestseller-surge-index", "culture", "도서·베스트셀러", previous, all.length),
+    ),
     ...buzzEntities,
     ...composePoliticsEntities(sources, previous),
   ]);

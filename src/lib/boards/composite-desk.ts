@@ -94,13 +94,20 @@ async function boardPool(channel: PostChannel): Promise<RankingEntity[]> {
 }
 
 /**
- * Cross-category heatmap pool — prefers the ingest snapshot when a channel has
- * live rows, otherwise falls back to board seeds (with per-board live overlays).
+ * Cross-category heatmap pool — board-first for economy/culture/travel so the
+ * landing desk matches each channel's menu boards. Other desks prefer live
+ * ingest once enough rows exist.
  */
 async function channelHeatmapPool(
   channel: PostChannel,
   market?: RankingsPayload,
 ): Promise<RankingEntity[]> {
+  const boardFirst =
+    channel === "economy" || channel === "culture" || channel === "travel";
+  if (boardFirst) {
+    const fromBoards = await boardPool(channel);
+    if (fromBoards.length) return fromBoards;
+  }
   const live = market
     ? withoutHeadlineHeatmapItems(itemsForChannel(market.items, channel)).map(attachTimeframeMetrics)
     : [];

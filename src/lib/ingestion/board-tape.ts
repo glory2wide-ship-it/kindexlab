@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { pickStaleBoards, refreshBoard } from "@/lib/boards/pipeline";
 import { menuBoardsForChannel, isHeadlineNewsBoard } from "@/lib/boards/registry";
+import { readBoard } from "@/lib/boards/store";
 import type { CachedBoard } from "@/lib/boards/types";
 import type { PostChannel } from "@/lib/posts/types";
 import type { EntityType, RankingEntity } from "@/lib/types";
@@ -34,6 +35,20 @@ function boardToEntities(entry: CachedBoard, channel: PostChannel): RankingEntit
   }));
 }
 
+function isLiveChartRow(item: RankingEntity): boolean {
+  return (
+    (item.type === "economy_board" || item.type === "culture_board") &&
+    Boolean(item.tags?.includes("live-chart"))
+  );
+}
+
+function isBoardTapeRow(item: RankingEntity): boolean {
+  return (
+    (item.type === "economy_board" || item.type === "culture_board") &&
+    !item.tags?.includes("live-chart")
+  );
+}
+
 /** UTC minute window where ingest also rebuilds a couple of seed-only boards. */
 export function shouldRefreshBoardsDuringIngest(now = new Date()): boolean {
   if (process.env.BOARDS_REFRESH_EVERY_INGEST === "1") return true;
@@ -41,6 +56,30 @@ export function shouldRefreshBoardsDuringIngest(now = new Date()): boolean {
   if (!process.env.GEMINI_API_KEY) return false;
   const minute = now.getUTCMinutes();
   return minute <= 2;
+}
+
+/**
+ * Fold published (or local-cache) menu-board rankings into RankingEntity rows
+ * so heatmaps move without waiting on an LLM refresh window.
+ */
+export async function loadPublishedBoardTape(): Promise<RankingEntity[]> {
+  const entities: RankingEntity[] = [];
+  for (const channel of BOARD_CHANNELS) {
+    const menus = menuBoardsForChannel(channel).filter(
+      (board) => !board.deskKind && !isHeadlineNewsBoard(board.slug),
+    );
+    for (const board of menus) {
+      try {
+        const entry = await readBoard(board.slug);
+        if (entry?.ranking?.length) {
+          entities.push(...boardToEntities(entry, channel));
+        }
+      } catch {
+        /* one board missing must not blank the tape */
+      }
+    }
+  }
+  return entities;
 }
 
 /**
@@ -59,7 +98,7 @@ export async function refreshBoardTape(limit = 2): Promise<{
         .map((board) => board.slug),
     ),
   );
-  const stale = await pickStaleBoards(Math.max(limit * 3, 6));
+  const stale = await pickStaleBoards(Math.max(limit * 4, 8));
   const targets = [
     ...stale.filter((board) => prefer.has(board.slug)),
     ...stale.filter((board) => !prefer.has(board.slug)),
@@ -98,13 +137,34 @@ export async function refreshBoardTape(limit = 2): Promise<{
   return { entities, refreshed };
 }
 
-/** Drop previous board-tape rows, then append freshly rebuilt ones. */
+/**
+ * Drop previous published/LLM board-tape rows, keep live-chart crawls
+ * (tickets/books), then append the replacement tape.
+ */
 export function mergeBoardTape(
   items: RankingEntity[],
   boardEntities: RankingEntity[],
 ): RankingEntity[] {
-  const without = items.filter(
-    (item) => item.type !== "economy_board" && item.type !== "culture_board",
-  );
+  const without = items.filter((item) => !isBoardTapeRow(item));
   return [...without, ...boardEntities];
+}
+
+/** Replace board-tape rows only for the slugs present in `boardEntities`. */
+export function upsertBoardTape(
+  items: RankingEntity[],
+  boardEntities: RankingEntity[],
+): RankingEntity[] {
+  if (!boardEntities.length) return items;
+  const slugs = new Set(
+    boardEntities
+      .map((item) => item.tags?.[0] ?? item.slug.split("--")[0])
+      .filter(Boolean),
+  );
+  const kept = items.filter((item) => {
+    if (isLiveChartRow(item)) return true;
+    if (!isBoardTapeRow(item)) return true;
+    const boardSlug = item.tags?.[0] ?? item.slug.split("--")[0];
+    return !slugs.has(boardSlug);
+  });
+  return [...kept, ...boardEntities];
 }

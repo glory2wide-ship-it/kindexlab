@@ -2,6 +2,7 @@ import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { composeLiveSnapshot, snapshotToPayload } from "@/lib/ingestion/compose";
 import { fetchBroadcastSources } from "@/lib/ingestion/sources/broadcast";
+import { fetchBookSources } from "@/lib/ingestion/sources/books";
 import { fetchBuzzSources } from "@/lib/ingestion/sources/buzz";
 import { fetchGameSources } from "@/lib/ingestion/sources/games";
 import { fetchMusicSources } from "@/lib/ingestion/sources/music";
@@ -61,19 +62,31 @@ export async function ingestLivePayload(options?: {
   previous?: IngestSnapshot;
 }): Promise<IngestReport> {
   const previous = options?.previous ?? readPersistedSnapshot();
-  const [music, movies, broadcast, buzz, webtoon, shorts, games, politics, politicsYoutube, tickets] =
-    await Promise.all([
-      fetchMusicSources(),
-      fetchMovieSources(),
-      fetchBroadcastSources(),
-      fetchBuzzSources(),
-      fetchWebtoonSources(),
-      fetchShortsSources(),
-      fetchGameSources(),
-      fetchPoliticsSources(),
-      fetchPoliticsYoutubeSources(),
-      fetchTicketSources(),
-    ]);
+  const [
+    music,
+    movies,
+    broadcast,
+    buzz,
+    webtoon,
+    shorts,
+    games,
+    politics,
+    politicsYoutube,
+    tickets,
+    books,
+  ] = await Promise.all([
+    fetchMusicSources(),
+    fetchMovieSources(),
+    fetchBroadcastSources(),
+    fetchBuzzSources(),
+    fetchWebtoonSources(),
+    fetchShortsSources(),
+    fetchGameSources(),
+    fetchPoliticsSources(),
+    fetchPoliticsYoutubeSources(),
+    fetchTicketSources(),
+    fetchBookSources(),
+  ]);
   const sources = [
     ...music,
     ...movies,
@@ -85,6 +98,7 @@ export async function ingestLivePayload(options?: {
     ...politics,
     ...politicsYoutube,
     ...tickets,
+    ...books,
   ];
   const composed = await composeLiveSnapshot(sources, previous);
   const updatedAt = new Date().toISOString();
@@ -107,23 +121,33 @@ export async function ingestLivePayload(options?: {
     usedPreviousSnapshot = true;
   }
 
-  // Economy/culture/travel desks have no crawler tape — fold LLM board rankings
-  // into the snapshot on an hourly window so heatmaps move with the same commit.
+  // Economy/culture/travel: always fold published menu-board rankings into the
+  // snapshot; optionally refresh a couple of stale boards when Gemini is on.
   try {
-    const { mergeBoardTape, refreshBoardTape, shouldRefreshBoardsDuringIngest } = await import(
-      "@/lib/ingestion/board-tape"
-    );
+    const {
+      loadPublishedBoardTape,
+      mergeBoardTape,
+      refreshBoardTape,
+      shouldRefreshBoardsDuringIngest,
+      upsertBoardTape,
+    } = await import("@/lib/ingestion/board-tape");
+    const published = await loadPublishedBoardTape();
+    if (published.length) {
+      items = mergeBoardTape(items, published);
+    } else {
+      const prior = (previous?.items ?? []).filter(
+        (item) =>
+          (item.type === "economy_board" || item.type === "culture_board") &&
+          !item.tags?.includes("live-chart"),
+      );
+      if (prior.length) items = mergeBoardTape(items, prior);
+    }
     if (shouldRefreshBoardsDuringIngest()) {
       const { entities, refreshed } = await refreshBoardTape(2);
       if (entities.length) {
-        items = mergeBoardTape(items, entities);
+        items = upsertBoardTape(items, entities);
         console.info("[kindexlab:ingest] board tape", refreshed.join(", "));
       }
-    } else {
-      const prior = (previous?.items ?? []).filter(
-        (item) => item.type === "economy_board" || item.type === "culture_board",
-      );
-      if (prior.length) items = mergeBoardTape(items, prior);
     }
   } catch (error) {
     console.warn(

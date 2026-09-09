@@ -60,6 +60,21 @@ export function channelUsesBoardHeatmap(channel: PostChannel): boolean {
   );
 }
 
+/**
+ * Economy/culture/travel 종합 must paint published menu-board rankings.
+ * Thin live tape (or a few ticket/book rows) must not starve the full board pool.
+ */
+export function preferLiveChannelComposite(
+  channel: PostChannel,
+  board: string | undefined | null,
+  liveCount: number,
+  minLive = 3,
+): boolean {
+  if (board) return false;
+  if (channel === "economy" || channel === "culture" || channel === "travel") return false;
+  return liveCount >= minLive;
+}
+
 export function rankLimitForChannel(channel: PostChannel): number {
   if (channel === "entertainment") return ENTERTAINMENT_HEATMAP_TILES;
   if (channel === "economy") return ECONOMY_HEATMAP_TILES;

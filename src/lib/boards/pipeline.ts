@@ -219,12 +219,18 @@ export async function refreshBoard(
   return generateOnce(board, editionDate);
 }
 
-/** Missing first, then closest to expiry — hourly cron rotates through the full set. */
+/** Missing first, then closest to expiry — hourly cron rotates through the full set.
+ * Economy/culture/travel boards are refreshed ahead of entertainment/politics so
+ * those heatmaps stay dense without Naver Open API coverage.
+ */
 export async function pickStaleBoards(limit: number, slug?: string): Promise<BoardDefinition[]> {
   if (slug) {
     const found = getBoard(slug);
     return found && !isDeskBoard(found) ? [found] : [];
   }
+
+  const channelBoost = (channel: BoardDefinition["channel"]) =>
+    channel === "economy" || channel === "culture" || channel === "travel" ? 0 : 1;
 
   const scored = await Promise.all(
     BOARDS.filter((board) => !isDeskBoard(board)).map(async (board) => {
@@ -237,7 +243,12 @@ export async function pickStaleBoards(limit: number, slug?: string): Promise<Boa
 
   return scored
     .filter((item) => isRailBoard(item.board))
-    .sort((left, right) => left.priority - right.priority || left.at - right.at)
+    .sort(
+      (left, right) =>
+        channelBoost(left.board.channel) - channelBoost(right.board.channel) ||
+        left.priority - right.priority ||
+        left.at - right.at,
+    )
     .slice(0, Math.max(1, limit))
     .map((item) => item.board);
 }

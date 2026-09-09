@@ -28,16 +28,49 @@ const CHANNEL_BOARD_TTL_MS = 180_000;
 const MIN_LIVE_BOARD_ROWS = 3;
 
 /**
- * Prefer live ingest chart rows for boards that map to snapshot entity types.
+ * Prefer live ingest chart rows for boards that map to snapshot entity types,
+ * or board-slug-tagged live-chart rows (tickets, bestsellers, etc.).
  * Server-only — keeps fs-backed snapshot reads out of client bundles.
  */
 function liveRankingForBoard(
   def: BoardDefinition,
   snapshot: ReturnType<typeof readPersistedSnapshot>,
 ): BoardRankEntry[] | undefined {
-  const types = liveEntityTypesForBoard(def.slug);
-  if (!types.length || !snapshot?.items?.length) return undefined;
+  if (!snapshot?.items?.length) return undefined;
   const limit = rankLimitForBoard(def);
+
+  const boardTagged = snapshot.items
+    .filter(
+      (item) =>
+        item.tags?.includes(def.slug) &&
+        (item.tags.includes("live-chart") || item.slug.startsWith(`${def.slug}--`)),
+    )
+    .sort((a, b) => a.rank - b.rank || b.buzzScore - a.buzzScore);
+  if (boardTagged.length >= MIN_LIVE_BOARD_ROWS) {
+    const seen = new Set<string>();
+    return boardTagged
+      .filter((item) => {
+        const key = (item.name ?? "").replace(/\s+/g, "").toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, limit)
+      .map((item, index) => ({
+        rank: index + 1,
+        name: item.name,
+        score: Number(
+          Math.min(99.5, Math.max(12, item.buzzScore > 120 ? item.buzzScore / 10 : item.buzzScore)).toFixed(
+            2,
+          ),
+        ),
+        changeRate: Number((item.fluctuationRate ?? 0).toFixed(2)),
+        note: item.summary?.slice(0, 80) || `${def.shortTitle} 실시간 ${index + 1}위`,
+      }));
+  }
+
+  const types = liveEntityTypesForBoard(def.slug);
+  if (!types.length) return undefined;
   const typeSet = new Set(types);
   const seen = new Set<string>();
   const rows = snapshot.items

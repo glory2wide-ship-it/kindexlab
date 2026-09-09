@@ -6,6 +6,7 @@ import {
   loadHeatmapLivePayload,
   toTileEntity,
 } from "@/lib/boards/heatmap-server";
+import { preferLiveChannelComposite } from "@/lib/boards/limits";
 import { slimBriefingForCard, slimBriefingsForCards } from "@/lib/briefing/card-dto";
 import { COMMODITIES_FX_BOARD_SLUG } from "@/lib/market/market-index-codes";
 import {
@@ -28,9 +29,6 @@ export const MARKET_QUOTE_BOARD_SLUGS = [
 
 export { isMarketQuoteBoardSlug };
 
-/** Prefer live ingest on the channel 종합 once enough rows exist. */
-const MIN_LIVE_COMPOSITE = 3;
-
 /** Heatmap rows for one board (or channel 종합) — quotes applied in a later batch. */
 function rawHeatmapItems(
   channel: PostChannel,
@@ -38,14 +36,13 @@ function rawHeatmapItems(
   liveItems: RankingEntity[],
   board?: string,
 ): RankingEntity[] {
-  const preferLive = !board && liveItems.length >= MIN_LIVE_COMPOSITE;
   return buildHeatmapItems({
     boards,
     liveItems,
     board,
     gender: "all",
     age: "all",
-    preferLive,
+    preferLive: preferLiveChannelComposite(channel, board, liveItems.length),
   });
 }
 

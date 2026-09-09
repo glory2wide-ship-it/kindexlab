@@ -19,7 +19,12 @@ import { clampAgeForBoard } from "@/lib/boards/age-tabs";
 import { boardPath, getBoard } from "@/lib/boards/registry";
 import { filterLabel } from "@/lib/boards/demographics";
 import { boardUsesRegionFilter, entityMatchesRegion } from "@/lib/boards/regions";
-import { channelUsesBoardHeatmap, rankLimitForBoard, rankLimitForChannel } from "@/lib/boards/limits";
+import {
+  channelUsesBoardHeatmap,
+  preferLiveChannelComposite,
+  rankLimitForBoard,
+  rankLimitForChannel,
+} from "@/lib/boards/limits";
 import { isMarketQuoteBoardSlug } from "@/lib/market/kospi-quotes";
 import { withIndexPoints } from "@/lib/ingestion/composite";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
@@ -125,7 +130,8 @@ export function ChannelMarketDesk({
     boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
   );
   const liveItems = liveMarket.items;
-  const preferLiveComposite = (boardSlug: string) => !boardSlug && liveItems.length >= 3;
+  const preferLiveComposite = (boardSlug: string) =>
+    preferLiveChannelComposite(channel, boardSlug, liveItems.length);
   const quotedCacheRef = useRef<Map<string, RankingEntity[]>>(
     seedQuoteMap(initialQuotedByBoard, initialItems),
   );
@@ -179,7 +185,7 @@ export function ChannelMarketDesk({
       setTitle(heatmapBoardTitle(boards, board || undefined));
       setFlashNonce((value) => value + 1);
     },
-    [boards, liveItems],
+    [boards, channel, liveItems],
   );
 
   /** Paint quoted SSR/API cache immediately — never KinDex-only for quote boards. */
