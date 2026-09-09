@@ -252,6 +252,7 @@ export function rankRowsToEntities(
       region,
       heatmapGroup: board.shortTitle,
       platform,
+      sourceChannel: board.channel,
     });
   });
 }

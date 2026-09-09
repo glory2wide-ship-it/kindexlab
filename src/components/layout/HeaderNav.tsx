@@ -4,6 +4,7 @@ import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useActiveChannelOverride } from "@/components/providers/ActiveChannelProvider";
 import { POST_CHANNELS } from "@/lib/posts/channels";
+import { resolveChannelFromPath } from "@/lib/posts/resolve-channel-from-path";
 
 function CategoryLabel({ children }: { children: string }) {
   const { pending } = useLinkStatus();
@@ -19,7 +20,10 @@ export function HeaderNav() {
   const pathname = usePathname();
   const router = useRouter();
   const override = useActiveChannelOverride();
-  const allActive = !override && pathname === "/";
+  // Ranking/board detail routes encode the desk in the slug; prefer that over a
+  // blank override so /ranking/travel-… does not flash another category.
+  const activeChannel = override ?? resolveChannelFromPath(pathname || "/");
+  const allActive = !activeChannel && pathname === "/";
 
   return (
     <nav
@@ -41,8 +45,8 @@ export function HeaderNav() {
         <CategoryLabel>전체</CategoryLabel>
       </Link>
       {POST_CHANNELS.map((item) => {
-        const active = override
-          ? override === item.id
+        const active = activeChannel
+          ? activeChannel === item.id
           : pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link

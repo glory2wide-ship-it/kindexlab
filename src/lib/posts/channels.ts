@@ -1,4 +1,6 @@
 import type { CategoryId, EntityType, RankingEntity } from "@/lib/types";
+import { boardSlugFromEntitySlug } from "@/lib/analysis/briefing-boards";
+import { getBoard } from "@/lib/boards/registry";
 import type { GeneratedPost, PostChannel } from "@/lib/posts/types";
 import { isPoliticsEntityType, POLITICS_TYPE_ORDER } from "@/lib/politics/types";
 
@@ -198,8 +200,22 @@ export function channelFromEntityType(type: EntityType): PostChannel {
   return "entertainment";
 }
 
+/**
+ * Resolve the desk channel for a ranking/detail entity.
+ *
+ * Prefer the board registry channel from `boardSlug--row` slugs so shared entity
+ * types (e.g. subsidy on travel/culture/politics grant boards) do not pin the
+ * sticky category chip to the wrong desk.
+ */
 export function channelFromLead(lead: RankingEntity, slug?: string): PostChannel {
-  if (slug?.startsWith("fx-life")) return "economy";
+  if (lead.sourceChannel) return lead.sourceChannel;
+  const entitySlug = slug ?? lead.slug;
+  if (entitySlug?.startsWith("fx-life")) return "economy";
+  const boardSlug = boardSlugFromEntitySlug(entitySlug);
+  if (boardSlug) {
+    const board = getBoard(boardSlug);
+    if (board?.channel) return board.channel;
+  }
   return channelFromEntityType(lead.type);
 }
 
