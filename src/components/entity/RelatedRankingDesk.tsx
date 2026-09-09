@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DemographicTabs } from "@/components/boards/DemographicTabs";
-import { LIST_MAX_ITEMS } from "@/components/dashboard/treemap-config";
+import { LIST_MAX_ITEMS, MOBILE_LIST_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import { applyDemographicSkew } from "@/lib/boards/entity-skew";
 import { filterKey, filterLabel } from "@/lib/boards/demographics";
 import { TYPE_LABEL, formatRate } from "@/lib/format";
@@ -27,10 +27,19 @@ export function RelatedRankingDesk({
 }) {
   const [gender, setGender] = useState<"all" | GenderSegment>("all");
   const [age, setAge] = useState<"all" | AgeSegment>("all");
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobileViewport(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
   const channel = channelFromEntityType(entity.type);
+  const listCap = isMobileViewport ? MOBILE_LIST_MAX_ITEMS : LIST_MAX_ITEMS;
   const rows = useMemo(
-    () => applyDemographicSkew(related ?? [], gender, age).slice(0, LIST_MAX_ITEMS),
-    [related, gender, age],
+    () => applyDemographicSkew(related ?? [], gender, age).slice(0, listCap),
+    [related, gender, age, listCap],
   );
   const filtered = gender !== "all" || age !== "all";
   const listKey = filterKey(gender, age);

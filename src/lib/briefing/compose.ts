@@ -297,7 +297,7 @@ function composeDraft(
   const relatedPeer = rest[0];
   const internalLink = relatedPeer
     ? { href: rankingPath(relatedPeer.slug), label: relatedIssueTitle(relatedPeer.name) }
-    : { href: `/${channel}/briefing`, label: `${getPostChannelLabel(channel)} 일일브리핑` };
+    : { href: `/${channel}/briefing`, label: `${getPostChannelLabel(channel)} 투데이 브리핑` };
   const table = buildTable([keyword, ...relatedKeywords], `${dateLabel} ${label} 이슈 대비표`);
   const faq = buildIssueFaq({ keyword, focus, supportKw, label });
   const deskKey = options.kind === "main" ? "daily" : (options.deskId ?? String(category)).replaceAll("_", "-");

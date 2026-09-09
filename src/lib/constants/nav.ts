@@ -17,13 +17,13 @@ export const POLITICS_HEATMAP_BOARD_NAV: Record<
     slug: "party-support-chart",
     title: "정당 지지도",
     shortTitle: "정당 지지도",
-    heatmapLimit: 15,
+    heatmapLimit: 30,
   },
   "politician-support-chart": {
     slug: "politician-support-chart",
     title: "정치인 지지도",
     shortTitle: "정치인 지지도",
-    heatmapLimit: 15,
+    heatmapLimit: 30,
   },
 };
 
@@ -47,13 +47,13 @@ export const TRAVEL_HEATMAP_BOARD_NAV: Record<
 > = {
   "domestic-travel-ranking": {
     slug: "domestic-travel-ranking",
-    heatmapLimitAll: 15,
-    heatmapLimitRegion: 15,
+    heatmapLimitAll: 30,
+    heatmapLimitRegion: 30,
   },
   "weekend-outing-ranking": {
     slug: "weekend-outing-ranking",
-    heatmapLimitAll: 15,
-    heatmapLimitRegion: 15,
+    heatmapLimitAll: 30,
+    heatmapLimitRegion: 30,
   },
 };
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { scheduleEntityPrefetch } from "@/lib/nav/prefetch";
 import { Sparkline } from "@/components/dashboard/Sparkline";
-import { LIST_MAX_ITEMS } from "@/components/dashboard/treemap-config";
+import { LIST_MAX_ITEMS, MOBILE_LIST_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import { heatmapNameLines } from "@/lib/musicTitle";
 import { isTwoLineBracketHeatmap } from "@/lib/boards/culture-grants";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, rankDelta, metricLabel } from "@/lib/format";
@@ -32,8 +32,18 @@ export function RankingTable({
 }) {
   const router = useRouter();
   const [sortKey, setSortKey] = useState<SortKey>("rank");
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
 
-  const cappedItems = useMemo(() => items.slice(0, LIST_MAX_ITEMS), [items]);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobileViewport(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  const listCap = isMobileViewport ? MOBILE_LIST_MAX_ITEMS : LIST_MAX_ITEMS;
+  const cappedItems = useMemo(() => items.slice(0, listCap), [items, listCap]);
 
   useEffect(() => {
     return scheduleEntityPrefetch(router.prefetch, cappedItems);
@@ -88,8 +98,8 @@ export function RankingTable({
   return (
     <div className="index-gothic font-sans md:max-h-[min(78vh,880px)] md:overflow-auto">
       <div className="hidden md:block">
-        <table className="w-full font-sans text-sm">
-          <thead className="sticky top-0 z-10 bg-panel text-left text-[11px] font-sans tracking-wider text-muted shadow-[inset_0_-1px_0_var(--color-line)]">
+        <table className="w-full font-sans text-[16.1px]">
+          <thead className="sticky top-0 z-10 bg-panel text-left text-[12.65px] font-sans tracking-wider text-muted shadow-[inset_0_-1px_0_var(--color-line)]">
             <tr className="border-b border-line">
               <SortTh label="순위" active={!lockOrder && sortKey === "rank"} onClick={() => toggle("rank")} disabled={lockOrder} />
               <SortTh label="종목" active={!lockOrder && sortKey === "name"} onClick={() => toggle("name")} disabled={lockOrder} />
@@ -138,7 +148,7 @@ export function RankingTable({
                 }}
               >
                 <td className="px-4 py-3 font-sans tabular-nums">
-                  <span className="mr-2 text-base font-semibold">{item.rank}</span>
+                  <span className="mr-2 text-[18.4px] font-semibold">{item.rank}</span>
                   <RankMove delta={rankDelta(item.rank, item.previousRank)} />
                 </td>
                 <td className="px-2 py-3">
@@ -156,13 +166,13 @@ export function RankingTable({
                     <PlatformTag entity={item} />
                     <RankName entity={item} />
                     {priceLabel ? (
-                      <span className="mt-0.5 block font-sans text-xs tabular-nums text-muted">
+                      <span className="mt-0.5 block font-sans text-[13.8px] tabular-nums text-muted">
                         현재가 {priceLabel}
                       </span>
                     ) : null}
                   </Link>
                 </td>
-                <td className="px-2 py-3 text-xs text-muted">
+                <td className="px-2 py-3 text-[13.8px] text-muted">
                   {item.heatmapGroup ?? TYPE_LABEL[item.type]}
                 </td>
                 <td className="px-2 py-3 text-right font-sans tabular-nums">
@@ -182,7 +192,7 @@ export function RankingTable({
           </tbody>
         </table>
       </div>
-      <ul className="divide-y divide-line font-sans md:hidden">
+      <ul className="divide-y divide-line overflow-visible font-sans md:hidden">
         {rows.map(({ item, series, change, volume, priceLabel }) => (
           <li key={item.id}>
             <Link
@@ -194,20 +204,20 @@ export function RankingTable({
                 event.preventDefault();
                 onSelect(item.slug);
               }}
-              className={`flex items-center gap-3 px-4 py-3 ${
+              className={`flex items-center gap-3 px-4 py-[10.2px] leading-[1.0625rem] ${
                 selectedSlug === item.slug ? "bg-accent/10" : ""
               }`}
             >
-              <div className="w-8 text-center font-sans tabular-nums">
-                <div className="text-lg font-semibold">{item.rank}</div>
+              <div className="w-8 text-center font-sans tabular-nums leading-[1.0625rem]">
+                <div className="text-lg font-semibold leading-[1.275rem]">{item.rank}</div>
                 <RankMove delta={rankDelta(item.rank, item.previousRank)} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">
+                <p className="truncate font-medium leading-[1.0625rem]">
                   <PlatformTag entity={item} />
                   <RankName entity={item} />
                 </p>
-                <p className="font-sans text-xs tabular-nums text-muted">
+                <p className="font-sans text-xs leading-[1.0625rem] tabular-nums text-muted">
                   {priceLabel
                     ? `현재가 ${priceLabel}`
                     : TYPE_LABEL[item.type] && item.heatmapGroup
@@ -215,7 +225,7 @@ export function RankingTable({
                       : `${TYPE_LABEL[item.type]} · ${metricLabel(item.type)} ${formatCompact(volume)}`}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="text-right leading-[1.0625rem]">
                 <ChangeCell rate={change} />
                 <Sparkline
                   data={series.map((point) => point.v)}

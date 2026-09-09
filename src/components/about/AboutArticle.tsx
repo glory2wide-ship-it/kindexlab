@@ -16,12 +16,12 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
         <h1 className="text-3xl font-semibold">
           {meta ? `${meta.label} 소개` : "KinDex / 킨덱스 소개"}
         </h1>
-        <p className="mt-3 leading-7 text-muted">{channelCopy?.lead ?? SITE.description}</p>
+        <p className="mt-3 leading-[1.4rem] text-muted">{channelCopy?.lead ?? SITE.description}</p>
       </header>
 
       {channelCopy ? (
         <>
-          <section className="space-y-3 text-[15px] leading-8">
+          <section className="space-y-3 text-[15px] leading-[1.6rem]">
             <h2 className="text-xl font-semibold">무엇을 보나</h2>
             {channelCopy.whatYouSee.paragraphs.map((paragraph) => (
               <p key={paragraph.slice(0, 24)}>{paragraph}</p>
@@ -34,13 +34,13 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
               ))}
             </ul>
           </section>
-          <section className="space-y-3 text-[15px] leading-8">
+          <section className="space-y-3 text-[15px] leading-[1.6rem]">
             <h2 className="text-xl font-semibold">지수(INDEX)는 어떻게 읽나</h2>
             {channelCopy.indexHow.paragraphs.map((paragraph) => (
               <p key={paragraph.slice(0, 24)}>{paragraph}</p>
             ))}
           </section>
-          <section className="space-y-3 text-[15px] leading-8">
+          <section className="space-y-3 text-[15px] leading-[1.6rem]">
             <h2 className="text-xl font-semibold">데스크 구성</h2>
             {channelCopy.desk.paragraphs.map((paragraph) => (
               <p key={paragraph.slice(0, 24)}>{paragraph}</p>
@@ -49,7 +49,7 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
         </>
       ) : (
         <>
-          <section className="space-y-3 text-[15px] leading-8">
+          <section className="space-y-3 text-[15px] leading-[1.6rem]">
             <h2 className="text-xl font-semibold">무엇을 보나</h2>
             <p>
               {SITE.name}는 공개된 순위·지표·보도 신호를 지수(INDEX) 문법으로 읽는 매거진 데스크입니다.
@@ -58,7 +58,7 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
             </p>
             <p>
               상단 메뉴의 엔터·정치·경제·문화/생활·여행/맛집 데스크마다 실시간 랭킹,
-              일일브리핑, 아카이브, 소개가 같은 규격으로 제공됩니다.
+              투데이 브리핑, 인사이트 매거진, 소개가 같은 규격으로 제공됩니다.
             </p>
             <ul className="flex flex-wrap gap-2 text-sm">
               {POST_CHANNELS.map((item) => (
@@ -78,7 +78,7 @@ export function AboutArticle({ channel }: { channel?: PostChannel }) {
 
       <KinDexAboutSections channel={channel} />
 
-      <section className="space-y-3 text-[15px] leading-8">
+      <section className="space-y-3 text-[15px] leading-[1.6rem]">
         <h2 className="text-xl font-semibold">문의</h2>
         <p>
           운영 문의, 개인정보, 콘텐츠 오류는{" "}

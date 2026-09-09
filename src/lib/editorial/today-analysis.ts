@@ -463,7 +463,7 @@ export function composeTodayAnalysis(options: {
       }
     : {
         href: channelSectionHref(channel, "briefing"),
-        label: `${channelMeta.label} 일일브리핑`,
+        label: `${channelMeta.label} 투데이 브리핑`,
       };
   const table = buildTable([keyword, ...relatedKeywords]);
   const faq = buildIssueFaq({ keyword, focus, supportKw, label, facts: options.facts }).map((item) => {

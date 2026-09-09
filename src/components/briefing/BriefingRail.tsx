@@ -32,7 +32,7 @@ export function BriefingRail({ articles }: { articles: BriefingArticle[] }) {
             브리핑 허브
           </Link>
           <Link href="/briefing/archive" className="text-muted hover:text-ink">
-            아카이브
+            인사이트 매거진
           </Link>
         </div>
       </div>

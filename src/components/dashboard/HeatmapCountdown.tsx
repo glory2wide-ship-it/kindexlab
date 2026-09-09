@@ -5,12 +5,13 @@ import { isNavigating } from "@/lib/nav/progress";
 import { DEFAULT_TRENDS_REVALIDATE_SEC, formatRefreshClock } from "@/lib/refresh";
 
 /** Keep the same outer box as the neighboring "랭킹 산출 방식" control (30px). */
+/** Background matches heatmap legend rightmost green (#22c55e). */
 const SHELL_CLASS =
-  "inline-flex shrink-0 items-center justify-center gap-1 rounded-md border border-line bg-accent px-3 font-sans font-semibold text-black";
+  "inline-flex shrink-0 items-center justify-center gap-1 rounded-md border border-[#22c55e] bg-[#22c55e] px-3 font-sans font-semibold text-white";
 const SHELL_STYLE = { height: 30, boxSizing: "border-box" as const };
-/** Current desktop type was 13.2px; +10% → 14.52px for the clock digits. */
-const LABEL_CLASS = "text-[11.88px] font-bold leading-none tracking-tight whitespace-nowrap";
-const CLOCK_CLASS = "refresh-countdown text-[14.52px] tabular-nums leading-none";
+/** Prior clock 14.52px +10% → 15.972px; label 11.88px +10% → 13.068px. */
+const LABEL_CLASS = "text-[13.068px] font-bold leading-none tracking-tight whitespace-nowrap text-white";
+const CLOCK_CLASS = "refresh-countdown text-[15.972px] tabular-nums leading-none text-white";
 
 export function HeatmapCountdownFallback() {
   return (

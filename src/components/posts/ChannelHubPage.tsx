@@ -50,7 +50,7 @@ export async function ChannelHubPage({ channel }: { channel: PostChannel }) {
       <header className="space-y-3">
         <h1 className="text-3xl font-semibold tracking-tight">{meta.label} 이슈 칼럼</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          오늘의 일일 브리핑·Update 키워드와 키워드 매거진 칼럼을 모았습니다. 지수(INDEX)는 키워드를 고르는
+          투데이 브리핑·투데이 인사이트와 키워드 매거진 칼럼을 모았습니다. 지수(INDEX)는 키워드를 고르는
           트리거이고, 본문은 그 키워드만으로 쓴 독립 칼럼입니다.
         </p>
         <p className="text-sm text-muted">
@@ -76,7 +76,7 @@ export async function ChannelHubPage({ channel }: { channel: PostChannel }) {
               href={channelSectionHref(channel, "briefing")}
               className="text-sm font-medium text-accent hover:underline"
             >
-              일일브리핑 전체 →
+              투데이 브리핑 전체 →
             </Link>
           </div>
           <ul className="grid gap-4 md:grid-cols-2">
@@ -118,7 +118,7 @@ export async function ChannelHubPage({ channel }: { channel: PostChannel }) {
 
       {!briefings.length && !posts.length ? (
         <p className="rounded-2xl border border-dashed border-line bg-panel p-6 text-sm leading-6 text-muted">
-          아직 이 카테고리의 이슈 글이 없습니다. 일일 브리핑이 발행되면 이 허브에 함께 노출됩니다.
+          아직 이 카테고리의 이슈 글이 없습니다. 투데이 브리핑이 발행되면 이 허브에 함께 노출됩니다.
         </p>
       ) : null}
     </div>
@@ -133,7 +133,7 @@ export async function PostsIndexWithChannels() {
         <h1 className="text-3xl font-semibold tracking-tight">이슈 칼럼</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
           지수(INDEX)는 오늘의 키워드를 고르는 트리거입니다. 본문은 그 키워드만으로 쓴 매거진 칼럼과
-          일일 브리핑입니다. 투자 권유가 아닙니다.
+          투데이 브리핑입니다. 투자 권유가 아닙니다.
         </p>
       </header>
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

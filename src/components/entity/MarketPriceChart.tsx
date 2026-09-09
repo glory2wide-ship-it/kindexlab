@@ -200,7 +200,7 @@ export function MarketPriceChart({
         <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_240px]">
           <div className="px-3 py-3 md:px-5">
             {loading ? (
-              <div className="flex h-[300px] items-center justify-center rounded-lg border border-line/60 bg-panel text-xs text-muted md:h-[400px]">
+              <div className="flex h-[240px] items-center justify-center rounded-lg border border-line/60 bg-panel text-xs text-muted md:h-[400px]">
                 시세 불러오는 중…
               </div>
             ) : candles.length >= 2 ? (
@@ -214,7 +214,7 @@ export function MarketPriceChart({
                 initialVisibleBars={initialVisibleBars}
               />
             ) : (
-              <div className="flex h-[300px] flex-col items-center justify-center gap-2 rounded-lg border border-line/60 bg-panel px-6 text-center text-sm text-muted md:h-[400px]">
+              <div className="flex h-[240px] flex-col items-center justify-center gap-2 rounded-lg border border-line/60 bg-panel px-6 text-center text-sm text-muted md:h-[400px]">
                 <p>{error || "이 종목의 시세 차트를 아직 불러오지 못했습니다."}</p>
                 <p className="text-xs">공개된 시계열이 없는 항목일 수 있습니다.</p>
               </div>
@@ -222,10 +222,10 @@ export function MarketPriceChart({
           </div>
           <dl className="grid grid-cols-3 gap-px border-t border-line bg-line lg:grid-cols-1 lg:border-l lg:border-t-0">
             {quote.map((item) => (
-              <div key={item.label} className="bg-panel px-3 py-2.5 md:px-4 md:py-3">
-                <dt className="text-[11px] text-muted">{item.label}</dt>
+              <div key={item.label} className="bg-panel px-3 py-2.5 max-md:py-2 md:px-4 md:py-3">
+                <dt className="text-[11px] leading-[0.9375rem] text-muted md:leading-normal">{item.label}</dt>
                 <dd
-                  className={`mt-1 font-sans text-sm font-semibold tabular-nums ${item.className ?? ""}`}
+                  className={`mt-1 font-sans text-sm font-semibold tabular-nums leading-[1.05rem] md:leading-normal ${item.className ?? ""}`}
                 >
                   {item.value}
                 </dd>
@@ -233,7 +233,7 @@ export function MarketPriceChart({
             ))}
           </dl>
         </div>
-        <p className="border-t border-line px-5 py-3 text-[11px] leading-5 text-muted md:px-7">
+        <p className="border-t border-line px-5 py-3 text-[11px] leading-5 text-muted max-md:leading-4 md:px-7">
           TradingView Lightweight Charts · 실제 시세(단위: {unit}). 차트를 좌우로 끌어
           이전 시간대도 확인할 수 있습니다. 분봉은 국내 주식은 분 단위 체결을 집계하고, 해외
           주식·원자재·환율은 제공 범위에 따라 일봉으로 대체될 수 있습니다.

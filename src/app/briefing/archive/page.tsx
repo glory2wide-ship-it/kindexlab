@@ -11,9 +11,9 @@ import { categoryLabel } from "@/lib/briefing/metrics";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "브리핑 아카이브",
+  title: "인사이트 매거진",
   description:
-    "날짜가 지난 KinDex 일일 브리핑과 Update 키워드를 검색합니다. 히트맵과 종목 시세로 다시 연결되는 장기 SEO 아카이브입니다.",
+    "날짜가 지난 KinDex 투데이 브리핑과 투데이 인사이트를 검색합니다. 히트맵과 종목 시세로 다시 연결되는 장기 SEO 인사이트 매거진입니다.",
   alternates: { canonical: "/briefing/archive" },
 };
 
@@ -32,7 +32,7 @@ export default async function BriefingArchivePage({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: `${SITE.name} 브리핑 아카이브`,
+    name: `${SITE.name} 인사이트 매거진`,
     url: `${SITE.url}/briefing/archive`,
     numberOfItems: results.length,
   };
@@ -44,7 +44,7 @@ export default async function BriefingArchivePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <header className="space-y-3">
-        <h1 className="text-3xl font-semibold tracking-tight">브리핑 아카이브</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">인사이트 매거진</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
           어제 이전 에디션을 발행일 기준으로 모았습니다. 카테고리와 키워드로 과거 해설을
           찾고, 각 기사에서 지수(INDEX) 히트맵으로 돌아갈 수 있습니다.
@@ -58,7 +58,7 @@ export default async function BriefingArchivePage({
       </header>
       {results.length === 0 ? (
         <p className="rounded-2xl border border-line bg-panel px-5 py-10 text-sm text-muted">
-          조건에 맞는 아카이브 기사가 없습니다. 검색어를 줄이거나 카테고리를 종합으로 바꿔
+          조건에 맞는 인사이트 매거진 기사가 없습니다. 검색어를 줄이거나 카테고리를 종합으로 바꿔
           보세요.
         </p>
       ) : (

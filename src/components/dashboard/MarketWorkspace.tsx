@@ -13,6 +13,7 @@ import {
   TREEMAP_MAX_ITEMS,
   MOBILE_TREEMAP_MAX_ITEMS,
   LIST_MAX_ITEMS,
+  MOBILE_LIST_MAX_ITEMS,
 } from "@/components/dashboard/treemap-config";
 import { HeaderRefreshCountdown } from "@/components/layout/HeaderRefreshCountdown";
 import { MobileBottomSheet } from "@/components/layout/MobileBottomSheet";
@@ -210,11 +211,10 @@ export function MarketWorkspace({
     return rankedPool.slice(0, cap).map((item, index) => ({ ...item, rank: index + 1 }));
   }, [rankedPool, maxItems, isMobileViewport]);
 
-  const listItems = useMemo(
-    () =>
-      rankedPool.slice(0, LIST_MAX_ITEMS).map((item, index) => ({ ...item, rank: index + 1 })),
-    [rankedPool],
-  );
+  const listItems = useMemo(() => {
+    const listCap = isMobileViewport ? MOBILE_LIST_MAX_ITEMS : LIST_MAX_ITEMS;
+    return rankedPool.slice(0, listCap).map((item, index) => ({ ...item, rank: index + 1 }));
+  }, [rankedPool, isMobileViewport]);
   const demoKey = filterKey(gender, age, region);
   const demoActive = gender !== "all" || age !== "all" || region !== "all";
   /** Region has its own mobile dial; sheet is only for category tabs. */

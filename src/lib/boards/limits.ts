@@ -2,14 +2,14 @@ import { POLITICS_HEATMAP_BOARD_NAV, TRAVEL_HEATMAP_BOARD_NAV } from "@/lib/cons
 import type { BoardDefinition } from "@/lib/boards/types";
 import type { PostChannel } from "@/lib/posts/types";
 
-/** Default heatmap tiles for every channel unless a board override applies. */
-export const DEFAULT_CHANNEL_HEATMAP_TILES = 15;
+/** Default ranked rows per channel — enough for list top-30; heatmap caps separately at 20/15. */
+export const DEFAULT_CHANNEL_HEATMAP_TILES = 30;
 export const ENTERTAINMENT_HEATMAP_TILES = DEFAULT_CHANNEL_HEATMAP_TILES;
 export const ECONOMY_HEATMAP_TILES = DEFAULT_CHANNEL_HEATMAP_TILES;
 export const CULTURE_HEATMAP_TILES = DEFAULT_CHANNEL_HEATMAP_TILES;
 export const TRAVEL_HEATMAP_TILES = DEFAULT_CHANNEL_HEATMAP_TILES;
 export const POLITICS_HEATMAP_TILES = DEFAULT_CHANNEL_HEATMAP_TILES;
-export const DEFAULT_HEATMAP_TILES = 15;
+export const DEFAULT_HEATMAP_TILES = 30;
 /** 정당 지지도 랭킹 board tile cap. */
 export const PARTY_SUPPORT_HEATMAP_TILES =
   POLITICS_HEATMAP_BOARD_NAV["party-support-chart"].heatmapLimit;

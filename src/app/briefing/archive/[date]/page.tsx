@@ -22,10 +22,10 @@ export async function generateMetadata({
   params: Promise<{ date: string }>;
 }): Promise<Metadata> {
   const { date } = await params;
-  if (!isEditionDate(date)) return { title: "브리핑 아카이브" };
+  if (!isEditionDate(date)) return { title: "인사이트 매거진" };
   return {
     title: `${formatKoreanDate(date)} 브리핑`,
-    description: `${date} KinDex 일일 트렌드 브리핑 아카이브. 종합 해설과 Update 키워드를 날짜별로 보관합니다.`,
+    description: `${date} KinDex 일일 트렌드 인사이트 매거진. 종합 해설과 투데이 인사이트를 날짜별로 보관합니다.`,
     alternates: { canonical: `/briefing/archive/${date}` },
   };
 }
@@ -73,7 +73,7 @@ export default async function BriefingArchiveDatePage({
         </Link>
         <span className="mx-2">/</span>
         <Link href="/briefing/archive" className="hover:text-ink">
-          아카이브
+          인사이트 매거진
         </Link>
         <span className="mx-2">/</span>
         {date}
@@ -82,8 +82,8 @@ export default async function BriefingArchiveDatePage({
         <DeskEyebrow variant="xs">DAILY EDITION</DeskEyebrow>
         <h1 className="text-3xl font-semibold tracking-tight">{formatKoreanDate(date)} 브리핑</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          이 날짜에 발행된 종합 브리핑과 Update 키워드입니다. 하루 종합 1편과 히트맵 전 카테고리
-          Update 키워드가 자동으로 묶여 장기 검색 유입용 아카이브가 됩니다.
+          이 날짜에 발행된 종합 브리핑과 투데이 인사이트입니다. 하루 종합 1편과 히트맵 전 카테고리
+          투데이 인사이트가 자동으로 묶여 장기 검색 유입용 인사이트 매거진가 됩니다.
         </p>
         <ArchiveSearchForm />
       </header>

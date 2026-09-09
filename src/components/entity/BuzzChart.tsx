@@ -20,7 +20,7 @@ const TradingViewChart = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[300px] items-center justify-center rounded-lg border border-line/60 bg-panel text-xs text-muted md:h-[400px]">
+      <div className="flex h-[240px] items-center justify-center rounded-lg border border-line/60 bg-panel text-xs text-muted md:h-[400px]">
         차트 불러오는 중…
       </div>
     ),
@@ -135,10 +135,10 @@ export function BuzzChart({
           </div>
           <dl className="grid grid-cols-3 gap-px border-t border-line bg-line lg:grid-cols-1 lg:border-l lg:border-t-0">
             {quote.map((item) => (
-              <div key={item.label} className="bg-panel px-3 py-2.5 md:px-4 md:py-3">
-                <dt className="text-[11px] text-muted">{item.label}</dt>
+              <div key={item.label} className="bg-panel px-3 py-2.5 max-md:py-2 md:px-4 md:py-3">
+                <dt className="text-[11px] leading-[0.9375rem] text-muted md:leading-normal">{item.label}</dt>
                 <dd
-                  className={`mt-1 font-sans text-sm font-semibold tabular-nums ${item.className ?? ""}`}
+                  className={`mt-1 font-sans text-sm font-semibold tabular-nums leading-[1.05rem] md:leading-normal ${item.className ?? ""}`}
                 >
                   {item.value}
                 </dd>
@@ -146,7 +146,7 @@ export function BuzzChart({
             ))}
           </dl>
         </div>
-        <p className="border-t border-line px-5 py-3 text-[11px] leading-5 text-muted md:px-7">
+        <p className="border-t border-line px-5 py-3 text-[11px] leading-5 text-muted max-md:leading-4 md:px-7">
           TradingView Lightweight Charts 기반 · 라인은 종가 곡선(그라데이션·현재가 점), 캔들은
           미국식(상승 초록 / 하락 빨강)입니다. 차트를 좌우로 끌어 이전 시간대도 볼 수 있습니다.
           거래량 수치는 우측 시세란을 참고하세요. 실측 시세 이력은 아닙니다.

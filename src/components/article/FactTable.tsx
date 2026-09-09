@@ -23,7 +23,7 @@ export function FactTable({
         <span className="block font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
           {eyebrow}
         </span>
-        <span className="mt-1 block text-[14.5px] font-semibold leading-6 text-ink">{table.caption}</span>
+        <span className="mt-1 block text-[14.5px] font-semibold leading-6 text-ink max-md:leading-[1.125rem]">{table.caption}</span>
       </figcaption>
       {/* Mobile: fit viewport without horizontal scroll. Desktop keeps the wide table. */}
       <div className="max-md:overflow-x-visible md:overflow-x-auto">
@@ -34,7 +34,7 @@ export function FactTable({
                 <th
                   key={header}
                   scope="col"
-                  className={`border-b border-line px-4 py-3 text-left font-sans text-[12.4px] font-semibold uppercase tracking-wide text-muted max-md:px-2.5 max-md:py-2 max-md:text-[11px] max-md:normal-case max-md:tracking-normal md:whitespace-nowrap ${
+                  className={`border-b border-line px-4 py-3 text-left font-sans text-[12.4px] font-semibold uppercase tracking-wide text-muted max-md:px-2.5 max-md:py-2 max-md:text-[11px] max-md:normal-case max-md:tracking-normal max-md:leading-[0.9375rem] md:whitespace-nowrap ${
                     headerIndex === 0 ? "max-md:w-[32%]" : ""
                   }`}
                 >
@@ -52,7 +52,7 @@ export function FactTable({
                 {row.map((cell, cellIndex) => (
                   <td
                     key={`${rowIndex}-${cellIndex}`}
-                    className={`px-4 py-3 align-top leading-6 max-md:break-words max-md:px-2.5 max-md:py-2 max-md:text-[13px] max-md:leading-5 ${
+                    className={`px-4 py-3 align-top leading-6 max-md:break-words max-md:px-2.5 max-md:py-2 max-md:text-[13px] max-md:leading-[0.9375rem] ${
                       cellIndex === 0 ? "font-medium text-ink" : "text-muted"
                     }`}
                   >

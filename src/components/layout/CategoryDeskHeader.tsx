@@ -19,10 +19,10 @@ export function CategoryDeskHeader({ channel }: { channel: PostChannel }) {
 
   return (
     <header className="space-y-1.5 font-gothic md:space-y-2">
-      <h1 className="whitespace-nowrap text-[clamp(13px,3.8vw,18px)] font-semibold leading-none tracking-tighter md:whitespace-normal md:text-3xl md:leading-snug md:tracking-tight">
+      <h1 className="whitespace-nowrap text-[clamp(15.6px,4.56vw,21.6px)] font-semibold leading-[0.8] tracking-tighter md:whitespace-normal md:text-3xl md:leading-snug md:tracking-tight">
         {title}
       </h1>
-      <p className="max-w-3xl text-[14px] leading-6 text-muted md:text-[16.8px] md:leading-[28.8px]">
+      <p className="max-w-3xl text-[12.6px] leading-[19.2px] text-muted md:text-[16.8px] md:leading-[28.8px]">
         {description}
       </p>
     </header>

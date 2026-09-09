@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DemographicTabs } from "@/components/boards/DemographicTabs";
 import { BoardReportBody } from "@/components/boards/BoardReportBody";
-import { LIST_MAX_ITEMS } from "@/components/dashboard/treemap-config";
+import { LIST_MAX_ITEMS, MOBILE_LIST_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import { clampAgeForBoard } from "@/lib/boards/age-tabs";
 import { filterKey, filterLabel, selectRanking, dropNamesForFilter } from "@/lib/boards/demographics";
 import { canonicalizeGameEsportsName, platformForGame, formatPlatformTag } from "@/lib/boards/game-platforms";
@@ -58,7 +58,7 @@ function RankRow({
 
   return (
     <li
-      className="board-rank-row grid grid-cols-[2.5rem_1fr_auto] items-center gap-3 border-t border-line/80 px-4 py-3 first:border-t-0"
+      className="board-rank-row grid grid-cols-[2.5rem_1fr_auto] items-center gap-3 border-t border-line/80 px-4 py-3 max-md:py-[10.2px] max-md:leading-[1.0625rem] first:border-t-0"
       style={{ animationDelay: `${Math.min(index, 9) * 28}ms` }}
     >
       <span className="font-sans text-sm font-semibold tabular-nums text-muted">{index + 1}</span>
@@ -136,19 +136,28 @@ export function BoardRankingPanel({
   onAge: (value: "all" | AgeSegment) => void;
   onRegion?: (value: "all" | RegionSegment) => void;
 }) {
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobileViewport(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  const listCap = isMobileViewport ? MOBILE_LIST_MAX_ITEMS : LIST_MAX_ITEMS;
   const showRegion = boardUsesRegionFilter(board.slug);
   const rows = useMemo(() => {
     try {
       const def = getBoard(board.slug);
       return selectRanking(board.demographics, board.ranking ?? [], gender, age, {
-        limit: LIST_MAX_ITEMS,
+        limit: listCap,
         dropNames: dropNamesForFilter(def, gender, age),
         region: showRegion ? region : "all",
-      }).slice(0, LIST_MAX_ITEMS);
+      }).slice(0, listCap);
     } catch {
-      return (board.ranking ?? []).slice(0, LIST_MAX_ITEMS);
+      return (board.ranking ?? []).slice(0, listCap);
     }
-  }, [board.demographics, board.ranking, board.slug, gender, age, region, showRegion]);
+  }, [board.demographics, board.ranking, board.slug, gender, age, region, showRegion, listCap]);
   const max = rows.length ? Math.max(...rows.map((row) => (Number.isFinite(row.score) ? row.score : 0))) : 0;
   const filtered = gender !== "all" || age !== "all" || (showRegion && region !== "all");
   const listKey = filterKey(gender, age, showRegion ? region : "all");

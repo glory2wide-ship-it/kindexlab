@@ -6,10 +6,13 @@
 export const TREEMAP_MAX_ITEMS = 20;
 
 /** Mobile-only denser/readable heatmap. Desktop keeps `TREEMAP_MAX_ITEMS`. */
-export const MOBILE_TREEMAP_MAX_ITEMS = 12;
+export const MOBILE_TREEMAP_MAX_ITEMS = 15;
 
-/** List / 전광판 rows — heatmap may show more tiles than this. */
-export const LIST_MAX_ITEMS = 10;
+/** List / 전광판 rows — desktop. */
+export const LIST_MAX_ITEMS = 30;
+
+/** List / 전광판 rows — mobile. */
+export const MOBILE_LIST_MAX_ITEMS = 25;
 
 /**
  * Shared frame for treemap + skeletons.

@@ -82,7 +82,7 @@ export default async function CategoryBriefingArticlePage({
       />
       <p className="text-sm text-muted">
         <Link href={channelSectionHref(category, "briefing")} className="hover:text-ink">
-          {meta.label} 일일브리핑
+          {meta.label} 투데이 브리핑
         </Link>
         <span className="mx-2">/</span>
         {briefing.editionDate}

@@ -327,7 +327,7 @@ nav[aria-label$="서브 메뉴"] {
 }
 
 /**
- * Shared body typography for 일일 브리핑 · Update 키워드 · 이슈칼럼 · 오늘의 분석.
+ * Shared body typography for 투데이 브리핑 · 투데이 인사이트 · 이슈칼럼 · 오늘의 분석.
  * History (from original 15px / leading-8):
  *   +11.3% -> 16.7px, then +10% -> 18.37px, then −5% -> 17.45px
  *   leading −23.5% -> 1.53rem, then +10% -> 1.683rem, then −5% -> 1.599rem

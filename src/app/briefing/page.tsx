@@ -10,7 +10,7 @@ import { SITE } from "@/lib/site";
 export const metadata: Metadata = {
   title: "데일리 트렌드 브리핑",
   description:
-    "엔터·정치·경제·문화/생활·여행/맛집 각 채널의 종합 브리핑과 Update 키워드를 매일 발행합니다. 어제 글은 매거진 아카이브로 쌓입니다.",
+    "엔터·정치·경제·문화/생활·여행/맛집 각 채널의 종합 브리핑과 투데이 인사이트를 매일 발행합니다. 어제 글은 매거진 인사이트 매거진로 쌓입니다.",
   alternates: { canonical: "/briefing" },
 };
 
@@ -51,8 +51,8 @@ export default async function BriefingHubPage() {
       <header className="space-y-3">
         <h1 className="text-3xl font-semibold tracking-tight">오늘의 트렌드 브리핑</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          카테고리마다 상단은 종합 브리핑, 아래는 Update 키워드입니다. 날짜가 바뀌면 전날
-          기사는 검색 가능한 아카이브로 넘어갑니다.
+          카테고리마다 상단은 종합 브리핑, 아래는 투데이 인사이트입니다. 날짜가 바뀌면 전날
+          기사는 검색 가능한 인사이트 매거진로 넘어갑니다.
         </p>
         <ArchiveSearchForm />
       </header>
@@ -64,8 +64,8 @@ export default async function BriefingHubPage() {
             href={channelSectionHref(channel.id, "briefing")}
             className="rounded-2xl border border-line bg-panel p-4 hover:border-accent"
           >
-            <h2 className="font-semibold tracking-tight">{channel.label} 일일브리핑</h2>
-            <p className="mt-1 text-xs leading-5 text-muted">종합 브리핑 + Update 키워드</p>
+            <h2 className="font-semibold tracking-tight">{channel.label} 투데이 브리핑</h2>
+            <p className="mt-1 text-xs leading-5 text-muted">종합 브리핑 + 투데이 인사이트</p>
           </Link>
         ))}
       </nav>
@@ -79,7 +79,7 @@ export default async function BriefingHubPage() {
                 href={channelSectionHref(channel.id, "briefing")}
                 className="text-sm text-accent hover:underline"
               >
-                {channel.label} 일일브리핑 · Update 키워드 {dives.length}편 →
+                {channel.label} 투데이 브리핑 · 투데이 인사이트 {dives.length}편 →
               </Link>
             </div>
             {main ? (
@@ -99,7 +99,7 @@ export default async function BriefingHubPage() {
 
       <p className="text-sm text-muted">
         <Link href="/briefing/archive" className="text-accent hover:underline">
-          전체 아카이브 →
+          전체 인사이트 매거진 →
         </Link>
       </p>
     </div>

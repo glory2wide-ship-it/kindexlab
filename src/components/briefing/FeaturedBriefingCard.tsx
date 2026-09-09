@@ -27,8 +27,12 @@ export function FeaturedBriefingCard({
             {article.editionDate} · {article.deskLabel || categoryLabel(article.category)}
           </span>
         </div>
-        <h2 className="mt-2 text-lg font-semibold tracking-tight md:text-xl">{article.title}</h2>
-        <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted">{article.excerpt}</p>
+        <h2 className="mt-2 text-lg font-semibold leading-[1.105] tracking-tight md:text-xl md:leading-snug">
+          {article.title}
+        </h2>
+        <p className="mt-2 line-clamp-3 text-sm leading-[1.0625rem] text-muted md:leading-6">
+          {article.excerpt}
+        </p>
         <span className="mt-4 inline-flex font-medium text-accent">종합 브리핑 본문 읽기 →</span>
       </Link>
     </article>

@@ -15,7 +15,7 @@ function MethodologyBlock({ channel }: { channel: PostChannel }) {
   if (!method) return null;
   const meta = getPostChannel(channel);
   return (
-    <section className="space-y-3 border-t border-line pt-6 text-[15px] leading-8">
+    <section className="space-y-3 border-t border-line pt-6 text-[15px] leading-[1.6rem]">
       <h3 className="text-lg font-semibold">{method.title}</h3>
       <p className="text-sm text-muted">{method.subtitle}</p>
       <p className="rounded-lg bg-panel px-3 py-2 font-mono text-xs leading-5">{method.formula}</p>
@@ -41,7 +41,7 @@ function MethodologyBlock({ channel }: { channel: PostChannel }) {
 
 function IntroSection({ compact }: { compact?: boolean }) {
   return (
-    <section className="space-y-3 text-[15px] leading-8">
+    <section className="space-y-3 text-[15px] leading-[1.6rem]">
       <h2 className="text-xl font-semibold">{KINDEX_INTRO.title}</h2>
       {(compact ? KINDEX_INTRO.paragraphs.slice(0, 2) : KINDEX_INTRO.paragraphs).map((paragraph) => (
         <p key={paragraph.slice(0, 20)}>{paragraph}</p>
@@ -59,7 +59,7 @@ function IntroSection({ compact }: { compact?: boolean }) {
 
 function DataSourcesSection() {
   return (
-    <section className="space-y-3 text-[15px] leading-8">
+    <section className="space-y-3 text-[15px] leading-[1.6rem]">
       <h2 className="text-xl font-semibold">데이터 출처</h2>
       <p className="text-sm text-muted">
         아래는 예시 형식이 아니라, 현재 파이프라인이 실제로 수집하거나 정규화에 쓰는 출처입니다.
@@ -82,7 +82,7 @@ function DataSourcesSection() {
 
 function BulletSection({ title, items }: { title: string; items: string[] }) {
   return (
-    <section className="space-y-3 text-[15px] leading-8">
+    <section className="space-y-3 text-[15px] leading-[1.6rem]">
       <h2 className="text-xl font-semibold">{title}</h2>
       <ul className="list-disc space-y-2 pl-5">
         {items.map((item) => (
@@ -104,7 +104,7 @@ export function KinDexAboutSections({
   return (
     <div className="space-y-8">
       <IntroSection compact={compact} />
-      <section className="space-y-3 text-[15px] leading-8">
+      <section className="space-y-3 text-[15px] leading-[1.6rem]">
         <h2 className="text-xl font-semibold">지수 산출 방식</h2>
         <p className="text-sm text-muted">
           {channel

@@ -20,11 +20,11 @@ export async function generateMetadata({
   params: Promise<{ category: string }>;
 }): Promise<Metadata> {
   const { category } = await params;
-  if (!isPostChannel(category)) return { title: "아카이브" };
+  if (!isPostChannel(category)) return { title: "인사이트 매거진" };
   const meta = getPostChannel(category);
   return {
-    title: `${meta.label} 아카이브`,
-    description: `${meta.label} 종합 브리핑과 Update 키워드를 발행일 기준으로 보관합니다.`,
+    title: `${meta.label} 인사이트 매거진`,
+    description: `${meta.label} 종합 브리핑과 투데이 인사이트를 발행일 기준으로 보관합니다.`,
     alternates: { canonical: channelSectionHref(category, "archive") },
   };
 }
@@ -69,9 +69,9 @@ export default async function CategoryArchivePage({
   return (
     <div className="space-y-8">
       <header className="space-y-3">
-        <h1 className="text-3xl font-semibold tracking-tight">{meta.label} 아카이브</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{meta.label} 인사이트 매거진</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          {meta.label} 데스크에서 발행한 종합 브리핑과 Update 키워드를 날짜별로 모았습니다.
+          {meta.label} 데스크에서 발행한 종합 브리핑과 투데이 인사이트를 날짜별로 모았습니다.
           최신 발행일이 위에 옵니다.
         </p>
       </header>

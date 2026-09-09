@@ -6,12 +6,12 @@ import { SITE } from "@/lib/site";
 export const revalidate = 180;
 
 export const metadata: Metadata = {
-  title: "정치 일일브리핑",
+  title: "정치 투데이 브리핑",
   description:
-    "정치 종합 브리핑과 헤드라인·대통령·정당·정치인 등 Update 키워드. 표, FAQ, 1,500단어 이상 본문을 같은 규격으로 발행합니다.",
+    "정치 종합 브리핑과 헤드라인·대통령·정당·정치인 등 투데이 인사이트. 표, FAQ, 1,500단어 이상 본문을 같은 규격으로 발행합니다.",
   alternates: { canonical: channelSectionHref("politics", "briefing") },
   openGraph: {
-    title: `정치 일일브리핑 · ${SITE.name}`,
+    title: `정치 투데이 브리핑 · ${SITE.name}`,
     url: `${SITE.url}${channelSectionHref("politics", "briefing")}`,
   },
 };

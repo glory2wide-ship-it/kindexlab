@@ -72,7 +72,7 @@ export default async function BriefingArticlePage({
         </Link>
         <span className="mx-2">/</span>
         <Link href="/briefing/archive" className="hover:text-ink">
-          아카이브
+          인사이트 매거진
         </Link>
         <span className="mx-2">/</span>
         <Link href={`/briefing/archive/${briefing.editionDate}`} className="hover:text-ink">

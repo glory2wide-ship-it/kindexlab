@@ -86,7 +86,8 @@ function fitPriceToVisibleRange(
 
 function resolveChartHeight(desktop: number): number {
   if (typeof window === "undefined") return desktop;
-  return window.matchMedia(MOBILE_MQ).matches ? Math.round(desktop * 0.75) : desktop;
+  // Mobile: prior 25% shorter (×0.75), then an additional 20% (×0.8) → ×0.6.
+  return window.matchMedia(MOBILE_MQ).matches ? Math.round(desktop * 0.6) : desktop;
 }
 
 export function TradingViewChart({
@@ -142,7 +143,7 @@ export function TradingViewChart({
 
   const [resolvedHeight, setResolvedHeight] = useState(() => resolveChartHeight(height));
 
-  // Mobile chart height is 25% shorter; desktop keeps the requested height.
+  // Mobile chart height is 40% shorter than desktop (25% then −20%).
   useEffect(() => {
     const mq = window.matchMedia(MOBILE_MQ);
     const apply = () => setResolvedHeight(resolveChartHeight(height));

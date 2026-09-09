@@ -42,20 +42,20 @@ export function BriefingCard({
         <h3
           className={`mt-2 font-semibold tracking-tight ${
             lead
-              ? "text-lg leading-[1.3] md:text-xl md:leading-snug"
-              : "text-sm leading-5 md:leading-6"
+              ? "text-lg leading-[1.105] md:text-xl md:leading-snug"
+              : "text-sm leading-[1.0625rem] md:leading-6"
           }`}
         >
           {article.title}
         </h3>
         <p
-          className={`mt-2 text-sm leading-5 text-muted md:leading-6 ${
+          className={`mt-2 text-sm leading-[1.0625rem] text-muted md:leading-6 ${
             lead ? "line-clamp-3" : "line-clamp-2"
           }`}
         >
           {article.excerpt}
         </p>
-        <span className="mt-3 inline-flex text-sm font-medium leading-5 text-accent md:leading-6">
+        <span className="mt-3 inline-flex text-sm font-medium leading-[1.0625rem] text-accent md:leading-6">
           본문 읽기 →
         </span>
       </Link>

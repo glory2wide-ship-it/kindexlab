@@ -112,13 +112,13 @@ export const CHANNEL_SECTIONS: {
   {
     id: "briefing",
     path: "/briefing",
-    label: "일일브리핑",
-    description: "키워드 기반 Update 키워드 브리핑, 마크다운 표, FAQ",
+    label: "투데이 브리핑",
+    description: "키워드 기반 투데이 인사이트 브리핑, 마크다운 표, FAQ",
   },
   {
     id: "archive",
     path: "/archive",
-    label: "아카이브",
+    label: "인사이트 매거진",
     description: "지난 브리핑 목록",
   },
   {
