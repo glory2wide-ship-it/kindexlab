@@ -67,9 +67,9 @@ function MarketQuoteHero({
           : TYPE_LABEL[entity.type];
 
   return (
-    <section className="rounded-2xl border border-line bg-panel p-6 md:p-8">
+    <section className="rounded-2xl border border-line bg-panel p-[18px] md:p-8">
       <p className="text-xs text-muted">{kicker ?? boardHint}</p>
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+      <div className="mt-1.5 flex flex-wrap items-end justify-between gap-3 md:mt-2 md:gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{entity.name}</h1>
           {entity.nameEn ? <p className="mt-1 text-sm text-muted">{entity.nameEn}</p> : null}
@@ -84,7 +84,7 @@ function MarketQuoteHero({
           </p>
         </div>
       </div>
-      <p className="mt-6 text-[11px] text-muted">
+      <p className="mt-[1.125rem] text-[11px] text-muted md:mt-6">
         {quote.label}
         {observedLabel ? ` · ${observedLabel} 기준` : ""} · 약 3분마다 갱신 · 킨덱스 지수는 표시하지 않습니다
       </p>
