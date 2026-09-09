@@ -12,17 +12,13 @@ export interface TreemapBox {
   y1: number;
 }
 
-/** Rank 1 target share of the map's area (within the 12–15% band). */
-export const RANK_1_AREA_RATIO = 0.14;
+/** Soft typical share for the leader on a ~15–20 tile Finviz-style board. */
+export const RANK_1_AREA_RATIO = 0.15;
 export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
-/**
- * Rank 2+ must stay strictly below the rank-1 share, otherwise the leader stops
- * reading as the leader. Derived rather than written out so the two cannot drift
- * apart when the share is retuned.
- */
+/** Soft ceiling used by helpers; live layout uses dynamic caps by tile count. */
 export const RANK_BELOW_CAP = RANK_1_AREA_RATIO - 0.001;
-/** Soft ceiling for rank-1 box aspect (max(w,h)/min(w,h)). */
-export const RANK_1_MAX_ASPECT = 1.2;
+/** Soft ceiling for near-square helper aspect (max(w,h)/min(w,h)). */
+export const RANK_1_MAX_ASPECT = 1.25;
 
 export interface HeatmapSizeInput {
   id: string;
@@ -41,82 +37,50 @@ function safeScore(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-/**
- * Rank Zipf × index score. Rank decay keeps 2 > 3 > … even when scores bunch;
- * the score term still stretches neighbors so a higher index reads larger.
- */
-function rankScoreWeight(
-  rank: number,
-  score: number,
-  peakScore: number,
-  exponent: number,
-  floorPlace = 2,
-): number {
-  const place = Math.max(Math.round(rank), floorPlace);
-  const rankPart = 1 / place ** exponent;
-  const peak = Math.max(peakScore, 1);
-  const scoreNorm = Math.min(1, safeScore(score) / peak);
-  const scorePart = 0.18 + 0.82 * scoreNorm ** 1.05;
-  return rankPart * scorePart;
+/** Milder Zipf on denser boards — Finviz market maps step down smoothly, not cliff-like. */
+function zipfExponent(count: number): number {
+  if (count >= 20) return 0.82;
+  if (count >= 15) return 0.88;
+  if (count >= 10) return 0.95;
+  return 1.05;
 }
 
-/** Walk rank 2+ and shrink any tile that would match or exceed the one above it. */
-function enforceDescending(leaderShare: number, rest: number[]): number[] {
-  const out = [...rest];
-  let previous = leaderShare;
-  // ~6% step-down per rank keeps 2 > 3 > … visible while still filling the
-  // remaining ~86% pool at typical heatmap counts (15–20 tiles).
-  const step = 0.94;
-  for (let i = 0; i < out.length; i++) {
-    const ceiling = previous * step;
-    if (out[i] >= ceiling) out[i] = ceiling;
-    previous = out[i];
+/** Soft max share for the largest tile so one box does not dominate the map. */
+function maxLeaderShare(count: number): number {
+  if (count <= 6) return 0.3;
+  if (count <= 10) return 0.24;
+  if (count <= 15) return 0.18;
+  return 0.15;
+}
+
+/**
+ * Finviz-like area weight: score-dominant with mild rank assist.
+ * Higher index → larger tile; ranks still break ties when scores bunch.
+ */
+function finvizWeight(rank: number, score: number, peakScore: number, exponent: number): number {
+  const place = Math.max(Math.round(rank), 1);
+  const peak = Math.max(peakScore, 1);
+  const scoreNorm = Math.min(1, safeScore(score) / peak);
+  // Concave score curve keeps mid-pack tiles readable (like market-cap maps).
+  const scorePart = Math.pow(0.12 + 0.88 * scoreNorm, 0.8);
+  const rankPart = 1 / place ** exponent;
+  return Math.max(scorePart * rankPart, 1e-6);
+}
+
+/** Keep 1 ≥ 2 ≥ 3 … with a gentle step so neighbors stay visually related. */
+function enforceSoftDescending(values: number[]): number[] {
+  const out = [...values];
+  for (let i = 1; i < out.length; i++) {
+    const ceiling = out[i - 1]! * 0.98;
+    if (out[i]! > ceiling) out[i] = ceiling;
   }
   return out;
 }
 
-/** Split a pool by weight, capping every tile below the rank-1 share. */
-function allocatePool(weights: number[], pool = REMAINING_AREA_RATIO, cap = RANK_BELOW_CAP): number[] {
-  const n = weights.length;
-  if (!n) return [];
-  const values = weights.map((value) => (Number.isFinite(value) && value > 0 ? value : 0));
-  const ratios = new Array(n).fill(0);
-  const locked = new Array(n).fill(false);
-  let remaining = pool;
-
-  for (let round = 0; round < n + 2; round++) {
-    let freeWeight = 0;
-    let freeCount = 0;
-    for (let i = 0; i < n; i++) {
-      if (locked[i]) continue;
-      freeWeight += values[i];
-      freeCount += 1;
-    }
-    if (freeCount === 0 || remaining <= 1e-12) break;
-
-    const snapshot = remaining;
-    let capped = false;
-    for (let i = 0; i < n; i++) {
-      if (locked[i]) continue;
-      const raw = freeWeight > 0 ? (values[i] / freeWeight) * snapshot : snapshot / freeCount;
-      if (raw > cap) {
-        ratios[i] = cap;
-        locked[i] = true;
-        remaining -= cap;
-        capped = true;
-      }
-    }
-    if (capped) continue;
-
-    for (let i = 0; i < n; i++) {
-      if (locked[i]) continue;
-      ratios[i] = freeWeight > 0 ? (values[i] / freeWeight) * remaining : remaining / freeCount;
-    }
-    remaining = 0;
-    break;
-  }
-
-  return ratios;
+function renormalize(values: number[]): number[] {
+  const sum = values.reduce((total, value) => total + value, 0);
+  if (sum <= 1e-12) return values.map(() => 1 / Math.max(values.length, 1));
+  return values.map((value) => value / sum);
 }
 
 interface PanelNode {
@@ -327,9 +291,9 @@ function squarifyFill(
 }
 
 /**
- * Rank 1 is a near-square in the top-left. Rank 2 always sits directly under
- * it in the same left column (same width). Ranks 3+ fill the remaining
- * L-shaped region (right of the #1+#2 stack, plus any strip below).
+ * Finviz-style squarified treemap over the full canvas.
+ * Largest tiles (by score×rank weight) are packed first so the leader naturally
+ * anchors near a corner with near-square neighbors — no forced left-column stack.
  */
 export function layoutHeatmapLeaves(
   items: HeatmapSizeInput[],
@@ -349,153 +313,14 @@ export function layoutHeatmapLeaves(
     rank: item.rank ?? index + 1,
     value: Math.max(allocation.ratios.get(item.id) ?? 0, 1e-6),
   }));
-
-  const gap = Math.max(0, padding);
-  const leader = nodes[0]!;
-  const second = nodes[1]!;
-  const others = nodes.slice(2);
-  const mapArea = Math.max(width * height, 1);
-
-  const { w: squareSide } = nearSquareRank1Size(width, height);
-  const colW = Math.min(squareSide, Math.max(24, width - 24));
-  const leadH = Math.min(squareSide, Math.max(24, height - 24));
-
-  const leaderBox: TreemapBox = {
-    id: leader.id,
-    rank: leader.rank,
-    x0: 0,
-    y0: 0,
-    x1: colW,
-    y1: leadH,
-  };
-
-  const belowY0 = Math.min(leadH + gap, height);
-  if (belowY0 >= height - 8) {
-    return squarifyPanel(nodes, 0, 0, width, height, gap);
-  }
-
-  // #2 directly under #1, same column width; height from its area share.
-  const secondRatio = Math.max(allocation.ratios.get(second.id) ?? second.value, 1e-6);
-  let secondH = (secondRatio * mapArea) / Math.max(colW, 1);
-  const maxSecondH = height - belowY0;
-  secondH = Math.max(24, Math.min(secondH, maxSecondH));
-  // If only a thin sliver would remain under #2 in the column, absorb it.
-  if (maxSecondH - secondH < 24) secondH = maxSecondH;
-
-  const secondY1 = belowY0 + secondH;
-  const secondBox: TreemapBox = {
-    id: second.id,
-    rank: second.rank,
-    x0: 0,
-    y0: belowY0,
-    x1: colW,
-    y1: secondY1,
-  };
-
-  const boxes: TreemapBox[] = [leaderBox, secondBox];
-  const stackBottom = secondY1;
-  const rightX0 = Math.min(colW + gap, width);
-  const rightW = width - rightX0;
-  const bottomY0 = Math.min(stackBottom + gap, height);
-  const bottomH = height - bottomY0;
-  const usableRight = rightW >= 24;
-  const usableBottom = bottomH >= 24;
-
-  if (!others.length) {
-    // Two tiles: keep #2 under #1; stretch both to full width only when there
-    // is no right/bottom room left to paint.
-    if (!usableRight && !usableBottom) {
-      leaderBox.x1 = width;
-      secondBox.x1 = width;
-    } else if (usableRight && !usableBottom) {
-      // Expand #2 downward already filled; give right strip to #2 by widening
-      // both? Prefer widening the stack to full width so #2 stays under #1.
-      leaderBox.x1 = width;
-      secondBox.x1 = width;
-      const topH = Math.min(leadH, Math.max(24, Math.round((RANK_1_AREA_RATIO * mapArea) / width)));
-      leaderBox.y1 = topH;
-      secondBox.y0 = Math.min(topH + gap, height);
-      secondBox.y1 = height;
-    } else if (!usableRight && usableBottom) {
-      secondBox.y1 = height;
-    } else {
-      // Room on the right: widen stack to avoid an empty right column when n=2.
-      leaderBox.x1 = width;
-      secondBox.x1 = width;
-      const topH = Math.min(leadH, Math.max(24, Math.round((RANK_1_AREA_RATIO * mapArea) / width)));
-      leaderBox.y1 = topH;
-      secondBox.y0 = Math.min(topH + gap, height);
-      secondBox.y1 = height;
-    }
-    return [leaderBox, secondBox];
-  }
-
-  if (!usableRight && !usableBottom) {
-    return squarifyPanel(nodes, 0, 0, width, height, gap);
-  }
-
-  let rightNodes: PanelNode[] = [];
-  let bottomNodes: PanelNode[] = [];
-
-  if (usableRight && usableBottom) {
-    const rightArea = rightW * Math.max(stackBottom, 1);
-    const bottomArea = width * bottomH;
-    const restTotal = others.reduce((sum, node) => sum + node.value, 0) || others.length;
-    const targetRight = restTotal * (rightArea / Math.max(rightArea + bottomArea, 1));
-    let acc = 0;
-    for (let i = 0; i < others.length; i++) {
-      const node = others[i]!;
-      const remainingAfter = others.length - i - 1;
-      if (rightNodes.length && (acc >= targetRight || remainingAfter === 0)) {
-        bottomNodes.push(node);
-      } else {
-        rightNodes.push(node);
-        acc += node.value;
-      }
-    }
-    if (!bottomNodes.length && rightNodes.length > 1) bottomNodes.push(rightNodes.pop()!);
-    if (!rightNodes.length && bottomNodes.length > 1) rightNodes.push(bottomNodes.shift()!);
-  } else if (usableRight) {
-    rightNodes = others;
-  } else {
-    bottomNodes = others;
-  }
-
-  if (rightNodes.length && usableRight) {
-    // Right panel aligns with the #1+#2 stack height when a bottom strip exists;
-    // otherwise it spans the full map height.
-    const rightY1 = bottomNodes.length && usableBottom ? stackBottom : height;
-    boxes.push(...squarifyPanel(rightNodes, rightX0, 0, width, rightY1, gap));
-  }
-  if (bottomNodes.length && usableBottom) {
-    boxes.push(...squarifyPanel(bottomNodes, 0, bottomY0, width, height, gap));
-  }
-
-  if (boxes.length < nodes.length) {
-    return squarifyPanel(nodes, 0, 0, width, height, gap);
-  }
-  return boxes;
-}
-
-function fillRestPool(leaderShare: number, rest: number[], pool: number): number[] {
-  let values = enforceDescending(leaderShare, rest);
-  for (let round = 0; round < 4; round++) {
-    const sum = values.reduce((total, value) => total + value, 0);
-    if (sum <= 1e-12) break;
-    values = enforceDescending(
-      leaderShare,
-      values.map((value) => (value / sum) * pool),
-    );
-    const used = values.reduce((total, value) => total + value, 0);
-    if (Math.abs(used - pool) < 1e-6) break;
-  }
-  return values;
+  // Squarify expects largest-first; that also tends to park #1 top-left like Finviz.
+  nodes.sort((a, b) => b.value - a.value || a.rank - b.rank);
+  return squarifyPanel(nodes, 0, 0, width, height, padding);
 }
 
 /**
- * Rank 1 is always ~14% of the map (12–15% band). Rank 2+ share the rest by
- * rank × index score, each capped below rank 1 and strictly smaller than the
- * tile above it so box size steps down with rank.
+ * Continuous Finviz-like area shares for every tile (including rank 1).
+ * Weights follow score with a mild Zipf assist, then soft descending + caps.
  */
 export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSizeAllocation {
   const ratios = new Map<string, number>();
@@ -506,27 +331,48 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
     return { ratios, leftover: 0 };
   }
 
-  ratios.set(items[0].id, RANK_1_AREA_RATIO);
-  const rest = items.slice(1);
-  const packed = items.length >= 20;
-  // Stronger Zipf decay → clearer size drop from 2 → 3 → … even when scores bunch.
-  const exponent = packed ? 1.12 : 1.2;
-  const cap = packed ? Math.min(0.12, RANK_BELOW_CAP) : RANK_1_AREA_RATIO * 0.88;
-  const peak = Math.max(...rest.map((item) => safeScore(item.score)), 1);
-  const weights = rest.map((item, index) =>
-    rankScoreWeight(item.rank ?? index + 2, item.score, peak, exponent),
+  const n = items.length;
+  const peak = Math.max(...items.map((item) => safeScore(item.score)), 1);
+  const exponent = zipfExponent(n);
+  let values = items.map((item, index) =>
+    finvizWeight(item.rank ?? index + 1, item.score, peak, exponent),
   );
-  const restRatios = fillRestPool(
-    RANK_1_AREA_RATIO,
-    allocatePool(weights, REMAINING_AREA_RATIO, cap),
-    REMAINING_AREA_RATIO,
-  );
-  rest.forEach((item, index) => {
-    ratios.set(item.id, restRatios[index] ?? 0);
+  values = renormalize(enforceSoftDescending(renormalize(values)));
+
+  const leaderCap = maxLeaderShare(n);
+  if (values[0]! > leaderCap) {
+    const excess = values[0]! - leaderCap;
+    values[0] = leaderCap;
+    const restSum = values.slice(1).reduce((sum, value) => sum + value, 0) || 1;
+    for (let i = 1; i < values.length; i++) {
+      values[i] = values[i]! + excess * (values[i]! / restSum);
+    }
+    values = renormalize(enforceSoftDescending(values));
+  }
+
+  // Tiny-tile floor so the tail stays clickable without flattening the leaders.
+  const minShare = Math.min(0.018, 0.55 / n);
+  let deficit = 0;
+  for (let i = 0; i < values.length; i++) {
+    if (values[i]! < minShare) {
+      deficit += minShare - values[i]!;
+      values[i] = minShare;
+    }
+  }
+  if (deficit > 0) {
+    const head = values.slice(0, Math.max(1, Math.ceil(n * 0.35)));
+    const headSum = head.reduce((sum, value) => sum + value, 0) || 1;
+    for (let i = 0; i < head.length; i++) {
+      values[i] = Math.max(minShare, values[i]! - deficit * (values[i]! / headSum));
+    }
+    values = renormalize(enforceSoftDescending(values));
+  }
+
+  items.forEach((item, index) => {
+    ratios.set(item.id, values[index] ?? 0);
   });
   const used = [...ratios.values()].reduce((sum, value) => sum + value, 0);
-  const leftover = Math.max(0, 1 - used);
-  return { ratios, leftover };
+  return { ratios, leftover: Math.max(0, 1 - used) };
 }
 
 /** Area weight used by the strip fallback layout. */

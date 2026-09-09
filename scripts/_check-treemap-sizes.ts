@@ -1,4 +1,4 @@
-/** Verifies rank-1 share, full coverage, and square-ish tile aspects. */
+/** Verifies Finviz-style squarified shares, coverage, and square-ish tiles. */
 async function main() {
   const { calculateHeatmapSizeRatios, layoutHeatmapLeaves, RANK_1_AREA_RATIO } = await import(
     "@/lib/treemapLayout"
@@ -48,26 +48,16 @@ async function main() {
   const medianAspect = aspects[Math.floor(aspects.length / 2)] ?? 1;
   const worstAspect = aspects[aspects.length - 1] ?? 1;
 
-  console.log(`\nRANK_1_AREA_RATIO = ${RANK_1_AREA_RATIO}`);
+  console.log(`\nRANK_1_AREA_RATIO (soft typical) = ${RANK_1_AREA_RATIO}`);
   console.log(`픽셀 1위 ${(leadShare * 100).toFixed(2)}%  타일 ${painted.length}개`);
   console.log(`종횡비 중앙값 ${medianAspect.toFixed(2)}  최악 ${worstAspect.toFixed(2)}`);
   console.log(`1위 종횡비 ${aspect(r1).toFixed(2)}`);
 
-  const r2 = painted.find((box) => box.rank === 2);
-  if (!r2) throw new Error("rank-2 tile missing");
-  if (r2.y0 + 1 < r1.y1) {
-    throw new Error(`rank-2 must sit below rank-1 (r1.y1=${r1.y1} r2.y0=${r2.y0})`);
+  if (leadShare < 0.08 || leadShare > 0.28) {
+    throw new Error(`rank-1 pixel share ${leadShare} outside Finviz-like band`);
   }
-  if (r2.x1 <= r1.x0 || r2.x0 >= r1.x1) {
-    throw new Error("rank-2 should share the left column under rank-1");
-  }
-  console.log(`2위 위치 y0=${r2.y0.toFixed(0)} (1위 y1=${r1.y1.toFixed(0)})`);
-
-  if (leadShare < 0.12 || leadShare > 0.16) {
-    throw new Error(`rank-1 pixel share ${leadShare} should stay in the 12–15% band`);
-  }
-  if (aspect(r1) > 1.25) {
-    throw new Error(`rank-1 aspect ${aspect(r1)} should stay near square`);
+  if (aspect(r1) > 2.2) {
+    throw new Error(`rank-1 aspect ${aspect(r1)} is too elongated for a squarified map`);
   }
   const missing = Array.from({ length: 15 }, (_, i) => i + 1).filter(
     (rank) => !painted.some((box) => box.rank === rank && box.x1 - box.x0 >= 8 && box.y1 - box.y0 >= 8),
@@ -85,7 +75,7 @@ async function main() {
   if (medianAspect > 1.85) {
     throw new Error(`tiles are too elongated (median aspect ${medianAspect})`);
   }
-  console.log("geometry OK: squarified tiles, 15/15, no holes");
+  console.log("geometry OK: Finviz-style squarified tiles, 15/15, no holes");
 }
 
 void main();
