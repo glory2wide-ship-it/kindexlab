@@ -135,10 +135,12 @@ export function BuzzChart({
           </div>
           <dl className="grid grid-cols-3 gap-px border-t border-line bg-line lg:grid-cols-1 lg:border-l lg:border-t-0">
             {quote.map((item) => (
-              <div key={item.label} className="bg-panel px-3 py-2.5 max-md:py-2 md:px-4 md:py-3">
-                <dt className="text-[11px] leading-[0.9375rem] text-muted md:leading-normal">{item.label}</dt>
+              <div key={item.label} className="bg-panel px-3 py-2.5 max-md:py-1.5 md:px-4 md:py-3">
+                <dt className="text-[11px] leading-[0.9375rem] text-muted max-md:leading-[0.703rem] md:leading-normal">
+                  {item.label}
+                </dt>
                 <dd
-                  className={`mt-1 font-sans text-sm font-semibold tabular-nums leading-[1.05rem] md:leading-normal ${item.className ?? ""}`}
+                  className={`mt-1 font-sans text-sm font-semibold tabular-nums leading-[1.05rem] max-md:mt-0.5 max-md:leading-[0.788rem] md:leading-normal ${item.className ?? ""}`}
                 >
                   {item.value}
                 </dd>

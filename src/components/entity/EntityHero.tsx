@@ -156,7 +156,7 @@ export function EntityHero({
           </p>
         </div>
       ) : null}
-      <p className="mt-5 max-w-3xl text-sm leading-7 text-ink/85 max-md:leading-[1.3125rem]">{entity.summary}</p>
+      <p className="mt-5 max-w-3xl text-sm leading-7 text-ink/85 max-md:leading-[0.984rem]">{entity.summary}</p>
     </section>
   );
 }

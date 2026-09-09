@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { FlipBoardText } from "@/components/dashboard/FlipBoardNumber";
 import { isNavigating } from "@/lib/nav/progress";
 import { DEFAULT_TRENDS_REVALIDATE_SEC, formatRefreshClock } from "@/lib/refresh";
 
@@ -16,8 +17,10 @@ const CLOCK_CLASS = "refresh-countdown text-[15.972px] tabular-nums leading-none
 export function HeatmapCountdownFallback() {
   return (
     <div role="timer" className={SHELL_CLASS} style={SHELL_STYLE} aria-hidden>
-      <span className={LABEL_CLASS}>LIVE Update</span>
-      <span className={CLOCK_CLASS}>03:00</span>
+      <span className={LABEL_CLASS}>LIVE KinDex</span>
+      <span className={CLOCK_CLASS}>
+        <FlipBoardText text="03:00" />
+      </span>
     </div>
   );
 }
@@ -25,7 +28,7 @@ export function HeatmapCountdownFallback() {
 /**
  * Owns the 1s countdown locally so parent heatmaps do not re-render (and
  * re-layout d3) every second. Optional `onExpire` fires about every interval.
- * Desktop copy matches the mobile header countdown: "LIVE Update MM:SS".
+ * Desktop copy matches the mobile header countdown: "LIVE KinDex MM:SS".
  */
 export function HeatmapCountdown({
   intervalSec = DEFAULT_TRENDS_REVALIDATE_SEC,
@@ -72,9 +75,9 @@ export function HeatmapCountdown({
       className={SHELL_CLASS}
       style={SHELL_STYLE}
     >
-      <span className={LABEL_CLASS}>LIVE Update</span>
+      <span className={LABEL_CLASS}>LIVE KinDex</span>
       <span className={CLOCK_CLASS}>
-        {refreshing ? "…" : formatRefreshClock(remainingSec)}
+        {refreshing ? "…" : <FlipBoardText text={formatRefreshClock(remainingSec)} />}
       </span>
     </div>
   );

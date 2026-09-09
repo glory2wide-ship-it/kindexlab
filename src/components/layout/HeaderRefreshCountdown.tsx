@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { FlipBoardText } from "@/components/dashboard/FlipBoardNumber";
 import { isNavigating } from "@/lib/nav/progress";
 import { DEFAULT_TRENDS_REVALIDATE_SEC, formatRefreshClock } from "@/lib/refresh";
 
@@ -60,10 +61,10 @@ export function HeaderRefreshCountdown({
       className="inline-flex h-[25.5px] shrink-0 items-center justify-center gap-1 rounded-md border border-[#22c55e] bg-[#22c55e] px-1.5 font-sans font-semibold text-white"
     >
       <span className="text-[10.89px] font-bold leading-none tracking-tight whitespace-nowrap text-white">
-        LIVE Update
+        LIVE KinDex
       </span>
-      <span className="text-[13.31px] tabular-nums leading-none text-white">
-        {pending ? "…" : formatRefreshClock(remainingSec)}
+      <span className="refresh-countdown text-[13.31px] tabular-nums leading-none text-white">
+        {pending ? "…" : <FlipBoardText text={formatRefreshClock(remainingSec)} />}
       </span>
     </div>
   );
