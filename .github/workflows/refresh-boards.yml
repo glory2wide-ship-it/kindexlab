@@ -34,6 +34,8 @@ jobs:
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
           BOARDS_CHAIN_ENABLED: "1"
           TRENDS_DATA_SOURCE: live
         run: |
