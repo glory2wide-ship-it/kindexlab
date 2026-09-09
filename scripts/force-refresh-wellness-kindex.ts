@@ -1,11 +1,13 @@
 /**
- * Force-refresh 웰니스관광 클러스터 KinDex ❺ and bump generatedAt
- * so long-lived Next memory picks up the shard.
+ * Force-refresh 웰니스관광 클러스터 KinDex ❺ using ❶–❹ story beats
+ * (not rank-only glue) and bump generatedAt so memory caches refresh.
  */
 import { readAnalysis, writeAnalysis } from "../src/lib/analysis/store";
 import {
   buildKindexFeatureParagraph,
+  extractStoryBeatsFromSections,
   isKindexFeatureSectionHeading,
+  isUnusableKindexFeatureBody,
 } from "../src/lib/editorial/tense-rules";
 import { stripRowQualifier } from "../src/lib/boards/heatmap";
 import { readFile } from "node:fs/promises";
@@ -37,16 +39,16 @@ async function main() {
     );
     if (row.note?.trim()) facts.push(`${row.note.replace(/\.$/, "")}입니다.`);
   }
-  const peers = ranking
-    .filter((item) => item.name !== row?.name)
-    .slice(0, 3)
-    .map((item) => `${stripRowQualifier(item.name)}(${item.rank}위)`);
-  if (peers.length) {
-    facts.push(`같은 보드 상위권에는 ${peers.join(", ")} 등이 함께 올라와 있습니다.`);
-  }
 
-  const paragraph = buildKindexFeatureParagraph({ keyword: focus, signalFacts: facts });
+  const storyBeats = extractStoryBeatsFromSections(entry.article.sections);
+  const paragraph = buildKindexFeatureParagraph({
+    keyword: focus,
+    signalFacts: facts,
+    storyBeats,
+  });
+  console.log("[storyBeats]", storyBeats.slice(0, 4));
   console.log("[❺]", paragraph);
+  console.log("[usable]", !isUnusableKindexFeatureBody(paragraph));
 
   const sections = entry.article.sections.map((section) =>
     isKindexFeatureSectionHeading(section.heading)

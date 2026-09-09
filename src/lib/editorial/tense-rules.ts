@@ -118,12 +118,45 @@ export function isKindexFeatureMetaBoilerplate(text: string): boolean {
   return isKindexFeatureMetaDefinition(t);
 }
 
+/**
+ * True when ❺ is the old deterministic rank-glue template
+ * (fact sentences + fixed closer), not editorial interpretation.
+ */
+export function isKindexFeatureRankTemplate(text: string): boolean {
+  const t = text.replace(/\s+/g, " ").trim();
+  if (!t) return false;
+  if (/종합하면\s+.+\s+관심은\s+보드\s*안\s+상대\s*순위[·・]?움직임으로\s*읽습니다/.test(t)) {
+    return true;
+  }
+  if (/이\s*숫자는\s+.+\s+관심이\s*모이는\s*상대\s*위치와\s*속도를\s*보여\s*줍니다/.test(t)) {
+    return true;
+  }
+  if (/같은\s*보드에서\s*확인된\s*순위[·・]?변동\s*신호가\s*제한적이어서/.test(t)) {
+    return true;
+  }
+  const hasRankStack =
+    /해당\s*히트맵에서\s*\d+\s*위에\s*있습니다/.test(t) &&
+    /(직전\s*대비\s*순위\s*변동|직전\s*\d+\s*위에서)/.test(t);
+  const hasEditorialBridge =
+    /(신청|자격|모집|일정|정책|지원|관심의\s*축|흐름으로|해석하면|읽히|의미|본문에서|앞서\s*다룬|❶|❷|❸|❹)/.test(
+      t,
+    );
+  return hasRankStack && !hasEditorialBridge;
+}
+
+/** Empty, meta-definition, or rank-glue template — replace before publish. */
+export function isUnusableKindexFeatureBody(text: string): boolean {
+  const t = text.replace(/\s+/g, " ").trim();
+  if (!t) return true;
+  return isKindexFeatureMetaDefinition(t) || isKindexFeatureRankTemplate(t);
+}
+
 function toHonorificSignalClause(raw: string): string {
   let text = raw.replace(/\s+/g, " ").trim();
   if (!text) return "";
   if (!/[.!?…]$/u.test(text)) text = `${text}.`;
-  // Already 합니다체 — do not touch (avoids 있습니다. → 있습니습니다.).
-  if (/(습니다|합니다|됩니다|입니다|습니까|입니까)\.?$/u.test(text)) {
+  // Already 합니다체 (~습니다 / ~ㅂ니다) — do not touch.
+  if (/(습니다|합니다|됩니다|입니다|습니까|입니까|니다)\.?$/u.test(text)) {
     return text.endsWith(".") ? text : `${text}.`;
   }
   text = text
@@ -147,33 +180,112 @@ function topicParticle(word: string): "은" | "는" {
   return (code - 0xac00) % 28 === 0 ? "는" : "은";
 }
 
+/** Pull short story cues from ❶–❹ so fallback ❺ is not rank-only glue. */
+export function extractStoryBeatsFromSections(
+  sections: Array<{ heading: string; paragraphs: string[] }>,
+): string[] {
+  const beats: string[] = [];
+  for (const section of sections) {
+    if (isKindexFeatureSectionHeading(section.heading)) continue;
+    if (isCoreSummaryHeading(section.heading)) continue;
+    const heading = scrubSectionHeadingNoise(section.heading);
+    if (heading && !/오늘의\s*결론|왜\s*지금/.test(heading)) {
+      beats.push(heading);
+    }
+    for (const paragraph of section.paragraphs ?? []) {
+      const first = paragraph
+        .replace(/\s+/g, " ")
+        .trim()
+        .split(/(?<=[.!?…])\s+/)
+        .map((part) => part.trim())
+        .find((part) => part.length >= 24);
+      if (first) {
+        beats.push(first.length > 110 ? `${first.slice(0, 108).replace(/\s+\S*$/, "")}…` : first);
+      }
+      if (beats.length >= 6) return beats.slice(0, 6);
+    }
+  }
+  return beats.slice(0, 6);
+}
+
+function pickStoryTheme(storyBeats: string[]): string {
+  const blob = storyBeats.join(" ");
+  const themes: Array<{ re: RegExp; label: string; weight: number }> = [
+    { re: /관광|여행|휴양|웰니스|클러스터|특화|치유/, label: "관광·휴양 정책과 현장 일정", weight: 3 },
+    { re: /신청|자격|모집|접수|지원금|쿠폰/, label: "신청·자격·모집 일정", weight: 2 },
+    { re: /공연|축제|티켓|예매|관람/, label: "공연·축제 일정과 예매", weight: 2 },
+    { re: /투자|주가|공시|실적/, label: "투자·공시 이슈", weight: 2 },
+    { re: /채용|취업|자격증/, label: "채용·자격 이슈", weight: 2 },
+  ];
+  let best: { label: string; score: number } | undefined;
+  for (const theme of themes) {
+    const hits = blob.match(new RegExp(theme.re.source, "g"))?.length ?? 0;
+    if (!hits) continue;
+    const score = hits * theme.weight;
+    if (!best || score > best.score) best = { label: theme.label, score };
+  }
+  if (best) return best.label;
+  const firstHeading = storyBeats.find((beat) => beat.length <= 40 && !/[.!?…]$/u.test(beat));
+  if (firstHeading) return firstHeading;
+  return "본문에서 다룬 일정·신청·파급 포인트";
+}
+
+function describeRankMotion(facts: string[]): { rankClause: string; motionClause: string } {
+  const joined = facts.join(" ");
+  const rankMatch = joined.match(/(\d+)\s*위/);
+  const rankClause = rankMatch
+    ? `히트맵 ${rankMatch[1]}위`
+    : /상위권/.test(joined)
+      ? "보드 상위권"
+      : "보드 안 상대 위치";
+
+  let motionClause = "관심 속도는 확인된 변동 신호로만 가늠합니다";
+  if (/정체|변동은\s*없|0\s*%|변동률은\s*0/.test(joined)) {
+    motionClause = "직전 대비 순위는 정체라 급등·급락보다 안정 관심으로 읽힙니다";
+  } else if (/올랐|상승|급등|\+/.test(joined) && !/내렸|하락|급락/.test(joined)) {
+    motionClause = "직전 대비 순위가 올라 관심 속도가 붙은 구간으로 읽힙니다";
+  } else if (/내렸|하락|급락/.test(joined)) {
+    motionClause = "직전 대비 순위가 내려 관심 분산 여부를 함께 볼 구간입니다";
+  }
+  return { rankClause, motionClause };
+}
+
 /**
- * Build a keyword-specific ❺ paragraph from KinDex signal facts (rank/trend/peers).
- * Never returns the meta-definition boilerplate.
+ * Build a keyword-specific ❺ paragraph from KinDex signals + ❶–❹ story beats.
+ * Never returns meta-definition or rank-only glue templates.
  */
 export function buildKindexFeatureParagraph(options: {
   keyword: string;
   signalFacts?: string[];
+  storyBeats?: string[];
 }): string {
   const keyword = options.keyword.replace(/^\[[^\]]+\]\s*/, "").trim() || "이 이슈";
   const particle = topicParticle(keyword);
   const facts = (options.signalFacts ?? []).map((item) => item.trim()).filter(Boolean);
-  const preferred = facts.filter(
-    (fact) =>
-      /\d+\s*위/.test(fact) ||
-      /(추세|올랐|내렸|머물|상위권|함께 올라|관심도|검색·신청|변동|스냅샷)/.test(fact),
+  const storyBeats = (options.storyBeats ?? []).map((item) => item.trim()).filter(Boolean);
+  const theme = pickStoryTheme(storyBeats);
+  const { rankClause, motionClause } = describeRankMotion(facts);
+  const agencyHint = facts.find((fact) =>
+    /(관광공사|문체부|해수부|산림청|공공|지원사업|검색·신청|관심도)/.test(fact),
   );
-  const pool = (preferred.length ? preferred : facts).slice(0, 3).map(toHonorificSignalClause).filter(Boolean);
 
-  if (pool.length) {
-    const glue =
-      pool.length === 1
-        ? `${pool[0]} 이 숫자는 ${keyword}${particle} 관심이 모이는 상대 위치와 속도를 보여 줍니다.`
-        : `${pool.join(" ")} 종합하면 ${keyword} 관심은 보드 안 상대 순위·움직임으로 읽습니다.`;
-    return glue.replace(/\s+/g, " ").trim();
+  const sentences: string[] = [];
+  sentences.push(
+    `${keyword}${particle} KinDex ${rankClause}에 있으며, ${motionClause}.`,
+  );
+  if (agencyHint) {
+    sentences.push(toHonorificSignalClause(agencyHint));
   }
+  sentences.push(
+    `앞서 본문의 ${theme}이 관심의 축인 만큼, 숫자만 나열하기보다 ‘보드 안 상대 위치’로 ${keyword} 흐름을 읽는 편이 맞습니다.`,
+  );
 
-  return `${keyword}${particle} 같은 보드에서 확인된 순위·변동 신호가 제한적이어서, 카테고리 상위권 대비 상대 위치만으로 관심 흐름을 가늠합니다.`;
+  return sentences
+    .map((item) => toHonorificSignalClause(item))
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function resolveKindexParagraph(
@@ -181,7 +293,7 @@ function resolveKindexParagraph(
   fallback: string,
 ): string {
   const cleaned = candidate?.replace(/\s+/g, " ").trim() ?? "";
-  if (!cleaned || isKindexFeatureMetaBoilerplate(cleaned)) return fallback;
+  if (!cleaned || isUnusableKindexFeatureBody(cleaned)) return fallback;
   return cleaned;
 }
 
@@ -193,14 +305,13 @@ export function ensureKindexFeatureSectionPlacement<
   T extends { heading: string; paragraphs: string[]; headingLevel?: 2 | 3 },
 >(
   sections: T[],
-  options?: { fallbackParagraph?: string; keyword?: string; signalFacts?: string[] },
+  options?: {
+    fallbackParagraph?: string;
+    keyword?: string;
+    signalFacts?: string[];
+    storyBeats?: string[];
+  },
 ): T[] {
-  const fallback =
-    options?.fallbackParagraph?.trim() ||
-    buildKindexFeatureParagraph({
-      keyword: options?.keyword ?? "",
-      signalFacts: options?.signalFacts,
-    });
   const summary: T[] = [];
   const body: T[] = [];
   let kindex: T | undefined;
@@ -221,12 +332,24 @@ export function ensureKindexFeatureSectionPlacement<
         ...(kindex ?? {}),
         heading: KINDEX_FEATURE_SECTION_HEADING,
         headingLevel: 2 as const,
-        paragraphs: [resolveKindexParagraph(merged, fallback)],
+        paragraphs: [merged || ""],
       } as T;
       continue;
     }
     body.push(section);
   }
+
+  const storyBeats =
+    options?.storyBeats?.length
+      ? options.storyBeats
+      : extractStoryBeatsFromSections(body);
+  const fallback =
+    options?.fallbackParagraph?.trim() ||
+    buildKindexFeatureParagraph({
+      keyword: options?.keyword ?? "",
+      signalFacts: options?.signalFacts,
+      storyBeats,
+    });
 
   if (!kindex) {
     kindex = {
@@ -330,9 +453,10 @@ export function kindexDataTrendInterpretationRules(): string {
     "- 상승·하락·급등·정체·상대적 관심 쏠림처럼 ‘방향과 속도, 다른 이슈 대비 위치’를 문장으로 풀어 쓴다.",
     "- 점수 산식·100점 만점·999 스케일 강의는 하지 않는다. 숫자는 관심의 세기와 움직임을 읽는 신호로만 쓴다.",
     "- 입력에 없는 수치를 지어내지 않는다. 있는 숫자만 트렌드로 해석한다.",
-    "[❺ 금지 — 메타 정의 문구]",
+    "[❺ 금지 — 메타 정의·순위 나열 템플릿]",
     "- KinDex가 무엇인지 설명하는 일반론(예: '관심 신호는 … 방향과 속도를 가리키며, 산출 공식이 아니라…')만 쓰는 것은 실패다.",
-    "- 포커스 키워드의 순위·변동·같은 보드 상대 위치 등 구체 신호를 한 문단에 반드시 넣는다.",
+    "- 순위·정체 팩트만 이어 붙인 뒤 '종합하면 보드 안 상대 순위·움직임으로 읽습니다'로 끝내는 템플릿도 실패다.",
+    "- 포커스 키워드의 순위·변동과 함께, 본문 ❶~❹에서 다룬 신청·일정·정책 축을 한 문단에 연결한다.",
     "[필수 소제목 배치 — 모든 글]",
     `- 본문 sections에 번호 달린 소제목 \`KinDex 데이터가 보여주는 특징\`을 반드시 둔다 (오늘의 분석·하이브리드는 ❺, 그 외 글은 본문 H2 중 마지막 번호).`,
     "- 이 소제목 그룹의 paragraphs는 정확히 1개(한 문단)만 쓴다. 2개 이상 금지.",

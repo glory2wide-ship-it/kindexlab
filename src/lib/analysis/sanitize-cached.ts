@@ -1,6 +1,6 @@
 /**
  * Repair stale cached analysis bodies that still contain known editorial
- * defects (KinDex meta boilerplate, identical 지원금 ❸/❹ headings).
+ * defects (KinDex meta/rank-template ❺, identical 지원금 ❸/❹ headings).
  * Runs at read time so production Supabase rows fix themselves on deploy
  * without waiting for a full regenerate.
  */
@@ -8,8 +8,9 @@ import type { CachedAnalysis } from "@/lib/analysis/store";
 import { stripRowQualifier } from "@/lib/boards/heatmap";
 import {
   buildKindexFeatureParagraph,
-  isKindexFeatureMetaDefinition,
+  extractStoryBeatsFromSections,
   isKindexFeatureSectionHeading,
+  isUnusableKindexFeatureBody,
   scrubSectionHeadingNoise,
 } from "@/lib/editorial/tense-rules";
 import type { RankingEntity } from "@/lib/types";
@@ -52,6 +53,7 @@ export function sanitizeCachedAnalysisArticle(
 ): CachedAnalysis {
   const focus = focusLabel(entry, entity);
   let changed = false;
+  const storyBeats = extractStoryBeatsFromSections(entry.article.sections);
 
   const sections = entry.article.sections.map((section) => {
     let heading = section.heading;
@@ -68,11 +70,12 @@ export function sanitizeCachedAnalysisArticle(
 
     if (isKindexFeatureSectionHeading(heading)) {
       const body = paragraphs.join(" ").trim();
-      if (isKindexFeatureMetaDefinition(body)) {
+      if (isUnusableKindexFeatureBody(body)) {
         paragraphs = [
           buildKindexFeatureParagraph({
             keyword: focus,
             signalFacts: signalFactsFromEntity(focus, entity),
+            storyBeats,
           }),
         ];
         changed = true;

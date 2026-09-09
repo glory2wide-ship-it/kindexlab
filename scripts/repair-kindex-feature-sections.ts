@@ -8,8 +8,9 @@
 import { writeAnalysis, type CachedAnalysis } from "../src/lib/analysis/store";
 import {
   buildKindexFeatureParagraph,
-  isKindexFeatureMetaDefinition,
+  extractStoryBeatsFromSections,
   isKindexFeatureSectionHeading,
+  isUnusableKindexFeatureBody,
   KINDEX_FEATURE_META_BOILERPLATE,
 } from "../src/lib/editorial/tense-rules";
 import { stripRowQualifier } from "../src/lib/boards/heatmap";
@@ -96,7 +97,7 @@ function patchEntry(
   const kindex = sections.find((section) => isKindexFeatureSectionHeading(section.heading));
   const body = (kindex?.paragraphs ?? []).join(" ").trim();
   const forceBroken = /습니습니다/.test(body);
-  if (!forceBroken && !isKindexFeatureMetaDefinition(body)) {
+  if (!forceBroken && !isUnusableKindexFeatureBody(body)) {
     return { entry, changed: false };
   }
 
@@ -104,6 +105,7 @@ function patchEntry(
   const paragraph = buildKindexFeatureParagraph({
     keyword,
     signalFacts: signalFactsForSlug(entry.slug, keyword, boards),
+    storyBeats: extractStoryBeatsFromSections(sections),
   });
 
   const nextSections = sections.map((section) =>

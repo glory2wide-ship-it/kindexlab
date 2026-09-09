@@ -36,8 +36,8 @@ import {
 } from "@/lib/premium/data-journalist-prompt";
 import {
   ensureMinBodySections,
-  isKindexFeatureMetaBoilerplate,
   isKindexFeatureSectionHeading,
+  isUnusableKindexFeatureBody,
   stripNumberedHeadingPrefix,
 } from "@/lib/editorial/tense-rules";
 import { toHonorificProse } from "@/lib/editorial/honorific";
@@ -1135,7 +1135,7 @@ export async function generatePremiumArticle(input: {
     .filter((section) => isKindexFeatureSectionHeading(section.heading))
     .flatMap((section) => section.paragraphs)
     .join(" ");
-  if (isKindexFeatureMetaBoilerplate(kindexFeatureBody)) {
+  if (isUnusableKindexFeatureBody(kindexFeatureBody)) {
     return { ok: false, reason: "banned-copy", detail: "kindex-feature-boilerplate" };
   }
   const headingScan = sections.map((section) => section.heading).join("\n");
