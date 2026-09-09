@@ -167,8 +167,11 @@ function toHonorificSignalClause(raw: string): string {
     .replace(/올랐다\.$/u, "올랐습니다.")
     .replace(/내렸다\.$/u, "내렸습니다.")
     .replace(/있다\.$/u, "있습니다.")
-    .replace(/없다\.$/u, "없습니다.")
-    .replace(/다\.$/u, "습니다.");
+    .replace(/없다\.$/u, "없습니다.");
+  // Do not match the trailing "다." inside already-converted ~습니다/~ㅂ니다.
+  if (!/(습니다|합니다|됩니다|입니다|니다)\.?$/u.test(text)) {
+    text = text.replace(/(?<![니습합됩입])다\.$/u, "습니다.");
+  }
   return text;
 }
 
@@ -265,9 +268,12 @@ export function buildKindexFeatureParagraph(options: {
   const storyBeats = (options.storyBeats ?? []).map((item) => item.trim()).filter(Boolean);
   const theme = pickStoryTheme(storyBeats);
   const { rankClause, motionClause } = describeRankMotion(facts);
-  const agencyHint = facts.find((fact) =>
-    /(관광공사|문체부|해수부|산림청|공공|지원사업|검색·신청|관심도)/.test(fact),
-  );
+  const agencyHint =
+    facts.find((fact) => /(검색·신청\s*관심도|지원사업의\s*검색|관심도\s*기준)/.test(fact)) ||
+    facts.find(
+      (fact) =>
+        /(문체부|해수부|산림청|공공\s*지원)/.test(fact) && !/히트맵\s*\d+\s*위/.test(fact),
+    );
 
   const sentences: string[] = [];
   sentences.push(
