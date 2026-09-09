@@ -15,7 +15,7 @@ import { formatHeatmapRank } from "@/lib/boards/limits";
 import { heatmapNameLines } from "@/lib/musicTitle";
 import { CHANNEL_SHORT_LABEL } from "@/lib/posts/channels";
 import { CULTURE_GRANT_TITLE } from "@/lib/boards/culture-grants";
-import { summarizeHeadlineTitle } from "@/lib/news/headline-title";
+import { heatmapSourceCaption, summarizeHeadlineTitle } from "@/lib/news/headline-title";
 import { layoutHeatmapLeaves } from "@/lib/treemapLayout";
 import { TREEMAP_FRAME_CLASS, TREEMAP_MAX_ITEMS, MOBILE_TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import { heatmapChangeRate, heatmapPriceLabel } from "@/lib/market/kospi-quotes-ui";
@@ -74,6 +74,7 @@ export function TreemapView({
   selectedSlug: _selectedSlug,
   onSelect,
   showChannelTags = false,
+  showSourceCaptions = false,
 }: {
   items: RankingEntity[];
   category: CategoryId;
@@ -82,6 +83,8 @@ export function TreemapView({
   onSelect?: (slug: string) => void;
   /** Landing unified map: show short desk tags (엔터/정치/…) beside the rank. */
   showChannelTags?: boolean;
+  /** Category composite map: show submenu/board names under the rank (top tiles). */
+  showSourceCaptions?: boolean;
 }) {
   const safeItems = Array.isArray(items) ? items : [];
   const router = useRouter();
@@ -208,6 +211,10 @@ export function TreemapView({
           const isHeadline = entity.type === "headline_news";
           const isGrantTwoLine =
             entity.heatmapGroup === CULTURE_GRANT_TITLE && Boolean(lines.artist);
+          const sourceLabel = heatmapSourceCaption(entity);
+          const sourceSize = Math.max(8, rankSize - 2) * 1.15;
+          const showSource =
+            showSourceCaptions && rank <= 10 && Boolean(sourceLabel) && w >= 52 && h >= 28;
           const displayTitle = isHeadline ? summarizeHeadlineTitle(entity.name) : (label?.name ?? lines.title);
           /**
            * Mobile title: 1–7 → −10%, 8–12 → −15%.
@@ -267,7 +274,7 @@ export function TreemapView({
                     x={rankHeaderX}
                     y={leaf.y0 + 3}
                     width={rankHeaderWidth}
-                    height={28}
+                    height={showSource ? 64 : 28}
                   >
                     <div
                       className={`pointer-events-none flex h-full w-full flex-col justify-start ${
@@ -293,6 +300,23 @@ export function TreemapView({
                           {rankBadge}
                         </span>
                       </span>
+                      {showSource && sourceLabel ? (
+                        <span
+                          className={`mt-0.5 max-w-full font-medium leading-tight opacity-90 ${
+                            isMobileViewport ? "text-left" : "text-right"
+                          }`}
+                          style={{
+                            fontSize: sourceSize,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            wordBreak: "keep-all",
+                          }}
+                        >
+                          {sourceLabel}
+                        </span>
+                      ) : null}
                     </div>
                   </foreignObject>
                 ) : null}

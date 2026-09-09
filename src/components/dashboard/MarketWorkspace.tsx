@@ -427,6 +427,7 @@ export function MarketWorkspace({
               category={category}
               timeframe={timeframe}
               showChannelTags={showChannelTags}
+              showSourceCaptions={Boolean(channel) && !boardSlug}
             />
           </HeatmapErrorBoundary>
         ) : (
