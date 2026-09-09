@@ -423,7 +423,6 @@ export function MarketWorkspace({
               items={sortedItems}
               category={category}
               timeframe={timeframe}
-              showSourceCaptions={!boardSlug}
             />
           </HeatmapErrorBoundary>
         ) : (

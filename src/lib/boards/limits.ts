@@ -87,5 +87,5 @@ export function compositePerBoard(channel: PostChannel): number {
 
 export function formatHeatmapRank(rank: number): string {
   const safe = Number.isFinite(rank) && rank > 0 ? Math.round(rank) : 1;
-  return `#${String(safe).padStart(2, "0")}`;
+  return String(safe);
 }
