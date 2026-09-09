@@ -19,7 +19,6 @@ const BOARD_ENTITY_TYPE: Record<string, EntityType> = {
   "government-subsidy-search": "subsidy",
   "party-support-chart": "party_support",
   "politician-support-chart": "politician_support",
-  "shortform-meme-velocity": "shorts",
   "realtime-webtoon-rank": "webtoon",
 };
 

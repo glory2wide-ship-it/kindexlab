@@ -177,8 +177,8 @@ export function resolveSiteSection(pathname: string): ChannelSectionId {
 /**
  * Live ingest types that feed each desk heatmap.
  *
- * Keep this aligned with menu boards (엔터 = 음원·팬덤·방송·웹툰·게임·숏폼),
- * not the older culture-bucket that stranded games/shorts off the 엔터 desk.
+ * Keep this aligned with visible category submenu boards only
+ * (엔터 = 음원·팬덤·방송·웹툰·게임·영화·유튜버 — retired 숏폼 밈 excluded).
  */
 export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
   entertainment: [
@@ -190,7 +190,6 @@ export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
     "tv_rating",
     "movie",
     "webtoon",
-    "shorts",
     "mobile_game",
     "pc_game",
     "console_game",

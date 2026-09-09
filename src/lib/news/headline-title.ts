@@ -18,7 +18,7 @@ const MENU_BY_TYPE: Partial<Record<EntityType, string>> = {
   celebrity: "스타",
   pc_game: "게임",
   influencer: "유튜버",
-  shorts: "숏폼 밈",
+  shorts: "숏폼",
   webtoon: "웹툰",
   movie: "영화",
 };

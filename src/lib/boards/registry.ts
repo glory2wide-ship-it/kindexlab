@@ -1688,7 +1688,7 @@ export const BOARDS: BoardDefinition[] = [
     id: "ent-7",
     slug: "shortform-meme-velocity",
     channel: "entertainment",
-    /** Retired from ranking rail + deep-dive desks (2026-09 UX sync). */
+    /** Retired — removed from rail, 종합/엔터 heatmaps, and category chips. */
     railHidden: true,
     title: "숏폼 밈 확산 속도 지수",
     shortTitle: "숏폼 밈",

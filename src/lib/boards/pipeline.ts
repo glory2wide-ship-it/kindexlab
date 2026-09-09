@@ -6,7 +6,7 @@ import { emptyBoardReport, writeBoardReport } from "@/lib/boards/chain/report";
 import { polishBoardReport } from "@/lib/boards/chain/polish";
 import { buildBoardPump } from "@/lib/boards/chain/pump";
 import { collectBoardSources } from "@/lib/boards/collect-board-sources";
-import { BOARDS, boardPath, getBoard, isDeskBoard } from "@/lib/boards/registry";
+import { BOARDS, boardPath, getBoard, isDeskBoard, isRailBoard } from "@/lib/boards/registry";
 import { EXHIBITION_BOARD_SLUG, PERFORMANCE_BOARD_SLUG } from "@/lib/boards/region-catalogs";
 import { buildSampleBoard } from "@/lib/boards/seed";
 import {
@@ -236,6 +236,7 @@ export async function pickStaleBoards(limit: number, slug?: string): Promise<Boa
   );
 
   return scored
+    .filter((item) => isRailBoard(item.board))
     .sort((left, right) => left.priority - right.priority || left.at - right.at)
     .slice(0, Math.max(1, limit))
     .map((item) => item.board);

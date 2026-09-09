@@ -56,6 +56,10 @@ export default async function BoardDetailPage({ params }: { params: Promise<{ sl
   if (alias) redirect(boardPath(alias));
   const board = getBoard(slug);
   if (!board) notFound();
+  // Retired menus stay in the registry for old links but no longer have a desk page.
+  if (board.railHidden && !isDeskBoard(board)) {
+    redirect(categoryBoardPath(board.channel));
+  }
 
   const channel = getPostChannel(board.channel);
   const siblings = menuBoardsForChannel(board.channel).filter((item) => item.slug !== board.slug);

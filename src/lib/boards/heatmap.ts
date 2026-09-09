@@ -93,10 +93,22 @@ export function isHeadlineHeatmapEntity(
   return false;
 }
 
+/** Retired menus (e.g. 숏폼 밈) must never reappear on category/unified heatmaps. */
+export function isRetiredHeatmapEntity(
+  entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">,
+): boolean {
+  if (entity.type === "shorts") return true;
+  const boardSlug = entity.slug.includes("--") ? entity.slug.split("--")[0] : entity.slug;
+  if (boardSlug === "shortform-meme-velocity") return true;
+  const group = entity.heatmapGroup ?? "";
+  if (group.includes("숏폼 밈") || group === "숏폼") return true;
+  return false;
+}
+
 export function withoutHeadlineHeatmapItems<
   T extends Pick<RankingEntity, "type" | "slug" | "heatmapGroup">,
 >(items: T[]): T[] {
-  return items.filter((item) => !isHeadlineHeatmapEntity(item));
+  return items.filter((item) => !isHeadlineHeatmapEntity(item) && !isRetiredHeatmapEntity(item));
 }
 
 function normalizeBoardRanking(def: BoardDefinition, rows: BoardRankEntry[]): BoardRankEntry[] {
