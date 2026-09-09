@@ -42,7 +42,7 @@ export function GlobalDesktopCategorySectionBar() {
       className="sticky top-14 z-30 border-b border-line bg-board/95 backdrop-blur-md max-md:hidden"
       data-sticky-desktop-category-sections
     >
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="mx-auto max-w-[72rem] px-4">
         {showSections ? (
           <CategorySubNav channel={channel} searchInputId="section-tab-search-desktop" />
         ) : (

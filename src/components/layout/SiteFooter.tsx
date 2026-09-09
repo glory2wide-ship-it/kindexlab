@@ -9,7 +9,7 @@ export function SiteFooter() {
 
   return (
     <footer className="mt-8 border-t border-line bg-panel">
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-8 md:grid-cols-4 md:gap-8">
+      <div className="mx-auto grid max-w-[72rem] gap-6 px-4 py-8 md:grid-cols-4 md:gap-8">
         <div>
           <Link href="/about" className="font-semibold hover:text-ink">
             KinDex / 킨덱스 소개

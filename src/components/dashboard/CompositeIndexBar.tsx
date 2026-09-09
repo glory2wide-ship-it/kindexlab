@@ -48,7 +48,7 @@ export function CompositeIndexBar({
 
   return (
     <div className="index-gothic sticky top-14 z-30 border-b border-line bg-panel/95 font-sans backdrop-blur-md">
-      <div className="mx-auto flex h-10 max-w-7xl items-center justify-between gap-3 overflow-hidden px-4">
+      <div className="mx-auto flex h-10 max-w-[72rem] items-center justify-between gap-3 overflow-hidden px-4">
         <Link href="/#heatmap" className="flex min-w-0 items-center gap-3 font-sans">
           <span className="shrink-0 font-sans text-[11px] font-semibold tracking-[0.14em] text-accent">
             KINDEXLAB 종합지수

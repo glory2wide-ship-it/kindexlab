@@ -9,7 +9,7 @@ export function SiteHeader() {
     <>
       <RouteProgress />
       <header className="sticky top-0 z-40 overflow-visible border-b border-line bg-board/90 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 overflow-visible px-4 md:justify-between md:gap-3">
+        <div className="mx-auto flex h-14 max-w-[72rem] items-center gap-2 overflow-visible px-4 md:justify-between md:gap-3">
           <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2 md:gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-accent font-sans text-[11px] font-bold tracking-tight text-black">
               KD

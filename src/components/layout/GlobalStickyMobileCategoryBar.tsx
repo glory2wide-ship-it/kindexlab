@@ -44,7 +44,7 @@ export function GlobalStickyMobileCategoryBar() {
       className="sticky top-14 z-30 border-b border-line bg-board/95 backdrop-blur-md md:hidden"
       data-sticky-mobile-categories
     >
-      <div className="mx-auto max-w-7xl space-y-1.5 px-4 py-1.5">
+      <div className="mx-auto max-w-[72rem] space-y-1.5 px-4 py-1.5">
         <MobileCategoryBar activeId={channel} />
         {showSections ? (
           <div data-sticky-mobile-category-sections>

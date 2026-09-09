@@ -161,7 +161,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <SiteHeader />
             <GlobalStickyMobileCategoryBar />
             <GlobalDesktopCategorySectionBar />
-            <main className="mx-auto w-full max-w-7xl px-4 py-4 max-md:pt-3">{children}</main>
+            <main className="mx-auto w-full max-w-[72rem] px-4 py-4 max-md:pt-3">{children}</main>
             <SiteFooter />
           </ActiveChannelProvider>
         </ThemeProvider>
