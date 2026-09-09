@@ -36,6 +36,7 @@ export function UnifiedMarketBoard({
           items={items}
           initialView="treemap"
           hideCategoryTabs
+          showChannelTags
           title={LIVE_INDEX_LABEL}
           subtitle="등락률·시세·버즈를 히트맵과 리스트로 읽습니다. 주식·해외 주식·원자재·환율 타일은 현재가(단위)를 표시합니다."
           refreshIntervalSec={refreshIntervalSec}

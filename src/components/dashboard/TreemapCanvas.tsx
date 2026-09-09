@@ -13,6 +13,7 @@ import { TYPE_LABEL, formatRate } from "@/lib/format";
 import { heatFill, heatText } from "@/lib/heatmap";
 import { formatHeatmapRank } from "@/lib/boards/limits";
 import { heatmapNameLines } from "@/lib/musicTitle";
+import { CHANNEL_SHORT_LABEL } from "@/lib/posts/channels";
 import { CULTURE_GRANT_TITLE } from "@/lib/boards/culture-grants";
 import { summarizeHeadlineTitle } from "@/lib/news/headline-title";
 import { layoutHeatmapLeaves } from "@/lib/treemapLayout";
@@ -22,6 +23,7 @@ import { scoreForTimeframe } from "@/lib/timeframes";
 import { entityHref } from "@/lib/slugs";
 import { layoutTreemapLabel } from "@/lib/treemapLabel";
 import type { CategoryId, RankingEntity, Timeframe } from "@/lib/types";
+import type { PostChannel } from "@/lib/posts/types";
 
 export { TREEMAP_MAX_ITEMS, MOBILE_TREEMAP_MAX_ITEMS };
 
@@ -71,12 +73,15 @@ export function TreemapView({
   timeframe,
   selectedSlug: _selectedSlug,
   onSelect,
+  showChannelTags = false,
 }: {
   items: RankingEntity[];
   category: CategoryId;
   timeframe: Timeframe;
   selectedSlug?: string | null;
   onSelect?: (slug: string) => void;
+  /** Landing unified map: show short desk tags (엔터/정치/…) beside the rank. */
+  showChannelTags?: boolean;
 }) {
   const safeItems = Array.isArray(items) ? items : [];
   const router = useRouter();
@@ -195,6 +200,11 @@ export function TreemapView({
           /** Mobile: rank −30%; desktop unchanged. */
           const rankSize = isMobileViewport ? baseRankSize * 0.7 : baseRankSize;
           const showRank = w >= 36 && h >= 20;
+          const channelTag =
+            showChannelTags && entity.sourceChannel
+              ? CHANNEL_SHORT_LABEL[entity.sourceChannel as PostChannel]
+              : undefined;
+          const showChannelTag = Boolean(channelTag) && w >= 74 && h >= 26;
           const isHeadline = entity.type === "headline_news";
           const isGrantTwoLine =
             entity.heatmapGroup === CULTURE_GRANT_TITLE && Boolean(lines.artist);
@@ -224,7 +234,7 @@ export function TreemapView({
               href={href}
               prefetch={false}
               className="cursor-pointer"
-              aria-label={`${group} ${rankBadge} ${entity.name}${priceLabel ? ` ${priceLabel}` : ""} ${rate}`}
+              aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name}${priceLabel ? ` ${priceLabel}` : ""} ${rate}`}
               data-heatmap-rank={rank}
               onPointerDown={() => {
                 router.prefetch(href);
@@ -267,11 +277,21 @@ export function TreemapView({
                       }`}
                       style={{ color: fill }}
                     >
-                      <span
-                        className="font-sans font-semibold tabular-nums leading-none"
-                        style={{ fontSize: rankSize }}
-                      >
-                        {rankBadge}
+                      <span className="flex items-center gap-1 leading-none">
+                        {showChannelTag ? (
+                          <span
+                            className="rounded-[3px] border px-1 py-px font-sans font-semibold leading-none opacity-85"
+                            style={{ fontSize: Math.max(8, rankSize - 2), borderColor: "currentColor" }}
+                          >
+                            {channelTag}
+                          </span>
+                        ) : null}
+                        <span
+                          className="font-sans font-semibold tabular-nums leading-none"
+                          style={{ fontSize: rankSize }}
+                        >
+                          {rankBadge}
+                        </span>
                       </span>
                     </div>
                   </foreignObject>

@@ -68,6 +68,7 @@ export function MarketWorkspace({
   hideTimeframes = false,
   boardSlug,
   showRegion = false,
+  showChannelTags = false,
   maxItems = TREEMAP_MAX_ITEMS,
   remainingSec: _remainingSec = DEFAULT_TRENDS_REVALIDATE_SEC,
   refreshing = false,
@@ -93,6 +94,8 @@ export function MarketWorkspace({
   hideTimeframes?: boolean;
   boardSlug?: string;
   showRegion?: boolean;
+  /** Landing unified map: short desk tags beside tile ranks. */
+  showChannelTags?: boolean;
   /** When set, methodology modal uses that desk's copy. */
   channel?: PostChannel;
   /** Tile cap for this desk. Defaults to the shared ceiling. */
@@ -423,6 +426,7 @@ export function MarketWorkspace({
               items={sortedItems}
               category={category}
               timeframe={timeframe}
+              showChannelTags={showChannelTags}
             />
           </HeatmapErrorBoundary>
         ) : (
