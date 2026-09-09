@@ -105,34 +105,34 @@ export function EntityHero({
   }
 
   return (
-    <section className="rounded-2xl border border-line bg-panel p-6 md:p-8">
+    <section className="rounded-2xl border border-line bg-panel p-[18px] md:p-8">
       <p className="text-xs text-muted">
         {kicker ?? `${TYPE_LABEL[entity.type]} · 전일 ${entity.previousRank}위`}
       </p>
-      <div className="mt-2">
+      <div className="mt-1.5 md:mt-2">
         <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{entity.name}</h1>
         {entity.nameEn ? <p className="mt-1 text-sm text-muted">{entity.nameEn}</p> : null}
       </div>
-      <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-line pt-4 text-sm sm:grid-cols-4">
+      <dl className="mt-[1.125rem] grid grid-cols-2 gap-3 border-t border-line pt-3 text-sm sm:grid-cols-4 md:mt-6 md:gap-4 md:pt-4">
         <div>
           <dt className="text-muted">현재 순위</dt>
-          <dd className="mt-1 font-sans text-lg tabular-nums">{entity.rank}위</dd>
+          <dd className="mt-0.5 font-sans text-lg tabular-nums md:mt-1">{entity.rank}위</dd>
         </div>
         <div>
           <dt className="text-muted">시가(오픈)</dt>
-          <dd className="mt-1 font-sans text-lg tabular-nums">{formatScore(entity.openScore)}</dd>
+          <dd className="mt-0.5 font-sans text-lg tabular-nums md:mt-1">{formatScore(entity.openScore)}</dd>
         </div>
         <div>
           <dt className="text-muted">{metricLabel(entity.type)}</dt>
-          <dd className="mt-1 font-sans text-lg tabular-nums">{formatCompact(entity.volume)}</dd>
+          <dd className="mt-0.5 font-sans text-lg tabular-nums md:mt-1">{formatCompact(entity.volume)}</dd>
         </div>
         <div>
           <dt className="text-muted">태그</dt>
-          <dd className="mt-1">{entity.tags.join(" · ")}</dd>
+          <dd className="mt-0.5 md:mt-1">{entity.tags.join(" · ")}</dd>
         </div>
       </dl>
       {entity.measurement ? (
-        <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3">
+        <div className="mt-3 rounded-xl border border-accent/30 bg-accent/5 px-4 py-2.5 md:mt-4 md:py-3">
           <p className="text-[11px] text-muted">
             {entity.measurement.source} 발표 · {entity.measurement.label}
           </p>
@@ -156,7 +156,9 @@ export function EntityHero({
           </p>
         </div>
       ) : null}
-      <p className="mt-5 max-w-3xl text-sm leading-7 text-ink/85 max-md:leading-[0.984rem]">{entity.summary}</p>
+      <p className="mt-[0.9375rem] max-w-3xl text-sm leading-7 text-ink/85 max-md:leading-[0.984rem] md:mt-5">
+        {entity.summary}
+      </p>
     </section>
   );
 }
