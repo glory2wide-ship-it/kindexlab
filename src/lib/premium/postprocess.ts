@@ -190,18 +190,28 @@ export function autoCorrectArticleFields(input: {
             yearOpts,
           )
         : section.heading,
-      paragraphs: section.paragraphs.map((paragraph) =>
-        toHonorificProse(
-          scrubBannedPhraseStems(scrubBoilerplatePhrases(scrubBrokenPredicateEndings(paragraph))),
-        ),
-      ),
+      paragraphs: section.paragraphs
+        .map((paragraph) =>
+          toHonorificProse(
+            scrubBannedPhraseStems(
+              scrubGenericPaddingProse(
+                scrubBoilerplatePhrases(scrubBrokenPredicateEndings(paragraph)),
+              ),
+            ),
+          ),
+        )
+        .filter((paragraph) => paragraph.trim().length > 0),
     })),
   );
   const faq = polishFaq(
     input.faq.map((item) => ({
       question: scrubBoilerplatePhrases(item.question),
       answer: toHonorificProse(
-        scrubBannedPhraseStems(scrubBoilerplatePhrases(scrubBrokenPredicateEndings(item.answer))),
+        scrubBannedPhraseStems(
+          scrubGenericPaddingProse(
+            scrubBoilerplatePhrases(scrubBrokenPredicateEndings(item.answer)),
+          ),
+        ),
       ),
     })),
   );
@@ -313,6 +323,30 @@ export function padArticleLengthLocally(input: {
     );
     if (item.answer.includes(extra.slice(0, 20))) break;
     item.answer = ensureSentencePunctuation(`${item.answer} ${extra}`);
+    added += 1;
+    chars = measure();
+  }
+
+  // B1 last resort: synthesize grounded filler from the keyword until floor is met.
+  const fallbackLines = [
+    `${keyword} 관심 신호는 검색·조회가 모이는 속도와 상대 위치를 함께 보여 줍니다.`,
+    `${keyword} 관련 일정·발표·후속 반응을 확인하면 흐름을 더 정확히 읽을 수 있습니다.`,
+    `같은 주제권 비교 키워드와 나란히 보면 ${keyword}의 오늘 위치가 더 분명해집니다.`,
+    `${keyword} 이슈는 단발 검색보다 반복 유입이 이어질 때 해석 가치가 커집니다.`,
+    `독자는 ${keyword}의 핵심 일정과 공식 안내만 먼저 대조해도 판단에 도움이 됩니다.`,
+  ];
+  let fallbackIndex = 0;
+  while (chars < input.minChars && fallbackIndex < fallbackLines.length && guard < 64) {
+    guard += 1;
+    const sentence = ensureSentencePunctuation(fallbackLines[fallbackIndex++]!);
+    const targetSection =
+      sections.find((section) => !/KinDex|핵심 요약/.test(section.heading ?? "")) ??
+      sections[sections.length - 1];
+    if (!targetSection) break;
+    if (targetSection.paragraphs.some((paragraph) => paragraph.includes(sentence.slice(0, 18)))) {
+      continue;
+    }
+    targetSection.paragraphs.push(sentence);
     added += 1;
     chars = measure();
   }

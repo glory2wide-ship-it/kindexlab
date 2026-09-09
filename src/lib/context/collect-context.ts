@@ -11,6 +11,7 @@ import {
 } from "@/lib/context/score";
 import { buildSignalBrief } from "@/lib/context/signal-brief";
 import { resolveSourceStrategy } from "@/lib/context/source-strategy";
+import { officialUrlSeeds } from "@/lib/context/official-url-seeds";
 import type { CollectedContext, ContextSource } from "@/lib/context/types";
 import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
 import { isGoogleNewsUrl, publisherFromUrl, unwrapNewsUrls } from "@/lib/news/unwrap";
@@ -255,10 +256,22 @@ export async function collectArticleContext(
   let sources = mergeSources(crawled, news.sources);
   sources = mergeSources(sources, signal.rssSources);
 
-  let newsCount = countNewsSources(sources);
   const providers = [...news.providers, `strategy:${plan.strategy}`];
   let unwrapped = news.unwrapped;
   let lookbackHours = news.lookbackHours;
+
+  // A2: board/channel official URL seeds so thin-news keywords still have citable hrefs.
+  const seeded = officialUrlSeeds({
+    keyword,
+    boardSlug: options.boardSlug,
+    strategy: plan.strategy,
+  });
+  if (seeded.length) {
+    providers.push("official-url-seeds");
+    sources = mergeSources(sources, seeded);
+  }
+
+  let newsCount = countNewsSources(sources);
 
   // When the focus keyword is too niche, widen with related names / entity aliases.
   if (sources.length === 0 || newsCount <= NEWS_FALLBACK_THRESHOLD) {

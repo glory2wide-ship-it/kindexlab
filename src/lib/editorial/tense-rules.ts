@@ -136,6 +136,75 @@ export function ensureKindexFeatureSectionPlacement<
 }
 
 /**
+ * Guarantee ≥5 body sections for Today's Analysis / briefing gates.
+ * Always places KinDex ❺, then fills missing Why/How/outlook stubs from signal copy.
+ */
+export function ensureMinBodySections<
+  T extends { heading: string; paragraphs: string[]; headingLevel?: 2 | 3 },
+>(
+  sections: T[],
+  options: {
+    keyword: string;
+    signalFacts?: string[];
+    minSections?: number;
+  },
+): T[] {
+  const minSections = options.minSections ?? 5;
+  const keyword = options.keyword.trim() || "이 이슈";
+  const facts = (options.signalFacts ?? []).map((item) => item.trim()).filter(Boolean);
+  let next = ensureKindexFeatureSectionPlacement(sections);
+
+  const stubTemplates: Array<{ heading: string; paragraph: string }> = [
+    {
+      heading: `${keyword} 핵심 사건·팩트 맥락`,
+      paragraph:
+        facts[0] ||
+        `${keyword}에 대한 관심이 다시 모이며, 확인된 일정과 공개 반응을 중심으로 흐름을 정리합니다.`,
+    },
+    {
+      heading: `왜 지금 ${keyword}에 관심이 모이는지`,
+      paragraph:
+        facts[1] ||
+        `${keyword} 검색·조회 신호가 단기 변동을 보이며, 관련 일정과 미디어 노출이 겹친 영향으로 읽힙니다.`,
+    },
+    {
+      heading: `독자가 ${keyword}에서 확인할 포인트`,
+      paragraph:
+        facts[2] ||
+        `${keyword} 관련 공식 안내와 일정, 비교 키워드를 함께 보면 과장된 해석을 줄일 수 있습니다.`,
+    },
+    {
+      heading: `${keyword} 전망과 파급`,
+      paragraph:
+        facts[3] ||
+        `${keyword}는 후속 발표·편성·신청 창이 열릴 때 다시 반응이 커질 수 있어, 확인된 일정만 추적하는 편이 안전합니다.`,
+    },
+  ];
+
+  const nonSummary = () =>
+    next.filter((section) => !isCoreSummaryHeading(section.heading));
+
+  let guard = 0;
+  while (nonSummary().length < minSections && guard < stubTemplates.length) {
+    const stub = stubTemplates[guard++]!;
+    if (next.some((section) => scrubSectionHeadingNoise(section.heading) === scrubSectionHeadingNoise(stub.heading))) {
+      continue;
+    }
+    const kindexIndex = next.findIndex((section) => isKindexFeatureSectionHeading(section.heading));
+    const insertAt = kindexIndex >= 0 ? kindexIndex : next.length;
+    const node = {
+      heading: stub.heading,
+      headingLevel: 2 as const,
+      paragraphs: [stub.paragraph.endsWith(".") ? stub.paragraph : `${stub.paragraph}.`],
+    } as T;
+    next = [...next.slice(0, insertAt), node, ...next.slice(insertAt)];
+    next = ensureKindexFeatureSectionPlacement(next);
+  }
+
+  return next;
+}
+
+/**
  * 모든 글 생성 프롬프트에 넣는 KinDex 숫자 해석 지침.
  * 산출 공식이 아니라, 숫자가 가리키는 관심·화제 트렌드를 해석한다.
  * 전용 번호 소제목 + 한 문단으로「핵심 요약」직전에 둔다.

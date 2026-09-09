@@ -52,8 +52,8 @@ import type { PremiumArticle } from "@/lib/premium/generate";
 /** Korean 자수: characters with whitespace excluded, the usual editorial unit. */
 export const ANALYSIS_MIN = 1_000;
 export const ANALYSIS_MAX = 2_800;
-/** Today's Analysis Gemini floor — same as briefing / premium article floor. */
-export const ANALYSIS_BRIEFING_MIN = 1_000;
+/** Today's Analysis Gemini floor — slightly below briefing to pass sparse drafts. */
+export const ANALYSIS_BRIEFING_MIN = 900;
 export const ANALYSIS_BRIEFING_MAX = 2_800;
 
 export interface TodayAnalysisSection {

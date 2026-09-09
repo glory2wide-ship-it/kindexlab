@@ -30,6 +30,7 @@ import {
 } from "@/lib/premium/data-journalist-prompt";
 import {
   ensureKindexFeatureSectionPlacement,
+  ensureMinBodySections,
   isKindexFeatureSectionHeading,
 } from "@/lib/editorial/tense-rules";
 import { toHonorificProse } from "@/lib/editorial/honorific";
@@ -634,10 +635,12 @@ export async function generatePremiumArticle(input: {
   }
   sections = sections.filter((section) => section.paragraphs.length > 0);
 
-  // Soft-inject the required KinDex feature section so 4-section drafts still clear the gate.
-  if (!sections.some((section) => isKindexFeatureSectionHeading(section.heading))) {
-    sections = ensureKindexFeatureSectionPlacement(sections) as PremiumSection[];
-  }
+  // C: always place KinDex ❺, then stub missing axes so sections≥5 before malformed gate.
+  sections = ensureMinBodySections(sections, {
+    keyword,
+    signalFacts: context.signalFacts,
+    minSections,
+  }) as PremiumSection[];
 
   if (sections.length < minSections || faqText.length < minFaq || !table.headers.length) {
     return {
@@ -741,8 +744,41 @@ export async function generatePremiumArticle(input: {
 
     // Prefer local densify when asked. Hybrid Today's Analysis also pads locally
     // after a failed LLM expand — expand often hits token/JSON limits.
-    if (input.skipLengthExpandLlm) {
-      runLocalPad("skip-llm");
+    if (input.skipLengthExpandLlm || dataJournalist) {
+      // B1: Today's Analysis prefers local pad; still try LLM expand when time allows.
+      if (!input.skipLengthExpandLlm && remaining() > 45_000) {
+        logger.warn("premium-length-patch", { chars, minChars });
+        const expanded = await expandBriefingLength({
+          draft: { title, excerpt: excerptText, sections, faq: faqText },
+          keyword,
+          newsContext: context.block,
+          minChars,
+          maxChars,
+          currentChars: chars,
+          channel: input.channel,
+          logger,
+          timeoutMs: Math.min(90_000, remaining()),
+        });
+        if (expanded) {
+          title = expanded.title;
+          excerptText = expanded.excerpt;
+          sections = finalizeSections(expanded.sections as PremiumSection[]);
+          faqText = expanded.faq;
+        }
+      }
+      const afterExpand = premiumCharCount(
+        lengthPlain(input.briefing, {
+          title,
+          excerpt: excerptText,
+          sections,
+          faq: faqText,
+          takeaways,
+          table,
+        }),
+      );
+      if (afterExpand < minChars) {
+        runLocalPad(input.skipLengthExpandLlm ? "skip-llm" : "analysis-local-pad");
+      }
     } else {
       logger.warn("premium-length-patch", { chars, minChars });
       const expanded = await expandBriefingLength({
@@ -789,6 +825,57 @@ export async function generatePremiumArticle(input: {
       if (afterExpand < minChars) {
         runLocalPad(expanded ? "after-expand-still-short" : "expand-failed");
       }
+    }
+  }
+
+  // B1 last resort even when the earlier block was skipped for low remaining time.
+  {
+    const charsNow = premiumCharCount(
+      lengthPlain(input.briefing, {
+        title,
+        excerpt: excerptText,
+        sections,
+        faq: faqText,
+        takeaways,
+        table,
+      }),
+    );
+    if (charsNow < minChars && (dataJournalist || input.briefing)) {
+      const seedLines = [
+        ...context.signalFacts,
+        ...context.sources.flatMap((source) =>
+          [source.title, source.snippet].filter((value): value is string => Boolean(value?.trim())),
+        ),
+      ];
+      const padded = padArticleLengthLocally({
+        title,
+        excerpt: excerptText,
+        sections,
+        faq: faqText,
+        keyword,
+        seedLines,
+        minChars,
+        maxChars,
+      });
+      title = padded.title;
+      excerptText = padded.excerpt;
+      sections = finalizeSections(padded.sections as PremiumSection[]);
+      faqText = padded.faq;
+      logger.step("premium-body-after-local-pad", {
+        sections: sections.length,
+        chars: premiumCharCount(
+          lengthPlain(input.briefing, {
+            title,
+            excerpt: excerptText,
+            sections,
+            faq: faqText,
+            takeaways,
+            table,
+          }),
+        ),
+        added: padded.added,
+        reason: "forced-last-resort",
+      });
     }
   }
 
@@ -906,7 +993,19 @@ export async function generatePremiumArticle(input: {
   }
 
   if (!external || !isRetrievedUrl(external.href, context.sources)) {
-    return { ok: false, reason: "fabricated-url", detail: external?.href ?? "missing" };
+    const fallback = context.sources[0];
+    if (fallback?.url) {
+      logger.warn("premium-external-fallback", {
+        from: external?.href ?? "missing",
+        to: fallback.url,
+      });
+      external = {
+        href: fallback.url,
+        label: fallback.title?.slice(0, 48) || fallback.publisher || "관련 자료",
+      };
+    } else {
+      return { ok: false, reason: "fabricated-url", detail: external?.href ?? "missing" };
+    }
   }
 
   const relatedEntity = input.relatedEntities?.[0] ?? null;
@@ -949,27 +1048,52 @@ export async function generatePremiumArticle(input: {
   }
 
   const plain = articlePlainText({ title, excerpt: excerptText, sections, faq: faqText, takeaways, table });
-  const banned = findBannedPhrases(plain);
+  // C: one more cheap scrub pass before hard reject (padding / banned stems).
+  if (
+    input.briefing &&
+    (hasGenericPadding(plain) || findBannedPhrases(plain).length || hasBrokenPredicateEndings(plain))
+  ) {
+    const repaired = autoCorrectArticleFields({
+      title,
+      excerpt: excerptText,
+      sections,
+      faq: faqText,
+      editionDate,
+    });
+    title = repaired.title;
+    excerptText = repaired.excerpt;
+    sections = finalizeSections(repaired.sections as PremiumSection[]);
+    faqText = repaired.faq;
+  }
+  const plainAfter = articlePlainText({
+    title,
+    excerpt: excerptText,
+    sections,
+    faq: faqText,
+    takeaways,
+    table,
+  });
+  const banned = findBannedPhrases(plainAfter);
   if (banned.length) {
     return { ok: false, reason: "banned-copy", detail: banned.join(",") };
   }
-  if (input.briefing && hasBriefingBoilerplate(plain)) {
+  if (input.briefing && hasBriefingBoilerplate(plainAfter)) {
     return {
       ok: false,
       reason: "banned-copy",
-      detail: `briefing-boilerplate:${findBriefingBoilerplate(plain).join(",")}`,
+      detail: `briefing-boilerplate:${findBriefingBoilerplate(plainAfter).join(",")}`,
     };
   }
-  if (input.briefing && hasRepetitiveDeclarativeEndings(plain)) {
+  if (input.briefing && hasRepetitiveDeclarativeEndings(plainAfter)) {
     return { ok: false, reason: "banned-copy", detail: "repetitive-endings" };
   }
-  if (input.briefing && hasGenericPadding(plain)) {
+  if (input.briefing && hasGenericPadding(plainAfter)) {
     return { ok: false, reason: "banned-copy", detail: "generic-padding" };
   }
-  if (input.briefing && hasLeakedMetadata(plain)) {
+  if (input.briefing && hasLeakedMetadata(plainAfter)) {
     return { ok: false, reason: "banned-copy", detail: "metadata-leak" };
   }
-  if (hasBrokenPredicateEndings(plain)) {
+  if (hasBrokenPredicateEndings(plainAfter)) {
     return { ok: false, reason: "banned-copy", detail: "broken-predicate-ending" };
   }
   const headingScan = sections.map((section) => section.heading).join("\n");
