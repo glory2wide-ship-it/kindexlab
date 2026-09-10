@@ -1,11 +1,11 @@
 /** Verifies strict rank area order, coverage (no gaps), and layout variants. */
 function maxLeaderShareForTest(count: number): number {
-  const step = 0.94;
+  const step = 0.82;
   const geoSum = (1 - Math.pow(step, Math.max(count, 1))) / (1 - step);
   const minFirstToFill = 1 / Math.max(geoSum, 1e-9);
   const preferred =
-    count >= 15 ? 0.1 : count >= 10 ? 0.12 : count >= 6 ? 0.2 : count >= 4 ? 0.3 : 0.4;
-  return Math.max(preferred, minFirstToFill) + 0.02; // tolerance for renormalize noise
+    count >= 20 ? 0.18 : count >= 15 ? 0.2 : count >= 10 ? 0.24 : count >= 6 ? 0.3 : count >= 4 ? 0.36 : 0.42;
+  return Math.max(preferred, minFirstToFill) + 0.03; // tolerance for renormalize noise
 }
 
 async function main() {
@@ -33,6 +33,7 @@ async function main() {
     console.log(
       `${String(count).padStart(2)}개  1위 ${(shares[0]! * 100).toFixed(1)}%`.padEnd(20),
       `2위 ${((shares[1] ?? 0) * 100).toFixed(2)}%`.padEnd(14),
+      `3위 ${((shares[2] ?? 0) * 100).toFixed(2)}%`.padEnd(14),
       `말위 ${((shares.at(-1) ?? 0) * 100).toFixed(2)}%`.padEnd(14),
       topOk ? "캡 O" : "캡 X",
       descending ? "1≥…≥N O" : "1≥…≥N X",
@@ -43,6 +44,13 @@ async function main() {
     }
     if (!descending) throw new Error(`strict descending areas broken for n=${count}`);
     if (Math.abs(sum - 1) > 1e-6) throw new Error(`shares must sum to 1 for n=${count}`);
+    // #1 should clearly outsize #3 (and #2) — not a near-flat podium.
+    if (count >= 3 && shares[0]! < shares[2]! * 1.35) {
+      throw new Error(`#1/#3 contrast too weak for n=${count}: ${shares[0]} vs ${shares[2]}`);
+    }
+    if (count >= 2 && shares[0]! < shares[1]! * 1.12) {
+      throw new Error(`#1/#2 contrast too weak for n=${count}: ${shares[0]} vs ${shares[1]}`);
+    }
   }
 
   const W = 390;
@@ -90,8 +98,11 @@ async function main() {
     if (coverage < 0.92) {
       throw new Error(`${variant} coverage ${coverage.toFixed(3)} — gaps under tiles`);
     }
-    if (leadShare > RANK_TOP_AREA_CAP + 0.05) {
+    if (leadShare > RANK_TOP_AREA_CAP + 0.08) {
       throw new Error(`${variant} rank-1 pixel share ${leadShare} too large`);
+    }
+    if (leadShare < secondShare * 1.08) {
+      throw new Error(`${variant} rank-1 should clearly outsize rank-2`);
     }
     if (!pixelDesc) {
       throw new Error(`${variant} pixel areas not descending by rank`);

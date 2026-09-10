@@ -34,7 +34,9 @@ export const POLITICS_TYPE_LABEL: Record<PoliticsEntityType, string> = {
 
 export const POLITICS_CATEGORIES: { id: CategoryId; label: string }[] = [
   { id: "all", label: "종합 랭킹" },
-  ...POLITICS_TYPE_ORDER.filter((id) => id !== "headline_news").map((id) => ({
+  ...POLITICS_TYPE_ORDER.filter(
+    (id) => id !== "headline_news" && id !== "political_ratings",
+  ).map((id) => ({
     id,
     label: POLITICS_TYPE_LABEL[id],
   })),
@@ -47,7 +49,6 @@ export const POLITICS_INDEX_META: { id: string; label: string; type?: EntityType
   { id: "pol-politician", label: "정치인지수", type: "politician_support", note: "인물 검색·보도" },
   { id: "pol-pundit", label: "평론가지수", type: "political_pundit", note: "평론·시사 버즈" },
   { id: "pol-influencer", label: "정치유튜브지수", type: "political_influencer", note: "시사 유튜브 채널" },
-  { id: "pol-ratings", label: "정치시청지수", type: "political_ratings", note: "뉴스 프로그램 시청" },
   { id: "pol-search", label: "정치검색지수", type: "political_search", note: "실시간 검색어" },
   { id: "pol-policy", label: "지자체정책지수", type: "local_policy", note: "지역 정책 화제" },
   { id: "pol-subsidy", label: "지원금지수", type: "subsidy", note: "정부 지원금 관심" },

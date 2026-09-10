@@ -20,6 +20,15 @@ function stripBracketQualifier(name: string): string {
   return match?.[1]?.trim() || name.trim();
 }
 
+/** Paint-only: drop trailing `(시사평론가)` / person-role tags on pundit tiles. */
+function stripPunditRoleSuffix(name: string): string {
+  return name
+    .replace(/\s*\(시사평론가\)\s*/gu, " ")
+    .replace(/\s*\([^)]*평론가\)\s*$/u, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /**
  * Optional helper kept for scripts / non-tile surfaces that still want a trim.
  * Heatmap tiles themselves use the stripped subject name.
@@ -57,7 +66,8 @@ export function heatmapTileLabel(
   entity: Pick<RankingEntity, "name" | "nameEn" | "type" | "heatmapGroup">,
 ): HeatmapTileLabel {
   const fullName = entity.name;
-  const title = stripBracketQualifier(fullName) || compactSpaces(fullName);
+  const title =
+    stripPunditRoleSuffix(stripBracketQualifier(fullName)) || compactSpaces(fullName);
   const lines = heatmapNameLines(entity);
   const bracket = parseBracketLabel(entity.name);
 

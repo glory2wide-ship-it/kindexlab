@@ -133,7 +133,7 @@ export function liveEntityTypesForBoard(slug: string): EntityType[] {
   if (primary === "pc_game") return ["pc_game", "console_game", "mobile_game"];
   if (primary === "tv_rating") return ["tv_rating", "tv_show"];
   if (primary === "political_influencer") {
-    return ["political_influencer", "political_ratings"];
+    return ["political_influencer"];
   }
   return [primary];
 }

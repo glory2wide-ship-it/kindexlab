@@ -12,15 +12,17 @@ export interface TreemapBox {
   y1: number;
 }
 
-/** Soft typical share for the leader — hard-capped at 10% of the map. */
-export const RANK_1_AREA_RATIO = 0.1;
-/** Hard ceiling for rank 1 and rank 2 shares (mobile + desktop). */
-export const RANK_TOP_AREA_CAP = 0.1;
+/** Soft typical share for the leader on dense boards (raised for clearer #1 hierarchy). */
+export const RANK_1_AREA_RATIO = 0.18;
+/** Soft ceiling for rank 1 on dense boards — still below a Finviz-style megatile. */
+export const RANK_TOP_AREA_CAP = 0.18;
 export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
 /** Soft ceiling used by helpers; live layout uses dynamic caps by tile count. */
 export const RANK_BELOW_CAP = RANK_1_AREA_RATIO - 0.001;
 /** Soft ceiling for near-square helper aspect (max(w,h)/min(w,h)). */
 export const RANK_1_MAX_ASPECT = 1.35;
+/** Max share of previous tile — steeper than 0.94 so #1 ≫ #2 ≫ #3. */
+export const RANK_AREA_STEP = 0.82;
 
 export type HeatmapLayoutVariant =
   | "squarify"
@@ -56,21 +58,31 @@ function safeScore(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-/** Flatter Zipf so #1/#2 stay ≤10% and mid/low ranks stay readable. */
+/** Steeper Zipf so #1 is clearly largest and lower ranks shrink faster. */
 function zipfExponent(count: number): number {
-  if (count >= 20) return 0.52;
-  if (count >= 15) return 0.58;
-  if (count >= 10) return 0.68;
-  if (count >= 6) return 0.78;
-  return 0.88;
+  if (count >= 20) return 0.95;
+  if (count >= 15) return 1.05;
+  if (count >= 10) return 1.15;
+  if (count >= 6) return 1.25;
+  return 1.35;
 }
 
 /** Soft max share for #1 — respects unit-sum + strict descending feasibility. */
-function maxLeaderShare(count: number, step = 0.94): number {
+function maxLeaderShare(count: number, step = RANK_AREA_STEP): number {
   const geoSum = (1 - Math.pow(step, Math.max(count, 1))) / (1 - step);
   const minFirstToFill = 1 / Math.max(geoSum, 1e-9);
   const preferred =
-    count >= 15 ? RANK_TOP_AREA_CAP : count >= 10 ? 0.12 : count >= 6 ? 0.2 : count >= 4 ? 0.3 : 0.4;
+    count >= 20
+      ? RANK_TOP_AREA_CAP
+      : count >= 15
+        ? 0.2
+        : count >= 10
+          ? 0.24
+          : count >= 6
+            ? 0.3
+            : count >= 4
+              ? 0.36
+              : 0.42;
   return Math.max(preferred, minFirstToFill);
 }
 
@@ -88,22 +100,22 @@ function finvizWeight(rank: number, score: number, peakScore: number, exponent: 
   return Math.max(rankPart * scoreAssist, 1e-6);
 }
 
-/** Longer Korean names need a slightly larger cell so the title stays readable. */
+/** Longer Korean names need a larger cell so the title stays readable. */
 function readabilityAreaBoost(name?: string): number {
   if (!name) return 1;
   const chars = name.replace(/\s+/g, "").length;
   if (chars <= 4) return 1;
-  if (chars <= 8) return 1.04;
-  if (chars <= 12) return 1.1;
-  if (chars <= 18) return 1.16;
-  return 1.22;
+  if (chars <= 8) return 1.06;
+  if (chars <= 12) return 1.14;
+  if (chars <= 18) return 1.22;
+  return 1.3;
 }
 
 /**
- * Strict 1 ≥ 2 ≥ 3 … with a gentler step so the tail keeps usable area.
- * `step` is the max share of the previous tile (e.g. 0.97 → at most 97% of #n-1).
+ * Strict 1 ≥ 2 ≥ 3 … with a steep step so top ranks read as a clear ladder.
+ * `step` is the max share of the previous tile (e.g. 0.82 → at most 82% of #n-1).
  */
-function enforceStrictDescending(values: number[], step = 0.97): number[] {
+function enforceStrictDescending(values: number[], step = RANK_AREA_STEP): number[] {
   const out = [...values];
   for (let i = 1; i < out.length; i++) {
     const ceiling = out[i - 1]! * step;
@@ -511,7 +523,7 @@ export function layoutHeatmapLeaves(
 /**
  * Continuous area shares for every tile.
  * Strict rank order: #1 ≥ #2 ≥ #3 ≥ … ≥ #N, summing to 1 (fills the map).
- * Soft-caps the leader near 10% on dense boards when geometry allows.
+ * Soft-caps the leader (~18–24%) so #1 stays largest without swallowing the board.
  */
 export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSizeAllocation {
   const ratios = new Map<string, number>();
@@ -527,15 +539,15 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
     .sort((a, b) => a.rank - b.rank || a.index - b.index);
 
   const n = ordered.length;
-  const step = 0.94;
+  const step = RANK_AREA_STEP;
   const leaderCap = maxLeaderShare(n, step);
   const peak = Math.max(...ordered.map(({ item }) => safeScore(item.score)), 1);
   const exponent = zipfExponent(n);
 
-  // Rank-primary weights; tiny name nudge cannot survive the descending pass.
+  // Rank-primary weights; name boost helps long titles without flipping order.
   let values = ordered.map(({ item, rank }) =>
     finvizWeight(rank, item.score, peak, exponent) *
-    Math.min(1.04, readabilityAreaBoost(item.name)),
+    Math.min(1.12, readabilityAreaBoost(item.name)),
   );
   values = renormalize(enforceStrictDescending(renormalize(values), step));
 

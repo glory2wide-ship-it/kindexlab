@@ -83,30 +83,39 @@ export type HeatmapRegion = "all" | RegionSegment;
  * Filters by entity type, board slug prefix, and group label.
  */
 export function isHeadlineHeatmapEntity(
-  entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">,
+  entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup" | "tags" | "name">,
 ): boolean {
   if (entity.type === "headline_news") return true;
   const boardSlug = entity.slug.includes("--") ? entity.slug.split("--")[0] : entity.slug;
   if (isHeadlineNewsBoard(boardSlug)) return true;
   if (/^(?:pol-)?headline[_-]news(?:-|$)/i.test(entity.slug)) return true;
-  if ((entity.heatmapGroup ?? "").includes("헤드라인")) return true;
+  const group = entity.heatmapGroup ?? "";
+  if (group.includes("헤드라인")) return true;
+  const tags = entity.tags ?? [];
+  if (tags.some((tag) => /^(?:headline_news|헤드라인(?:\s*뉴스)?)$/i.test(tag))) return true;
   return false;
 }
 
-/** Retired menus (e.g. 숏폼 밈) must never reappear on category/unified heatmaps. */
+/** Retired menus (숏폼 밈, 헤드라인, 정치뉴스 시청률) must never reappear on heatmaps. */
 export function isRetiredHeatmapEntity(
-  entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">,
+  entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup" | "tags">,
 ): boolean {
   if (entity.type === "shorts") return true;
+  if (entity.type === "headline_news") return true;
+  // Rail no longer lists 정치뉴스 시청률 — keep it off 종합 / channel heatmaps.
+  if (entity.type === "political_ratings") return true;
   const boardSlug = entity.slug.includes("--") ? entity.slug.split("--")[0] : entity.slug;
   if (boardSlug === "shortform-meme-velocity") return true;
+  if (isHeadlineNewsBoard(boardSlug)) return true;
   const group = entity.heatmapGroup ?? "";
   if (group.includes("숏폼 밈") || group === "숏폼") return true;
+  if (group.includes("헤드라인")) return true;
+  if (group.includes("정치뉴스")) return true;
   return false;
 }
 
 export function withoutHeadlineHeatmapItems<
-  T extends Pick<RankingEntity, "type" | "slug" | "heatmapGroup">,
+  T extends Pick<RankingEntity, "type" | "slug" | "heatmapGroup" | "tags" | "name">,
 >(items: T[]): T[] {
   return items.filter((item) => !isHeadlineHeatmapEntity(item) && !isRetiredHeatmapEntity(item));
 }

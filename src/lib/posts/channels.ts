@@ -204,7 +204,9 @@ export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
   culture: CULTURE_ENTITY_TYPES,
   travel: TRAVEL_ENTITY_TYPES,
   economy: ECONOMY_ENTITY_TYPES,
-  politics: POLITICS_TYPE_ORDER.filter((type) => type !== "headline_news"),
+  politics: POLITICS_TYPE_ORDER.filter(
+    (type) => type !== "headline_news" && type !== "political_ratings",
+  ),
 };
 
 export function channelFromEntityType(type: EntityType): PostChannel {
@@ -239,6 +241,13 @@ export function channelFromLead(lead: RankingEntity, slug?: string): PostChannel
 export function itemsForChannel(items: RankingEntity[], channel: PostChannel): RankingEntity[] {
   const types = CHANNEL_ENTITY_TYPES[channel];
   return items.filter((item) => {
+    // Retired politics menus must not re-enter via sourceChannel alone.
+    if (channel === "politics") {
+      if (item.type === "headline_news" || item.type === "political_ratings") return false;
+      if (/^(?:pol-)?headline[_-]news(?:-|$)/i.test(item.slug)) return false;
+      const group = item.heatmapGroup ?? "";
+      if (group.includes("헤드라인") || group.includes("정치뉴스")) return false;
+    }
     if (item.sourceChannel) return item.sourceChannel === channel;
     if (!types.length) return false;
     return types.includes(item.type);

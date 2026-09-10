@@ -4,7 +4,8 @@ import {
   heatmapLabelDisplayLength,
 } from "@/lib/heatmap-display-name";
 
-const MIN_NAME = 11;
+const MIN_NAME = 12;
+const READABLE_NAME = 13;
 const MAX_NAME = 28;
 const MIN_RATE = 12;
 const MAX_RATE = 18;
@@ -89,6 +90,8 @@ function nameBlockHeight(size: number, lines: number): number {
 function maxLinesForTile(width: number, height: number, displayLen: number): number {
   if (displayLen < HEATMAP_WRAP_MIN_CHARS) return 1;
   if (displayLen >= 18 && height >= 64 && width >= 70) return 3;
+  // Cramped tiles: wrap earlier so each line stays short and type can grow.
+  if (height >= 32 && width >= 40 && displayLen >= 8) return 2;
   if (height >= 36 && width >= 44) return 2;
   return 1;
 }
@@ -216,7 +219,7 @@ function densityNameSize(input: {
   const shortBoost = chars <= 4 && maxLines === 1 ? 1.04 : 1;
   size *= shortBoost;
 
-  const floor = Math.min(MIN_NAME, Math.max(8.5, heightCap * 0.9));
+  const floor = Math.min(MIN_NAME, Math.max(11, heightCap * 0.9));
   const ceiling = Math.max(floor, Math.min(MAX_NAME, heightCap));
   size = clamp(size, floor, ceiling);
 
@@ -237,6 +240,46 @@ function densityNameSize(input: {
     size -= 0.3;
   }
   return { size, lines, maxLines };
+}
+
+/**
+ * Prefer truncating a long name over painting it unreadably small.
+ * Keeps type near READABLE_NAME whenever the box can hold ≥4 glyphs.
+ */
+function preferReadableName(
+  name: string,
+  innerW: number,
+  innerH: number,
+  omitRate: boolean,
+): { name: string; size: number; lines: number; maxLines: number } {
+  const fitted = densityNameSize({ text: name, innerW, innerH, omitRate });
+  if (fitted.size >= READABLE_NAME || name.length <= 4) {
+    return { name, ...fitted };
+  }
+
+  // Binary-search a shorter prefix that paints at readable size.
+  let lo = 4;
+  let hi = name.length;
+  let best = { name, ...fitted };
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const candidate = ellipsize(name.slice(0, mid), READABLE_NAME, innerW);
+    const trial = densityNameSize({ text: candidate, innerW, innerH, omitRate });
+    if (trial.size >= READABLE_NAME - 0.2) {
+      best = { name: candidate, ...trial };
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+
+  // Absolute floor: never drop below MIN_NAME when any text can fit.
+  if (best.size < MIN_NAME) {
+    const short = ellipsize(name, MIN_NAME, innerW);
+    const trial = densityNameSize({ text: short, innerW, innerH, omitRate: true });
+    return { name: short, size: Math.max(MIN_NAME, trial.size), lines: trial.lines, maxLines: trial.maxLines };
+  }
+  return best;
 }
 
 /**
@@ -265,25 +308,23 @@ export function layoutTreemapLabel(input: {
   const innerW = Math.max(12, w - padX * 2);
   const innerH = Math.max(12, h - padY * 2);
 
-  const showRate = !omitRate && h >= 34;
+  // Tiny tiles: drop ±% early so the name can claim the height budget.
+  const cramped = w < 72 || h < 44;
+  const showRate = !omitRate && !cramped && h >= 34;
   const rateBudget = showRate ? Math.min(MAX_RATE + 2, innerH * 0.18) : 0;
   const nameBudget = Math.max(MIN_NAME, innerH - (showRate ? rateBudget + 3 : 0));
 
-  const fitted = densityNameSize({
-    text: name,
-    innerW,
-    innerH: nameBudget,
-    omitRate: Boolean(omitRate),
-  });
-  let nameSize = fitted.size;
-  const maxLines = fitted.maxLines;
+  const readable = preferReadableName(name, innerW, nameBudget, !showRate);
+  let nameSize = readable.size;
+  const maxLines = readable.maxLines;
+  const paintName = readable.name;
 
   const combine = Boolean(typeLabel) && w >= 88 && h >= 56;
   const rateText = combine ? `${rate}  ${typeLabel}` : rate;
   let rateSize = showRate ? clamp(Math.min(nameSize * 0.5, 16), MIN_RATE, MAX_RATE) : 0;
   if (showRate) rateSize = fitSizeToWidth(rateText, rateSize, innerW, MIN_RATE);
 
-  const showArtist = Boolean(artist) && w >= 80 && h >= 78;
+  const showArtist = Boolean(artist) && w >= 80 && h >= 78 && !cramped;
   let artistSize = 0;
   if (showArtist && artist) {
     artistSize = clamp(nameSize * 0.48, MIN_ARTIST, MAX_ARTIST);
@@ -293,7 +334,7 @@ export function layoutTreemapLabel(input: {
   const gap = 3;
   let usedArtist = showArtist;
   let usedRate = showRate;
-  const wrappedName = softWrapHeatmapName(name, maxLines);
+  const wrappedName = softWrapHeatmapName(paintName, maxLines);
   const wrappedLines = Math.max(1, wrappedName.split("\n").length);
   const nameH = () => nameBlockHeight(nameSize, Math.min(maxLines, wrappedLines));
   let stack = nameH();
@@ -316,7 +357,7 @@ export function layoutTreemapLabel(input: {
     }
   }
 
-  const nameFloor = Math.min(MIN_NAME, Math.max(8.5, nameBudget * 0.28));
+  const nameFloor = Math.min(MIN_NAME, Math.max(11, nameBudget * 0.28));
   while (stack > innerH && nameSize > nameFloor) {
     nameSize -= 0.3;
     stack = nameH();

@@ -193,8 +193,8 @@ export function TreemapView({
           const priceLabel = heatmapPriceLabel(entity);
           const rank = displayRankById.get(entity.id) ?? leaf.rank ?? entity.rank;
           const rankBadge = formatHeatmapRank(rank);
-          /** Ranks 10+: name only — hide ±% on mobile and desktop. */
-          const omitRate = rank >= 10;
+          /** Ranks 10+ or cramped tiles: name only — hide ±%. */
+          const omitRate = rank >= 10 || w < 72 || h < 44;
           const group = groupLabel(entity);
           const tile = heatmapTileLabel(entity);
           const isHeadline = entity.type === "headline_news";
