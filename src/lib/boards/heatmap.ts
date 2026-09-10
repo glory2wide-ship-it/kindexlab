@@ -55,8 +55,17 @@ import {
 import { influencerSeedNames } from "@/lib/politics/youtube-seeds";
 import { attachTimeframeMetrics } from "@/lib/timeframes";
 import type { EntityType, RankingEntity } from "@/lib/types";
+import { sanitizeTicketEntityName } from "@/lib/ingestion/sources/tickets";
 
 export { entityTypeForBoardSlug } from "@/lib/boards/entity-type";
+
+function heatmapNameDedupeKey(name: string): string {
+  const cleaned = sanitizeTicketEntityName(name);
+  return cleaned
+    .replace(/^\[[^\]]+\]\s*/, "")
+    .replace(/\s+/g, "")
+    .toLowerCase();
+}
 
 export interface HeatmapBoardPayload {
   slug: string;
@@ -601,12 +610,16 @@ export function buildHeatmapItems({
       const seen = new Set<string>();
       const merged: RankingEntity[] = [];
       const push = (entity: RankingEntity) => {
-        const key = (entity.name ?? "").replace(/\s+/g, "").toLowerCase();
+        const key = heatmapNameDedupeKey(entity.name ?? "");
         if (!key || seen.has(key) || seen.has(entity.id) || seen.has(entity.slug)) return;
         seen.add(key);
         seen.add(entity.id);
         seen.add(entity.slug);
-        merged.push(entity);
+        const name =
+          entity.type === "performance" || entity.type === "exhibition"
+            ? sanitizeTicketEntityName(entity.name)
+            : entity.name;
+        merged.push(name === entity.name ? entity : { ...entity, name });
       };
       for (const entity of preferred) {
         if (merged.length >= limit) break;
