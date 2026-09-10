@@ -16,12 +16,21 @@ function result(id: string, label: string, items: ChartRow[], error?: string): S
 }
 
 function cleanShowTitle(raw: string): string {
-  return raw
+  let title = raw
     .replace(/<[^>]+>/g, " ")
     .replace(/[〈〈]/g, "〈")
     .replace(/[〉〉]/g, "〉")
     .replace(/\s+/g, " ")
     .trim();
+  // Interpark HTML scrape can leak trailing JSON when the goodsName closer is
+  // consumed as an escaped quote — cut at the first field boundary.
+  const leak = title.search(
+    /(?:\\?"\\?\s*,\\?\s*\\?"(?:posterImageUrl|placeName|goodsCode|goodsName|bookingPercent|rank|playPeriod|action|serverLogMeta)\b|","[a-zA-Z]|posterImageUrl|serverLogMeta)/,
+  );
+  if (leak >= 0) title = title.slice(0, leak);
+  title = title.replace(/\\+"/g, '"').replace(/^"+|"+$/g, "").trim();
+  if (title.length > 100) title = title.slice(0, 100).trim();
+  return title;
 }
 
 /** Infer 시/도 label from venue / tour suffix for `[지역] 공연명` seeds. */
@@ -58,6 +67,24 @@ export function formatTicketSeedName(title: string, venue?: string): string {
   return region ? `[${region}] ${cleaned}` : cleaned;
 }
 
+/** Repair titles corrupted by Interpark JSON leakage (persisted snapshots). */
+export function sanitizeTicketEntityName(name: string): string {
+  if (!name) return name;
+  if (
+    !/posterImageUrl|serverLogMeta|goodsCode|placeName":|bookingPercent|"action"/.test(name) &&
+    name.length <= 100
+  ) {
+    return name;
+  }
+  const labeled = name.match(/^(\[[^\]]+\])\s*(.+)$/);
+  if (labeled) {
+    const region = labeled[1]!;
+    const subject = cleanShowTitle(labeled[2] ?? "");
+    return subject ? `${region} ${subject}` : cleanShowTitle(name);
+  }
+  return cleanShowTitle(name);
+}
+
 type InterparkRankRow = {
   rank?: string | number;
   previousRank?: string | number;
@@ -87,7 +114,8 @@ function chartRowsFromInterpark(rows: InterparkRankRow[], tag: string, rankingTy
   const items: ChartRow[] = [];
   for (const [index, row] of rows.entries()) {
     const title = cleanShowTitle(row.goodsName ?? "");
-    if (!title) continue;
+    if (!title || title.length < 2) continue;
+    if (/posterImageUrl|serverLogMeta|goodsCode|bookingPercent/.test(title)) continue;
     const rank = Number(row.rank) || index + 1;
     const prev = Number(row.previousRank);
     const pct = Number(row.bookingPercent);
@@ -96,7 +124,7 @@ function chartRowsFromInterpark(rows: InterparkRankRow[], tag: string, rankingTy
       rank,
       previousRank: Number.isFinite(prev) && prev > 0 ? prev : undefined,
       title,
-      subtitle: row.placeName,
+      subtitle: row.placeName ? cleanShowTitle(row.placeName) : undefined,
       metric: Number.isFinite(pct) ? pct : Math.max(1, 60 - index),
       volume: Number.isFinite(pct) ? Math.round(pct * 10_000) : undefined,
       measurement: Number.isFinite(pct)
@@ -118,24 +146,31 @@ function parseInterparkRankingHtml(html: string, genreKey: string): InterparkRan
   );
   const block = html.match(re)?.[1] ?? html;
   const rows: InterparkRankRow[] = [];
+
+  const unescapeJson = (value: string) =>
+    value
+      .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+      .replace(/\\"/g, '"');
+
+  // Non-greedy — greedy `(?:[^"\\]|\\.)*` swallows the closing `\"`.
   for (const match of block.matchAll(
-    /\\"goodsName\\":\\"((?:[^"\\]|\\.)*)\\"[\\s\\S]{0,420}?\\"placeName\\":\\"((?:[^"\\]|\\.)*)\\"[\\s\\S]{0,220}?\\"rank\\":(\d+)/g,
+    /\\"goodsName\\":\\"(.*?)\\"[\s\S]{0,380}?\\"placeName\\":\\"(.*?)\\"[\s\S]{0,220}?\\"rank\\":(\d+)/g,
   )) {
+    const goodsName = cleanShowTitle(unescapeJson(match[1] ?? ""));
+    if (!goodsName) continue;
     rows.push({
-      goodsName: match[1]?.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))).replace(/\\"/g, '"'),
-      placeName: match[2]?.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))).replace(/\\"/g, '"'),
+      goodsName,
+      placeName: cleanShowTitle(unescapeJson(match[2] ?? "")) || undefined,
       rank: Number(match[3]),
       displayGenre: undefined,
     });
     if (rows.length >= 50) break;
   }
   if (rows.length) return rows;
-  // Whole-page fallback: keep unique goodsName in document order.
+
   const seen = new Set<string>();
-  for (const match of html.matchAll(/\\"goodsName\\":\\"((?:[^"\\]|\\.)*)\\"/g)) {
-    const goodsName = match[1]
-      ?.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
-      .replace(/\\"/g, '"');
+  for (const match of html.matchAll(/\\"goodsName\\":\\"(.*?)\\"/g)) {
+    const goodsName = cleanShowTitle(unescapeJson(match[1] ?? ""));
     if (!goodsName || seen.has(goodsName)) continue;
     seen.add(goodsName);
     rows.push({ goodsName, rank: rows.length + 1 });

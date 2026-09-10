@@ -30,6 +30,7 @@ import { pickPrimaryShorts } from "@/lib/ingestion/sources/shorts";
 import {
   pickExhibitionTicketRows,
   pickPerformanceTicketRows,
+  sanitizeTicketEntityName,
 } from "@/lib/ingestion/sources/tickets";
 import { pickPrimaryWebtoon } from "@/lib/ingestion/sources/webtoon";
 import { channelForBoardSlug } from "@/lib/boards/entity-type";
@@ -327,7 +328,11 @@ function toBoardChartEntity(
   previous: IngestSnapshot | undefined,
   listSize?: number,
 ): RankingEntity {
-  const title = cleanTitle(row.title);
+  const rawTitle = cleanTitle(row.title);
+  const title =
+    boardSlug === "performance-ticket-ranking" || boardSlug === "exhibition-popup-ranking"
+      ? sanitizeTicketEntityName(rawTitle)
+      : rawTitle;
   const slug = `${boardSlug}--${slugify(title) || `item-${row.rank}`}`;
   const type = entityTypeForBoardChannel(boardSlug, channel);
   const span = listSize && listSize > 1 ? listSize : 30;
@@ -828,6 +833,24 @@ export function snapshotToPayload(snapshot: Pick<IngestSnapshot, "updatedAt" | "
     updatedAt: snapshot.updatedAt,
     status: snapshot.status,
     indices: snapshot.indices,
-    items: snapshot.items,
+    items: snapshot.items.map((item) => {
+      if (
+        item.type !== "performance" &&
+        item.type !== "exhibition" &&
+        !item.slug?.startsWith("performance-ticket-ranking") &&
+        !item.slug?.startsWith("exhibition-popup-ranking")
+      ) {
+        return item;
+      }
+      const name = sanitizeTicketEntityName(item.name);
+      if (name === item.name) return item;
+      return {
+        ...item,
+        name,
+        summary: item.summary?.includes("posterImageUrl")
+          ? `${name}은(는) 실시간 티켓 랭킹 종목입니다.`
+          : item.summary,
+      };
+    }),
   };
 }

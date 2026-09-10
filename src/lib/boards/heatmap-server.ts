@@ -15,6 +15,7 @@ import type { BoardDefinition, BoardRankEntry, CachedBoard } from "@/lib/boards/
 import { COMPOSITE_INDEX_ID } from "@/lib/ingestion/composite";
 import { snapshotToPayload } from "@/lib/ingestion/compose";
 import { readPersistedSnapshot } from "@/lib/ingestion/job";
+import { sanitizeTicketEntityName } from "@/lib/ingestion/sources/tickets";
 import { itemsForChannel } from "@/lib/posts/channels";
 import { isPoliticsIndex } from "@/lib/politics/types";
 import type { ChannelLiveMarket } from "@/components/dashboard/ChannelMarketDesk";
@@ -28,6 +29,18 @@ const CHANNEL_BOARD_TTL_MS = 180_000;
 
 /** Minimum live rows before a board seed list is replaced. */
 const MIN_LIVE_BOARD_ROWS = 3;
+
+function sanitizeLiveBoardName(slug: string, name: string): string {
+  if (
+    slug === "performance-ticket-ranking" ||
+    slug === "exhibition-popup-ranking" ||
+    slug.startsWith("performance-ticket-ranking") ||
+    slug.startsWith("exhibition-popup-ranking")
+  ) {
+    return sanitizeTicketEntityName(name);
+  }
+  return name;
+}
 
 /**
  * Prefer live ingest chart rows for boards that map to snapshot entity types,
@@ -53,7 +66,9 @@ function liveRankingForBoard(
     return boardTagged
       .filter((item) => {
         if (!passesKpopTrotBoardFilter(def.slug, item.name)) return false;
-        const key = (item.name ?? "").replace(/\s+/g, "").toLowerCase();
+        const name = sanitizeLiveBoardName(def.slug, item.name);
+        if (!name || name.length < 2) return false;
+        const key = name.replace(/\s+/g, "").toLowerCase();
         if (!key || seen.has(key)) return false;
         seen.add(key);
         return true;
@@ -61,7 +76,7 @@ function liveRankingForBoard(
       .slice(0, limit)
       .map((item, index) => ({
         rank: index + 1,
-        name: item.name,
+        name: sanitizeLiveBoardName(def.slug, item.name),
         score: Number(
           Math.min(99.5, Math.max(12, item.buzzScore > 120 ? item.buzzScore / 10 : item.buzzScore)).toFixed(
             2,
@@ -87,7 +102,9 @@ function liveRankingForBoard(
     })
     .sort((a, b) => a.rank - b.rank || b.buzzScore - a.buzzScore)
     .filter((item) => {
-      const key = (item.name ?? "").replace(/\s+/g, "").toLowerCase();
+      const name = sanitizeLiveBoardName(def.slug, item.name);
+      if (!name || name.length < 2) return false;
+      const key = name.replace(/\s+/g, "").toLowerCase();
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -95,7 +112,7 @@ function liveRankingForBoard(
     .slice(0, limit)
     .map((item, index) => ({
       rank: index + 1,
-      name: item.name,
+      name: sanitizeLiveBoardName(def.slug, item.name),
       score: Number(
         Math.min(99.5, Math.max(12, item.buzzScore > 120 ? item.buzzScore / 10 : item.buzzScore)).toFixed(
           2,
@@ -183,10 +200,14 @@ export const loadChannelHeatmapPayloads = cache(async (channel: PostChannel): Pr
  */
 export function toTileEntity(entity: RankingEntity): RankingEntity {
   const metric3m = entity.metrics?.["3m"];
+  const name =
+    entity.type === "performance" || entity.type === "exhibition"
+      ? sanitizeTicketEntityName(entity.name)
+      : entity.name;
   return {
     id: entity.id,
     slug: entity.slug,
-    name: entity.name,
+    name,
     nameEn: entity.nameEn || "",
     type: entity.type,
     rank: entity.rank,
@@ -198,7 +219,9 @@ export function toTileEntity(entity: RankingEntity): RankingEntity {
     sparkline: Array.isArray(entity.sparkline) ? entity.sparkline.slice(-8) : [],
     history: [],
     tags: Array.isArray(entity.tags) ? entity.tags.slice(0, 4) : [],
-    summary: entity.summary ? entity.summary.slice(0, 96) : "",
+    summary: entity.summary
+      ? (entity.summary.includes("posterImageUrl") ? `${name} 실시간 티켓` : entity.summary).slice(0, 96)
+      : "",
     metrics: metric3m ? ({ "3m": metric3m } as RankingEntity["metrics"]) : undefined,
     measurement: entity.measurement,
     href: entity.href,
