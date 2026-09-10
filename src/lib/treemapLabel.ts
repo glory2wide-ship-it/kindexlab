@@ -4,8 +4,8 @@ import {
   heatmapLabelDisplayLength,
 } from "@/lib/heatmap-display-name";
 
-const MIN_NAME = 12;
-const READABLE_NAME = 13;
+const MIN_NAME = 13;
+const READABLE_NAME = 14;
 const MAX_NAME = 28;
 const MIN_RATE = 12;
 const MAX_RATE = 18;

@@ -8,11 +8,11 @@ import { DEFAULT_TRENDS_REVALIDATE_SEC, formatRefreshClock } from "@/lib/refresh
 /** Keep the same outer box as the neighboring "랭킹 산출 방식" control (30px). */
 /** Background matches heatmap legend rightmost green (#22c55e). */
 const SHELL_CLASS =
-  "inline-flex shrink-0 items-center justify-center gap-1 rounded-md border border-[#22c55e] bg-[#22c55e] px-3 font-sans font-normal text-white";
-const SHELL_STYLE = { height: 30, boxSizing: "border-box" as const };
+  "inline-flex shrink-0 items-center justify-center gap-1 rounded-md border border-[#22c55e] bg-[#22c55e] px-3 font-sans font-light text-white";
+const SHELL_STYLE = { height: 30, boxSizing: "border-box" as const, fontWeight: 400 };
 /** Prior clock 14.52px +10% → 15.972px; label 11.88px +10% → 13.068px. */
-const LABEL_CLASS = "text-[13.068px] font-normal leading-none tracking-tight whitespace-nowrap text-white";
-const CLOCK_CLASS = "refresh-countdown text-[15.972px] tabular-nums leading-none text-white";
+const LABEL_CLASS = "text-[13.068px] font-light leading-none tracking-tight whitespace-nowrap text-white";
+const CLOCK_CLASS = "refresh-countdown text-[15.972px] font-light tabular-nums leading-none text-white";
 
 export function HeatmapCountdownFallback() {
   return (

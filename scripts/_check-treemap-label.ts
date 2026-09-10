@@ -20,9 +20,9 @@ const cases: Array<{
   { name: "김치찌개", width: 140, height: 90, minSize: 12, maxSize: 28, minLines: 1 },
   { name: "웰니스관광", width: 340, height: 280, minSize: 14, maxSize: 28, minLines: 1 },
   { name: "마약김밥", width: 220, height: 150, minSize: 13, maxSize: 28, minLines: 1 },
-  { name: "혈압", width: 80, height: 56, minSize: 12, maxSize: 22, minLines: 1 },
+  { name: "혈압", width: 80, height: 56, minSize: 13, maxSize: 22, minLines: 1 },
   // Small tile: prefer readable type (may ellipsize) over tiny glyphs
-  { name: "소상공인 전기요금 지원사업", width: 56, height: 40, minSize: 12, maxSize: 22, minLines: 1 },
+  { name: "소상공인 전기요금 지원사업", width: 56, height: 40, minSize: 13, maxSize: 22, minLines: 1 },
   // 10+ chars (spaces included) → 2 lines
   { name: "소상공인 전기요금 지원", width: 200, height: 140, minSize: 12, maxSize: 28, minLines: 2 },
   { name: "광장시장 마약김밥 맛집", width: 220, height: 150, minSize: 12, maxSize: 28, minLines: 2 },

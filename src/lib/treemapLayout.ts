@@ -13,16 +13,18 @@ export interface TreemapBox {
 }
 
 /** Soft typical share for the leader on dense boards (raised for clearer #1 hierarchy). */
-export const RANK_1_AREA_RATIO = 0.18;
+export const RANK_1_AREA_RATIO = 0.22;
 /** Soft ceiling for rank 1 on dense boards — still below a Finviz-style megatile. */
-export const RANK_TOP_AREA_CAP = 0.18;
+export const RANK_TOP_AREA_CAP = 0.22;
 export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
 /** Soft ceiling used by helpers; live layout uses dynamic caps by tile count. */
 export const RANK_BELOW_CAP = RANK_1_AREA_RATIO - 0.001;
 /** Soft ceiling for near-square helper aspect (max(w,h)/min(w,h)). */
 export const RANK_1_MAX_ASPECT = 1.35;
-/** Max share of previous tile — steeper than 0.94 so #1 ≫ #2 ≫ #3. */
-export const RANK_AREA_STEP = 0.82;
+/** Max share of previous tile — steep ladder so #1 ≫ #2 ≫ #3. */
+export const RANK_AREA_STEP = 0.72;
+/** Soft floor so lower-rank tiles keep readable label area. */
+export const RANK_TAIL_FLOOR = 0.028;
 
 export type HeatmapLayoutVariant =
   | "squarify"
@@ -60,11 +62,11 @@ function safeScore(value: number): number {
 
 /** Steeper Zipf so #1 is clearly largest and lower ranks shrink faster. */
 function zipfExponent(count: number): number {
-  if (count >= 20) return 0.95;
-  if (count >= 15) return 1.05;
-  if (count >= 10) return 1.15;
-  if (count >= 6) return 1.25;
-  return 1.35;
+  if (count >= 20) return 1.15;
+  if (count >= 15) return 1.25;
+  if (count >= 10) return 1.35;
+  if (count >= 6) return 1.45;
+  return 1.55;
 }
 
 /** Soft max share for #1 — respects unit-sum + strict descending feasibility. */
@@ -75,14 +77,14 @@ function maxLeaderShare(count: number, step = RANK_AREA_STEP): number {
     count >= 20
       ? RANK_TOP_AREA_CAP
       : count >= 15
-        ? 0.2
+        ? 0.24
         : count >= 10
-          ? 0.24
+          ? 0.28
           : count >= 6
-            ? 0.3
+            ? 0.34
             : count >= 4
-              ? 0.36
-              : 0.42;
+              ? 0.4
+              : 0.46;
   return Math.max(preferred, minFirstToFill);
 }
 
@@ -545,28 +547,36 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
   const exponent = zipfExponent(n);
 
   // Rank-primary weights; name boost helps long titles without flipping order.
-  let values = ordered.map(({ item, rank }) =>
+  let zipf = ordered.map(({ item, rank }) =>
     finvizWeight(rank, item.score, peak, exponent) *
     Math.min(1.12, readabilityAreaBoost(item.name)),
   );
-  values = renormalize(enforceStrictDescending(renormalize(values), step));
+  zipf = renormalize(enforceStrictDescending(renormalize(zipf), step));
+
+  // Additive floor keeps lower-rank tiles readable; Zipf spends the free budget.
+  const floor = n >= 8 ? Math.min(RANK_TAIL_FLOOR, 0.6 / n) : 0;
+  const free = Math.max(0, 1 - floor * n);
+  let values = zipf.map((weight) => floor + free * weight);
 
   if (values[0]! > leaderCap + 1e-9) {
-    // Find decay r so leaderCap * (1-r^n)/(1-r) ≈ 1, then renormalize.
+    // Cap the free-budget leader, then rebuild with the same floor.
+    const freeCap = Math.max(0, leaderCap - floor);
     let lo = 0.5;
     let hi = 0.999;
     for (let iter = 0; iter < 24; iter++) {
       const mid = (lo + hi) / 2;
-      const sum = (leaderCap * (1 - Math.pow(mid, n))) / (1 - mid);
-      if (sum > 1) hi = mid;
+      const sum = (freeCap * (1 - Math.pow(mid, n))) / (1 - mid);
+      if (sum > free) hi = mid;
       else lo = mid;
     }
-    values = Array.from({ length: n }, (_, index) => leaderCap * Math.pow(lo, index));
-    values = renormalize(values);
+    zipf = Array.from({ length: n }, (_, index) => freeCap * Math.pow(lo, index));
+    const zipfSum = zipf.reduce((sum, value) => sum + value, 0) || 1;
+    values = zipf.map((weight) => floor + free * (weight / zipfSum));
   }
 
-  // Final assert: descending + unit sum.
-  values = renormalize(enforceStrictDescending(values, step));
+  // Milder step on the final pass so the floor is not crushed back to dust.
+  const finalStep = n >= 10 ? Math.max(step, 0.9) : step;
+  values = renormalize(enforceStrictDescending(values, finalStep));
 
   ordered.forEach(({ item }, index) => {
     ratios.set(item.id, values[index] ?? 0);
