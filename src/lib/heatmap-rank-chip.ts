@@ -5,6 +5,14 @@
 
 import { entityPlatform, type GamePlatformTag } from "@/lib/boards/game-platforms";
 import { isTwoLineBracketHeatmap } from "@/lib/boards/culture-grants";
+import {
+  boardSlugOf,
+  inferBookGenreChip,
+  inferCelebrityJobChip,
+  inferMusicGenreChip,
+  inferTvChannelChip,
+  stripChipBrackets,
+} from "@/lib/heatmap-rank-meta";
 import { heatmapSourceCaption } from "@/lib/news/headline-title";
 import { parseBracketLabel } from "@/lib/politics/labeled-rank";
 import type { RankingEntity } from "@/lib/types";
@@ -57,30 +65,79 @@ function wantsBracketChip(entity: Pick<RankingEntity, "type" | "slug" | "heatmap
   );
 }
 
+function isTvRatingsEntity(entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">): boolean {
+  if (entity.type === "tv_rating" || entity.type === "tv_show") return true;
+  const slug = boardSlugOf(entity);
+  const group = entity.heatmapGroup ?? "";
+  return slug === "realtime-tv-ratings" || group === "TV 시청률";
+}
+
+function isMusicChartEntity(entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">): boolean {
+  if (entity.type === "music_chart") return true;
+  const slug = boardSlugOf(entity);
+  const group = entity.heatmapGroup ?? "";
+  return slug === "realtime-music-chart" || group === "음원";
+}
+
+function isStarEntity(entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">): boolean {
+  if (entity.type === "celebrity") return true;
+  const slug = boardSlugOf(entity);
+  const group = entity.heatmapGroup ?? "";
+  return slug === "star-reputation-index" || group === "스타";
+}
+
+function isBookEntity(entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">): boolean {
+  if (entity.type === "book") return true;
+  const slug = boardSlugOf(entity);
+  const group = entity.heatmapGroup ?? "";
+  return slug === "bestseller-surge-index" || group.includes("도서");
+}
+
 /**
  * Chip text shown immediately before the rank badge.
- * Priority: game platform → [지역/기관] → optional submenu caption.
+ * Priority: game → TV channel → music genre → star job → book genre → region/agency → menu.
+ * Bracket qualifiers render without `[` `]` symbols.
  */
 export function heatmapRankPrefixChip(
   entity: Pick<
     RankingEntity,
-    "name" | "type" | "slug" | "heatmapGroup" | "platform" | "sourceChannel" | "tags"
+    "name" | "nameEn" | "type" | "slug" | "heatmapGroup" | "platform" | "sourceChannel" | "tags"
   >,
   options?: { allowMenuCaption?: boolean },
 ): string | undefined {
   if (isGameEntity(entity)) {
     const platform = entityPlatform(entity);
-    if (platform) return formatHeatmapGameChip(platform);
+    if (platform) return stripChipBrackets(formatHeatmapGameChip(platform));
+  }
+
+  if (isTvRatingsEntity(entity)) {
+    const channel = inferTvChannelChip(entity);
+    if (channel) return stripChipBrackets(channel);
+  }
+
+  if (isMusicChartEntity(entity)) {
+    const genre = inferMusicGenreChip(entity);
+    if (genre) return stripChipBrackets(genre);
+  }
+
+  if (isStarEntity(entity)) {
+    const job = inferCelebrityJobChip(entity);
+    if (job) return stripChipBrackets(job);
+  }
+
+  if (isBookEntity(entity)) {
+    const genre = inferBookGenreChip(entity);
+    if (genre) return stripChipBrackets(genre);
   }
 
   if (wantsBracketChip(entity)) {
     const bracket = parseBracketLabel(entity.name);
-    if (bracket?.org) return `[${bracket.org}]`;
+    if (bracket?.org) return stripChipBrackets(bracket.org);
   }
 
   if (options?.allowMenuCaption) {
     const menu = heatmapSourceCaption(entity as RankingEntity);
-    if (menu) return menu;
+    if (menu) return stripChipBrackets(menu);
   }
 
   return undefined;

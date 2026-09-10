@@ -272,6 +272,21 @@ function toEntity(
             : (row.volume ??
               volumeFromRank(row.rank, knownType === "music_chart" ? 120_000 : 70_000));
   const tags = [...new Set([...(catalog?.tags ?? []), ...(row.tags ?? []), ...extraTags])].slice(0, 5);
+  if (
+    (type === "tv_rating" || type === "tv_show" || knownType === "tv_rating" || knownType === "tv_show") &&
+    row.subtitle
+  ) {
+    const channel = row.subtitle.trim();
+    if (
+      channel &&
+      channel.length <= 18 &&
+      !tags.includes(channel) &&
+      /KBS|MBC|SBS|JTBC|tvN|TVN|조선|채널|MBN|ENA|OCN|Mnet|EBS|YTN/i.test(channel)
+    ) {
+      tags.unshift(channel);
+      if (tags.length > 5) tags.length = 5;
+    }
+  }
   const sourceLabel = tags[0] ?? "실시간";
   const nameEn =
     catalog?.nameEn ||
