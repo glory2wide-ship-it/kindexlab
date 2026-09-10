@@ -494,14 +494,22 @@ export function buildHeatmapItems({
         return false;
       });
       if (boardLive.length) {
+        const regionScoped = region !== "all" && boardUsesRegionFilter(selected.slug);
+        const regionLive = regionScoped
+          ? boardLive.filter(
+              (item) => item.region === region || regionFromName(item.name) === region,
+            )
+          : boardLive;
         const seen = new Set<string>();
         const merged: RankingEntity[] = [];
-        const poolCap =
-          region === "all" && boardUsesRegionFilter(selected.slug)
+        // Region tabs: keep headroom for catalog pad after live. 전체: wider live pool.
+        const poolCap = regionScoped
+          ? boardLimit
+          : boardUsesRegionFilter(selected.slug)
             ? Math.max(boardLimit * 3, 48)
             : boardLimit;
         const push = (entity: RankingEntity) => {
-          const key = (entity.name ?? "").replace(/\s+/g, "").toLowerCase();
+          const key = heatmapNameDedupeKey(entity.name ?? "");
           if (!key || seen.has(key) || seen.has(entity.id) || seen.has(entity.slug)) return;
           seen.add(key);
           seen.add(entity.id);
@@ -511,17 +519,56 @@ export function buildHeatmapItems({
             heatmapGroup: entity.heatmapGroup || selected.shortTitle,
           });
         };
-        for (const entity of boardLive) {
+        // Live-first within the selected 시/도 (never fill with other regions first).
+        for (const entity of regionLive) {
           if (merged.length >= poolCap) break;
           push(entity);
         }
+        // Board/catalog pad already region-scoped via selectHeatmapRows → padRegionOnly.
         for (const entity of boardEntities) {
-          if (merged.length >= poolCap) break;
+          if (merged.length >= boardLimit) break;
           push(entity);
         }
 
         let ordered = merged;
-        if (region === "all" && boardUsesRegionFilter(selected.slug)) {
+        if (regionScoped) {
+          // Guarantee 20 regional tiles: live → board pad → same-시/도 catalog.
+          const asRows: BoardRankEntry[] = merged.map((entity, index) => ({
+            rank: index + 1,
+            name: entity.name,
+            score: Number(
+              Math.min(
+                99.5,
+                Math.max(12, entity.buzzScore > 120 ? entity.buzzScore / 10 : entity.buzzScore),
+              ).toFixed(2),
+            ),
+            changeRate: entity.fluctuationRate ?? 0,
+            region: (entity.region as RegionSegment | undefined) ?? region,
+            note: entity.summary,
+          }));
+          const padded = padRegionOnly(asRows, region, boardLimit, selected.slug);
+          const byKey = new Map(
+            merged.map((entity) => [normalizeName(entity.name), entity] as const),
+          );
+          ordered = padded.map((row, index) => {
+            const hit = byKey.get(normalizeName(row.name));
+            if (hit) {
+              return {
+                ...hit,
+                name: row.name,
+                region: row.region ?? hit.region ?? region,
+                rank: index + 1,
+                previousRank: index + 1,
+              };
+            }
+            return rankRowsToEntities([row], selected).map((entity) => ({
+              ...entity,
+              region: row.region ?? region,
+              rank: index + 1,
+              previousRank: index + 1,
+            }))[0]!;
+          });
+        } else if (boardUsesRegionFilter(selected.slug)) {
           const seeds = getBoard(selected.slug)?.seeds ?? [];
           const asRows: BoardRankEntry[] = merged.map((entity, index) => ({
             rank: index + 1,
@@ -562,11 +609,7 @@ export function buildHeatmapItems({
           });
         }
 
-        const scoped =
-          region !== "all" && boardUsesRegionFilter(selected.slug)
-            ? ordered.filter((item) => item.region === region || regionFromName(item.name) === region)
-            : ordered;
-        return scoped.slice(0, boardLimit).map((entity, index) => ({
+        return ordered.slice(0, boardLimit).map((entity, index) => ({
           ...entity,
           rank: index + 1,
           previousRank: index + 1,
@@ -574,11 +617,7 @@ export function buildHeatmapItems({
       }
     }
 
-    const scoped =
-      region !== "all" && boardUsesRegionFilter(selected.slug)
-        ? boardEntities.filter((item) => item.region === region || regionFromName(item.name) === region)
-        : boardEntities;
-    return scoped;
+    return boardEntities.slice(0, boardLimit);
   }
 
   const liveClean = withoutHeadlineHeatmapItems(liveItems ?? []);

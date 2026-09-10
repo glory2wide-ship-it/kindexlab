@@ -1,4 +1,9 @@
 import { POLITICS_HEATMAP_BOARD_NAV, TRAVEL_HEATMAP_BOARD_NAV } from "@/lib/constants/nav";
+import {
+  CULTURE_EVENT_REGION_CATALOG_MIN,
+  EXHIBITION_BOARD_SLUG,
+  PERFORMANCE_BOARD_SLUG,
+} from "@/lib/boards/region-catalogs";
 import type { BoardDefinition } from "@/lib/boards/types";
 import type { PostChannel } from "@/lib/posts/types";
 
@@ -17,8 +22,15 @@ export const PARTY_SUPPORT_HEATMAP_TILES =
 export const POLITICIAN_SUPPORT_HEATMAP_TILES =
   POLITICS_HEATMAP_BOARD_NAV["politician-support-chart"].heatmapLimit;
 
+/** 공연·전시 지역 탭은 시/도당 20종목. */
+export const CULTURE_EVENT_REGION_HEATMAP_TILES = CULTURE_EVENT_REGION_CATALOG_MIN;
+
 export function isTravelRegionalHeatmapBoard(slug: string): slug is keyof typeof TRAVEL_HEATMAP_BOARD_NAV {
   return slug === "domestic-travel-ranking" || slug === "weekend-outing-ranking";
+}
+
+export function isCultureEventRegionalBoard(slug: string): boolean {
+  return slug === PERFORMANCE_BOARD_SLUG || slug === EXHIBITION_BOARD_SLUG;
 }
 
 /** True when a region tab is actively selected (not 전체/all). */
@@ -35,6 +47,9 @@ export function rankLimitForBoard(
   if (isTravelRegionalHeatmapBoard(board.slug)) {
     const meta = TRAVEL_HEATMAP_BOARD_NAV[board.slug];
     return isRegionHeatmapFilter(region) ? meta.heatmapLimitRegion : meta.heatmapLimitAll;
+  }
+  if (isCultureEventRegionalBoard(board.slug) && isRegionHeatmapFilter(region)) {
+    return CULTURE_EVENT_REGION_HEATMAP_TILES;
   }
   return rankLimitForChannel(board.channel);
 }
