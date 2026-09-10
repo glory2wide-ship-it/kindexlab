@@ -829,28 +829,34 @@ export async function composeLiveSnapshot(
 }
 
 export function snapshotToPayload(snapshot: Pick<IngestSnapshot, "updatedAt" | "status" | "indices" | "items">): RankingsPayload {
-  return {
-    updatedAt: snapshot.updatedAt,
-    status: snapshot.status,
-    indices: snapshot.indices,
-    items: snapshot.items.map((item) => {
-      if (
-        item.type !== "performance" &&
-        item.type !== "exhibition" &&
-        !item.slug?.startsWith("performance-ticket-ranking") &&
-        !item.slug?.startsWith("exhibition-popup-ranking")
-      ) {
-        return item;
-      }
-      const name = sanitizeTicketEntityName(item.name);
-      if (name === item.name) return item;
-      return {
+  const seenTicket = new Set<string>();
+  const items = snapshot.items.flatMap((item) => {
+    const isTicket =
+      item.type === "performance" ||
+      item.type === "exhibition" ||
+      item.slug?.startsWith("performance-ticket-ranking") ||
+      item.slug?.startsWith("exhibition-popup-ranking");
+    if (!isTicket) return [item];
+    const name = sanitizeTicketEntityName(item.name);
+    if (!name || name.length < 2) return [];
+    const key = `${item.type}:${name.replace(/\s+/g, "").toLowerCase()}`;
+    if (seenTicket.has(key)) return [];
+    seenTicket.add(key);
+    if (name === item.name && !item.summary?.includes("posterImageUrl")) return [item];
+    return [
+      {
         ...item,
         name,
         summary: item.summary?.includes("posterImageUrl")
           ? `${name}은(는) 실시간 티켓 랭킹 종목입니다.`
           : item.summary,
-      };
-    }),
+      },
+    ];
+  });
+  return {
+    updatedAt: snapshot.updatedAt,
+    status: snapshot.status,
+    indices: snapshot.indices,
+    items,
   };
 }
