@@ -711,7 +711,7 @@ export function officialLinkForTopic(
   if (type === "webtoon") {
     return { href: "https://comic.naver.com/index", label: "네이버웹툰 공식", rel: "noopener noreferrer" };
   }
-  if (type === "kpop" || type === "music_chart") {
+  if (type === "kpop" || type === "trot" || type === "music_chart") {
     return { href: "https://www.melon.com/", label: "멜론 공식", rel: "noopener noreferrer" };
   }
   if (type === "movie") {

@@ -16,6 +16,7 @@ import {
   volumeFromRank,
 } from "@/lib/ingestion/score";
 import { entityTypeForBoardChannel, heatmapGroupForBoardSlug } from "@/lib/boards/entity-type";
+import { isLikelyTrotArtist } from "@/lib/boards/trot";
 import { classifyBuzzType, fetchNaverNewsBoost } from "@/lib/ingestion/sources/buzz";
 import { pickBestsellerRows } from "@/lib/ingestion/sources/books";
 import {
@@ -192,6 +193,10 @@ function artistRows(music: ChartRow[]): ChartRow[] {
     });
   });
   return [...map.values()].sort((a, b) => a.rank - b.rank);
+}
+
+function chartArtistType(name: string): "kpop" | "trot" {
+  return isLikelyTrotArtist(name) ? "trot" : "kpop";
 }
 
 function toEntity(
@@ -598,12 +603,8 @@ export async function composeLiveSnapshot(
       return [];
     }
     const rows = takeTop(pickCategoryLiveRows(sources, boardSlug), 24);
-    // Tickets/books already own these culture boards — skip duplicate live news overlays.
-    if (
-      boardSlug === "performance-ticket-ranking" ||
-      boardSlug === "exhibition-popup-ranking" ||
-      boardSlug === "bestseller-surge-index"
-    ) {
+    // 도서 보드만 서점 랭킹이 단독 소유. 공연·전시는 티켓 + 뉴스/YouTube 시드를 함께 쓴다.
+    if (boardSlug === "bestseller-surge-index") {
       return [];
     }
     return rows.map((row, _i, all) =>
@@ -703,7 +704,9 @@ export async function composeLiveSnapshot(
 
   const built = uniqueBySlug([
     ...musicRows.map((row, _i, all) => toEntity(row, "music_chart", previous, row.tags ?? [], false, all.length)),
-    ...artists.map((row, _i, all) => toEntity(row, "kpop", previous, ["차트 아티스트"], false, all.length)),
+    ...artists.map((row, _i, all) =>
+      toEntity(row, chartArtistType(row.title), previous, ["차트 아티스트"], true, all.length),
+    ),
     ...ratings.map((row, _i, all) => toEntity(row, "tv_rating", previous, row.tags ?? [], false, all.length)),
     ...shows.map((row, _i, all) => toEntity(row, "tv_show", previous, row.tags ?? [], false, all.length)),
     ...movieRows.map((row, _i, all) => toEntity(row, "movie", previous, row.tags ?? [], true, all.length)),

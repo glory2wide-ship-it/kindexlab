@@ -599,7 +599,41 @@ export function ensureFoodRestaurantRanking(
       }),
     );
   }
-  return unique.map((row, index) => ({ ...row, rank: index + 1 }));
+  const diversified =
+    slug === PERFORMANCE_BOARD_SLUG || slug === EXHIBITION_BOARD_SLUG
+      ? interleaveByRegion(unique)
+      : unique;
+  return diversified.map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
+/**
+ * Round-robin across 시/도 so 공연·전시 전체 상위 20에 지역 종목이 빠지지 않는다.
+ * Score order is preserved within each region bucket.
+ */
+function interleaveByRegion(rows: BoardRankEntry[]): BoardRankEntry[] {
+  const buckets = new Map<string, BoardRankEntry[]>();
+  for (const row of rows) {
+    const region = row.region ?? regionFromName(row.name) ?? "other";
+    const list = buckets.get(region) ?? [];
+    list.push(row);
+    buckets.set(region, list);
+  }
+  const order = [...REGION_SEGMENTS, "other"];
+  const out: BoardRankEntry[] = [];
+  let depth = 0;
+  while (out.length < rows.length) {
+    let advanced = false;
+    for (const key of order) {
+      const bucket = buckets.get(key);
+      const item = bucket?.[depth];
+      if (!item) continue;
+      out.push(item);
+      advanced = true;
+    }
+    if (!advanced) break;
+    depth += 1;
+  }
+  return out;
 }
 
 export function padRankEntries(

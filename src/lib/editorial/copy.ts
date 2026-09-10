@@ -59,13 +59,14 @@ function topicLens(type: EntityType): {
 } {
   switch (type) {
     case "kpop":
+    case "trot":
     case "music_chart":
       return {
-        scene: "음원과 팬덤 문화",
-        spark: "신보와 화보",
-        habit: "재생과 착용 취향",
+        scene: type === "trot" ? "트로트·성인가요 무대" : "음원과 팬덤 문화",
+        spark: type === "trot" ? "콘서트와 방송 출연" : "신보와 화보",
+        habit: type === "trot" ? "응원과 음원 재생" : "재생과 착용 취향",
         noise: "응원 댓글만의 소음",
-        ripple: "팬덤 밖 패션 관심",
+        ripple: type === "trot" ? "팬미팅·콘서트 관심" : "팬덤 밖 패션 관심",
       };
     case "celebrity":
       return {

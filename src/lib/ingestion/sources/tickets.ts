@@ -400,15 +400,28 @@ function mergeChartRows(groups: ChartRow[][]): ChartRow[] {
 
 export function pickPerformanceTicketRows(sources: SourceResult[]): ChartRow[] {
   return mergeChartRows(
-    sources.filter((source) => PERFORMANCE_SOURCE_IDS.has(source.id)).map((source) => source.items),
+    sources.filter((source) => PERFORMANCE_SOURCE_IDS.has(source.id)).map((source) =>
+      source.items.map((row) => ({
+        ...row,
+        title: formatTicketSeedName(row.title, row.subtitle),
+      })),
+    ),
   ).slice(0, 40);
 }
 
 export function pickExhibitionTicketRows(sources: SourceResult[]): ChartRow[] {
-  const exhibit = sources.find((source) => source.id === "interpark-exhibit")?.items ?? [];
-  const yes24 = (sources.find((source) => source.id === "yes24-ticket-rank")?.items ?? []).filter((row) =>
-    /전시|팝업|페어|비엔날레|뮤지엄|몰입|체험전|특별전|미디어/.test(row.title),
+  const exhibit = (sources.find((source) => source.id === "interpark-exhibit")?.items ?? []).map(
+    (row) => ({
+      ...row,
+      title: formatTicketSeedName(row.title, row.subtitle),
+    }),
   );
+  const yes24 = (sources.find((source) => source.id === "yes24-ticket-rank")?.items ?? [])
+    .filter((row) => /전시|팝업|페어|비엔날레|뮤지엄|몰입|체험전|특별전|미디어/.test(row.title))
+    .map((row) => ({
+      ...row,
+      title: formatTicketSeedName(row.title, row.subtitle),
+    }));
   return mergeChartRows([exhibit, yes24]).slice(0, 40);
 }
 

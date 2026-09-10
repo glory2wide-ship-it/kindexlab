@@ -4,6 +4,7 @@ import type { CategoryId, EntityType, RankingEntity, TimeframeOption } from "@/l
 export const CATEGORIES: { id: CategoryId; label: string }[] = [
   { id: "all", label: "종합 랭킹" },
   { id: "kpop", label: "K POP" },
+  { id: "trot", label: "트로트·가요" },
   { id: "celebrity", label: "스타" },
   { id: "tv_show", label: "방송" },
   { id: "influencer", label: "유튜버" },
@@ -41,6 +42,7 @@ export { POLITICS_CATEGORIES, POLITICS_TYPE_ORDER };
 
 export const TYPE_ORDER: EntityType[] = [
   "kpop",
+  "trot",
   "celebrity",
   "tv_show",
   "influencer",

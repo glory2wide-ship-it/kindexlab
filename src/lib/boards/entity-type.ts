@@ -11,7 +11,7 @@ const BOARD_ENTITY_TYPE: Record<string, EntityType> = {
   // Entertainment
   "realtime-music-chart": "music_chart",
   "kpop-fandom-power": "kpop",
-  "trot-kayo-fandom-power": "kpop",
+  "trot-kayo-fandom-power": "trot",
   "realtime-tv-ratings": "tv_rating",
   "variety-hot-minute": "tv_rating",
   "star-reputation-index": "celebrity",

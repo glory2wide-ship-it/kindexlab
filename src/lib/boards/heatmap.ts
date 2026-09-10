@@ -32,12 +32,14 @@ import type {
 import type { PostChannel } from "@/lib/posts/types";
 import { canonicalizeGameEsportsName, platformForGame } from "@/lib/boards/game-platforms";
 import { ensureCelebrityRanking, isLikelyCelebrityName } from "@/lib/boards/celebrity";
+import { passesKpopTrotBoardFilter } from "@/lib/boards/trot";
 import {
   ensureCultureGrantRanking,
   isCultureGrantBoard,
 } from "@/lib/boards/culture-grants";
 import { entityTypeForBoardChannel, entityTypeForBoardSlug, liveEntityTypesForBoard } from "@/lib/boards/entity-type";
-import { isHeadlineNewsBoard } from "@/lib/boards/registry";
+import { getBoard, isHeadlineNewsBoard } from "@/lib/boards/registry";
+import { namesOverlap, normalizeName } from "@/lib/ingestion/names";
 import {
   ensureTravelGrantRanking,
   isTravelGrantBoard,
@@ -51,7 +53,6 @@ import {
   labeledNameEn,
 } from "@/lib/politics/labeled-rank";
 import { influencerSeedNames } from "@/lib/politics/youtube-seeds";
-import { namesOverlap } from "@/lib/ingestion/names";
 import { attachTimeframeMetrics } from "@/lib/timeframes";
 import type { EntityType, RankingEntity } from "@/lib/types";
 
@@ -451,19 +452,27 @@ export function buildHeatmapItems({
     if (preferLive && liveClean.length) {
       const typeSet = new Set(liveEntityTypesForBoard(selected.slug));
       const boardLive = liveClean.filter((item) => {
-        if (item.tags?.includes(selected.slug)) return true;
-        if (item.slug?.startsWith(`${selected.slug}--`)) return true;
+        if (item.tags?.includes(selected.slug)) {
+          return passesKpopTrotBoardFilter(selected.slug, item.name);
+        }
+        if (item.slug?.startsWith(`${selected.slug}--`)) {
+          return passesKpopTrotBoardFilter(selected.slug, item.name);
+        }
         if (typeSet.size && typeSet.has(item.type)) {
           if (selected.slug === "star-reputation-index") {
             return isLikelyCelebrityName(item.name);
           }
-          return true;
+          return passesKpopTrotBoardFilter(selected.slug, item.name);
         }
         return false;
       });
       if (boardLive.length) {
         const seen = new Set<string>();
         const merged: RankingEntity[] = [];
+        const poolCap =
+          region === "all" && boardUsesRegionFilter(selected.slug)
+            ? Math.max(boardLimit * 3, 48)
+            : boardLimit;
         const push = (entity: RankingEntity) => {
           const key = (entity.name ?? "").replace(/\s+/g, "").toLowerCase();
           if (!key || seen.has(key) || seen.has(entity.id) || seen.has(entity.slug)) return;
@@ -476,18 +485,61 @@ export function buildHeatmapItems({
           });
         };
         for (const entity of boardLive) {
-          if (merged.length >= boardLimit) break;
+          if (merged.length >= poolCap) break;
           push(entity);
         }
         for (const entity of boardEntities) {
-          if (merged.length >= boardLimit) break;
+          if (merged.length >= poolCap) break;
           push(entity);
         }
+
+        let ordered = merged;
+        if (region === "all" && boardUsesRegionFilter(selected.slug)) {
+          const seeds = getBoard(selected.slug)?.seeds ?? [];
+          const asRows: BoardRankEntry[] = merged.map((entity, index) => ({
+            rank: index + 1,
+            name: entity.name,
+            score: Number(
+              Math.min(
+                99.5,
+                Math.max(12, entity.buzzScore > 120 ? entity.buzzScore / 10 : entity.buzzScore),
+              ).toFixed(2),
+            ),
+            changeRate: entity.fluctuationRate ?? 0,
+            region: entity.region as RegionSegment | undefined,
+            note: entity.summary,
+          }));
+          const diversified = ensureFoodRestaurantRanking(asRows, seeds, selected.slug).slice(
+            0,
+            boardLimit,
+          );
+          const byKey = new Map(
+            merged.map((entity) => [normalizeName(entity.name), entity] as const),
+          );
+          ordered = diversified.map((row, index) => {
+            const hit = byKey.get(normalizeName(row.name));
+            if (hit) {
+              return {
+                ...hit,
+                name: row.name,
+                region: row.region ?? hit.region,
+                rank: index + 1,
+                previousRank: index + 1,
+              };
+            }
+            return rankRowsToEntities([row], selected).map((entity) => ({
+              ...entity,
+              rank: index + 1,
+              previousRank: index + 1,
+            }))[0]!;
+          });
+        }
+
         const scoped =
           region !== "all" && boardUsesRegionFilter(selected.slug)
-            ? merged.filter((item) => item.region === region || regionFromName(item.name) === region)
-            : merged;
-        return scoped.map((entity, index) => ({
+            ? ordered.filter((item) => item.region === region || regionFromName(item.name) === region)
+            : ordered;
+        return scoped.slice(0, boardLimit).map((entity, index) => ({
           ...entity,
           rank: index + 1,
           previousRank: index + 1,

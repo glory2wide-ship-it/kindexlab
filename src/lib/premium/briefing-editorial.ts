@@ -32,6 +32,7 @@ const CHANNEL_EDITOR_PERSONA: Record<PostChannel, string> = {
 const CATEGORY_HINT: Record<string, RegExp> = {
   webtoon: /웹툰|연재|회차|작가|네이버웹툰|카카오웹툰/i,
   kpop: /음원|아이돌|KPOP|팬덤|신보|컴백|뮤직|차트/i,
+  trot: /트로트|미스터트롯|성인가요|가요|콘서트|팬덤/i,
   music_chart: /음원|아이돌|KPOP|팬덤|신보|컴백|뮤직|차트/i,
   tv_show: /방송|드라마|예고|본방|시청|출연|편성/i,
   tv_rating: /방송|드라마|예고|본방|시청|시청률/i,

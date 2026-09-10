@@ -190,6 +190,7 @@ export function resolveSiteSection(pathname: string): ChannelSectionId {
 export const CHANNEL_ENTITY_TYPES: Record<PostChannel, EntityType[]> = {
   entertainment: [
     "kpop",
+    "trot",
     "celebrity",
     "tv_show",
     "influencer",

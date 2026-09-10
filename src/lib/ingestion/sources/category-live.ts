@@ -76,8 +76,7 @@ interface LiveBoardSpec {
 }
 
 const SKIP_LIVE_BOARDS = new Set([
-  "performance-ticket-ranking",
-  "exhibition-popup-ranking",
+  // 공연·전시는 티켓 랭킹 + 뉴스/YouTube 시드를 함께 쓴다 (지역 커버리지).
   "bestseller-surge-index",
   "eco-headline-news-ranking",
 ]);

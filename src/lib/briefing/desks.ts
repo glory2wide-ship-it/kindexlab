@@ -25,6 +25,7 @@ export function isHeadlineBriefingDesk(deskId: string | undefined): boolean {
  */
 export const ENTERTAINMENT_LEGACY_DESK_TO_BOARD: Record<string, string> = {
   kpop: "kpop-fandom-power",
+  trot: "trot-kayo-fandom-power",
   celebrity: "star-reputation-index",
   tv_show: "realtime-tv-ratings",
   influencer: "entertain-youtuber-ranking",

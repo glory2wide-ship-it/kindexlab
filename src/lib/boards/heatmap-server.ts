@@ -7,6 +7,7 @@ import {
 } from "@/lib/boards/heatmap";
 import { liveEntityTypesForBoard } from "@/lib/boards/entity-type";
 import { isLikelyCelebrityName } from "@/lib/boards/celebrity";
+import { passesKpopTrotBoardFilter } from "@/lib/boards/trot";
 import { rankLimitForBoard } from "@/lib/boards/limits";
 import { menuBoardsForChannel, isHeadlineNewsBoard } from "@/lib/boards/registry";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
@@ -51,6 +52,7 @@ function liveRankingForBoard(
     const seen = new Set<string>();
     return boardTagged
       .filter((item) => {
+        if (!passesKpopTrotBoardFilter(def.slug, item.name)) return false;
         const key = (item.name ?? "").replace(/\s+/g, "").toLowerCase();
         if (!key || seen.has(key)) return false;
         seen.add(key);
@@ -81,7 +83,7 @@ function liveRankingForBoard(
       if (def.slug === "star-reputation-index") {
         return isLikelyCelebrityName(item.name);
       }
-      return true;
+      return passesKpopTrotBoardFilter(def.slug, item.name);
     })
     .sort((a, b) => a.rank - b.rank || b.buzzScore - a.buzzScore)
     .filter((item) => {

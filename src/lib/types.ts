@@ -2,6 +2,7 @@ import type { PostChannel } from "@/lib/posts/types";
 
 export type EntityType =
   | "kpop"
+  | "trot"
   | "celebrity"
   | "tv_show"
   | "influencer"
