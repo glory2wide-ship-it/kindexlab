@@ -1,4 +1,13 @@
-/** Verifies ≤10% #1/#2 caps, coverage, and layout variants. */
+/** Verifies strict rank area order, coverage (no gaps), and layout variants. */
+function maxLeaderShareForTest(count: number): number {
+  const step = 0.94;
+  const geoSum = (1 - Math.pow(step, Math.max(count, 1))) / (1 - step);
+  const minFirstToFill = 1 / Math.max(geoSum, 1e-9);
+  const preferred =
+    count >= 15 ? 0.1 : count >= 10 ? 0.12 : count >= 6 ? 0.2 : count >= 4 ? 0.3 : 0.4;
+  return Math.max(preferred, minFirstToFill) + 0.02; // tolerance for renormalize noise
+}
+
 async function main() {
   const {
     calculateHeatmapSizeRatios,
@@ -17,32 +26,32 @@ async function main() {
     }));
     const { ratios } = calculateHeatmapSizeRatios(items);
     const shares = items.map((item) => ratios.get(item.id) ?? 0);
-    const descendingHead = !shares[1] || shares[1]! <= shares[0]! + 1e-9;
-    const descendingTail = shares.slice(2).every((v, i) => i === 0 || v <= shares[i + 1]! + 1e-9 || v <= shares[i + 1]!);
-    // Tail ranks 3..n should be non-increasing among themselves.
-    const tailOk = shares.slice(2).every((v, i, arr) => i === 0 || v <= arr[i - 1]! + 1e-9);
-    const topOk = shares[0]! <= RANK_TOP_AREA_CAP + 1e-6;
-    const secondOk = !shares[1] || shares[1]! <= RANK_TOP_AREA_CAP + 1e-6;
+    const descending = shares.every((v, i) => i === 0 || v <= shares[i - 1]! + 1e-9);
+    const topOk = shares[0]! <= maxLeaderShareForTest(count) + 1e-6;
+    const sum = shares.reduce((a, b) => a + b, 0);
 
     console.log(
       `${String(count).padStart(2)}개  1위 ${(shares[0]! * 100).toFixed(1)}%`.padEnd(20),
       `2위 ${((shares[1] ?? 0) * 100).toFixed(2)}%`.padEnd(14),
-      topOk && secondOk ? "캡≤10% O" : "캡≤10% X",
-      descendingHead && tailOk ? "질서 O" : "질서 X",
+      `말위 ${((shares.at(-1) ?? 0) * 100).toFixed(2)}%`.padEnd(14),
+      topOk ? "캡 O" : "캡 X",
+      descending ? "1≥…≥N O" : "1≥…≥N X",
+      `sum=${sum.toFixed(3)}`,
     );
-    if (!topOk || !secondOk) {
-      throw new Error(`#1/#2 must be ≤${RANK_TOP_AREA_CAP * 100}% for n=${count}`);
+    if (!topOk) {
+      throw new Error(`#1 over soft cap for n=${count}`);
     }
-    if (!descendingHead || !tailOk) throw new Error(`rank area order broken for n=${count}`);
-    void descendingTail;
+    if (!descending) throw new Error(`strict descending areas broken for n=${count}`);
+    if (Math.abs(sum - 1) > 1e-6) throw new Error(`shares must sum to 1 for n=${count}`);
   }
 
   const W = 390;
   const H = 560;
+  const mapArea = W * H;
   const items = Array.from({ length: 15 }, (_, i) => ({
     id: `board:demo:tile-${i + 1}`,
     rank: i + 1,
-    score: i < 10 ? 999 : 800 - i * 12,
+    score: 999 - i * 12,
     name: `종목이름${i + 1}`,
   }));
 
@@ -57,33 +66,41 @@ async function main() {
 
   for (const variant of variants) {
     const painted = layoutHeatmapLeaves(items, W, H, 2, { variant });
-    const mapArea = W * H;
     const byRank = [...painted].sort((a, b) => a.rank - b.rank);
     const areas = byRank.map((box) => Math.max(0, box.x1 - box.x0) * Math.max(0, box.y1 - box.y0));
-    const aspects = byRank.slice(0, 3).map((box) => {
-      const bw = Math.max(1, box.x1 - box.x0);
-      const bh = Math.max(1, box.y1 - box.y0);
-      return Math.max(bw / bh, bh / bw);
-    });
+    const covered = areas.reduce((sum, a) => sum + a, 0);
+    const coverage = covered / mapArea;
     const leadShare = areas[0]! / mapArea;
     const secondShare = (areas[1] ?? 0) / mapArea;
+    // Pixel areas should be non-increasing by rank (allow tiny gutter noise).
+    const pixelDesc = areas.every((a, i) => i === 0 || a <= areas[i - 1]! * 1.08 + 1);
+    // Lower ranks should sit further right or down on average.
+    const topCentroid = {
+      x: (byRank[0]!.x0 + byRank[0]!.x1) / 2,
+      y: (byRank[0]!.y0 + byRank[0]!.y1) / 2,
+    };
+    const bottomCentroid = {
+      x: (byRank.at(-1)!.x0 + byRank.at(-1)!.x1) / 2,
+      y: (byRank.at(-1)!.y0 + byRank.at(-1)!.y1) / 2,
+    };
+    const lowerTowardEdge =
+      bottomCentroid.x + bottomCentroid.y >= topCentroid.x + topCentroid.y - 8;
+
     if (painted.length !== 15) throw new Error(`${variant} dropped tiles: ${painted.length}`);
-    if (leadShare > RANK_TOP_AREA_CAP + 0.04) {
+    if (coverage < 0.92) {
+      throw new Error(`${variant} coverage ${coverage.toFixed(3)} — gaps under tiles`);
+    }
+    if (leadShare > RANK_TOP_AREA_CAP + 0.05) {
       throw new Error(`${variant} rank-1 pixel share ${leadShare} too large`);
     }
-    if (secondShare > RANK_TOP_AREA_CAP + 0.045) {
-      throw new Error(`${variant} rank-2 pixel share ${secondShare} too large`);
+    if (!pixelDesc) {
+      throw new Error(`${variant} pixel areas not descending by rank`);
     }
-    // Default/mirror packs: top-3 should stay near-square (aspect ≤ ~2.2).
-    if (variant === "squarify" || variant.startsWith("mirror")) {
-      for (const [index, aspect] of aspects.entries()) {
-        if (aspect > 2.4) {
-          throw new Error(`${variant} rank-${index + 1} aspect ${aspect.toFixed(2)} too elongated`);
-        }
-      }
+    if (variant === "squarify" && !lowerTowardEdge) {
+      throw new Error(`${variant} lower ranks should sit further right/bottom`);
     }
     console.log(
-      `variant ${variant.padEnd(12)} 1위 ${(leadShare * 100).toFixed(1)}%  2위 ${(secondShare * 100).toFixed(1)}%  tiles ${painted.length}  topAspect ${aspects.map((a) => a.toFixed(2)).join("/")}`,
+      `variant ${variant.padEnd(12)} 1위 ${(leadShare * 100).toFixed(1)}%  2위 ${(secondShare * 100).toFixed(1)}%  cover ${(coverage * 100).toFixed(1)}%  tiles ${painted.length}`,
     );
   }
 
@@ -91,7 +108,7 @@ async function main() {
   const b = pickHeatmapLayoutVariant("politics:bar:15");
   console.log(`seed variants ${a} / ${b}`);
   console.log(`RANK_1_AREA_RATIO=${RANK_1_AREA_RATIO} RANK_TOP_AREA_CAP=${RANK_TOP_AREA_CAP}`);
-  console.log("geometry OK: ≤10% leaders + mobile layout variants");
+  console.log("geometry OK: no gaps + strict 1≥…≥N + lower ranks right/bottom");
 }
 
 main().catch((error) => {

@@ -193,8 +193,8 @@ export function TreemapView({
           const priceLabel = heatmapPriceLabel(entity);
           const rank = displayRankById.get(entity.id) ?? leaf.rank ?? entity.rank;
           const rankBadge = formatHeatmapRank(rank);
-          /** Mobile ranks 8+: hide ±% so the ticker name stays readable in small tiles. */
-          const omitRate = isMobileViewport && rank >= 8;
+          /** Ranks 10+: name only — hide ±% on mobile and desktop. */
+          const omitRate = rank >= 10;
           const group = groupLabel(entity);
           const tile = heatmapTileLabel(entity);
           const isHeadline = entity.type === "headline_news";

@@ -21,8 +21,6 @@ export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
 export const RANK_BELOW_CAP = RANK_1_AREA_RATIO - 0.001;
 /** Soft ceiling for near-square helper aspect (max(w,h)/min(w,h)). */
 export const RANK_1_MAX_ASPECT = 1.35;
-/** Soft ceiling for ranks 2–3 near-square tiles. */
-export const RANK_TOP_MAX_ASPECT = 1.45;
 
 export type HeatmapLayoutVariant =
   | "squarify"
@@ -67,9 +65,13 @@ function zipfExponent(count: number): number {
   return 0.88;
 }
 
-/** Hard max share for #1 (and soft guide for early redistribution). */
-function maxLeaderShare(_count: number): number {
-  return RANK_TOP_AREA_CAP;
+/** Soft max share for #1 — respects unit-sum + strict descending feasibility. */
+function maxLeaderShare(count: number, step = 0.94): number {
+  const geoSum = (1 - Math.pow(step, Math.max(count, 1))) / (1 - step);
+  const minFirstToFill = 1 / Math.max(geoSum, 1e-9);
+  const preferred =
+    count >= 15 ? RANK_TOP_AREA_CAP : count >= 10 ? 0.12 : count >= 6 ? 0.2 : count >= 4 ? 0.3 : 0.4;
+  return Math.max(preferred, minFirstToFill);
 }
 
 /**
@@ -169,111 +171,6 @@ export function rank1Rectangle(
 ): { x0: number; y0: number; x1: number; y1: number } {
   const { w, h } = nearSquareRank1Size(width, height);
   return { x0: 0, y0: 0, x1: Math.min(w, width), y1: Math.min(h, height) };
-}
-
-/**
- * Place ranks 1–3 as near-square tiles (sizes follow area shares), then
- * squarify the remainder into the leftover L-region.
- */
-function layoutNearSquareTop3(
-  nodes: PanelNode[],
-  width: number,
-  height: number,
-  padding: number,
-): TreemapBox[] {
-  const ordered = [...nodes].sort((a, b) => a.rank - b.rank || b.value - a.value);
-  if (ordered.length <= 1) {
-    return squarifyPanel(ordered, 0, 0, width, height, padding);
-  }
-
-  const gap = Math.max(0, padding);
-  const total = ordered.reduce((sum, node) => sum + node.value, 0) || 1;
-  const leadCount = Math.min(3, ordered.length);
-  const lead = ordered.slice(0, leadCount);
-  const tail = ordered.slice(leadCount);
-  const mapArea = Math.max(width * height, 1);
-
-  const leadBoxes: TreemapBox[] = [];
-  let cursorX = 0;
-  let cursorY = 0;
-  let rowH = 0;
-  let usedRight = 0;
-  let usedBottom = 0;
-
-  for (let i = 0; i < lead.length; i++) {
-    const node = lead[i]!;
-    const ratio = Math.max(node.value / total, 0.04);
-    const aspect = i === 0 ? RANK_1_MAX_ASPECT : RANK_TOP_MAX_ASPECT;
-    let { w, h } = nearSquareRank1Size(width, height, ratio, aspect);
-
-    // If the next square does not fit on this row, wrap under #1.
-    if (cursorX > 0 && cursorX + w + gap > width * 0.92) {
-      cursorX = 0;
-      cursorY = rowH + gap;
-      rowH = 0;
-    }
-
-    // Keep lead tiles inside the map; shrink gently rather than stretch.
-    w = Math.min(w, Math.max(24, width - cursorX - gap));
-    h = Math.min(h, Math.max(24, height - cursorY - gap));
-    const side = Math.min(w, h);
-    // Prefer square-ish: use the smaller side, then expand the other toward area.
-    const targetArea = mapArea * ratio;
-    w = Math.min(Math.max(side, Math.sqrt(targetArea)), width - cursorX);
-    h = Math.min(Math.max(targetArea / Math.max(w, 1), side * 0.75), height - cursorY);
-    const boxAspect = Math.max(w / Math.max(h, 1), h / Math.max(w, 1));
-    if (boxAspect > aspect) {
-      const s = Math.sqrt(Math.max(w * h, 1));
-      w = Math.min(s, width - cursorX);
-      h = Math.min(s, height - cursorY);
-    }
-
-    const x0 = cursorX;
-    const y0 = cursorY;
-    const x1 = Math.min(width, x0 + Math.max(20, w));
-    const y1 = Math.min(height, y0 + Math.max(20, h));
-    leadBoxes.push({ id: node.id, rank: node.rank, x0, y0, x1, y1 });
-
-    cursorX = x1 + gap;
-    rowH = Math.max(rowH, y1);
-    usedRight = Math.max(usedRight, x1);
-    usedBottom = Math.max(usedBottom, y1);
-  }
-
-  if (!tail.length) {
-    // Stretch lead tiles only if they left large empty bands — otherwise keep squares.
-    return leadBoxes;
-  }
-
-  // Remaining L-region: right of the lead cluster and/or below it.
-  const restBoxes: TreemapBox[] = [];
-  const rightX0 = Math.min(width - 24, usedRight + gap);
-  const belowY0 = Math.min(height - 24, usedBottom + gap);
-  const rightW = width - rightX0;
-  const belowH = height - belowY0;
-
-  if (rightW >= 40 && usedBottom > height * 0.35) {
-    // Tall lead row → pack remainder to the right of lead + below.
-    const rightNodes = tail.slice(0, Math.ceil(tail.length / 2));
-    const belowNodes = tail.slice(rightNodes.length);
-    if (rightNodes.length && rightW >= 36) {
-      restBoxes.push(...squarifyPanel(rightNodes, rightX0, 0, width, usedBottom, padding));
-    }
-    const belowPool = belowNodes.length ? belowNodes : rightNodes.length ? [] : tail;
-    if (belowPool.length && belowH >= 36) {
-      restBoxes.push(...squarifyPanel(belowPool, 0, belowY0, width, height, padding));
-    } else if (tail.length) {
-      restBoxes.push(...squarifyPanel(tail, 0, belowY0, width, height, padding));
-    }
-  } else if (belowH >= 40) {
-    restBoxes.push(...squarifyPanel(tail, 0, belowY0, width, height, padding));
-  } else if (rightW >= 40) {
-    restBoxes.push(...squarifyPanel(tail, rightX0, 0, width, height, padding));
-  } else {
-    restBoxes.push(...squarifyPanel(tail, 0, belowY0, width, height, padding));
-  }
-
-  return [...leadBoxes, ...restBoxes];
 }
 
 function rowWorstAspect(row: PanelNode[], rowValue: number, shortSide: number): number {
@@ -603,8 +500,9 @@ export function layoutHeatmapLeaves(
     return layoutSliceDice(ordered, 0, 0, width, height, Math.max(0, padding), height >= width);
   }
 
-  // Default (and mirrors): near-square #1–#3, then squarify the rest.
-  const packed = layoutNearSquareTop3(nodes, width, height, padding);
+  // Default (and mirrors): full-canvas squarify — no gaps. Larger ranks pack
+  // first (top-left); lower ranks settle toward the right / bottom.
+  const packed = squarifyPanel(nodes, 0, 0, width, height, padding);
   if (variant === "mirror-x") return mirrorBoxes(packed, width, height, "x");
   if (variant === "mirror-y") return mirrorBoxes(packed, width, height, "y");
   return packed;
@@ -612,7 +510,8 @@ export function layoutHeatmapLeaves(
 
 /**
  * Continuous area shares for every tile.
- * Rank 1 and 2 are hard-capped at 10% of the map so lower ranks stay readable.
+ * Strict rank order: #1 ≥ #2 ≥ #3 ≥ … ≥ #N, summing to 1 (fills the map).
+ * Soft-caps the leader near 10% on dense boards when geometry allows.
  */
 export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSizeAllocation {
   const ratios = new Map<string, number>();
@@ -623,80 +522,39 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
     return { ratios, leftover: 0 };
   }
 
-  // Work in display-rank order so descending enforcement matches on-screen #1…#N.
   const ordered = items
     .map((item, index) => ({ item, index, rank: item.rank ?? index + 1 }))
     .sort((a, b) => a.rank - b.rank || a.index - b.index);
 
   const n = ordered.length;
+  const step = 0.94;
+  const leaderCap = maxLeaderShare(n, step);
   const peak = Math.max(...ordered.map(({ item }) => safeScore(item.score)), 1);
   const exponent = zipfExponent(n);
+
+  // Rank-primary weights; tiny name nudge cannot survive the descending pass.
   let values = ordered.map(({ item, rank }) =>
-    finvizWeight(rank, item.score, peak, exponent) * readabilityAreaBoost(item.name),
+    finvizWeight(rank, item.score, peak, exponent) *
+    Math.min(1.04, readabilityAreaBoost(item.name)),
   );
-  values = renormalize(enforceStrictDescending(renormalize(values), 0.97));
+  values = renormalize(enforceStrictDescending(renormalize(values), step));
 
-  const leaderCap = maxLeaderShare(n);
-  const secondCap = Math.min(RANK_TOP_AREA_CAP, leaderCap);
-
-  // Cap #1/#2 at 10%, keep #1 ≥ #2, pour the rest into ranks 3+ (may exceed #2 —
-  // that is intentional so lower names stay readable under the leader caps).
-  values[0] = Math.min(values[0]!, leaderCap);
-  if (n > 1) values[1] = Math.min(values[1]!, secondCap, values[0]! * 0.97);
-
-  const head = values[0]! + (n > 1 ? values[1]! : 0);
-  const tailNeed = Math.max(0, 1 - head);
-  if (n <= 2) {
-    if (n === 2) values[1] = Math.min(secondCap, 1 - values[0]!);
-    values[0] = Math.min(leaderCap, 1 - (values[1] ?? 0));
-  } else {
-    const rawTail = values.slice(2).map((value) => Math.max(value, 1e-9));
-    const rawSum = rawTail.reduce((sum, value) => sum + value, 0) || 1;
-    let tail = rawTail.map((value) => (value / rawSum) * tailNeed);
-    // Descending within the tail only.
-    tail = enforceStrictDescending(tail, 0.97);
-    const tailSum = tail.reduce((sum, value) => sum + value, 0) || 1;
-    tail = tail.map((value) => (value / tailSum) * tailNeed);
-    values = [values[0]!, values[1]!, ...tail];
-  }
-
-  // Tiny-tile floor on the tail so the bottom ranks stay tappable.
-  const minShare = Math.min(0.03, 0.72 / n);
-  if (n > 2) {
-    let deficit = 0;
-    for (let i = 2; i < values.length; i++) {
-      if (values[i]! < minShare) {
-        deficit += minShare - values[i]!;
-        values[i] = minShare;
-      }
+  if (values[0]! > leaderCap + 1e-9) {
+    // Find decay r so leaderCap * (1-r^n)/(1-r) ≈ 1, then renormalize.
+    let lo = 0.5;
+    let hi = 0.999;
+    for (let iter = 0; iter < 24; iter++) {
+      const mid = (lo + hi) / 2;
+      const sum = (leaderCap * (1 - Math.pow(mid, n))) / (1 - mid);
+      if (sum > 1) hi = mid;
+      else lo = mid;
     }
-    if (deficit > 0) {
-      // Borrow from the largest mid/low tiles first (still under no #2 ceiling).
-      for (let i = 2; i < values.length && deficit > 1e-9; i++) {
-        const give = Math.max(0, values[i]! - minShare);
-        const take = Math.min(give, deficit);
-        values[i]! -= take;
-        deficit -= take;
-      }
-      // Re-normalize tail to exact leftover after head.
-      const headNow = values[0]! + values[1]!;
-      const tailNow = values.slice(2);
-      const tailSum = tailNow.reduce((sum, value) => sum + value, 0) || 1;
-      const scale = Math.max(0, 1 - headNow) / tailSum;
-      for (let i = 2; i < values.length; i++) values[i] = values[i]! * scale;
-    }
+    values = Array.from({ length: n }, (_, index) => leaderCap * Math.pow(lo, index));
+    values = renormalize(values);
   }
 
-  // Final guarantee on leader caps + #1 ≥ #2.
-  values[0] = Math.min(values[0]!, leaderCap);
-  if (n > 1) values[1] = Math.min(values[1]!, secondCap, values[0]! * 0.97);
-  if (n > 2) {
-    const headNow = values[0]! + values[1]!;
-    const tail = values.slice(2);
-    const tailSum = tail.reduce((sum, value) => sum + value, 0) || 1;
-    const scale = Math.max(0, 1 - headNow) / tailSum;
-    for (let i = 2; i < values.length; i++) values[i] = values[i]! * scale;
-  }
+  // Final assert: descending + unit sum.
+  values = renormalize(enforceStrictDescending(values, step));
 
   ordered.forEach(({ item }, index) => {
     ratios.set(item.id, values[index] ?? 0);
