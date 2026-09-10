@@ -12,19 +12,19 @@ export interface TreemapBox {
   y1: number;
 }
 
-/** Soft typical share for the leader on dense boards (raised for clearer #1 hierarchy). */
-export const RANK_1_AREA_RATIO = 0.22;
-/** Soft ceiling for rank 1 on dense boards — still below a Finviz-style megatile. */
-export const RANK_TOP_AREA_CAP = 0.22;
+/** Soft typical share for the leader — kept modest so lower tiles stay readable. */
+export const RANK_1_AREA_RATIO = 0.1;
+/** Soft ceiling for rank 1 on dense boards (~50% below prior megatile era). */
+export const RANK_TOP_AREA_CAP = 0.1;
 export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
 /** Soft ceiling used by helpers; live layout uses dynamic caps by tile count. */
 export const RANK_BELOW_CAP = RANK_1_AREA_RATIO - 0.001;
 /** Soft ceiling for near-square helper aspect (max(w,h)/min(w,h)). */
 export const RANK_1_MAX_ASPECT = 1.35;
-/** Max share of previous tile — steep ladder so #1 ≫ #2 ≫ #3. */
-export const RANK_AREA_STEP = 0.72;
+/** Neighbor step after #1 — keeps #2 well below the leader without starving the tail. */
+export const RANK_AREA_STEP = 0.78;
 /** Soft floor so lower-rank tiles keep readable label area. */
-export const RANK_TAIL_FLOOR = 0.028;
+export const RANK_TAIL_FLOOR = 0.032;
 
 export type HeatmapLayoutVariant =
   | "squarify"
@@ -60,32 +60,24 @@ function safeScore(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-/** Steeper Zipf so #1 is clearly largest and lower ranks shrink faster. */
+/** Mild Zipf — #1/#2 stay modest so lower ranks get usable area for names. */
 function zipfExponent(count: number): number {
-  if (count >= 20) return 1.15;
-  if (count >= 15) return 1.25;
-  if (count >= 10) return 1.35;
-  if (count >= 6) return 1.45;
-  return 1.55;
+  if (count >= 20) return 0.48;
+  if (count >= 15) return 0.55;
+  if (count >= 10) return 0.62;
+  if (count >= 6) return 0.72;
+  return 0.85;
 }
 
-/** Soft max share for #1 — respects unit-sum + strict descending feasibility. */
-function maxLeaderShare(count: number, step = RANK_AREA_STEP): number {
-  const geoSum = (1 - Math.pow(step, Math.max(count, 1))) / (1 - step);
-  const minFirstToFill = 1 / Math.max(geoSum, 1e-9);
-  const preferred =
-    count >= 20
-      ? RANK_TOP_AREA_CAP
-      : count >= 15
-        ? 0.24
-        : count >= 10
-          ? 0.28
-          : count >= 6
-            ? 0.34
-            : count >= 4
-              ? 0.4
-              : 0.46;
-  return Math.max(preferred, minFirstToFill);
+/** Soft max share for #1 — prefers the visual cap; additive floor fills the rest. */
+function maxLeaderShare(count: number, _step = RANK_AREA_STEP): number {
+  void _step;
+  if (count >= 20) return RANK_TOP_AREA_CAP;
+  if (count >= 15) return 0.11;
+  if (count >= 10) return 0.13;
+  if (count >= 6) return 0.17;
+  if (count >= 4) return 0.24;
+  return 0.32;
 }
 
 /**
@@ -547,36 +539,75 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
   const exponent = zipfExponent(n);
 
   // Rank-primary weights; name boost helps long titles without flipping order.
-  let zipf = ordered.map(({ item, rank }) =>
+  let values = ordered.map(({ item, rank }) =>
     finvizWeight(rank, item.score, peak, exponent) *
     Math.min(1.12, readabilityAreaBoost(item.name)),
   );
-  zipf = renormalize(enforceStrictDescending(renormalize(zipf), step));
+  values = renormalize(enforceStrictDescending(renormalize(values), Math.max(step, 0.88)));
 
-  // Additive floor keeps lower-rank tiles readable; Zipf spends the free budget.
-  const floor = n >= 8 ? Math.min(RANK_TAIL_FLOOR, 0.6 / n) : 0;
-  const free = Math.max(0, 1 - floor * n);
-  let values = zipf.map((weight) => floor + free * weight);
+  /**
+   * Dense heatmaps (10+): blend toward uniform so #1/#2 shrink ~50% vs the prior
+   * megatile era, while lower ranks gain area for readable names.
+   */
+  if (n >= 10) {
+    const uniform = 1 / n;
+    // Higher mix → flatter map. Keeps #1 near ~11–13% on 15–20 tile boards.
+    const mix = n >= 18 ? 0.64 : n >= 14 ? 0.6 : 0.55;
+    values = values.map((value) => mix * uniform + (1 - mix) * value);
+    values = renormalize(enforceStrictDescending(values, 0.97));
 
-  if (values[0]! > leaderCap + 1e-9) {
-    // Cap the free-budget leader, then rebuild with the same floor.
-    const freeCap = Math.max(0, leaderCap - floor);
-    let lo = 0.5;
-    let hi = 0.999;
+    const cap1 = n >= 18 ? 0.1 : n >= 14 ? 0.11 : 0.13;
+    // #2 ≤ ~75% of prior megatile era (~15% → ≤7.5–8.5%).
+    const cap2 = Math.min(cap1 * 0.78, n >= 18 ? 0.072 : n >= 14 ? 0.08 : 0.1);
+
+    // Cap #1, then force #2 clearly below #1, spilling excess into ranks 3+.
+    const spillFrom = (index: number, target: number) => {
+      if (values[index]! <= target + 1e-12) return;
+      const excess = values[index]! - target;
+      values[index] = target;
+      const start = index + 1;
+      if (start >= values.length) return;
+      const restSum = values.slice(start).reduce((sum, value) => sum + value, 0) || 1;
+      for (let i = start; i < values.length; i++) {
+        values[i] = values[i]! + excess * (values[i]! / restSum);
+      }
+    };
+
+    spillFrom(0, cap1);
+    spillFrom(1, Math.min(cap2, values[0]! * 0.78));
+    values = enforceStrictDescending(values, 0.97);
+
+    // Unit-sum without re-inflating the capped head.
+    const sum = values.reduce((total, value) => total + value, 0) || 1;
+    if (Math.abs(sum - 1) > 1e-8) {
+      const head = values[0]!;
+      const rest = values.slice(1);
+      const restTarget = Math.max(1e-9, 1 - head);
+      const restSum = rest.reduce((total, value) => total + value, 0) || 1;
+      values = [head, ...rest.map((value) => (value / restSum) * restTarget)];
+      values = enforceStrictDescending(values, 0.97);
+      // If descending crushed mass, top up from the bottom within ceilings.
+      let left = 1 - values.reduce((total, value) => total + value, 0);
+      for (let i = values.length - 1; i >= 1 && left > 1e-10; i--) {
+        const room = values[i - 1]! * 0.97 - values[i]!;
+        if (room <= 0) continue;
+        const add = Math.min(room, left);
+        values[i] = values[i]! + add;
+        left -= add;
+      }
+    }
+  } else if (values[0]! > leaderCap + 1e-9) {
+    let lo = 0.7;
+    let hi = 0.98;
     for (let iter = 0; iter < 24; iter++) {
       const mid = (lo + hi) / 2;
-      const sum = (freeCap * (1 - Math.pow(mid, n))) / (1 - mid);
-      if (sum > free) hi = mid;
+      const sum = (leaderCap * (1 - Math.pow(mid, n))) / (1 - mid);
+      if (sum > 1) hi = mid;
       else lo = mid;
     }
-    zipf = Array.from({ length: n }, (_, index) => freeCap * Math.pow(lo, index));
-    const zipfSum = zipf.reduce((sum, value) => sum + value, 0) || 1;
-    values = zipf.map((weight) => floor + free * (weight / zipfSum));
+    values = Array.from({ length: n }, (_, index) => leaderCap * Math.pow(lo, index));
+    values = renormalize(enforceStrictDescending(values, Math.max(step, 0.85)));
   }
-
-  // Milder step on the final pass so the floor is not crushed back to dust.
-  const finalStep = n >= 10 ? Math.max(step, 0.9) : step;
-  values = renormalize(enforceStrictDescending(values, finalStep));
 
   ordered.forEach(({ item }, index) => {
     ratios.set(item.id, values[index] ?? 0);

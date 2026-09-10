@@ -1,11 +1,12 @@
 /** Verifies strict rank area order, coverage (no gaps), and layout variants. */
 function maxLeaderShareForTest(count: number): number {
-  const step = 0.72;
-  const geoSum = (1 - Math.pow(step, Math.max(count, 1))) / (1 - step);
-  const minFirstToFill = 1 / Math.max(geoSum, 1e-9);
-  const preferred =
-    count >= 20 ? 0.22 : count >= 15 ? 0.24 : count >= 10 ? 0.28 : count >= 6 ? 0.34 : count >= 4 ? 0.4 : 0.46;
-  return Math.max(preferred, minFirstToFill) + 0.04; // tolerance for renormalize / tail floor
+  // Dense heatmaps (15–20) keep #1 near 10–11%. Small boards may lead larger.
+  if (count >= 20) return 0.12;
+  if (count >= 15) return 0.13;
+  if (count >= 10) return 0.15;
+  if (count >= 6) return 0.28;
+  if (count >= 4) return 0.4;
+  return 0.5;
 }
 
 async function main() {
@@ -44,12 +45,18 @@ async function main() {
     }
     if (!descending) throw new Error(`strict descending areas broken for n=${count}`);
     if (Math.abs(sum - 1) > 1e-6) throw new Error(`shares must sum to 1 for n=${count}`);
-    // #1 should clearly outsize #3 (and #2) — not a near-flat podium.
-    if (count >= 3 && shares[0]! < shares[2]! * 1.45) {
+    // #1 stays ahead of neighbors; dense boards stay modest so tails stay readable.
+    if (count >= 3 && shares[0]! < shares[2]! * 1.12) {
       throw new Error(`#1/#3 contrast too weak for n=${count}: ${shares[0]} vs ${shares[2]}`);
     }
-    if (count >= 2 && shares[0]! < shares[1]! * 1.18) {
+    if (count >= 2 && shares[0]! < shares[1]! * 1.08) {
       throw new Error(`#1/#2 contrast too weak for n=${count}: ${shares[0]} vs ${shares[1]}`);
+    }
+    if (count >= 15 && shares[0]! > 0.145) {
+      throw new Error(`#1 too large for dense map n=${count}: ${shares[0]}`);
+    }
+    if (count >= 15 && (shares.at(-1) ?? 0) < 0.025) {
+      throw new Error(`tail too small for readable names n=${count}: ${shares.at(-1)}`);
     }
   }
 
@@ -98,11 +105,11 @@ async function main() {
     if (coverage < 0.92) {
       throw new Error(`${variant} coverage ${coverage.toFixed(3)} — gaps under tiles`);
     }
-    if (leadShare > RANK_TOP_AREA_CAP + 0.1) {
+    if (leadShare > RANK_TOP_AREA_CAP + 0.05) {
       throw new Error(`${variant} rank-1 pixel share ${leadShare} too large`);
     }
-    if (leadShare < secondShare * 1.12) {
-      throw new Error(`${variant} rank-1 should clearly outsize rank-2`);
+    if (leadShare < secondShare * 1.06) {
+      throw new Error(`${variant} rank-1 should outsize rank-2`);
     }
     if (!pixelDesc) {
       throw new Error(`${variant} pixel areas not descending by rank`);

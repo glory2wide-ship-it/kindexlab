@@ -20,13 +20,9 @@ function stripBracketQualifier(name: string): string {
   return match?.[1]?.trim() || name.trim();
 }
 
-/** Paint-only: drop trailing `(시사평론가)` / person-role tags on pundit tiles. */
-function stripPunditRoleSuffix(name: string): string {
-  return name
-    .replace(/\s*\(시사평론가\)\s*/gu, " ")
-    .replace(/\s*\([^)]*평론가\)\s*$/u, "")
-    .replace(/\s+/g, " ")
-    .trim();
+/** Paint-only: drop every `(…)` clause (pundit role tags and similar). */
+function stripParentheticalClauses(name: string): string {
+  return name.replace(/\s*\([^)]*\)/gu, " ").replace(/\s+/g, " ").trim();
 }
 
 /**
@@ -66,8 +62,22 @@ export function heatmapTileLabel(
   entity: Pick<RankingEntity, "name" | "nameEn" | "type" | "heatmapGroup">,
 ): HeatmapTileLabel {
   const fullName = entity.name;
-  const title =
-    stripPunditRoleSuffix(stripBracketQualifier(fullName)) || compactSpaces(fullName);
+  let title = stripBracketQualifier(fullName) || compactSpaces(fullName);
+  // Pundit / person-tag tiles: never paint "(시사평론가)" or other ( ) role suffixes.
+  if (
+    entity.type === "political_pundit" ||
+    entity.heatmapGroup === "정치평론가" ||
+    /\([^)]+\)/.test(title)
+  ) {
+    // Only strip parens for pundit boards / names that already look like "이름 (역할)".
+    if (
+      entity.type === "political_pundit" ||
+      entity.heatmapGroup === "정치평론가" ||
+      /\([^)]*(?:평론|컨설턴트|여론|변호사|기자|교수)[^)]*\)/.test(fullName)
+    ) {
+      title = stripParentheticalClauses(title) || title;
+    }
+  }
   const lines = heatmapNameLines(entity);
   const bracket = parseBracketLabel(entity.name);
 

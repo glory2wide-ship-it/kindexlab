@@ -6,6 +6,7 @@ import {
   type HeatmapBoardPayload,
 } from "@/lib/boards/heatmap";
 import { liveEntityTypesForBoard } from "@/lib/boards/entity-type";
+import { isLikelyCelebrityName } from "@/lib/boards/celebrity";
 import { rankLimitForBoard } from "@/lib/boards/limits";
 import { menuBoardsForChannel, isHeadlineNewsBoard } from "@/lib/boards/registry";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
@@ -75,6 +76,13 @@ function liveRankingForBoard(
   const seen = new Set<string>();
   const rows = snapshot.items
     .filter((item) => typeSet.has(item.type))
+    .filter((item) => {
+      // 스타 board: reject company / drama / Trends noise masquerading as celebrity.
+      if (def.slug === "star-reputation-index") {
+        return isLikelyCelebrityName(item.name);
+      }
+      return true;
+    })
     .sort((a, b) => a.rank - b.rank || b.buzzScore - a.buzzScore)
     .filter((item) => {
       const key = (item.name ?? "").replace(/\s+/g, "").toLowerCase();

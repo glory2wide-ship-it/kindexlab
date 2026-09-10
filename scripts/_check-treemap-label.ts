@@ -78,6 +78,12 @@ const paintSamples = [
     heatmapGroup: "정치평론가",
     expect: "진중권",
   },
+  {
+    name: "박성민 (정치컨설턴트)",
+    type: "political_pundit" as const,
+    heatmapGroup: "정치평론가",
+    expect: "박성민",
+  },
 ];
 
 for (const sample of paintSamples) {

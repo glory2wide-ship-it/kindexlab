@@ -31,11 +31,12 @@ import type {
 } from "@/lib/boards/types";
 import type { PostChannel } from "@/lib/posts/types";
 import { canonicalizeGameEsportsName, platformForGame } from "@/lib/boards/game-platforms";
+import { ensureCelebrityRanking, isLikelyCelebrityName } from "@/lib/boards/celebrity";
 import {
   ensureCultureGrantRanking,
   isCultureGrantBoard,
 } from "@/lib/boards/culture-grants";
-import { entityTypeForBoardChannel, entityTypeForBoardSlug } from "@/lib/boards/entity-type";
+import { entityTypeForBoardChannel, entityTypeForBoardSlug, liveEntityTypesForBoard } from "@/lib/boards/entity-type";
 import { isHeadlineNewsBoard } from "@/lib/boards/registry";
 import {
   ensureTravelGrantRanking,
@@ -129,6 +130,9 @@ function normalizeBoardRanking(def: BoardDefinition, rows: BoardRankEntry[]): Bo
   if (isCultureGrantBoard(def.slug)) return ensureCultureGrantRanking(rows);
   if (isTravelGrantBoard(def.slug)) return ensureTravelGrantRanking(rows);
   if (def.slug === "political-pundit-ranking") return ensurePunditRanking(rows);
+  if (def.slug === "star-reputation-index") {
+    return ensureCelebrityRanking(rows, def.seeds, rankLimitForChannel(def.channel));
+  }
   if (def.slug === HOUSING_BOARD_SLUG) {
     return ensureHousingApartmentRanking(rows, rankLimitForChannel(def.channel));
   }
@@ -436,15 +440,66 @@ export function buildHeatmapItems({
       { channel: selected.channel, slug: selected.slug },
       region,
     );
-    const entities = rankRowsToEntities(
-      selectHeatmapRows(selected, gender, age, boardLimit, region),
-      selected,
-    ).slice(0, boardLimit);
+    const boardEntities = withoutHeadlineHeatmapItems(
+      rankRowsToEntities(
+        selectHeatmapRows(selected, gender, age, boardLimit, region),
+        selected,
+      ).slice(0, boardLimit),
+    );
+
+    const liveClean = withoutHeadlineHeatmapItems(liveItems ?? []);
+    if (preferLive && liveClean.length) {
+      const typeSet = new Set(liveEntityTypesForBoard(selected.slug));
+      const boardLive = liveClean.filter((item) => {
+        if (item.tags?.includes(selected.slug)) return true;
+        if (item.slug?.startsWith(`${selected.slug}--`)) return true;
+        if (typeSet.size && typeSet.has(item.type)) {
+          if (selected.slug === "star-reputation-index") {
+            return isLikelyCelebrityName(item.name);
+          }
+          return true;
+        }
+        return false;
+      });
+      if (boardLive.length) {
+        const seen = new Set<string>();
+        const merged: RankingEntity[] = [];
+        const push = (entity: RankingEntity) => {
+          const key = (entity.name ?? "").replace(/\s+/g, "").toLowerCase();
+          if (!key || seen.has(key) || seen.has(entity.id) || seen.has(entity.slug)) return;
+          seen.add(key);
+          seen.add(entity.id);
+          seen.add(entity.slug);
+          merged.push({
+            ...entity,
+            heatmapGroup: entity.heatmapGroup || selected.shortTitle,
+          });
+        };
+        for (const entity of boardLive) {
+          if (merged.length >= boardLimit) break;
+          push(entity);
+        }
+        for (const entity of boardEntities) {
+          if (merged.length >= boardLimit) break;
+          push(entity);
+        }
+        const scoped =
+          region !== "all" && boardUsesRegionFilter(selected.slug)
+            ? merged.filter((item) => item.region === region || regionFromName(item.name) === region)
+            : merged;
+        return scoped.map((entity, index) => ({
+          ...entity,
+          rank: index + 1,
+          previousRank: index + 1,
+        }));
+      }
+    }
+
     const scoped =
       region !== "all" && boardUsesRegionFilter(selected.slug)
-        ? entities.filter((item) => item.region === region || regionFromName(item.name) === region)
-        : entities;
-    return withoutHeadlineHeatmapItems(scoped);
+        ? boardEntities.filter((item) => item.region === region || regionFromName(item.name) === region)
+        : boardEntities;
+    return scoped;
   }
 
   const liveClean = withoutHeadlineHeatmapItems(liveItems ?? []);

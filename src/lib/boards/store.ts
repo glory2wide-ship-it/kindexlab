@@ -3,6 +3,7 @@ import path from "node:path";
 import { AGE_SEGMENTS, applyDemographicWeights, dedupeSegments, isUnusableRankName } from "@/lib/boards/demographics";
 import { rankLimitForBoard, segmentLimitForBoard } from "@/lib/boards/limits";
 import { canonicalizeGameEsportsName } from "@/lib/boards/game-platforms";
+import { ensureCelebrityRanking } from "@/lib/boards/celebrity";
 import { emptyBoardReport } from "@/lib/boards/chain/report";
 import { getBoard } from "@/lib/boards/registry";
 import { boardUsesRegionFilter, ensureFoodRestaurantRanking, ensureHousingApartmentRanking, HOUSING_BOARD_SLUG } from "@/lib/boards/regions";
@@ -126,6 +127,9 @@ function padRankingFromSeeds(ranking: BoardRankEntry[], slug: string): BoardRank
   }
   if (slug === "political-pundit-ranking") {
     return enforceScoreOrder(ensurePunditRanking(ranking).slice(0, limit));
+  }
+  if (slug === "star-reputation-index") {
+    return enforceScoreOrder(ensureCelebrityRanking(ranking, def.seeds, limit).slice(0, limit));
   }
   if (slug === HOUSING_BOARD_SLUG) {
     return enforceScoreOrder(ensureHousingApartmentRanking(ranking, limit));

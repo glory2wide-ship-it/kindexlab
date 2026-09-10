@@ -43,6 +43,7 @@ import type {
 import { matchPoliticsCatalog } from "@/lib/politics/catalog";
 import { composePoliticsEntities } from "@/lib/politics/compose";
 import { isPoliticsEntityType, POLITICS_INDEX_META } from "@/lib/politics/types";
+import type { PostChannel } from "@/lib/posts/types";
 import type { AffiliateProduct, EntityType, MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
 
 /**
@@ -301,7 +302,7 @@ function toEntity(
 function toBoardChartEntity(
   row: ChartRow,
   boardSlug: string,
-  channel: "culture" | "travel" | "economy",
+  channel: PostChannel,
   heatmapGroup: string,
   previous: IngestSnapshot | undefined,
   listSize?: number,
@@ -587,7 +588,15 @@ export async function composeLiveSnapshot(
 
   const categoryLiveEntities = listCategoryLiveBoardSlugs(sources).flatMap((boardSlug) => {
     const channel = channelForBoardSlug(boardSlug);
-    if (channel !== "economy" && channel !== "culture" && channel !== "travel") return [];
+    if (
+      channel !== "economy" &&
+      channel !== "culture" &&
+      channel !== "travel" &&
+      channel !== "entertainment" &&
+      channel !== "politics"
+    ) {
+      return [];
+    }
     const rows = takeTop(pickCategoryLiveRows(sources, boardSlug), 24);
     // Tickets/books already own these culture boards — skip duplicate live news overlays.
     if (

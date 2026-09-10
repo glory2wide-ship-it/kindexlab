@@ -75,8 +75,8 @@ export function countLivePreferRows(
 }
 
 /**
- * Channel 종합 prefers live crawl when enough live-chart (or chart) rows exist.
- * Board tabs always stay on demographic/board rankings.
+ * Prefer live crawl for channel 종합 and individual menus when enough live rows exist.
+ * Falls back to board/demographic rankings when the live pool is thin.
  */
 export function preferLiveChannelComposite(
   channel: PostChannel,
@@ -84,7 +84,7 @@ export function preferLiveChannelComposite(
   liveCount: number,
   minLive = 3,
 ): boolean {
-  if (board) return false;
+  void board;
   void channel;
   return liveCount >= minLive;
 }

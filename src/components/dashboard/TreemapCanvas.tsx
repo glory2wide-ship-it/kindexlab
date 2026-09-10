@@ -13,8 +13,9 @@ import { TYPE_LABEL, formatRate } from "@/lib/format";
 import { heatFill, heatText } from "@/lib/heatmap";
 import { formatHeatmapRank } from "@/lib/boards/limits";
 import { heatmapTileLabel } from "@/lib/heatmap-display-name";
+import { heatmapRankPrefixChip } from "@/lib/heatmap-rank-chip";
 import { CHANNEL_SHORT_LABEL } from "@/lib/posts/channels";
-import { heatmapSourceCaption, summarizeHeadlineTitle } from "@/lib/news/headline-title";
+import { summarizeHeadlineTitle } from "@/lib/news/headline-title";
 import { layoutHeatmapLeaves } from "@/lib/treemapLayout";
 import { TREEMAP_FRAME_CLASS, TREEMAP_MAX_ITEMS, MOBILE_TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import { heatmapChangeRate, heatmapPriceLabel } from "@/lib/market/kospi-quotes-ui";
@@ -220,11 +221,12 @@ export function TreemapView({
               ? CHANNEL_SHORT_LABEL[entity.sourceChannel as PostChannel]
               : undefined;
           const showChannelTag = Boolean(channelTag) && w >= 74 && h >= 26;
-          const sourceLabel = heatmapSourceCaption(entity);
+          const prefixChip = heatmapRankPrefixChip(entity, {
+            allowMenuCaption: showSourceCaptions,
+          });
           const sourceChipSize = Math.max(8, rankSize - 1.5);
-          /** Submenu chip before the rank (landing-style), not under it. */
-          const showSourceChip =
-            showSourceCaptions && rank <= 10 && Boolean(sourceLabel) && w >= 72 && h >= 26;
+          /** Platform / region / agency / submenu chip immediately before the rank. */
+          const showPrefixChip = Boolean(prefixChip) && w >= 64 && h >= 24;
           const displayTitle = isHeadline
             ? summarizeHeadlineTitle(entity.name)
             : (label?.name ?? tile.title);
@@ -241,7 +243,7 @@ export function TreemapView({
           const rateFontSize = (label?.rateSize ?? 16.5) * (isMobileViewport ? 0.9 : 1);
           const showTileRate = !omitRate && label?.showRate !== false;
           const href = entityHref(entity);
-          const chipCount = (showChannelTag ? 1 : 0) + (showSourceChip ? 1 : 0);
+          const chipCount = (showChannelTag ? 1 : 0) + (showPrefixChip ? 1 : 0);
           const rankHeaderWidth = Math.min(
             chipCount > 0 ? 200 : 120,
             Math.max(48, w - 4),
@@ -254,7 +256,7 @@ export function TreemapView({
               href={href}
               prefetch={false}
               className="cursor-pointer"
-              aria-label={`${channelTag ? `${channelTag} ` : ""}${sourceLabel && showSourceChip ? `${sourceLabel} ` : ""}${group} ${rankBadge} ${tile.title}${priceLabel ? ` ${priceLabel}` : ""}${omitRate ? "" : ` ${rate}`}`}
+              aria-label={`${channelTag ? `${channelTag} ` : ""}${prefixChip && showPrefixChip ? `${prefixChip} ` : ""}${group} ${rankBadge} ${tile.title}${priceLabel ? ` ${priceLabel}` : ""}${omitRate ? "" : ` ${rate}`}`}
               data-heatmap-rank={rank}
               onPointerDown={() => {
                 router.prefetch(href);
@@ -301,13 +303,13 @@ export function TreemapView({
                           {channelTag}
                         </span>
                       ) : null}
-                      {showSourceChip && sourceLabel ? (
+                      {showPrefixChip && prefixChip ? (
                         <span
-                          className="max-w-[52%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
+                          className="max-w-[55%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
                           style={{ fontSize: sourceChipSize, borderColor: "currentColor" }}
-                          title={sourceLabel}
+                          title={prefixChip}
                         >
-                          {sourceLabel}
+                          {prefixChip}
                         </span>
                       ) : null}
                       <span

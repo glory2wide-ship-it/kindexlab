@@ -160,13 +160,21 @@ async function collectNewsTitles(
     }
   }
 
-  // Culture/travel/economy: YouTube fills gaps and always adds signal.
+  // Culture/travel/economy/entertainment/politics: YouTube fills gaps and always adds signal.
   const newsWeight = out.reduce((sum, row) => sum + row.weight, 0);
-  const needYoutube = !spec.grant && (newsWeight < 10 || spec.channel !== "economy");
+  const needYoutube = !spec.grant && (newsWeight < 12 || spec.channel !== "economy");
   const economyYoutube = spec.channel === "economy" && newsWeight < 14;
-  if (needYoutube || economyYoutube) {
+  const alwaysYoutube =
+    spec.channel === "entertainment" ||
+    spec.channel === "politics" ||
+    spec.channel === "culture" ||
+    spec.channel === "travel";
+  if (needYoutube || economyYoutube || alwaysYoutube) {
     for (const query of spec.queries.slice(0, 2)) {
-      const videos = await fetchYoutubeFallback(query, spec.channel === "economy" ? 4 : 5);
+      const videos = await fetchYoutubeFallback(
+        query,
+        spec.channel === "economy" ? 4 : spec.channel === "entertainment" ? 6 : 5,
+      );
       for (const video of videos) {
         out.push({ title: video.title, weight: newsWeight < 8 ? 1.4 : 0.9, via: "youtube" });
       }
@@ -205,7 +213,8 @@ function rankTitlesToRows(
   }
 
   // Only invent free-form topics when seed coverage is thin.
-  if (seedHits < 6) {
+  // Star board must stay person-seeded — never invent drama/company titles.
+  if (seedHits < 6 && spec.boardSlug !== "star-reputation-index") {
     for (const row of titles) {
       if (matchSeedNames(row.title, spec.seeds).length) continue;
       const topic = extractShortTopic(row.title);
@@ -240,9 +249,9 @@ async function fetchBoardLive(spec: LiveBoardSpec): Promise<SourceResult> {
   }
 }
 
-/** All economy / culture / travel menu boards → live-chart source batches. */
+/** All menu boards across desks → live-chart source batches (news + YouTube). */
 export async function fetchCategoryLiveSources(): Promise<SourceResult[]> {
-  const channels: PostChannel[] = ["economy", "culture", "travel"];
+  const channels: PostChannel[] = ["economy", "culture", "travel", "entertainment", "politics"];
   const specs = channels.flatMap(boardSpecsForChannel);
   // Cap concurrent board crawls to avoid hammering news/YouTube APIs.
   const concurrency = 4;
@@ -286,7 +295,7 @@ export function pickCategoryLiveRows(sources: SourceResult[], boardSlug: string)
 export function listCategoryLiveBoardSlugs(sources: SourceResult[]): string[] {
   const slugs = new Set<string>();
   for (const source of sources) {
-    const match = source.id.match(/^live-(?:economy|culture|travel)-(.+)$/);
+    const match = source.id.match(/^live-(?:economy|culture|travel|entertainment|politics)-(.+)$/);
     if (match?.[1]) slugs.add(match[1]);
     for (const item of source.items) {
       const tag = item.tags?.find((t) => t !== "live-chart" && !t.includes(":"));
