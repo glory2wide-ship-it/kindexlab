@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-10T02:02:45.217Z",
+  "updatedAt": "2026-09-10T02:23:31.379Z",
   "status": "open",
   "sources": [
     {
@@ -24,8 +24,9 @@
     },
     {
       "id": "youtube-music",
-      "ok": true,
-      "count": 20
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://kworb.net/youtube/insights/kr_daily.html)"
     },
     {
       "id": "apple-music",
@@ -70,33 +71,39 @@
     },
     {
       "id": "news-ent",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://news.google.com/rss/headlines/section/topic/ENTERTAINMENT?hl=ko&gl=KR&ceid=KR:ko)"
     },
     {
       "id": "news-kpop",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://news.google.com/rss/search?q=K-POP%20OR%20%EC%95%84%EC%9D%B4%EB%8F%8C&hl=ko&gl=KR&ceid=KR:ko)"
     },
     {
       "id": "news-tv",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://news.google.com/rss/search?q=%EC%98%88%EB%8A%A5%20OR%20%EB%93%9C%EB%9D%BC%EB%A7%88&hl=ko&gl=KR&ceid=KR:ko)"
     },
     {
       "id": "news-creator",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://news.google.com/rss/search?q=%EC%9C%A0%ED%8A%9C%EB%B2%84%20OR%20%EC%9D%B8%ED%94%8C%EB%A3%A8%EC%96%B8%EC%84%9C&hl=ko&gl=KR&ceid=KR:ko)"
     },
     {
       "id": "google-trends",
-      "ok": true,
-      "count": 10
+      "ok": false,
+      "count": 0,
+      "error": "HTTP 404 for https://trends.google.com/trends/trendingsearches/daily/rss?geo=KR"
     },
     {
       "id": "naver-webtoon-daily",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://comic.naver.com/api/webtoon/titlelist/weekday?week=thu&order=view)"
     },
     {
       "id": "naver-webtoon-weekly",
@@ -106,13 +113,13 @@
     {
       "id": "kakao-webtoon",
       "ok": true,
-      "count": 22
+      "count": 4
     },
     {
       "id": "youtube-trending",
       "ok": false,
       "count": 0,
-      "error": "HTTP 400 for https://www.youtube.com/youtubei/v1/browse?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&prettyPrint=false"
+      "error": "HTTP 400 for https://www.youtube.com/youtubei/v1/browse?prettyPrint=false"
     },
     {
       "id": "youtube-trending-html",
@@ -121,23 +128,27 @@
     },
     {
       "id": "apple-ios-games-free",
-      "ok": true,
-      "count": 30
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://itunes.apple.com/kr/rss/topfreeapplications/limit=30/genre=6014/json)"
     },
     {
       "id": "apple-ios-games-grossing",
-      "ok": true,
-      "count": 30
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://itunes.apple.com/kr/rss/topgrossingapplications/limit=30/genre=6014/json)"
     },
     {
       "id": "steam-most-played",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://steamspy.com/api.php?request=top100in2weeks)"
     },
     {
       "id": "steam-charts",
-      "ok": true,
-      "count": 30
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://api.steampowered.com/ISteamChartsService/GetMostPlayedGames/v1/)"
     },
     {
       "id": "playstation-store",
@@ -146,83 +157,93 @@
     },
     {
       "id": "news-politics",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://news.google.com/rss/headlines/section/topic/NATION?hl=ko&gl=KR&ceid=KR:ko)"
     },
     {
       "id": "news-politics-search",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://news.google.com/rss/search?q=%EC%A0%95%EC%B9%98%20OR%20%EA%B5%AD%ED%9A%8C%20OR%20%EB%8C%80%EC%84%A0&hl=ko&gl=KR&ceid=KR:ko)"
     },
     {
       "id": "news-party",
-      "ok": true,
-      "count": 6
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://news.google.com/rss/search?q=%EC%A0%95%EB%8B%B9%20%EC%A7%80%EC%A7%80%EB%8F%84%20OR%20%EC%97%AC%EB%A1%A0%EC%A1%B0%EC%82%AC&hl=ko&gl=KR&ceid=KR:ko)"
     },
     {
       "id": "news-politician",
-      "ok": true,
-      "count": 14
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://news.google.com/rss/search?q=%EC%A0%95%EC%B9%98%EC%9D%B8%20%EC%A7%80%EC%A7%80%EC%9C%A8%20OR%20%EB%8C%80%EC%84%A0%20%ED%9B%84%EB%B3%B4&hl=ko&gl=KR&ceid=KR:ko)"
     },
     {
       "id": "news-pundit",
-      "ok": true,
-      "count": 12
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://news.google.com/rss/search?q=%EC%A0%95%EC%B9%98%20%ED%8F%89%EB%A1%A0%20OR%20%EC%8B%9C%EC%82%AC%20%ED%86%A0%EB%A1%A0&hl=ko&gl=KR&ceid=KR:ko)"
     },
     {
       "id": "news-pol-influencer",
-      "ok": true,
-      "count": 6
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://news.google.com/rss/search?q=%EC%A0%95%EC%B9%98%20%EC%9C%A0%ED%8A%9C%EB%B8%8C%20OR%20%EC%8B%9C%EC%82%AC%20%EC%B1%84%EB%84%90&hl=ko&gl=KR&ceid=KR:ko)"
     },
     {
       "id": "news-pol-ratings",
-      "ok": true,
-      "count": 7
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://news.google.com/rss/search?q=%EB%89%B4%EC%8A%A4%EB%8D%B0%EC%8A%A4%ED%81%AC%20OR%20%EB%89%B4%EC%8A%A4%EB%A3%B8%20%EC%8B%9C%EC%B2%AD%EB%A5%A0&hl=ko&gl=KR&ceid=KR:ko)"
     },
     {
       "id": "news-policy",
-      "ok": true,
-      "count": 4
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://news.google.com/rss/search?q=%EC%A7%80%EC%9E%90%EC%B2%B4%20%EC%A0%95%EC%B1%85%20OR%20%EC%84%9C%EC%9A%B8%EC%8B%9C%20%EC%A0%95%EC%B1%85&hl=ko&gl=KR&ceid=KR:ko)"
     },
     {
       "id": "news-subsidy",
       "ok": true,
-      "count": 6
+      "count": 5
     },
     {
       "id": "youtube-politics-seeds",
-      "ok": true,
-      "count": 20
+      "ok": false,
+      "count": 20,
+      "error": "fetch failed (https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=UCAAvO0ehWox1bbym3rXKBZw,UCljnbFCt-4doBr7wtEIIbbw,UC0M-_02RJqMlGTKUjF1WhJg,UCgOLQwRv1r2m9mhE1tfsn3Q,UCxvU6bRtYhNLvZleAIGa-FQ,UCOqCunaF9qVN8bXwsK0HT3g,UCxuf3GXK290vcpFW0lxm0Uw,UCMYhq9OyGI5UEz_NTAoHY7A&maxResults=50&key=AIzaSyA4w50YDbvnxqWg-zi_gCO4vC0T9VHUWeE)"
     },
     {
       "id": "interpark-musical",
       "ok": true,
-      "count": 50
+      "count": 1
     },
     {
       "id": "interpark-concert",
       "ok": true,
-      "count": 50
+      "count": 1
     },
     {
       "id": "interpark-drama",
       "ok": true,
-      "count": 50
+      "count": 1
     },
     {
       "id": "interpark-classic",
       "ok": true,
-      "count": 50
+      "count": 1
     },
     {
       "id": "interpark-exhibit",
       "ok": true,
-      "count": 50
+      "count": 1
     },
     {
       "id": "yes24-ticket-rank",
-      "ok": true,
-      "count": 40
+      "ok": false,
+      "count": 0,
+      "error": "fetch failed (https://ticket.yes24.com/New/Rank/Ajax/RankList.aspx)"
     },
     {
       "id": "ticketlink-rank",
@@ -239,7 +260,7 @@
     {
       "id": "yes24-bestseller",
       "ok": true,
-      "count": 40
+      "count": 24
     }
   ],
   "indices": [
@@ -55865,6 +55886,558 @@
       "heatmapGroup": "문화/생활 정부 지원금"
     },
     {
+      "id": "performance-ticket-ranking--1",
+      "slug": "performance-ticket-ranking--[서울]-뮤지컬-〈엘리자벳〉",
+      "name": "[서울] 뮤지컬 〈엘리자벳〉",
+      "nameEn": "",
+      "type": "performance",
+      "rank": 1,
+      "previousRank": 1,
+      "buzzScore": 97.5,
+      "openScore": 97.5,
+      "fluctuationRate": -1.8,
+      "volume": 11700,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "performance-ticket-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "공연"
+    },
+    {
+      "id": "performance-ticket-ranking--2",
+      "slug": "performance-ticket-ranking--2026-highlight-fan-con-[18년차-아이돌인-내가-이세계에선-데뷔조-연습생?!]",
+      "name": "2026 HIGHLIGHT FAN CON [18년차 아이돌인 내가 이세계에선 데뷔조 연습생?!]",
+      "nameEn": "",
+      "type": "performance",
+      "rank": 2,
+      "previousRank": 2,
+      "buzzScore": 96.45,
+      "openScore": 96.45,
+      "fluctuationRate": -0.9,
+      "volume": 11574,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "performance-ticket-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "공연"
+    },
+    {
+      "id": "performance-ticket-ranking--3",
+      "slug": "performance-ticket-ranking--[서울]-2026-황민현-팬미팅-［도원경］---서울",
+      "name": "[서울] 2026 황민현 팬미팅 ［도원경］ - 서울",
+      "nameEn": "",
+      "type": "performance",
+      "rank": 3,
+      "previousRank": 3,
+      "buzzScore": 95.4,
+      "openScore": 95.4,
+      "fluctuationRate": 0,
+      "volume": 11448,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "performance-ticket-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "공연"
+    },
+    {
+      "id": "performance-ticket-ranking--4",
+      "slug": "performance-ticket-ranking--[서울]-2026-심규선-단독-콘서트［sanctuary］",
+      "name": "[서울] 2026 심규선 단독 콘서트［SANCTUARY］",
+      "nameEn": "",
+      "type": "performance",
+      "rank": 4,
+      "previousRank": 4,
+      "buzzScore": 94.35,
+      "openScore": 94.35,
+      "fluctuationRate": 0.9,
+      "volume": 11322,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "performance-ticket-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "공연"
+    },
+    {
+      "id": "performance-ticket-ranking--5",
+      "slug": "performance-ticket-ranking--연극-〈크루즈〉",
+      "name": "연극 〈크루즈〉",
+      "nameEn": "",
+      "type": "performance",
+      "rank": 5,
+      "previousRank": 5,
+      "buzzScore": 93.3,
+      "openScore": 93.3,
+      "fluctuationRate": 1.8,
+      "volume": 11196,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "performance-ticket-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "공연"
+    },
+    {
+      "id": "performance-ticket-ranking--6",
+      "slug": "performance-ticket-ranking--[서울]-최현우-30주년-기념-공연---legacy",
+      "name": "[서울] 최현우 30주년 기념 공연 - LEGACY",
+      "nameEn": "",
+      "type": "performance",
+      "rank": 6,
+      "previousRank": 6,
+      "buzzScore": 92.25,
+      "openScore": 92.25,
+      "fluctuationRate": -1.8,
+      "volume": 11070,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "performance-ticket-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "공연"
+    },
+    {
+      "id": "performance-ticket-ranking--7",
+      "slug": "performance-ticket-ranking--[부산]-〈불꽃야구2〉2026시즌-열다섯-번째-직관",
+      "name": "[부산] 〈불꽃야구2〉2026시즌 열다섯 번째 직관",
+      "nameEn": "",
+      "type": "performance",
+      "rank": 7,
+      "previousRank": 7,
+      "buzzScore": 91.2,
+      "openScore": 91.2,
+      "fluctuationRate": -0.9,
+      "volume": 10944,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "performance-ticket-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "공연"
+    },
+    {
+      "id": "performance-ticket-ranking--8",
+      "slug": "performance-ticket-ranking--[서울]-연극-〈더-헬멧〉",
+      "name": "[서울] 연극 〈더 헬멧〉",
+      "nameEn": "",
+      "type": "performance",
+      "rank": 8,
+      "previousRank": 8,
+      "buzzScore": 90.15,
+      "openScore": 90.15,
+      "fluctuationRate": 0,
+      "volume": 10818,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "performance-ticket-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "공연"
+    },
+    {
+      "id": "performance-ticket-ranking--9",
+      "slug": "performance-ticket-ranking--[경남]-[창원]-super!-수요콘서트-enhoy-by-bumhan-[전상근x박혜원]",
+      "name": "[경남] [창원] SUPER! 수요콘서트 Enhoy by Bumhan [전상근x박혜원]",
+      "nameEn": "",
+      "type": "performance",
+      "rank": 9,
+      "previousRank": 9,
+      "buzzScore": 89.1,
+      "openScore": 89.1,
+      "fluctuationRate": 0.9,
+      "volume": 10692,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "performance-ticket-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "공연"
+    },
+    {
+      "id": "performance-ticket-ranking--10",
+      "slug": "performance-ticket-ranking--뮤지컬-〈헬스키친〉-(musical-hell’s-kitchen)",
+      "name": "뮤지컬 〈헬스키친〉 (Musical Hell’s Kitchen)",
+      "nameEn": "",
+      "type": "performance",
+      "rank": 10,
+      "previousRank": 10,
+      "buzzScore": 88.05,
+      "openScore": 88.05,
+      "fluctuationRate": 1.8,
+      "volume": 10566,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "performance-ticket-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "공연"
+    },
+    {
+      "id": "performance-ticket-ranking--11",
+      "slug": "performance-ticket-ranking--[서울]-뮤지컬-드라큘라-(dracula：the-musical)",
+      "name": "[서울] 뮤지컬 드라큘라 (Dracula：The Musical)",
+      "nameEn": "",
+      "type": "performance",
+      "rank": 11,
+      "previousRank": 11,
+      "buzzScore": 87,
+      "openScore": 87,
+      "fluctuationRate": -1.8,
+      "volume": 10440,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "performance-ticket-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "공연"
+    },
+    {
+      "id": "performance-ticket-ranking--12",
+      "slug": "performance-ticket-ranking--[서울]-옥토버페스트-서울-2026-일반석",
+      "name": "[서울] 옥토버페스트 서울 2026 일반석",
+      "nameEn": "",
+      "type": "performance",
+      "rank": 12,
+      "previousRank": 12,
+      "buzzScore": 85.95,
+      "openScore": 85.95,
+      "fluctuationRate": -0.9,
+      "volume": 10314,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "performance-ticket-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "공연"
+    },
+    {
+      "id": "exhibition-popup-ranking--1",
+      "slug": "exhibition-popup-ranking--2026년-하반기-경복궁-야간관람",
+      "name": "2026년 하반기 경복궁 야간관람",
+      "nameEn": "",
+      "type": "exhibition",
+      "rank": 1,
+      "previousRank": 1,
+      "buzzScore": 97.5,
+      "openScore": 97.5,
+      "fluctuationRate": -1.8,
+      "volume": 11700,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "exhibition-popup-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "전시·팝업스토어"
+    },
+    {
+      "id": "exhibition-popup-ranking--2",
+      "slug": "exhibition-popup-ranking--［라스트-얼리버드］-스페인-미술-500년:-빛과-어둠의-연대기",
+      "name": "［라스트 얼리버드］ 스페인 미술 500년: 빛과 어둠의 연대기",
+      "nameEn": "",
+      "type": "exhibition",
+      "rank": 2,
+      "previousRank": 2,
+      "buzzScore": 96.45,
+      "openScore": 96.45,
+      "fluctuationRate": -0.9,
+      "volume": 11574,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "exhibition-popup-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "전시·팝업스토어"
+    },
+    {
+      "id": "exhibition-popup-ranking--3",
+      "slug": "exhibition-popup-ranking--[경기]-2026-제29회-부천국제만화축제-얼리버드-티켓",
+      "name": "[경기] 2026 제29회 부천국제만화축제 얼리버드 티켓",
+      "nameEn": "",
+      "type": "exhibition",
+      "rank": 3,
+      "previousRank": 3,
+      "buzzScore": 95.4,
+      "openScore": 95.4,
+      "fluctuationRate": 0,
+      "volume": 11448,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "exhibition-popup-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "전시·팝업스토어"
+    },
+    {
+      "id": "exhibition-popup-ranking--4",
+      "slug": "exhibition-popup-ranking--［북촌］-2026년-9월~11월_어둠속의대화(dialogue-in-the-dark)",
+      "name": "［북촌］ 2026년 9월~11월_어둠속의대화(DIALOGUE IN THE DARK)",
+      "nameEn": "",
+      "type": "exhibition",
+      "rank": 4,
+      "previousRank": 4,
+      "buzzScore": 94.35,
+      "openScore": 94.35,
+      "fluctuationRate": 0.9,
+      "volume": 11322,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "exhibition-popup-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "전시·팝업스토어"
+    },
+    {
+      "id": "exhibition-popup-ranking--5",
+      "slug": "exhibition-popup-ranking--［얼리버드］-현대카드-컬처프로젝트31-웨인티보-전",
+      "name": "［얼리버드］ 현대카드 컬처프로젝트31 웨인티보 전",
+      "nameEn": "",
+      "type": "exhibition",
+      "rank": 5,
+      "previousRank": 5,
+      "buzzScore": 93.3,
+      "openScore": 93.3,
+      "fluctuationRate": 1.8,
+      "volume": 11196,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "exhibition-popup-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "전시·팝업스토어"
+    },
+    {
+      "id": "exhibition-popup-ranking--6",
+      "slug": "exhibition-popup-ranking--[제주]-스튜디오-지브리展-in-jeju",
+      "name": "[제주] 스튜디오 지브리展 in Jeju",
+      "nameEn": "",
+      "type": "exhibition",
+      "rank": 6,
+      "previousRank": 6,
+      "buzzScore": 92.25,
+      "openScore": 92.25,
+      "fluctuationRate": -1.8,
+      "volume": 11070,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "exhibition-popup-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "전시·팝업스토어"
+    },
+    {
+      "id": "exhibition-popup-ranking--7",
+      "slug": "exhibition-popup-ranking--［얼리버드40%할인］-봉주르,-장자크-상페",
+      "name": "［얼리버드40%할인］ 봉주르, 장자크 상페",
+      "nameEn": "",
+      "type": "exhibition",
+      "rank": 7,
+      "previousRank": 7,
+      "buzzScore": 91.2,
+      "openScore": 91.2,
+      "fluctuationRate": -0.9,
+      "volume": 10944,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "exhibition-popup-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "전시·팝업스토어"
+    },
+    {
+      "id": "exhibition-popup-ranking--8",
+      "slug": "exhibition-popup-ranking--[대구]-대구간송미술관-특별전-〈겸재-정선〉",
+      "name": "[대구] 대구간송미술관 특별전 〈겸재 정선〉",
+      "nameEn": "",
+      "type": "exhibition",
+      "rank": 8,
+      "previousRank": 8,
+      "buzzScore": 90.15,
+      "openScore": 90.15,
+      "fluctuationRate": 0,
+      "volume": 10818,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "exhibition-popup-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "전시·팝업스토어"
+    },
+    {
+      "id": "exhibition-popup-ranking--9",
+      "slug": "exhibition-popup-ranking--[서울]-［굿바이특가할인］-내셔널지오그래픽-특별기획-ocean-가장-거대한-기록",
+      "name": "[서울] ［굿바이특가할인］ 내셔널지오그래픽 특별기획 OCEAN 가장 거대한 기록",
+      "nameEn": "",
+      "type": "exhibition",
+      "rank": 9,
+      "previousRank": 9,
+      "buzzScore": 89.1,
+      "openScore": 89.1,
+      "fluctuationRate": 0.9,
+      "volume": 10692,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "exhibition-popup-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "전시·팝업스토어"
+    },
+    {
+      "id": "exhibition-popup-ranking--10",
+      "slug": "exhibition-popup-ranking--궁궐야행,-창경궁",
+      "name": "궁궐야행, 창경궁",
+      "nameEn": "",
+      "type": "exhibition",
+      "rank": 10,
+      "previousRank": 10,
+      "buzzScore": 88.05,
+      "openScore": 88.05,
+      "fluctuationRate": 1.8,
+      "volume": 10566,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "exhibition-popup-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "전시·팝업스토어"
+    },
+    {
+      "id": "exhibition-popup-ranking--11",
+      "slug": "exhibition-popup-ranking--[부산]-제21회-부산불꽃축제",
+      "name": "[부산] 제21회 부산불꽃축제",
+      "nameEn": "",
+      "type": "exhibition",
+      "rank": 11,
+      "previousRank": 11,
+      "buzzScore": 87,
+      "openScore": 87,
+      "fluctuationRate": -1.8,
+      "volume": 10440,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "exhibition-popup-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "전시·팝업스토어"
+    },
+    {
+      "id": "exhibition-popup-ranking--12",
+      "slug": "exhibition-popup-ranking--［얼리버드］-브래드-월스-사진전",
+      "name": "［얼리버드］ 브래드 월스 사진전",
+      "nameEn": "",
+      "type": "exhibition",
+      "rank": 12,
+      "previousRank": 12,
+      "buzzScore": 85.95,
+      "openScore": 85.95,
+      "fluctuationRate": -0.9,
+      "volume": 10314,
+      "sparkline": [],
+      "history": [],
+      "tags": [
+        "exhibition-popup-ranking",
+        "culture",
+        "board-tape"
+      ],
+      "summary": "티켓몰 예매 순위 반영",
+      "sourceChannel": "culture",
+      "heatmapGroup": "전시·팝업스토어"
+    },
+    {
       "id": "bestseller-surge-index--1",
       "slug": "bestseller-surge-index--마흔에-읽는-쇼펜하우어",
       "name": "마흔에 읽는 쇼펜하우어",
@@ -58623,558 +59196,6 @@
       "summary": "지역별 맛집·대표 음식 검색량과 미식 콘텐츠 화제성 기준 12위",
       "sourceChannel": "travel",
       "heatmapGroup": "지역별 음식/맛집"
-    },
-    {
-      "id": "performance-ticket-ranking--1",
-      "slug": "performance-ticket-ranking--[서울]-뮤지컬-〈엘리자벳〉",
-      "name": "[서울] 뮤지컬 〈엘리자벳〉",
-      "nameEn": "",
-      "type": "performance",
-      "rank": 1,
-      "previousRank": 1,
-      "buzzScore": 97.5,
-      "openScore": 97.5,
-      "fluctuationRate": -1.8,
-      "volume": 11700,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "performance-ticket-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "공연"
-    },
-    {
-      "id": "performance-ticket-ranking--2",
-      "slug": "performance-ticket-ranking--[서울]-연극-〈더-헬멧〉",
-      "name": "[서울] 연극 〈더 헬멧〉",
-      "nameEn": "",
-      "type": "performance",
-      "rank": 2,
-      "previousRank": 2,
-      "buzzScore": 96.45,
-      "openScore": 96.45,
-      "fluctuationRate": -0.9,
-      "volume": 11574,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "performance-ticket-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "공연"
-    },
-    {
-      "id": "performance-ticket-ranking--3",
-      "slug": "performance-ticket-ranking--[부산]-〈불꽃야구2〉2026시즌-열다섯-번째-직관",
-      "name": "[부산] 〈불꽃야구2〉2026시즌 열다섯 번째 직관",
-      "nameEn": "",
-      "type": "performance",
-      "rank": 3,
-      "previousRank": 3,
-      "buzzScore": 95.4,
-      "openScore": 95.4,
-      "fluctuationRate": 0,
-      "volume": 11448,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "performance-ticket-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "공연"
-    },
-    {
-      "id": "performance-ticket-ranking--4",
-      "slug": "performance-ticket-ranking--[서울]-pentagon-10th-anniversary-tour-〈101010〉-in-seoul",
-      "name": "[서울] PENTAGON 10th Anniversary Tour 〈101010〉 in Seoul",
-      "nameEn": "",
-      "type": "performance",
-      "rank": 4,
-      "previousRank": 4,
-      "buzzScore": 94.35,
-      "openScore": 94.35,
-      "fluctuationRate": 0.9,
-      "volume": 11322,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "performance-ticket-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "공연"
-    },
-    {
-      "id": "performance-ticket-ranking--5",
-      "slug": "performance-ticket-ranking--[서울]-2026-심규선-단독-콘서트［sanctuary］",
-      "name": "[서울] 2026 심규선 단독 콘서트［SANCTUARY］",
-      "nameEn": "",
-      "type": "performance",
-      "rank": 5,
-      "previousRank": 5,
-      "buzzScore": 93.3,
-      "openScore": 93.3,
-      "fluctuationRate": 1.8,
-      "volume": 11196,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "performance-ticket-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "공연"
-    },
-    {
-      "id": "performance-ticket-ranking--6",
-      "slug": "performance-ticket-ranking--vaundy-asia-arena-tour-2026-“horo”-in-seoul",
-      "name": "Vaundy ASIA ARENA TOUR 2026 “HORO” IN SEOUL",
-      "nameEn": "",
-      "type": "performance",
-      "rank": 6,
-      "previousRank": 6,
-      "buzzScore": 92.25,
-      "openScore": 92.25,
-      "fluctuationRate": -1.8,
-      "volume": 11070,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "performance-ticket-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "공연"
-    },
-    {
-      "id": "performance-ticket-ranking--7",
-      "slug": "performance-ticket-ranking--[서울]-뮤지컬-〈광화문연가〉",
-      "name": "[서울] 뮤지컬 〈광화문연가〉",
-      "nameEn": "",
-      "type": "performance",
-      "rank": 7,
-      "previousRank": 7,
-      "buzzScore": 91.2,
-      "openScore": 91.2,
-      "fluctuationRate": -0.9,
-      "volume": 10944,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "performance-ticket-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "공연"
-    },
-    {
-      "id": "performance-ticket-ranking--8",
-      "slug": "performance-ticket-ranking--[경기]-2026-akmu-concert-[-소문의-낙원（paradise-of-rumors）]",
-      "name": "[경기] 2026 AKMU CONCERT [ 소문의 낙원（Paradise of Rumors）]",
-      "nameEn": "",
-      "type": "performance",
-      "rank": 8,
-      "previousRank": 8,
-      "buzzScore": 90.15,
-      "openScore": 90.15,
-      "fluctuationRate": 0,
-      "volume": 10818,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "performance-ticket-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "공연"
-    },
-    {
-      "id": "performance-ticket-ranking--9",
-      "slug": "performance-ticket-ranking--[서울]-옥토버페스트-서울-2026-일반석",
-      "name": "[서울] 옥토버페스트 서울 2026 일반석",
-      "nameEn": "",
-      "type": "performance",
-      "rank": 9,
-      "previousRank": 9,
-      "buzzScore": 89.1,
-      "openScore": 89.1,
-      "fluctuationRate": 0.9,
-      "volume": 10692,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "performance-ticket-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "공연"
-    },
-    {
-      "id": "performance-ticket-ranking--10",
-      "slug": "performance-ticket-ranking--[서울]-죽은-시인의-사회",
-      "name": "[서울] 죽은 시인의 사회",
-      "nameEn": "",
-      "type": "performance",
-      "rank": 10,
-      "previousRank": 10,
-      "buzzScore": 88.05,
-      "openScore": 88.05,
-      "fluctuationRate": 1.8,
-      "volume": 10566,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "performance-ticket-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "공연"
-    },
-    {
-      "id": "performance-ticket-ranking--11",
-      "slug": "performance-ticket-ranking--[부산]-[부산]-장-미셸-오토니엘《사랑-안의-미로-(in-the-labyrinth-of-love)》",
-      "name": "[부산] [부산] 장-미셸 오토니엘《사랑 안의 미로 (In the Labyrinth of Love)》",
-      "nameEn": "",
-      "type": "performance",
-      "rank": 11,
-      "previousRank": 11,
-      "buzzScore": 87,
-      "openScore": 87,
-      "fluctuationRate": -1.8,
-      "volume": 10440,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "performance-ticket-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "공연"
-    },
-    {
-      "id": "performance-ticket-ranking--12",
-      "slug": "performance-ticket-ranking--[서울]-뮤지컬-드라큘라-(dracula：the-musical)",
-      "name": "[서울] 뮤지컬 드라큘라 (Dracula：The Musical)",
-      "nameEn": "",
-      "type": "performance",
-      "rank": 12,
-      "previousRank": 12,
-      "buzzScore": 85.95,
-      "openScore": 85.95,
-      "fluctuationRate": -0.9,
-      "volume": 10314,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "performance-ticket-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "공연"
-    },
-    {
-      "id": "exhibition-popup-ranking--1",
-      "slug": "exhibition-popup-ranking--［라스트-얼리버드］-스페인-미술-500년:-빛과-어둠의-연대기",
-      "name": "［라스트 얼리버드］ 스페인 미술 500년: 빛과 어둠의 연대기",
-      "nameEn": "",
-      "type": "exhibition",
-      "rank": 1,
-      "previousRank": 1,
-      "buzzScore": 97.5,
-      "openScore": 97.5,
-      "fluctuationRate": -1.8,
-      "volume": 11700,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "exhibition-popup-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "전시·팝업스토어"
-    },
-    {
-      "id": "exhibition-popup-ranking--2",
-      "slug": "exhibition-popup-ranking--2026년-하반기-경복궁-야간관람",
-      "name": "2026년 하반기 경복궁 야간관람",
-      "nameEn": "",
-      "type": "exhibition",
-      "rank": 2,
-      "previousRank": 2,
-      "buzzScore": 96.45,
-      "openScore": 96.45,
-      "fluctuationRate": -0.9,
-      "volume": 11574,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "exhibition-popup-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "전시·팝업스토어"
-    },
-    {
-      "id": "exhibition-popup-ranking--3",
-      "slug": "exhibition-popup-ranking--［얼리버드］-현대카드-컬처프로젝트31-웨인티보-전",
-      "name": "［얼리버드］ 현대카드 컬처프로젝트31 웨인티보 전",
-      "nameEn": "",
-      "type": "exhibition",
-      "rank": 3,
-      "previousRank": 3,
-      "buzzScore": 95.4,
-      "openScore": 95.4,
-      "fluctuationRate": 0,
-      "volume": 11448,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "exhibition-popup-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "전시·팝업스토어"
-    },
-    {
-      "id": "exhibition-popup-ranking--4",
-      "slug": "exhibition-popup-ranking--［얼리버드-특가］-20세기-사진-거장전---빛,-시간을-멈추다",
-      "name": "［얼리버드 특가］ 20세기 사진 거장전 - 빛, 시간을 멈추다",
-      "nameEn": "",
-      "type": "exhibition",
-      "rank": 4,
-      "previousRank": 4,
-      "buzzScore": 94.35,
-      "openScore": 94.35,
-      "fluctuationRate": 0.9,
-      "volume": 11322,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "exhibition-popup-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "전시·팝업스토어"
-    },
-    {
-      "id": "exhibition-popup-ranking--5",
-      "slug": "exhibition-popup-ranking--[경기]-2026-제29회-부천국제만화축제-얼리버드-티켓",
-      "name": "[경기] 2026 제29회 부천국제만화축제 얼리버드 티켓",
-      "nameEn": "",
-      "type": "exhibition",
-      "rank": 5,
-      "previousRank": 5,
-      "buzzScore": 93.3,
-      "openScore": 93.3,
-      "fluctuationRate": 1.8,
-      "volume": 11196,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "exhibition-popup-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "전시·팝업스토어"
-    },
-    {
-      "id": "exhibition-popup-ranking--6",
-      "slug": "exhibition-popup-ranking--[제주]-스튜디오-지브리展-in-jeju",
-      "name": "[제주] 스튜디오 지브리展 in Jeju",
-      "nameEn": "",
-      "type": "exhibition",
-      "rank": 6,
-      "previousRank": 6,
-      "buzzScore": 92.25,
-      "openScore": 92.25,
-      "fluctuationRate": -1.8,
-      "volume": 11070,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "exhibition-popup-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "전시·팝업스토어"
-    },
-    {
-      "id": "exhibition-popup-ranking--7",
-      "slug": "exhibition-popup-ranking--［북촌］-2026년-9월~11월_어둠속의대화(dialogue-in-the-dark)",
-      "name": "［북촌］ 2026년 9월~11월_어둠속의대화(DIALOGUE IN THE DARK)",
-      "nameEn": "",
-      "type": "exhibition",
-      "rank": 7,
-      "previousRank": 7,
-      "buzzScore": 91.2,
-      "openScore": 91.2,
-      "fluctuationRate": -0.9,
-      "volume": 10944,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "exhibition-popup-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "전시·팝업스토어"
-    },
-    {
-      "id": "exhibition-popup-ranking--8",
-      "slug": "exhibition-popup-ranking--[광주]-［얼리버드］-인상파,-찬란한-순간들---광주",
-      "name": "[광주] ［얼리버드］ 인상파, 찬란한 순간들 - 광주",
-      "nameEn": "",
-      "type": "exhibition",
-      "rank": 8,
-      "previousRank": 8,
-      "buzzScore": 90.15,
-      "openScore": 90.15,
-      "fluctuationRate": 0,
-      "volume": 10818,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "exhibition-popup-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "전시·팝업스토어"
-    },
-    {
-      "id": "exhibition-popup-ranking--9",
-      "slug": "exhibition-popup-ranking--[대구]-대구간송미술관-특별전-〈겸재-정선〉",
-      "name": "[대구] 대구간송미술관 특별전 〈겸재 정선〉",
-      "nameEn": "",
-      "type": "exhibition",
-      "rank": 9,
-      "previousRank": 9,
-      "buzzScore": 89.1,
-      "openScore": 89.1,
-      "fluctuationRate": 0.9,
-      "volume": 10692,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "exhibition-popup-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "전시·팝업스토어"
-    },
-    {
-      "id": "exhibition-popup-ranking--10",
-      "slug": "exhibition-popup-ranking--[부산]-제21회-부산불꽃축제",
-      "name": "[부산] 제21회 부산불꽃축제",
-      "nameEn": "",
-      "type": "exhibition",
-      "rank": 10,
-      "previousRank": 10,
-      "buzzScore": 88.05,
-      "openScore": 88.05,
-      "fluctuationRate": 1.8,
-      "volume": 10566,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "exhibition-popup-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "전시·팝업스토어"
-    },
-    {
-      "id": "exhibition-popup-ranking--11",
-      "slug": "exhibition-popup-ranking--[서울]-［굿바이특가할인］-내셔널지오그래픽-특별기획-ocean-가장-거대한-기록",
-      "name": "[서울] ［굿바이특가할인］ 내셔널지오그래픽 특별기획 OCEAN 가장 거대한 기록",
-      "nameEn": "",
-      "type": "exhibition",
-      "rank": 11,
-      "previousRank": 11,
-      "buzzScore": 87,
-      "openScore": 87,
-      "fluctuationRate": -1.8,
-      "volume": 10440,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "exhibition-popup-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "전시·팝업스토어"
-    },
-    {
-      "id": "exhibition-popup-ranking--12",
-      "slug": "exhibition-popup-ranking--[대전]-대전-국제-와인-expo-2026-입장권",
-      "name": "[대전] 대전 국제 와인 EXPO 2026 입장권",
-      "nameEn": "",
-      "type": "exhibition",
-      "rank": 12,
-      "previousRank": 12,
-      "buzzScore": 85.95,
-      "openScore": 85.95,
-      "fluctuationRate": -0.9,
-      "volume": 10314,
-      "sparkline": [],
-      "history": [],
-      "tags": [
-        "exhibition-popup-ranking",
-        "culture",
-        "board-tape"
-      ],
-      "summary": "티켓몰 예매 순위 반영",
-      "sourceChannel": "culture",
-      "heatmapGroup": "전시·팝업스토어"
     }
   ],
   "scoreHistory": {
