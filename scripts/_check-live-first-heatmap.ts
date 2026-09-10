@@ -44,7 +44,7 @@ const boards: HeatmapBoardPayload[] = [
     title: "경제 이슈",
     shortTitle: "경제 이슈",
     channel: "economy",
-    ranking: [{ rank: 1, name: "보드시드", score: 90, changeRate: 1 }],
+    ranking: [{ rank: 1, name: "보드시드", score: 90, changeRate: 1, note: "" }],
     indexValue: 90,
     indexChangeRate: 1,
     unitLabel: "이슈",
@@ -70,9 +70,9 @@ assert.equal(composite[0]?.name, "네이버뉴스이슈");
 assert.ok(!composite.slice(0, 3).some((item) => item.tags?.includes("board-tape")));
 
 const subsidy = ensureSubsidyRanking([
-  { rank: 1, name: "[국세청] 근로장려금 특례", score: 95, changeRate: 2 },
-  { rank: 2, name: "[보건복지부] 부모급여 확대", score: 90, changeRate: 1 },
-  { rank: 3, name: "[고용노동부] 국민취업지원제도 개편", score: 85, changeRate: 0.5 },
+  { rank: 1, name: "[국세청] 근로장려금 특례", score: 95, changeRate: 2, note: "" },
+  { rank: 2, name: "[보건복지부] 부모급여 확대", score: 90, changeRate: 1, note: "" },
+  { rank: 3, name: "[고용노동부] 국민취업지원제도 개편", score: 85, changeRate: 0.5, note: "" },
 ]);
 assert.ok(subsidy.some((row) => row.name.includes("근로장려금")));
 assert.ok(subsidy.length >= 3);

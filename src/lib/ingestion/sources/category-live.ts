@@ -182,26 +182,38 @@ function rankTitlesToRows(
 ): ChartRow[] {
   const counts = new Map<string, { name: string; metric: number; tags: string[] }>();
 
+  const bump = (name: string, weight: number, via: string) => {
+    const key = normalizeName(name);
+    if (!key || key.length < 2) return;
+    const current = counts.get(key);
+    const tags = [spec.boardSlug, "live-chart", via.split(":")[0] ?? via];
+    if (current) {
+      current.metric += weight;
+      current.tags = [...new Set([...current.tags, ...tags])];
+    } else {
+      counts.set(key, { name, metric: weight, tags });
+    }
+  };
+
+  let seedHits = 0;
   for (const row of titles) {
-    const seedHits = matchSeedNames(row.title, spec.seeds);
-    const names =
-      seedHits.length > 0
-        ? seedHits
-        : (() => {
-            const topic = extractShortTopic(row.title);
-            return topic ? [topic] : [];
-          })();
-    for (const name of names) {
-      const key = normalizeName(name);
-      if (!key || key.length < 2) continue;
-      const current = counts.get(key);
-      const tags = [spec.boardSlug, "live-chart", row.via.split(":")[0] ?? row.via];
-      if (current) {
-        current.metric += row.weight;
-        current.tags = [...new Set([...current.tags, ...tags])];
-      } else {
-        counts.set(key, { name, metric: row.weight, tags });
-      }
+    const hits = matchSeedNames(row.title, spec.seeds);
+    if (hits.length) {
+      seedHits += hits.length;
+      for (const name of hits) bump(name, row.weight * 1.5, row.via);
+    }
+  }
+
+  // Only invent free-form topics when seed coverage is thin.
+  if (seedHits < 6) {
+    for (const row of titles) {
+      if (matchSeedNames(row.title, spec.seeds).length) continue;
+      const topic = extractShortTopic(row.title);
+      if (!topic) continue;
+      // Drop blog chrome / clickbait fragments.
+      if (/네이버|블로그|카페|클릭|속보|영상|포토|무조건|충격|이유/i.test(topic)) continue;
+      if (/\s/.test(topic) && topic.length > 18) continue;
+      bump(topic, row.weight * 0.8, row.via);
     }
   }
 
