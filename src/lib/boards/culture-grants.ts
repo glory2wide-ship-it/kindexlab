@@ -129,8 +129,8 @@ export function isTwoLineBracketHeatmap(heatmapGroup?: string): boolean {
 }
 
 /**
- * Culture heatmap ranking: keep only culture/living grants.
- * Unknown or travel rows are dropped; missing seeds are backfilled.
+ * Culture heatmap ranking: keep culture/living grants.
+ * Live labeled names win; seeds only pad when the list is thin.
  */
 export function ensureCultureGrantRanking(rows: BoardRankEntry[]): BoardRankEntry[] {
   const remapped = rows
@@ -152,7 +152,9 @@ export function ensureCultureGrantRanking(rows: BoardRankEntry[]): BoardRankEntr
     seen.add(key);
     unique.push(row);
   }
+  const padTo = Math.max(12, unique.length);
   for (const seed of CULTURE_GRANT_SEEDS) {
+    if (unique.length >= padTo) break;
     const key = subjectKey(seed);
     if (seen.has(key)) continue;
     seen.add(key);

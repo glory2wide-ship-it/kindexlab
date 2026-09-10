@@ -59,7 +59,12 @@ export function ensureTravelGrantRanking(rows: BoardRankEntry[]): BoardRankEntry
       if (labeled) return { ...row, name: formatBracketLabel(labeled.org, labeled.subject) };
       return row;
     })
-    .filter((row) => isTravelNoiseGrant(row.name) || findSeed(row.name, TRAVEL_GRANT_SEEDS));
+    .filter(
+      (row) =>
+        isTravelNoiseGrant(row.name) ||
+        findSeed(row.name, TRAVEL_GRANT_SEEDS) ||
+        Boolean(parseBracketLabel(row.name)),
+    );
 
   const unique: BoardRankEntry[] = [];
   const seen = new Set<string>();
@@ -69,7 +74,9 @@ export function ensureTravelGrantRanking(rows: BoardRankEntry[]): BoardRankEntry
     seen.add(key);
     unique.push(row);
   }
+  const padTo = Math.max(12, unique.length);
   for (const seed of TRAVEL_GRANT_SEEDS) {
+    if (unique.length >= padTo) break;
     const key = subjectKey(seed);
     if (seen.has(key)) continue;
     seen.add(key);

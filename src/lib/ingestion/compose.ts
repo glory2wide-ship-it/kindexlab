@@ -18,6 +18,10 @@ import {
 import { entityTypeForBoardChannel, heatmapGroupForBoardSlug } from "@/lib/boards/entity-type";
 import { classifyBuzzType, fetchNaverNewsBoost } from "@/lib/ingestion/sources/buzz";
 import { pickBestsellerRows } from "@/lib/ingestion/sources/books";
+import {
+  listCategoryLiveBoardSlugs,
+  pickCategoryLiveRows,
+} from "@/lib/ingestion/sources/category-live";
 import { pickConsoleGames, pickMobileGames, pickPcGames } from "@/lib/ingestion/sources/games";
 import { pickPrimaryMusic } from "@/lib/ingestion/sources/music";
 import { pickPrimaryMovie } from "@/lib/ingestion/sources/movies";
@@ -27,6 +31,7 @@ import {
   pickPerformanceTicketRows,
 } from "@/lib/ingestion/sources/tickets";
 import { pickPrimaryWebtoon } from "@/lib/ingestion/sources/webtoon";
+import { channelForBoardSlug } from "@/lib/boards/entity-type";
 import { attachTimeframeMetrics, changeForEntity, volumeForTimeframe } from "@/lib/timeframes";
 import type {
   CatalogMatch,
@@ -580,6 +585,30 @@ export async function composeLiveSnapshot(
   const exhibitionRows = takeTop(pickExhibitionTicketRows(sources), 24);
   const bookRows = takeTop(pickBestsellerRows(sources), 30);
 
+  const categoryLiveEntities = listCategoryLiveBoardSlugs(sources).flatMap((boardSlug) => {
+    const channel = channelForBoardSlug(boardSlug);
+    if (channel !== "economy" && channel !== "culture" && channel !== "travel") return [];
+    const rows = takeTop(pickCategoryLiveRows(sources, boardSlug), 24);
+    // Tickets/books already own these culture boards — skip duplicate live news overlays.
+    if (
+      boardSlug === "performance-ticket-ranking" ||
+      boardSlug === "exhibition-popup-ranking" ||
+      boardSlug === "bestseller-surge-index"
+    ) {
+      return [];
+    }
+    return rows.map((row, _i, all) =>
+      toBoardChartEntity(
+        row,
+        boardSlug,
+        channel,
+        heatmapGroupForBoardSlug(boardSlug) ?? boardSlug,
+        previous,
+        all.length,
+      ),
+    );
+  });
+
   const terrestrial = byId("nielsen-terrestrial")?.items ?? [];
   const cable = byId("nielsen-cable")?.items ?? [];
   const ratings = takeTop(terrestrial, 40);
@@ -706,6 +735,7 @@ export async function composeLiveSnapshot(
         all.length,
       ),
     ),
+    ...categoryLiveEntities,
     ...buzzEntities,
     ...composePoliticsEntities(sources, previous),
   ]);

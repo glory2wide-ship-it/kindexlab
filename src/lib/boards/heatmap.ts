@@ -439,17 +439,11 @@ export function buildHeatmapItems({
   }
 
   const liveClean = withoutHeadlineHeatmapItems(liveItems ?? []);
-  if (preferLive && liveClean.length) {
-    const channel = boards[0]?.channel ?? "politics";
-    return liveClean.slice(0, rankLimitForChannel(channel)).map((entity, index) => ({
-      ...entity,
-      rank: index + 1,
-      previousRank: index + 1,
-    }));
-  }
+  const channel = boards[0]?.channel ?? (liveClean[0]?.sourceChannel as PostChannel | undefined) ?? "entertainment";
+  const limit = rankLimitForChannel(channel);
 
-  if (boards.length) {
-    const channel = boards[0]?.channel ?? "entertainment";
+  const boardComposite = (): RankingEntity[] => {
+    if (!boards.length) return [];
     const perBoard = compositePerBoard(channel);
     const pools = boards.map((item) => {
       const rows = selectHeatmapRows(item, gender, age, perBoard, region);
@@ -468,7 +462,6 @@ export function buildHeatmapItems({
       channel === "travel" ||
       channel === "politics"
     ) {
-      const limit = rankLimitForChannel(channel);
       return interleaveHeatmapPools(pools, limit).map((entity, index) => ({
         ...entity,
         rank: index + 1,
@@ -476,9 +469,55 @@ export function buildHeatmapItems({
       }));
     }
     return withoutHeadlineHeatmapItems(pools.flat());
+  };
+
+  if (preferLive && liveClean.length) {
+    const liveChart = liveClean.filter((item) => item.tags?.includes("live-chart"));
+    const nonTape = liveClean.filter(
+      (item) => !item.tags?.includes("board-tape") && !item.tags?.includes("live-chart"),
+    );
+    // Live crawl first; never lead with published board-tape when preferLive is on.
+    const preferred =
+      liveChart.length || nonTape.length
+        ? [...liveChart, ...nonTape]
+        : liveClean.filter((item) => !item.tags?.includes("board-tape"));
+    if (preferred.length) {
+      const seen = new Set<string>();
+      const merged: RankingEntity[] = [];
+      const push = (entity: RankingEntity) => {
+        const key = (entity.name ?? "").replace(/\s+/g, "").toLowerCase();
+        if (!key || seen.has(key) || seen.has(entity.id) || seen.has(entity.slug)) return;
+        seen.add(key);
+        seen.add(entity.id);
+        seen.add(entity.slug);
+        merged.push(entity);
+      };
+      for (const entity of preferred) {
+        if (merged.length >= limit) break;
+        push(entity);
+      }
+      // Fill remaining slots from menu boards so thin live tape still paints a full desk.
+      if (merged.length < limit) {
+        for (const entity of boardComposite()) {
+          if (merged.length >= limit) break;
+          push(entity);
+        }
+      }
+      return merged.map((entity, index) => ({
+        ...entity,
+        rank: index + 1,
+        previousRank: index + 1,
+      }));
+    }
   }
 
-  return liveClean;
+  if (boards.length) return boardComposite();
+
+  return liveClean.slice(0, limit).map((entity, index) => ({
+    ...entity,
+    rank: index + 1,
+    previousRank: index + 1,
+  }));
 }
 
 export function heatmapBoardTitle(

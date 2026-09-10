@@ -1,5 +1,6 @@
 import { buildHeatmapItems, withoutHeadlineHeatmapItems, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
 import { loadChannelHeatmapPayloads, loadHeatmapLivePayload, toTileEntity } from "@/lib/boards/heatmap-server";
+import { countLivePreferRows, preferLiveChannelComposite } from "@/lib/boards/limits";
 import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
 import { itemsForChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
@@ -94,24 +95,28 @@ async function boardPool(channel: PostChannel): Promise<RankingEntity[]> {
 }
 
 /**
- * Cross-category heatmap pool — board-first for economy/culture/travel so the
- * landing desk matches each channel's menu boards. Other desks prefer live
- * ingest once enough rows exist.
+ * Cross-category heatmap pool — live-chart first when enough crawl rows exist;
+ * otherwise fall back to menu-board composites.
  */
 async function channelHeatmapPool(
   channel: PostChannel,
   market?: RankingsPayload,
 ): Promise<RankingEntity[]> {
-  const boardFirst =
-    channel === "economy" || channel === "culture" || channel === "travel";
-  if (boardFirst) {
-    const fromBoards = await boardPool(channel);
-    if (fromBoards.length) return fromBoards;
-  }
   const live = market
     ? withoutHeadlineHeatmapItems(itemsForChannel(market.items, channel)).map(attachTimeframeMetrics)
     : [];
-  if (live.length >= MIN_LIVE_CHANNEL_ROWS) return live;
+  const liveCount = countLivePreferRows(live, channel);
+  if (preferLiveChannelComposite(channel, undefined, liveCount, MIN_LIVE_CHANNEL_ROWS)) {
+    const chart = live.filter((item) => item.tags?.includes("live-chart"));
+    const nonTape = live.filter(
+      (item) => !item.tags?.includes("board-tape") && !item.tags?.includes("live-chart"),
+    );
+    const preferred = chart.length || nonTape.length ? [...chart, ...nonTape] : live;
+    if (preferred.length >= MIN_LIVE_CHANNEL_ROWS) return preferred;
+  }
+  if (live.length >= MIN_LIVE_CHANNEL_ROWS && liveCount >= MIN_LIVE_CHANNEL_ROWS) {
+    return live.filter((item) => !item.tags?.includes("board-tape"));
+  }
   return boardPool(channel);
 }
 
@@ -124,10 +129,8 @@ function deskTopItem(item: RankingEntity): RankingEntity {
 /**
  * The landing page's cross-category board.
  *
- * Prefers the ingest snapshot (refreshed every ~3 minutes by the trends
- * workflow). Board seeds only fill desks the snapshot does not cover yet
- * (mainly 경제·문화·여행). Per-board live overlays still replace music, politics,
- * games, etc. inside those board payloads.
+ * Prefers live-chart ingest (news/YouTube/tickets) when enough rows exist;
+ * menu boards fill desks the snapshot does not cover yet.
  */
 export async function loadUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMarket> {
   const resolved = market?.items?.length ? market : loadHeatmapLivePayload();

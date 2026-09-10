@@ -6,7 +6,7 @@ import {
   loadHeatmapLivePayload,
   toTileEntity,
 } from "@/lib/boards/heatmap-server";
-import { preferLiveChannelComposite } from "@/lib/boards/limits";
+import { countLivePreferRows, preferLiveChannelComposite } from "@/lib/boards/limits";
 import { slimBriefingForCard, slimBriefingsForCards } from "@/lib/briefing/card-dto";
 import { COMMODITIES_FX_BOARD_SLUG } from "@/lib/market/market-index-codes";
 import {
@@ -42,7 +42,11 @@ function rawHeatmapItems(
     board,
     gender: "all",
     age: "all",
-    preferLive: preferLiveChannelComposite(channel, board, liveItems.length),
+    preferLive: preferLiveChannelComposite(
+      channel,
+      board,
+      countLivePreferRows(liveItems, channel),
+    ),
   });
 }
 

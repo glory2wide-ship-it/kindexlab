@@ -61,8 +61,22 @@ export function channelUsesBoardHeatmap(channel: PostChannel): boolean {
 }
 
 /**
- * Economy/culture/travel 종합 must paint published menu-board rankings.
- * Thin live tape (or a few ticket/book rows) must not starve the full board pool.
+ * Count rows that qualify as live crawl for composite heatmaps.
+ * Economy/culture/travel board-tape (published/LLM) must not inflate the live gate.
+ */
+export function countLivePreferRows(
+  items: { tags?: string[] | null }[],
+  channel: PostChannel,
+): number {
+  if (channel === "economy" || channel === "culture" || channel === "travel") {
+    return items.filter((item) => item.tags?.includes("live-chart")).length;
+  }
+  return items.filter((item) => !item.tags?.includes("board-tape")).length;
+}
+
+/**
+ * Channel 종합 prefers live crawl when enough live-chart (or chart) rows exist.
+ * Board tabs always stay on demographic/board rankings.
  */
 export function preferLiveChannelComposite(
   channel: PostChannel,
@@ -71,7 +85,7 @@ export function preferLiveChannelComposite(
   minLive = 3,
 ): boolean {
   if (board) return false;
-  if (channel === "economy" || channel === "culture" || channel === "travel") return false;
+  void channel;
   return liveCount >= minLive;
 }
 

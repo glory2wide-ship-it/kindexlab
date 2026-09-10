@@ -139,7 +139,11 @@ function remapLocalPolicyName(name: string): string {
   return exactOrg ?? name;
 }
 
-function ensureSeededRanking(rows: BoardRankEntry[], seeds: readonly string[]): BoardRankEntry[] {
+function ensureSeededRanking(
+  rows: BoardRankEntry[],
+  seeds: readonly string[],
+  options?: { padTo?: number },
+): BoardRankEntry[] {
   const remapped = rows.map((row) => {
     const seed = findSeed(row.name, seeds);
     return seed ? { ...row, name: seed } : { ...row };
@@ -152,7 +156,10 @@ function ensureSeededRanking(rows: BoardRankEntry[], seeds: readonly string[]): 
     seen.add(key);
     unique.push(row);
   }
+  // Only pad when the live/LLM list is thin — do not force the full seed catalog.
+  const padTo = Math.max(0, options?.padTo ?? Math.min(12, seeds.length));
   for (const seed of seeds) {
+    if (unique.length >= padTo) break;
     const key = subjectKey(seed);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -188,8 +195,14 @@ export function ensureSubsidyRanking(rows: BoardRankEntry[]): BoardRankEntry[] {
     if (labeled) return { ...row, name: formatBracketLabel(labeled.org, labeled.subject) };
     return row;
   });
-  const labeledOnly = remapped.filter((row) => parseBracketLabel(row.name));
-  return ensureSeededRanking(labeledOnly, SUBSIDY_SEEDS);
+  // Prefer live `[기관] 사업` names; keep unlabeled only when they look like grants.
+  const usable = remapped.filter((row) => {
+    if (parseBracketLabel(row.name)) return true;
+    return /지원|바우처|장려금|도약|대출|장학금|급여|연금|상품권/i.test(row.name);
+  });
+  const labeled = usable.filter((row) => parseBracketLabel(row.name));
+  const base = labeled.length >= 3 ? labeled : usable.length ? usable : remapped;
+  return ensureSeededRanking(base, SUBSIDY_SEEDS, { padTo: Math.max(12, base.length) });
 }
 
 export function ensurePunditRanking(rows: BoardRankEntry[]): BoardRankEntry[] {

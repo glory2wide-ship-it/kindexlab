@@ -133,6 +133,11 @@ function padRankingFromSeeds(ranking: BoardRankEntry[], slug: string): BoardRank
   if (boardUsesRegionFilter(slug)) {
     return enforceScoreOrder(ensureFoodRestaurantRanking(ranking, def.seeds, slug).slice(0, limit));
   }
+  // Live/LLM rankings that already fill most of the board keep their names —
+  // only pad when the list is thin.
+  if (ranking.length >= Math.min(limit, 12)) {
+    return enforceScoreOrder(ranking.slice(0, limit));
+  }
   const seen = new Set(ranking.map((row) => row.name));
   const extra: BoardRankEntry[] = [];
   for (const seed of def.seeds) {

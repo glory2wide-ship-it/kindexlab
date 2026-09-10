@@ -38,6 +38,18 @@ export const EXPANDED_CRAWL_BOARD_SLUGS = new Set([
   "housing-subscription-hotspot",
   "health-info-ranking",
   "car-review-ranking",
+  "recipe-ranking",
+  "culture-issue-keywords",
+  "rates-finance-products",
+  "kospi-fomo-index",
+  "overseas-stock-index",
+  "commodities-fx-index",
+  "inflation-sentiment-index",
+  "startup-franchise-index",
+  "economy-issue-keywords",
+  "money-youtuber-influence",
+  "crypto-greed-fear",
+  "premium-mobility-value",
 ]);
 
 const LOOKBACK_HOURS = 168;
@@ -115,18 +127,65 @@ function countTiers(sources: ContextSource[]): Partial<Record<ContextTier, numbe
   return counts;
 }
 
+/** Economy boards prefer Naver news hits ahead of Google/Serper. */
+function preferNaverEconomyNews(docs: NewsDoc[], channel: BoardDefinition["channel"]): NewsDoc[] {
+  if (channel !== "economy") return docs;
+  return [...docs].sort((a, b) => {
+    const aNaver = a.source === "naver-news" ? 1 : 0;
+    const bNaver = b.source === "naver-news" ? 1 : 0;
+    return bNaver - aNaver;
+  });
+}
+
+/**
+ * Official-grant order: official/web first, then news, then youtube.
+ * News-then-ugc stays news-first; youtube/blog appended after thin news.
+ */
+function orderSourcesForStrategy(
+  sources: ContextSource[],
+  plan: SourceStrategyPlan,
+): ContextSource[] {
+  if (plan.strategy === "official-grant") {
+    const official = sources.filter(
+      (item) =>
+        item.tier === "web" &&
+        (plan.prioritizeOfficial ||
+          /go\.kr|or\.kr|fsc\.go\.kr|mss\.go\.kr|mohw|nts\.go|moel|molit|mcst|visitkorea|arko|kspo/i.test(
+            item.url,
+          )),
+    );
+    const news = sources.filter((item) => item.tier === "news");
+    const rest = sources.filter((item) => !official.includes(item) && !news.includes(item));
+    return mergeSources(mergeSources(official, news), rest);
+  }
+  if (plan.strategy === "news-then-ugc") {
+    const news = sources.filter((item) => item.tier === "news");
+    const blogWeb = sources.filter(
+      (item) => item.tier === "web" && !news.includes(item),
+    );
+    const youtube = sources.filter((item) => item.tier === "youtube");
+    const rest = sources.filter(
+      (item) => !news.includes(item) && !blogWeb.includes(item) && !youtube.includes(item),
+    );
+    return mergeSources(mergeSources(mergeSources(news, blogWeb), youtube), rest);
+  }
+  return sources;
+}
+
 async function retrieveNewsDocs(
   board: BoardDefinition,
   logger: AnalysisLogger,
 ): Promise<NewsDoc[]> {
+  const perQuery = board.channel === "economy" ? 10 : board.channel === "entertainment" ? 8 : 6;
   const settled = await Promise.allSettled(
     board.queries.map((query) =>
       retrieveNewsForKeyword(query, {
-        limit: board.channel === "entertainment" ? 8 : 5,
+        limit: perQuery,
         lookbackHours: LOOKBACK_HOURS,
         trustedOnly: false,
         allowMarketTape: true,
         skipAliasFilter: true,
+        preferNaver: board.channel === "economy",
       }),
     ),
   );
@@ -158,7 +217,7 @@ async function retrieveNewsDocs(
       docs.push(doc);
     }
   }
-  return docs;
+  return preferNaverEconomyNews(docs, board.channel);
 }
 
 async function expandAltSources(input: {
@@ -166,25 +225,41 @@ async function expandAltSources(input: {
   plan: SourceStrategyPlan;
   seedQueries: string[];
   providers: string[];
+  newsThin: boolean;
 }): Promise<{ sources: ContextSource[]; providers: string[] }> {
-  const { board, plan, seedQueries } = input;
+  const { board, plan, seedQueries, newsThin } = input;
   let sources: ContextSource[] = [];
   const providers = [...input.providers];
 
-  for (const keyword of seedQueries.slice(0, 3)) {
-    const seeded = officialUrlSeeds({
-      keyword,
-      boardSlug: board.slug,
-      strategy: plan.strategy,
-    });
-    if (seeded.length) {
-      providers.push(`official-url-seeds+${keyword}`);
-      sources = mergeSources(sources, seeded);
+  // Grants: official homepage seeds first.
+  if (plan.prioritizeOfficial || plan.strategy === "official-grant") {
+    for (const keyword of seedQueries.slice(0, 4)) {
+      const seeded = officialUrlSeeds({
+        keyword,
+        boardSlug: board.slug,
+        strategy: plan.strategy,
+      });
+      if (seeded.length) {
+        providers.push(`official-url-seeds+${keyword}`);
+        sources = mergeSources(sources, seeded);
+      }
+    }
+  } else {
+    for (const keyword of seedQueries.slice(0, 3)) {
+      const seeded = officialUrlSeeds({
+        keyword,
+        boardSlug: board.slug,
+        strategy: plan.strategy,
+      });
+      if (seeded.length) {
+        providers.push(`official-url-seeds+${keyword}`);
+        sources = mergeSources(sources, seeded);
+      }
     }
   }
 
   if (plan.prioritizeYoutube) {
-    for (const query of plan.queries.slice(0, 2)) {
+    for (const query of plan.queries.slice(0, 3)) {
       const videos = await fetchYoutubeFallback(query, plan.youtubeLimit);
       if (videos.length) {
         providers.push(`youtube-fallback+${query}`);
@@ -197,19 +272,22 @@ async function expandAltSources(input: {
   const searchQueries = [...new Set([board.focusKeyword, ...plan.queries, ...seedQueries])]
     .map((item) => item.trim())
     .filter(Boolean)
-    .slice(0, 3);
+    .slice(0, plan.strategy === "official-grant" ? 4 : 3);
+
+  const preferBlog =
+    plan.prioritizeBlog || (plan.strategy === "news-then-ugc" && newsThin);
 
   for (const query of searchQueries) {
     const [naverWeb, serperWeb, googleCse] = await Promise.all([
       fetchNaverWebFallback(query, plan.blogLimit + plan.webLimit, {
-        preferBlog: plan.prioritizeBlog,
+        preferBlog,
         preferOfficial: plan.prioritizeOfficial,
       }),
       fetchSerperWeb(query, plan.webLimit, {
-        allowUgc: plan.allowUgc,
+        allowUgc: plan.allowUgc || (plan.strategy === "news-then-ugc" && newsThin),
         preferOfficial: plan.prioritizeOfficial,
       }),
-      plan.prioritizeOfficial || plan.strategy === "review-web"
+      plan.prioritizeOfficial || plan.strategy === "review-web" || plan.strategy === "official-grant"
         ? fetchGoogleCustomSearch(query, 8)
         : Promise.resolve([] as ContextSource[]),
     ]);
@@ -217,18 +295,34 @@ async function expandAltSources(input: {
     if (serperWeb.length) providers.push(`serper-web+${query}`);
     if (googleCse.length) providers.push(`google-cse+${query}`);
     sources = mergeSources(sources, mergeSources(mergeSources(naverWeb, serperWeb), googleCse));
-    if (sources.length >= 10) break;
+    if (sources.length >= 12) break;
   }
 
-  if (
-    !plan.prioritizeYoutube &&
-    sources.filter((item) => item.tier === "youtube").length < 2 &&
-    (plan.youtubeLimit > 0 || plan.strategy === "review-web")
-  ) {
-    const videos = await fetchYoutubeFallback(board.focusKeyword, Math.max(2, plan.youtubeLimit));
-    if (videos.length) {
-      providers.push("youtube-fallback");
-      sources = mergeSources(sources, videos);
+  // Always pull YouTube for category boards when still short — all channels.
+  const youtubeCount = sources.filter((item) => item.tier === "youtube").length;
+  const wantYoutube =
+    plan.youtubeLimit > 0 &&
+    (youtubeCount < Math.min(2, plan.youtubeLimit) ||
+      newsThin ||
+      plan.strategy === "news-then-ugc" ||
+      board.channel === "economy" ||
+      board.channel === "culture" ||
+      board.channel === "travel" ||
+      board.channel === "politics" ||
+      board.channel === "entertainment");
+
+  if (wantYoutube && youtubeCount < plan.youtubeLimit) {
+    const ytQueries = [...new Set([board.focusKeyword, ...plan.queries.slice(0, 2)])].slice(0, 3);
+    for (const query of ytQueries) {
+      const videos = await fetchYoutubeFallback(
+        query,
+        Math.max(2, plan.youtubeLimit - youtubeCount),
+      );
+      if (videos.length) {
+        providers.push(`youtube-fallback+${query}`);
+        sources = mergeSources(sources, videos);
+      }
+      if (sources.filter((item) => item.tier === "youtube").length >= plan.youtubeLimit) break;
     }
   }
 
@@ -236,14 +330,14 @@ async function expandAltSources(input: {
 }
 
 /**
- * News RSS plus strategy-biased official / blog / web / YouTube expansion for
- * grant·travel·OTT·pundit·housing·health·car·outing·food boards.
+ * News RSS plus strategy-biased official / blog / web / YouTube expansion.
+ * Grants: official → news. Culture/travel: news → blog/YouTube when thin.
+ * Economy: Naver news weighted; YouTube always available.
  */
 export async function collectBoardSources(
   board: BoardDefinition,
   logger: AnalysisLogger,
 ): Promise<BoardSourceCollection> {
-  const newsDocs = await retrieveNewsDocs(board, logger);
   const plan = resolveSourceStrategy({
     keyword: board.focusKeyword,
     boardSlug: board.slug,
@@ -254,38 +348,85 @@ export async function collectBoardSources(
     keyword: board.focusKeyword,
   });
 
-  let sources = newsDocs
-    .map(newsDocToContext)
-    .filter((item): item is ContextSource => Boolean(item));
-  let providers = [`strategy:${plan.strategy}`, "board-news-rss"];
+  let sources: ContextSource[] = [];
+  let providers = [`strategy:${plan.strategy}`];
+  let newsDocs: NewsDoc[] = [];
 
-  const shouldExpand =
-    EXPANDED_CRAWL_BOARD_SLUGS.has(board.slug) ||
-    plan.strategy !== "news-first" ||
-    newsDocs.length <= NEWS_FALLBACK_THRESHOLD;
-
-  if (shouldExpand) {
-    const expanded = await expandAltSources({
+  if (plan.strategy === "official-grant") {
+    // 1차: 공식 홈페이지·공고 검색
+    const official = await expandAltSources({
       board,
       plan,
-      seedQueries: [board.focusKeyword, ...board.queries.slice(0, 2), ...board.seeds.slice(0, 2)],
+      seedQueries: [board.focusKeyword, ...board.queries.slice(0, 2), ...board.seeds.slice(0, 3)],
       providers,
+      newsThin: true,
     });
-    sources = mergeSources(sources, expanded.sources);
-    providers = expanded.providers;
-    logger.step("board:expand-crawl", {
-      strategy: plan.strategy,
-      added: expanded.sources.length,
-      providers: expanded.providers.filter((item) => !item.startsWith("strategy:")).slice(0, 8).join(","),
-    });
-    console.log(
-      `[rebuild:expand] board=${board.slug} strategy=${plan.strategy} sources=${sources.length} providers=${providers.length}`,
+    sources = mergeSources(sources, official.sources);
+    providers = official.providers;
+    // 2차: 최근 뉴스
+    newsDocs = await retrieveNewsDocs(board, logger);
+    sources = mergeSources(
+      sources,
+      newsDocs.map(newsDocToContext).filter((item): item is ContextSource => Boolean(item)),
     );
+    providers.push("board-news-rss");
+  } else {
+    newsDocs = await retrieveNewsDocs(board, logger);
+    sources = newsDocs
+      .map(newsDocToContext)
+      .filter((item): item is ContextSource => Boolean(item));
+    providers.push("board-news-rss");
+
+    const newsThin = newsDocs.length <= NEWS_FALLBACK_THRESHOLD;
+    const shouldExpand =
+      EXPANDED_CRAWL_BOARD_SLUGS.has(board.slug) ||
+      plan.strategy !== "news-first" ||
+      newsThin ||
+      plan.prioritizeYoutube ||
+      board.channel === "economy" ||
+      board.channel === "culture" ||
+      board.channel === "travel";
+
+    if (shouldExpand) {
+      const expanded = await expandAltSources({
+        board,
+        plan: {
+          ...plan,
+          // Culture/travel: flip blog preference only when news is thin.
+          prioritizeBlog:
+            plan.prioritizeBlog || (plan.strategy === "news-then-ugc" && newsThin),
+        },
+        seedQueries: [board.focusKeyword, ...board.queries.slice(0, 2), ...board.seeds.slice(0, 2)],
+        providers,
+        newsThin,
+      });
+      sources = mergeSources(sources, expanded.sources);
+      providers = expanded.providers;
+      logger.step("board:expand-crawl", {
+        strategy: plan.strategy,
+        added: expanded.sources.length,
+        providers: expanded.providers
+          .filter((item) => !item.startsWith("strategy:"))
+          .slice(0, 8)
+          .join(","),
+      });
+      console.log(
+        `[rebuild:expand] board=${board.slug} strategy=${plan.strategy} sources=${sources.length} providers=${providers.length}`,
+      );
+    }
   }
 
+  sources = orderSourcesForStrategy(sources, plan);
   sources = filterSourcesByBoardSense(rankSourcesByBoardSense(sources, sense), sense);
   const docs = sources.map(contextToNewsDoc);
-  const cap = board.channel === "entertainment" ? 28 : EXPANDED_CRAWL_BOARD_SLUGS.has(board.slug) ? 22 : 12;
+  const cap =
+    board.channel === "entertainment"
+      ? 28
+      : board.channel === "economy"
+        ? 24
+        : EXPANDED_CRAWL_BOARD_SLUGS.has(board.slug)
+          ? 22
+          : 14;
   const sliced = docs.slice(0, cap);
   const publishers = [...new Set(sliced.map((doc) => doc.publisher).filter(Boolean))] as string[];
 
@@ -293,7 +434,7 @@ export async function collectBoardSources(
     queries: board.queries.length,
     docs: sliced.length,
     news: newsDocs.length,
-    expanded: shouldExpand,
+    expanded: true,
     strategy: plan.strategy,
     publishers: publishers.slice(0, 4).join(","),
   });
@@ -305,6 +446,6 @@ export async function collectBoardSources(
     strategy: plan.strategy,
     strategyHint: plan.promptHint || undefined,
     tierCounts: countTiers(sources),
-    expanded: shouldExpand,
+    expanded: true,
   };
 }

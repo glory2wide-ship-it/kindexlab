@@ -5,7 +5,7 @@ import { isAgeSegment, isGenderSegment } from "@/lib/boards/demographics";
 import { parseRegionQuery } from "@/lib/boards/regions";
 import { buildHeatmapItems, heatmapBoardTitle } from "@/lib/boards/heatmap";
 import { loadChannelHeatmapPayloads, loadHeatmapLivePayload, toTileEntity } from "@/lib/boards/heatmap-server";
-import { preferLiveChannelComposite } from "@/lib/boards/limits";
+import { countLivePreferRows, preferLiveChannelComposite } from "@/lib/boards/limits";
 import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
 import { itemsForChannel, isPostChannel } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
@@ -51,7 +51,11 @@ export async function GET(request: Request) {
     liveItems = [];
   }
 
-  const preferLive = preferLiveChannelComposite(category, board, liveItems.length);
+  const preferLive = preferLiveChannelComposite(
+    category,
+    board,
+    countLivePreferRows(liveItems, category),
+  );
   const items = (
     await attachKospiStockQuotes(
       buildHeatmapItems({

@@ -56,6 +56,54 @@ const GRANT_ORG_HOMEPAGES: Record<string, { href: string; label: string }> = {
     href: "https://www.mss.go.kr/",
     label: "중소벤처기업부 공식",
   },
+  보건복지부: {
+    href: "https://www.mohw.go.kr/",
+    label: "보건복지부 공식",
+  },
+  국세청: {
+    href: "https://www.nts.go.kr/",
+    label: "국세청 공식",
+  },
+  고용노동부: {
+    href: "https://www.moel.go.kr/",
+    label: "고용노동부 공식",
+  },
+  국토교통부: {
+    href: "https://www.molit.go.kr/",
+    label: "국토교통부 공식",
+  },
+  산업통상자원부: {
+    href: "https://www.motie.go.kr/",
+    label: "산업통상자원부 공식",
+  },
+  교육부: {
+    href: "https://www.moe.go.kr/",
+    label: "교육부 공식",
+  },
+  여성가족부: {
+    href: "https://www.mogef.go.kr/",
+    label: "여성가족부 공식",
+  },
+  기획재정부: {
+    href: "https://www.moef.go.kr/",
+    label: "기획재정부 공식",
+  },
+  농림축산식품부: {
+    href: "https://www.mafra.go.kr/",
+    label: "농림축산식품부 공식",
+  },
+  과학기술정보통신부: {
+    href: "https://www.msit.go.kr/",
+    label: "과학기술정보통신부 공식",
+  },
+  행정안전부: {
+    href: "https://www.mois.go.kr/",
+    label: "행정안전부 공식",
+  },
+  주택도시보증공사: {
+    href: "https://www.khug.or.kr/",
+    label: "주택도시보증공사 공식",
+  },
   한국공예디자인문화진흥원: {
     href: "https://www.kcdf.or.kr/",
     label: "한국공예디자인문화진흥원 공식",
@@ -67,6 +115,26 @@ const GRANT_ORG_HOMEPAGES: Record<string, { href: string; label: string }> = {
   한국문화예술위원회: {
     href: "https://www.arko.or.kr/",
     label: "한국문화예술위원회 공식",
+  },
+  한국콘텐츠진흥원: {
+    href: "https://www.kocca.kr/",
+    label: "한국콘텐츠진흥원 공식",
+  },
+  영화진흥위원회: {
+    href: "https://www.kofic.or.kr/",
+    label: "영화진흥위원회 공식",
+  },
+  한국예술인복지재단: {
+    href: "https://www.kawf.kr/",
+    label: "한국예술인복지재단 공식",
+  },
+  한국문학번역원: {
+    href: "https://www.klti.or.kr/",
+    label: "한국문학번역원 공식",
+  },
+  한국문화정보원: {
+    href: "https://www.kcisa.kr/",
+    label: "한국문화정보원 공식",
   },
 };
 
@@ -168,8 +236,21 @@ export function officialUrlSeeds(input: {
     return grantSearchSources(keyword).slice(0, 3);
   }
 
-  if (strategy === "travel-ugc") {
-    return [visitKoreaSearchSource(keyword), naverBlogSearchSource(keyword)].slice(0, 3);
+  if (strategy === "news-then-ugc" || strategy === "travel-ugc") {
+    const subject = parseBracketLabel(keyword)?.subject?.trim() || keyword.replace(/^\[[^\]]+\]\s*/, "");
+    const travelish = /여행|관광|맛집|나들이|휴양|축제|코스|핫플/i.test(keyword + subject);
+    return [
+      {
+        title: `${keyword} 최근 뉴스 검색`,
+        url: `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(keyword)}`,
+        publisher: "네이버 뉴스",
+        snippet: `${keyword} 관련 최근 뉴스. 확인된 고유명사·지명만 인용하세요.`,
+        tier: "news" as const,
+      },
+      ...(travelish ? [visitKoreaSearchSource(keyword)] : []),
+      naverBlogSearchSource(keyword),
+      youtubeSearchSource(keyword),
+    ].slice(0, 3);
   }
 
   if (strategy === "review-web") {

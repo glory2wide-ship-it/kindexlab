@@ -13,6 +13,7 @@ import type { RankingEntity } from "@/lib/types";
  */
 export type SourceStrategy =
   | "news-first"
+  | "news-then-ugc"
   | "youtube-community"
   | "official-grant"
   | "travel-ugc"
@@ -42,6 +43,7 @@ const YOUTUBE_BOARDS = new Set([
   "finance-youtube-power",
   "entertain-youtuber-ranking",
   "political-pundit-ranking",
+  "money-youtuber-influence",
 ]);
 
 const GRANT_BOARDS = new Set([
@@ -59,12 +61,17 @@ const TRAVEL_UGC_BOARDS = new Set([
   "food-restaurant-ranking",
 ]);
 
+const CULTURE_NEWS_BOARDS = new Set([
+  "health-info-ranking",
+  "recipe-ranking",
+  "car-review-ranking",
+  "culture-issue-keywords",
+  "ott-buzz-ranking",
+]);
+
 /** Product/service review boards — blogs, portals, YouTube over thin RSS. */
 const REVIEW_WEB_BOARDS = new Set([
-  "ott-buzz-ranking",
   "housing-subscription-hotspot",
-  "health-info-ranking",
-  "car-review-ranking",
 ]);
 
 function cleanKeyword(keyword: string): string {
@@ -99,19 +106,15 @@ function travelQueries(keyword: string): string[] {
 
 function reviewQueries(keyword: string, boardSlug: string): string[] {
   const base = cleanKeyword(keyword);
-  if (boardSlug === "ott-buzz-ranking") {
-    return [...new Set([base, `${base} 넷플릭스`, `${base} OTT`, `${base} 리뷰`, `${base} 시청`])];
-  }
   if (boardSlug === "housing-subscription-hotspot") {
     return [...new Set([base, `${base} 분양`, `${base} 청약`, `${base} 부동산`, `${base} 시세`])];
   }
-  if (boardSlug === "health-info-ranking") {
-    return [...new Set([base, `${base} 건강`, `${base} 증상`, `${base} 병원`, `${base} 정보`])];
-  }
-  if (boardSlug === "car-review-ranking") {
-    return [...new Set([base, `${base} 시승`, `${base} 리뷰`, `${base} 연비`, `${base} 자동차`])];
-  }
   return [...new Set([base, `${base} 리뷰`, `${base} 후기`, `${base} 정보`])];
+}
+
+function economyNewsQueries(keyword: string): string[] {
+  const base = cleanKeyword(keyword);
+  return [...new Set([base, `${base} 경제`, `${base} 금리`, `${base} 증시`, `${base} 네이버 뉴스`])];
 }
 
 export function resolveSourceStrategy(input: {
@@ -154,27 +157,6 @@ export function resolveSourceStrategy(input: {
       webLimit: 6,
     };
   } else if (
-    // Travel place boards before generic "[기관] 사업" detection — regional labels
-    // like "[전남] 여수 밤바다" are places, not grant programs.
-    TRAVEL_UGC_BOARDS.has(boardSlug) ||
-    ((channel === "travel" || boardSlug.startsWith("travel-") || boardSlug.includes("travel")) &&
-      !GRANT_BOARDS.has(boardSlug) &&
-      !looksLikeGrantCopy)
-  ) {
-    plan = {
-      strategy: "travel-ugc",
-      queries: travelQueries(labeled?.subject ? `${labeled.subject}` : keyword),
-      promptHint:
-        "[소스 전략: 여행·블로그 후기 중심] 네이버 블로그·여행기·후기를 1차 근거로 쓰세요. 개인 후기의 주관적 평가는 ‘후기에서 언급’ 수준으로 쓰고, 확인된 지명·코스·시즌 정보 위주로 정리하세요.",
-      prioritizeYoutube: false,
-      prioritizeBlog: true,
-      prioritizeOfficial: false,
-      allowUgc: true,
-      youtubeLimit: 3,
-      blogLimit: 8,
-      webLimit: 6,
-    };
-  } else if (
     GRANT_BOARDS.has(boardSlug) ||
     type === "subsidy" ||
     looksLikeGrantCopy ||
@@ -184,56 +166,77 @@ export function resolveSourceStrategy(input: {
       strategy: "official-grant",
       queries: grantQueries(keyword),
       promptHint:
-        "[소스 전략: 공고·기관 페이지 중심] 소관 기관·공고·신청 안내 페이지를 1차 근거로 쓰세요. 블로그 후기보다 공식 문구·일정·대상을 우선하고, URL에 없는 금액·자격은 지어내지 마세요.",
+        "[소스 전략: 공식 홈페이지 → 최근 뉴스] 소관 기관 공식·공고·신청 안내를 1차 근거로 쓰고, 부족하면 최근 뉴스 보도로 보완하세요. 블로그 후기보다 공식 문구·일정·대상을 우선하고, URL에 없는 금액·자격은 지어내지 마세요.",
       prioritizeYoutube: false,
       prioritizeBlog: false,
       prioritizeOfficial: true,
       allowUgc: false,
-      youtubeLimit: 2,
+      youtubeLimit: 3,
       blogLimit: 2,
       webLimit: 10,
     };
   } else if (
+    TRAVEL_UGC_BOARDS.has(boardSlug) ||
+    CULTURE_NEWS_BOARDS.has(boardSlug) ||
+    ((channel === "travel" || channel === "culture") &&
+      !GRANT_BOARDS.has(boardSlug) &&
+      !looksLikeGrantCopy) ||
+    /여행|관광|맛집|핫플|밤바다|휴양림|축제|카페거리|건강|레시피|시승/i.test(keyword)
+  ) {
+    plan = {
+      strategy: "news-then-ugc",
+      queries: travelQueries(labeled?.subject ? `${labeled.subject}` : keyword),
+      promptHint:
+        "[소스 전략: 최근 뉴스 1차 → 블로그·유튜브 보완] 최근 뉴스를 1차 근거로 쓰세요. 뉴스가 부족할 때만 네이버 블로그·여행기·유튜브 영상으로 보완하고, 개인 후기의 주관적 평가는 ‘후기에서 언급’ 수준으로 쓰세요.",
+      prioritizeYoutube: false,
+      prioritizeBlog: false,
+      prioritizeOfficial: false,
+      allowUgc: true,
+      youtubeLimit: 6,
+      blogLimit: 8,
+      webLimit: 6,
+    };
+  } else if (
     REVIEW_WEB_BOARDS.has(boardSlug) ||
-    /시승기|분양|청약|넷플릭스|디즈니\+|티빙|혈압|혈당|콜레스테롤/i.test(keyword)
+    /시승기|분양|청약/i.test(keyword)
   ) {
     plan = {
       strategy: "review-web",
       queries: reviewQueries(keyword, boardSlug),
       promptHint:
         "[소스 전략: 리뷰·포털·웹문서 중심] 뉴스 RSS가 얇을 때 공식 안내·포털·블로그·유튜브 리뷰를 1차 근거로 쓰세요. 확인된 고유명사·제품명·단지명만 랭킹에 넣고, URL에 없는 수치·효능은 지어내지 마세요.",
-      prioritizeYoutube: boardSlug === "ott-buzz-ranking",
+      prioritizeYoutube: false,
       prioritizeBlog: true,
       prioritizeOfficial: boardSlug === "housing-subscription-hotspot",
       allowUgc: true,
-      youtubeLimit: boardSlug === "ott-buzz-ranking" ? 6 : 3,
+      youtubeLimit: 5,
       blogLimit: 8,
       webLimit: 8,
     };
-  } else if (/여행|관광|맛집|핫플|밤바다|휴양림|축제|카페거리/i.test(keyword)) {
+  } else if (channel === "economy") {
     plan = {
-      strategy: "travel-ugc",
-      queries: travelQueries(labeled?.subject || keyword),
+      strategy: "news-first",
+      queries: economyNewsQueries(keyword),
       promptHint:
-        "[소스 전략: 여행·블로그 후기 중심] 네이버 블로그·여행기·후기를 1차 근거로 쓰세요. 개인 후기의 주관적 평가는 ‘후기에서 언급’ 수준으로 쓰고, 확인된 지명·코스·시즌 정보 위주로 정리하세요.",
-      prioritizeYoutube: false,
-      prioritizeBlog: true,
+        "[소스 전략: 네이버 경제 뉴스 중심] 네이버·포털 경제 뉴스를 1차 근거로 쓰고, 유튜브·웹문서로 보완하세요. 확인된 종목·지표·상품명만 쓰세요.",
+      prioritizeYoutube: true,
+      prioritizeBlog: false,
       prioritizeOfficial: false,
-      allowUgc: true,
-      youtubeLimit: 3,
-      blogLimit: 8,
-      webLimit: 6,
+      allowUgc: false,
+      youtubeLimit: 6,
+      blogLimit: 4,
+      webLimit: 8,
     };
   } else {
     plan = {
       strategy: "news-first",
       queries: [keyword],
       promptHint: "",
-      prioritizeYoutube: false,
+      prioritizeYoutube: true,
       prioritizeBlog: false,
       prioritizeOfficial: false,
       allowUgc: false,
-      youtubeLimit: 5,
+      youtubeLimit: 6,
       blogLimit: 5,
       webLimit: 8,
     };

@@ -21,6 +21,7 @@ import { filterLabel } from "@/lib/boards/demographics";
 import { boardUsesRegionFilter, entityMatchesRegion } from "@/lib/boards/regions";
 import {
   channelUsesBoardHeatmap,
+  countLivePreferRows,
   preferLiveChannelComposite,
   rankLimitForBoard,
   rankLimitForChannel,
@@ -131,7 +132,7 @@ export function ChannelMarketDesk({
   );
   const liveItems = liveMarket.items;
   const preferLiveComposite = (boardSlug: string) =>
-    preferLiveChannelComposite(channel, boardSlug, liveItems.length);
+    preferLiveChannelComposite(channel, boardSlug, countLivePreferRows(liveItems, channel));
   const quotedCacheRef = useRef<Map<string, RankingEntity[]>>(
     seedQuoteMap(initialQuotedByBoard, initialItems),
   );

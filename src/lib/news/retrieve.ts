@@ -120,7 +120,13 @@ export async function retrieveNewsForKeyword(
   }
 
   // Recognised outlets first, then recency within each tier.
+  // Economy boards optionally boost Naver news above other providers.
   kept.sort((a, b) => {
+    if (options.preferNaver) {
+      const aNaver = a.source === "naver-news" ? 1 : 0;
+      const bNaver = b.source === "naver-news" ? 1 : 0;
+      if (aNaver !== bNaver) return bNaver - aNaver;
+    }
     if (a.publisherKind !== b.publisherKind) return a.publisherKind === "trusted" ? -1 : 1;
     const left = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
     const right = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;

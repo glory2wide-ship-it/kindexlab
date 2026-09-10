@@ -58,4 +58,6 @@ export interface NewsRetrieveOptions {
   allowMarketTape?: boolean;
   /** Keep Google News RSS hits even when the headline omits the exact query token. */
   skipAliasFilter?: boolean;
+  /** Economy boards: sort Naver news ahead of other providers. */
+  preferNaver?: boolean;
 }

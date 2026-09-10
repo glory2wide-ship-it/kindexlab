@@ -4,6 +4,7 @@ import { composeLiveSnapshot, snapshotToPayload } from "@/lib/ingestion/compose"
 import { fetchBroadcastSources } from "@/lib/ingestion/sources/broadcast";
 import { fetchBookSources } from "@/lib/ingestion/sources/books";
 import { fetchBuzzSources } from "@/lib/ingestion/sources/buzz";
+import { fetchCategoryLiveSources } from "@/lib/ingestion/sources/category-live";
 import { fetchGameSources } from "@/lib/ingestion/sources/games";
 import { fetchMusicSources } from "@/lib/ingestion/sources/music";
 import { fetchMovieSources } from "@/lib/ingestion/sources/movies";
@@ -74,6 +75,7 @@ export async function ingestLivePayload(options?: {
     politicsYoutube,
     tickets,
     books,
+    categoryLive,
   ] = await Promise.all([
     fetchMusicSources(),
     fetchMovieSources(),
@@ -86,6 +88,7 @@ export async function ingestLivePayload(options?: {
     fetchPoliticsYoutubeSources(),
     fetchTicketSources(),
     fetchBookSources(),
+    fetchCategoryLiveSources(),
   ]);
   const sources = [
     ...music,
@@ -99,6 +102,7 @@ export async function ingestLivePayload(options?: {
     ...politicsYoutube,
     ...tickets,
     ...books,
+    ...categoryLive,
   ];
   const composed = await composeLiveSnapshot(sources, previous);
   const updatedAt = new Date().toISOString();

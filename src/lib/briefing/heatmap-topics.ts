@@ -9,7 +9,7 @@ import {
   stripRowQualifier,
 } from "@/lib/boards/heatmap";
 import { loadChannelHeatmapPayloads, toTileEntity } from "@/lib/boards/heatmap-server";
-import { preferLiveChannelComposite } from "@/lib/boards/limits";
+import { countLivePreferRows, preferLiveChannelComposite } from "@/lib/boards/limits";
 import { menuBoardsForChannel } from "@/lib/boards/registry";
 import {
   CHANNEL_ENTITY_TYPES,
@@ -106,7 +106,11 @@ async function loadLiveItems(channel: PostChannel): Promise<RankingEntity[]> {
 export async function collectHeatmapTopics(channel: PostChannel): Promise<HeatmapTopicPool> {
   const boards = await loadChannelHeatmapPayloads(channel);
   const liveItems = await loadLiveItems(channel);
-  const preferLive = preferLiveChannelComposite(channel, undefined, liveItems.length);
+  const preferLive = preferLiveChannelComposite(
+    channel,
+    undefined,
+    countLivePreferRows(liveItems, channel),
+  );
 
   const compositeRaw = buildHeatmapItems({
     boards,
