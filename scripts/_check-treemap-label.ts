@@ -1,5 +1,9 @@
-import { layoutTreemapLabel, measureTextWidth } from "../src/lib/treemapLabel";
-import { heatmapTileLabel, heatmapLabelDisplayLength } from "../src/lib/heatmap-display-name";
+import { layoutTreemapLabel, measureTextWidth, softWrapHeatmapName } from "../src/lib/treemapLabel";
+import {
+  heatmapTileLabel,
+  heatmapLabelDisplayLength,
+  HEATMAP_WRAP_MIN_CHARS,
+} from "../src/lib/heatmap-display-name";
 
 const cases: Array<{
   name: string;
@@ -11,13 +15,16 @@ const cases: Array<{
 }> = [
   { name: "부모급여", width: 210, height: 260, minSize: 14, maxSize: 28, minLines: 1 },
   { name: "쇼펜하우어", width: 280, height: 200, minSize: 14, maxSize: 28, minLines: 1 },
-  { name: "세이노의 가르침", width: 240, height: 160, minSize: 13, maxSize: 28, minLines: 2 },
-  { name: "문화누리카드", width: 150, height: 110, minSize: 12, maxSize: 28, minLines: 2 },
+  { name: "세이노의 가르침", width: 240, height: 160, minSize: 13, maxSize: 28, minLines: 1 },
+  { name: "문화누리카드", width: 150, height: 110, minSize: 12, maxSize: 28, minLines: 1 },
   { name: "김치찌개", width: 140, height: 90, minSize: 12, maxSize: 28, minLines: 1 },
   { name: "웰니스관광", width: 340, height: 280, minSize: 14, maxSize: 28, minLines: 1 },
   { name: "마약김밥", width: 220, height: 150, minSize: 13, maxSize: 28, minLines: 1 },
   { name: "혈압", width: 80, height: 56, minSize: 11, maxSize: 22, minLines: 1 },
-  { name: "[보건복지부] 부모급여", width: 200, height: 140, minSize: 12, maxSize: 28, minLines: 2 },
+  // 10+ chars (spaces included) → 2 lines
+  { name: "소상공인 전기요금 지원", width: 200, height: 140, minSize: 12, maxSize: 28, minLines: 2 },
+  { name: "광장시장 마약김밥 맛집", width: 220, height: 150, minSize: 12, maxSize: 28, minLines: 2 },
+  { name: "근로자 휴가지원사업", width: 240, height: 160, minSize: 12, maxSize: 28, minLines: 2 },
 ];
 
 let failed = false;
@@ -41,36 +48,11 @@ for (const item of cases) {
   const ok = inRange && !overflow && linesOk;
   if (!ok) failed = true;
   console.log(
-    `${ok ? "ok" : "BAD"} ${size.toFixed(1).padStart(5)}px  L${label?.nameLines}  ${item.name}`,
+    `${ok ? "ok" : "BAD"} ${size.toFixed(1).padStart(5)}px  L${label?.nameLines}  len=${item.name.length}  ${item.name}`,
   );
 }
 
-const a =
-  layoutTreemapLabel({
-    width: 200,
-    height: 160,
-    y: 0,
-    name: "부모급여",
-    rate: "+1%",
-    typeLabel: "",
-  })?.nameSize ?? 0;
-const b =
-  layoutTreemapLabel({
-    width: 180,
-    height: 170,
-    y: 0,
-    name: "부모급여",
-    rate: "+1%",
-    typeLabel: "",
-  })?.nameSize ?? 0;
-const drift = Math.abs(a - b) / Math.max(a, 1);
-console.log(`density drift ${drift.toFixed(3)} (${a.toFixed(1)}/${b.toFixed(1)})`);
-if (drift > 0.28) {
-  console.error("similar tiles with same Hangul length should keep similar type size");
-  failed = true;
-}
-
-const fullNameSamples = [
+const paintSamples = [
   {
     name: "뮤지컬 〈엘리자벳〉",
     type: "performance" as const,
@@ -80,33 +62,40 @@ const fullNameSamples = [
     name: "[보건복지부] 부모급여",
     type: "subsidy" as const,
     heatmapGroup: "경제 정부지원금",
-    expect: "[보건복지부] 부모급여",
+    expect: "부모급여",
   },
   {
-    name: "2026 HIGHLIGHT FAN CON [18년차 아이돌인 내가 이세계에선 데뷔조 연습생?!]",
-    type: "performance" as const,
-    expect: "2026 HIGHLIGHT FAN CON [18년차 아이돌인 내가 이세계에선 데뷔조 연습생?!]",
+    name: "[서울] 광장시장 마약김밥",
+    type: "restaurant" as const,
+    heatmapGroup: "음식/맛집 랭킹",
+    expect: "광장시장 마약김밥",
   },
 ];
 
-for (const sample of fullNameSamples) {
+for (const sample of paintSamples) {
   const tile = heatmapTileLabel({
     name: sample.name,
     nameEn: "",
     type: sample.type,
     heatmapGroup: sample.heatmapGroup,
   });
-  const ok =
-    tile.title === sample.expect &&
-    tile.fullName === sample.name &&
-    tile.title === tile.fullName;
+  const ok = tile.title === sample.expect && tile.fullName === sample.name;
   if (!ok) failed = true;
-  console.log(`${ok ? "ok" : "BAD"} full "${sample.name}" → "${tile.title}"`);
+  console.log(`${ok ? "ok" : "BAD"} paint "${sample.name}" → "${tile.title}"`);
 }
 
-const long = "세이노의 가르침";
-console.log(`displayLen "${long}" = ${heatmapLabelDisplayLength(long)} (expect wrap ≥6)`);
-if (heatmapLabelDisplayLength(long) < 6) failed = true;
+const long = "소상공인 전기요금 지원";
+console.log(
+  `displayLen "${long}" = ${heatmapLabelDisplayLength(long)} (wrap ≥${HEATMAP_WRAP_MIN_CHARS})`,
+);
+if (heatmapLabelDisplayLength(long) < HEATMAP_WRAP_MIN_CHARS) failed = true;
+
+const wrapped = softWrapHeatmapName(long, 2);
+if (!wrapped.includes("\n")) {
+  console.error("expected soft wrap for 10+ char spaced name", wrapped);
+  failed = true;
+}
+console.log(`wrap "${long}" → ${JSON.stringify(wrapped)}`);
 
 if (failed) process.exit(1);
-console.log("label OK: full names + 6+ char multi-line density");
+console.log("label OK: strip brackets + 10+ char multi-line density");

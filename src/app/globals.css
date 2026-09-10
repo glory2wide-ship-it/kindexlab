@@ -196,7 +196,8 @@ body {
   height: 1.15em;
 }
 
-/* Compact airport flip digits inside green LIVE KinDex countdown shells. */
+/* Compact airport flip digits inside green LIVE KinDex countdown shells.
+ * Glyph faces use the same green as the shell — no darker inset behind digits. */
 .refresh-countdown .flip-board {
   gap: 0.04em;
   vertical-align: middle;
@@ -207,7 +208,7 @@ body {
   height: 1.05em;
   border-color: color-mix(in srgb, #ffffff 28%, transparent);
   border-radius: 0.1em;
-  background: color-mix(in srgb, #166534 55%, #22c55e);
+  background: #22c55e;
 }
 
 .refresh-countdown .flip-punct {
@@ -223,11 +224,11 @@ body {
 }
 
 .refresh-countdown .flip-leaf {
-  background: color-mix(in srgb, #166534 55%, #22c55e);
+  background: #22c55e;
 }
 
 .refresh-countdown .flip-glyph::after {
-  background: color-mix(in srgb, #ffffff 32%, transparent);
+  background: color-mix(in srgb, #ffffff 22%, transparent);
 }
 
 .flip-punct {

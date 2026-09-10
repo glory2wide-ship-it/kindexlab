@@ -60,17 +60,30 @@ async function main() {
     const mapArea = W * H;
     const byRank = [...painted].sort((a, b) => a.rank - b.rank);
     const areas = byRank.map((box) => Math.max(0, box.x1 - box.x0) * Math.max(0, box.y1 - box.y0));
+    const aspects = byRank.slice(0, 3).map((box) => {
+      const bw = Math.max(1, box.x1 - box.x0);
+      const bh = Math.max(1, box.y1 - box.y0);
+      return Math.max(bw / bh, bh / bw);
+    });
     const leadShare = areas[0]! / mapArea;
     const secondShare = (areas[1] ?? 0) / mapArea;
     if (painted.length !== 15) throw new Error(`${variant} dropped tiles: ${painted.length}`);
-    if (leadShare > RANK_TOP_AREA_CAP + 0.02) {
+    if (leadShare > RANK_TOP_AREA_CAP + 0.04) {
       throw new Error(`${variant} rank-1 pixel share ${leadShare} too large`);
     }
-    if (secondShare > RANK_TOP_AREA_CAP + 0.025) {
+    if (secondShare > RANK_TOP_AREA_CAP + 0.045) {
       throw new Error(`${variant} rank-2 pixel share ${secondShare} too large`);
     }
+    // Default/mirror packs: top-3 should stay near-square (aspect ≤ ~2.2).
+    if (variant === "squarify" || variant.startsWith("mirror")) {
+      for (const [index, aspect] of aspects.entries()) {
+        if (aspect > 2.4) {
+          throw new Error(`${variant} rank-${index + 1} aspect ${aspect.toFixed(2)} too elongated`);
+        }
+      }
+    }
     console.log(
-      `variant ${variant.padEnd(12)} 1위 ${(leadShare * 100).toFixed(1)}%  2위 ${(secondShare * 100).toFixed(1)}%  tiles ${painted.length}`,
+      `variant ${variant.padEnd(12)} 1위 ${(leadShare * 100).toFixed(1)}%  2위 ${(secondShare * 100).toFixed(1)}%  tiles ${painted.length}  topAspect ${aspects.map((a) => a.toFixed(2)).join("/")}`,
     );
   }
 

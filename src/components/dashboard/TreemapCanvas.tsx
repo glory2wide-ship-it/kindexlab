@@ -14,7 +14,6 @@ import { heatFill, heatText } from "@/lib/heatmap";
 import { formatHeatmapRank } from "@/lib/boards/limits";
 import { heatmapTileLabel } from "@/lib/heatmap-display-name";
 import { CHANNEL_SHORT_LABEL } from "@/lib/posts/channels";
-import { CULTURE_GRANT_TITLE } from "@/lib/boards/culture-grants";
 import { heatmapSourceCaption, summarizeHeadlineTitle } from "@/lib/news/headline-title";
 import { layoutHeatmapLeaves } from "@/lib/treemapLayout";
 import { TREEMAP_FRAME_CLASS, TREEMAP_MAX_ITEMS, MOBILE_TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
@@ -213,29 +212,27 @@ export function TreemapView({
           });
           const fill = heatText(change);
           const baseRankSize = w >= 120 && h >= 56 ? 16.5 : 13.5;
-          /** Mobile: rank −30%; desktop unchanged. */
-          const rankSize = isMobileViewport ? baseRankSize * 0.7 : baseRankSize;
+          /** Rank badge: −10% vs prior; mobile keeps additional −30% dampen. */
+          const rankSize = (isMobileViewport ? baseRankSize * 0.7 : baseRankSize) * 0.9;
           const showRank = w >= 36 && h >= 20;
           const channelTag =
             showChannelTags && entity.sourceChannel
               ? CHANNEL_SHORT_LABEL[entity.sourceChannel as PostChannel]
               : undefined;
           const showChannelTag = Boolean(channelTag) && w >= 74 && h >= 26;
-          const isGrantTwoLine =
-            entity.heatmapGroup === CULTURE_GRANT_TITLE && Boolean(tile.secondary);
           const sourceLabel = heatmapSourceCaption(entity);
-          const sourceSize = Math.max(8, rankSize - 2) * 1.15;
-          const showSource =
-            showSourceCaptions && rank <= 10 && Boolean(sourceLabel) && w >= 52 && h >= 28;
+          const sourceChipSize = Math.max(8, rankSize - 1.5);
+          /** Submenu chip before the rank (landing-style), not under it. */
+          const showSourceChip =
+            showSourceCaptions && rank <= 10 && Boolean(sourceLabel) && w >= 72 && h >= 26;
           const displayTitle = isHeadline
             ? summarizeHeadlineTitle(entity.name)
             : (label?.name ?? tile.title);
           /**
-           * Mobile title: 1–7 → −10%. Ranks 8+ omit the rate and keep full name size.
+           * Mobile title: slight dampen so dense 15-tile maps stay legible; size still tracks the box.
            * Mobile rate: −10%. Desktop unchanged.
            */
           const layoutNameSize = label?.nameSize ?? 16;
-          /** Mobile: slight dampen so dense 15-tile maps stay legible; size still tracks the box. */
           const mobileTitleScale = !isMobileViewport ? 1 : 0.94;
           const nameFontSize = layoutNameSize * mobileTitleScale;
           const headlineFontSize = isMobileViewport
@@ -244,7 +241,11 @@ export function TreemapView({
           const rateFontSize = (label?.rateSize ?? 16.5) * (isMobileViewport ? 0.9 : 1);
           const showTileRate = !omitRate && label?.showRate !== false;
           const href = entityHref(entity);
-          const rankHeaderWidth = Math.min(164, w - 4);
+          const chipCount = (showChannelTag ? 1 : 0) + (showSourceChip ? 1 : 0);
+          const rankHeaderWidth = Math.min(
+            chipCount > 0 ? 200 : 120,
+            Math.max(48, w - 4),
+          );
           // Rank badge sits top-right on both viewports (mobile previously top-left).
           const rankHeaderX = Math.max(leaf.x0 + 2, leaf.x1 - rankHeaderWidth - 2);
           return (
@@ -253,7 +254,7 @@ export function TreemapView({
               href={href}
               prefetch={false}
               className="cursor-pointer"
-              aria-label={`${channelTag ? `${channelTag} ` : ""}${group} ${rankBadge} ${entity.name}${priceLabel ? ` ${priceLabel}` : ""}${omitRate ? "" : ` ${rate}`}`}
+              aria-label={`${channelTag ? `${channelTag} ` : ""}${sourceLabel && showSourceChip ? `${sourceLabel} ` : ""}${group} ${rankBadge} ${tile.title}${priceLabel ? ` ${priceLabel}` : ""}${omitRate ? "" : ` ${rate}`}`}
               data-heatmap-rank={rank}
               onPointerDown={() => {
                 router.prefetch(href);
@@ -286,102 +287,39 @@ export function TreemapView({
                     x={rankHeaderX}
                     y={leaf.y0 + 3}
                     width={rankHeaderWidth}
-                    height={showSource ? 64 : 28}
+                    height={28}
                   >
                     <div
-                      className="pointer-events-none flex h-full w-full flex-col items-end justify-start pr-1 text-right"
+                      className="pointer-events-none flex h-full w-full items-center justify-end gap-1 pr-1 text-right"
                       style={{ color: fill }}
                     >
-                      <span className="flex items-center gap-1 leading-none">
-                        {showChannelTag ? (
-                          <span
-                            className="rounded-[3px] border px-1 py-px font-sans font-semibold leading-none opacity-85"
-                            style={{ fontSize: Math.max(8, rankSize - 2), borderColor: "currentColor" }}
-                          >
-                            {channelTag}
-                          </span>
-                        ) : null}
+                      {showChannelTag ? (
                         <span
-                          className="font-sans font-semibold tabular-nums leading-none"
-                          style={{ fontSize: rankSize }}
+                          className="max-w-[42%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
+                          style={{ fontSize: sourceChipSize, borderColor: "currentColor" }}
                         >
-                          {rankBadge}
+                          {channelTag}
                         </span>
-                      </span>
-                      {showSource && sourceLabel ? (
+                      ) : null}
+                      {showSourceChip && sourceLabel ? (
                         <span
-                          className="mt-0.5 max-w-full text-right font-medium leading-tight opacity-90"
-                          style={{
-                            fontSize: sourceSize,
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                            wordBreak: "keep-all",
-                          }}
+                          className="max-w-[52%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
+                          style={{ fontSize: sourceChipSize, borderColor: "currentColor" }}
+                          title={sourceLabel}
                         >
                           {sourceLabel}
                         </span>
                       ) : null}
+                      <span
+                        className="shrink-0 font-sans font-normal tabular-nums leading-none"
+                        style={{ fontSize: rankSize }}
+                      >
+                        {rankBadge}
+                      </span>
                     </div>
                   </foreignObject>
                 ) : null}
-                {isGrantTwoLine ? (
-                  <foreignObject
-                    x={leaf.x0 + 4}
-                    y={leaf.y0 + (showRank ? 32 : 6)}
-                    width={Math.max(w - 8, 0)}
-                    height={Math.max(h - (showRank ? 40 : 10), 0)}
-                  >
-                    <div
-                      className="pointer-events-none flex h-full w-full flex-col items-center justify-center px-0.5 text-center"
-                      style={{ color: fill }}
-                    >
-                      <p
-                        className="w-full font-extrabold tracking-tight"
-                        suppressHydrationWarning
-                        style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: label?.nameLines ?? 3,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          fontSize: nameFontSize,
-                          lineHeight: 1.22,
-                          letterSpacing: "-0.03em",
-                          whiteSpace: "pre-line",
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {label?.name ?? tile.title}
-                      </p>
-                      <p
-                        className="mt-0.5 w-full font-semibold"
-                        style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                          fontSize: Math.max(12, (label?.metaSize ?? 15) * 0.95),
-                          lineHeight: 1.2,
-                          letterSpacing: "-0.02em",
-                          opacity: 0.92,
-                          wordBreak: "keep-all",
-                        }}
-                      >
-                        {tile.secondary}
-                      </p>
-                      {showTileRate && h >= 48 ? (
-                        <p
-                          className="mt-1 font-bold tabular-nums"
-                          style={{ fontSize: rateFontSize }}
-                        >
-                          {label?.rate ?? rate}
-                        </p>
-                      ) : null}
-                    </div>
-                  </foreignObject>
-                ) : isHeadline ? (
+                {isHeadline ? (
                   <foreignObject
                     x={leaf.x0 + 4}
                     y={leaf.y0 + (showRank ? 32 : 6)}

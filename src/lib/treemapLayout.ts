@@ -20,7 +20,9 @@ export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
 /** Soft ceiling used by helpers; live layout uses dynamic caps by tile count. */
 export const RANK_BELOW_CAP = RANK_1_AREA_RATIO - 0.001;
 /** Soft ceiling for near-square helper aspect (max(w,h)/min(w,h)). */
-export const RANK_1_MAX_ASPECT = 1.25;
+export const RANK_1_MAX_ASPECT = 1.35;
+/** Soft ceiling for ranks 2–3 near-square tiles. */
+export const RANK_TOP_MAX_ASPECT = 1.45;
 
 export type HeatmapLayoutVariant =
   | "squarify"
@@ -121,19 +123,20 @@ interface PanelNode {
 }
 
 /**
- * Near-square pixel size for rank 1 at `areaRatio` of the map.
- * Prefers a true square; softens to at most `RANK_1_MAX_ASPECT` when clamped.
+ * Near-square pixel size for a lead tile at `areaRatio` of the map.
+ * Prefers a true square; softens to at most `maxAspect` when clamped.
  */
 export function nearSquareRank1Size(
   width: number,
   height: number,
   areaRatio = RANK_1_AREA_RATIO,
+  maxAspect = RANK_1_MAX_ASPECT,
 ): { w: number; h: number } {
   const mapArea = Math.max(width * height, 1);
   const targetArea = mapArea * areaRatio;
   // Leave room for the L-shaped remainder on both axes.
-  const maxW = Math.max(24, width * 0.62);
-  const maxH = Math.max(24, height * 0.62);
+  const maxW = Math.max(24, width * 0.58);
+  const maxH = Math.max(24, height * 0.58);
   let side = Math.min(Math.sqrt(targetArea), maxW, maxH);
   let w = side;
   let h = targetArea / Math.max(w, 1);
@@ -148,7 +151,7 @@ export function nearSquareRank1Size(
   }
 
   const aspect = Math.max(w / Math.max(h, 1), h / Math.max(w, 1));
-  if (aspect > RANK_1_MAX_ASPECT) {
+  if (aspect > maxAspect) {
     const s = Math.sqrt(Math.max(w * h, 1));
     w = Math.min(s, maxW);
     h = Math.min(s, maxH);
@@ -166,6 +169,111 @@ export function rank1Rectangle(
 ): { x0: number; y0: number; x1: number; y1: number } {
   const { w, h } = nearSquareRank1Size(width, height);
   return { x0: 0, y0: 0, x1: Math.min(w, width), y1: Math.min(h, height) };
+}
+
+/**
+ * Place ranks 1–3 as near-square tiles (sizes follow area shares), then
+ * squarify the remainder into the leftover L-region.
+ */
+function layoutNearSquareTop3(
+  nodes: PanelNode[],
+  width: number,
+  height: number,
+  padding: number,
+): TreemapBox[] {
+  const ordered = [...nodes].sort((a, b) => a.rank - b.rank || b.value - a.value);
+  if (ordered.length <= 1) {
+    return squarifyPanel(ordered, 0, 0, width, height, padding);
+  }
+
+  const gap = Math.max(0, padding);
+  const total = ordered.reduce((sum, node) => sum + node.value, 0) || 1;
+  const leadCount = Math.min(3, ordered.length);
+  const lead = ordered.slice(0, leadCount);
+  const tail = ordered.slice(leadCount);
+  const mapArea = Math.max(width * height, 1);
+
+  const leadBoxes: TreemapBox[] = [];
+  let cursorX = 0;
+  let cursorY = 0;
+  let rowH = 0;
+  let usedRight = 0;
+  let usedBottom = 0;
+
+  for (let i = 0; i < lead.length; i++) {
+    const node = lead[i]!;
+    const ratio = Math.max(node.value / total, 0.04);
+    const aspect = i === 0 ? RANK_1_MAX_ASPECT : RANK_TOP_MAX_ASPECT;
+    let { w, h } = nearSquareRank1Size(width, height, ratio, aspect);
+
+    // If the next square does not fit on this row, wrap under #1.
+    if (cursorX > 0 && cursorX + w + gap > width * 0.92) {
+      cursorX = 0;
+      cursorY = rowH + gap;
+      rowH = 0;
+    }
+
+    // Keep lead tiles inside the map; shrink gently rather than stretch.
+    w = Math.min(w, Math.max(24, width - cursorX - gap));
+    h = Math.min(h, Math.max(24, height - cursorY - gap));
+    const side = Math.min(w, h);
+    // Prefer square-ish: use the smaller side, then expand the other toward area.
+    const targetArea = mapArea * ratio;
+    w = Math.min(Math.max(side, Math.sqrt(targetArea)), width - cursorX);
+    h = Math.min(Math.max(targetArea / Math.max(w, 1), side * 0.75), height - cursorY);
+    const boxAspect = Math.max(w / Math.max(h, 1), h / Math.max(w, 1));
+    if (boxAspect > aspect) {
+      const s = Math.sqrt(Math.max(w * h, 1));
+      w = Math.min(s, width - cursorX);
+      h = Math.min(s, height - cursorY);
+    }
+
+    const x0 = cursorX;
+    const y0 = cursorY;
+    const x1 = Math.min(width, x0 + Math.max(20, w));
+    const y1 = Math.min(height, y0 + Math.max(20, h));
+    leadBoxes.push({ id: node.id, rank: node.rank, x0, y0, x1, y1 });
+
+    cursorX = x1 + gap;
+    rowH = Math.max(rowH, y1);
+    usedRight = Math.max(usedRight, x1);
+    usedBottom = Math.max(usedBottom, y1);
+  }
+
+  if (!tail.length) {
+    // Stretch lead tiles only if they left large empty bands — otherwise keep squares.
+    return leadBoxes;
+  }
+
+  // Remaining L-region: right of the lead cluster and/or below it.
+  const restBoxes: TreemapBox[] = [];
+  const rightX0 = Math.min(width - 24, usedRight + gap);
+  const belowY0 = Math.min(height - 24, usedBottom + gap);
+  const rightW = width - rightX0;
+  const belowH = height - belowY0;
+
+  if (rightW >= 40 && usedBottom > height * 0.35) {
+    // Tall lead row → pack remainder to the right of lead + below.
+    const rightNodes = tail.slice(0, Math.ceil(tail.length / 2));
+    const belowNodes = tail.slice(rightNodes.length);
+    if (rightNodes.length && rightW >= 36) {
+      restBoxes.push(...squarifyPanel(rightNodes, rightX0, 0, width, usedBottom, padding));
+    }
+    const belowPool = belowNodes.length ? belowNodes : rightNodes.length ? [] : tail;
+    if (belowPool.length && belowH >= 36) {
+      restBoxes.push(...squarifyPanel(belowPool, 0, belowY0, width, height, padding));
+    } else if (tail.length) {
+      restBoxes.push(...squarifyPanel(tail, 0, belowY0, width, height, padding));
+    }
+  } else if (belowH >= 40) {
+    restBoxes.push(...squarifyPanel(tail, 0, belowY0, width, height, padding));
+  } else if (rightW >= 40) {
+    restBoxes.push(...squarifyPanel(tail, rightX0, 0, width, height, padding));
+  } else {
+    restBoxes.push(...squarifyPanel(tail, 0, belowY0, width, height, padding));
+  }
+
+  return [...leadBoxes, ...restBoxes];
 }
 
 function rowWorstAspect(row: PanelNode[], rowValue: number, shortSide: number): number {
@@ -495,7 +603,8 @@ export function layoutHeatmapLeaves(
     return layoutSliceDice(ordered, 0, 0, width, height, Math.max(0, padding), height >= width);
   }
 
-  const packed = squarifyPanel(nodes, 0, 0, width, height, padding);
+  // Default (and mirrors): near-square #1–#3, then squarify the rest.
+  const packed = layoutNearSquareTop3(nodes, width, height, padding);
   if (variant === "mirror-x") return mirrorBoxes(packed, width, height, "x");
   if (variant === "mirror-y") return mirrorBoxes(packed, width, height, "y");
   return packed;

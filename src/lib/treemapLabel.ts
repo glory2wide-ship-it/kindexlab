@@ -1,4 +1,5 @@
 import {
+  HEATMAP_WRAP_MIN_CHARS,
   heatmapLabelCharCount,
   heatmapLabelDisplayLength,
 } from "@/lib/heatmap-display-name";
@@ -10,6 +11,10 @@ const MAX_RATE = 18;
 const MIN_ARTIST = 10;
 const MAX_ARTIST = 14;
 const NAME_LINE_HEIGHT = 1.14;
+
+/** Korean particles / endings — keep with the preceding word when breaking. */
+const TRAILING_JOSA =
+  /^(은|는|이|가|을|를|의|에|에서|으로|로써|로서|로|와|과|도|만|부터|까지|에게|한테|께|이며|이고|이나|나|며|고|요|다)$/;
 
 export interface TreemapLabelLayout {
   showName: boolean;
@@ -54,23 +59,9 @@ export function measureTextWidth(text: string, fontSize: number): number {
   return units * fontSize;
 }
 
-function wrapLineCount(text: string, fontSize: number, maxWidth: number): number {
-  const width = measureTextWidth(text, fontSize);
-  if (width <= maxWidth) return 1;
-  return Math.ceil(width / Math.max(8, maxWidth));
-}
-
 function fitSizeToWidth(text: string, size: number, maxWidth: number, min: number): number {
   let next = size;
   while (next > min && measureTextWidth(text, next) > maxWidth) {
-    next -= 0.3;
-  }
-  return next;
-}
-
-function fitWrappedSize(text: string, start: number, maxWidth: number, min: number, maxLines: number): number {
-  let next = start;
-  while (next > min && wrapLineCount(text, next, maxWidth) > maxLines) {
     next -= 0.3;
   }
   return next;
@@ -92,46 +83,102 @@ function nameBlockHeight(size: number, lines: number): number {
 }
 
 /**
- * Names with 6+ characters (spaces/symbols included) wrap to 2+ lines so type
+ * Names with 10+ characters (spaces/symbols included) wrap to 2+ lines so type
  * can stay larger. Very long titles may use a third line when the tile allows.
  */
 function maxLinesForTile(width: number, height: number, displayLen: number): number {
-  if (displayLen < 6) return 1;
-  if (displayLen >= 16 && height >= 64 && width >= 70) return 3;
+  if (displayLen < HEATMAP_WRAP_MIN_CHARS) return 1;
+  if (displayLen >= 18 && height >= 64 && width >= 70) return 3;
   if (height >= 36 && width >= 44) return 2;
   return 1;
 }
 
+/** Candidate soft-break indices (between chars), preferring spaces / sense boundaries. */
+function softBreakCandidates(text: string): number[] {
+  const breaks: number[] = [];
+  const tokens = text.split(/(\s+|·|\/|-)/);
+  let cursor = 0;
+  for (let t = 0; t < tokens.length; t++) {
+    const token = tokens[t] ?? "";
+    if (!token) continue;
+    const next = cursor + token.length;
+    if (/^\s+$/.test(token) || token === "·" || token === "/" || token === "-") {
+      // Break after the separator so the next word starts the new line.
+      if (next > 0 && next < text.length) breaks.push(next);
+    } else if (t + 2 < tokens.length && /^\s+$/.test(tokens[t + 1] ?? "")) {
+      // Break before space when following token looks like a josa-only particle.
+      const following = tokens[t + 2] ?? "";
+      if (!TRAILING_JOSA.test(following) && cursor > 0) {
+        /* space break handled above */
+      }
+    }
+    cursor = next;
+  }
+
+  // Hangul compounds without spaces: prefer mid breaks after 2+ syllables,
+  // avoiding a trailing josa stranded alone on the next line.
+  if (!/\s/.test(text) && text.length >= HEATMAP_WRAP_MIN_CHARS) {
+    for (let i = 2; i < text.length - 1; i++) {
+      const rest = text.slice(i);
+      if (TRAILING_JOSA.test(rest)) continue;
+      // Prefer breaks near the middle.
+      breaks.push(i);
+    }
+  }
+
+  return [...new Set(breaks)].sort((a, b) => a - b);
+}
+
+function pickBreakNear(text: string, target: number, candidates: number[]): number {
+  if (!candidates.length) return target;
+  return candidates.reduce(
+    (best, index) => (Math.abs(index - target) < Math.abs(best - target) ? index : best),
+    candidates[0]!,
+  );
+}
+
 /**
- * Insert soft line breaks so names with 6+ characters (spaces/symbols included)
- * paint on 2+ lines and can keep a larger type size.
+ * Insert soft line breaks so names with 10+ characters (spaces/symbols included)
+ * paint on 2+ lines. Prefers spaces, punctuation, and Hangul sense boundaries
+ * (조사·띄어쓰기) over raw mid-string cuts.
  */
 export function softWrapHeatmapName(name: string, maxLines = 2): string {
   const text = name.replace(/\s+/g, " ").trim();
-  if (text.length < 6 || maxLines < 2) return text;
+  if (text.length < HEATMAP_WRAP_MIN_CHARS || maxLines < 2) return text;
 
-  const linesWanted = text.length >= 16 && maxLines >= 3 ? 3 : 2;
-  // Prefer existing spaces / punctuation as break points.
-  const softBreaks: number[] = [];
-  for (let i = 1; i < text.length - 1; i++) {
-    const ch = text[i]!;
-    if (ch === " " || ch === "·" || ch === "/" || ch === "-" || ch === "·") softBreaks.push(i);
-  }
+  const linesWanted = text.length >= 18 && maxLines >= 3 ? 3 : 2;
+  const candidates = softBreakCandidates(text);
 
   if (linesWanted === 2) {
     const mid = Math.ceil(text.length / 2);
-    const atSpace = softBreaks.reduce(
-      (best, index) => (Math.abs(index - mid) < Math.abs(best - mid) ? index : best),
-      softBreaks[0] ?? mid,
-    );
-    if (softBreaks.length && Math.abs(atSpace - mid) <= Math.max(3, Math.floor(text.length * 0.35))) {
-      return `${text.slice(0, atSpace).trim()}\n${text.slice(atSpace).trim()}`;
+    const at = pickBreakNear(text, mid, candidates);
+    const loose =
+      candidates.length && Math.abs(at - mid) <= Math.max(4, Math.floor(text.length * 0.4));
+    const cut = loose ? at : mid;
+    const left = text.slice(0, cut).trim();
+    const right = text.slice(cut).trim();
+    if (!left || !right) return text;
+    // Avoid a one-syllable orphan on either line when a nearby candidate exists.
+    if (left.length === 1 || right.length === 1) {
+      const safer = candidates.find((index) => index >= 2 && text.length - index >= 2);
+      if (safer != null) {
+        return `${text.slice(0, safer).trim()}\n${text.slice(safer).trim()}`;
+      }
     }
-    return `${text.slice(0, mid)}\n${text.slice(mid)}`;
+    return `${left}\n${right}`;
   }
 
   const third = Math.ceil(text.length / 3);
-  return `${text.slice(0, third)}\n${text.slice(third, third * 2)}\n${text.slice(third * 2)}`;
+  const a = pickBreakNear(text, third, candidates);
+  const b = pickBreakNear(
+    text,
+    third * 2,
+    candidates.filter((index) => index > a + 1),
+  );
+  const l1 = text.slice(0, a).trim();
+  const l2 = text.slice(a, b).trim();
+  const l3 = text.slice(b).trim();
+  return [l1, l2, l3].filter(Boolean).join("\n");
 }
 
 /**
@@ -174,8 +221,8 @@ function densityNameSize(input: {
   size = clamp(size, floor, ceiling);
 
   // Multi-line long names: nudge size up — wrapping already frees width.
-  if (maxLines >= 2 && displayLen >= 6) {
-    size = Math.min(ceiling, size * 1.12);
+  if (maxLines >= 2 && displayLen >= HEATMAP_WRAP_MIN_CHARS) {
+    size = Math.min(ceiling, size * 1.14);
   }
 
   // Measure against the longest soft-wrapped line so type can grow.
@@ -193,7 +240,7 @@ function densityNameSize(input: {
 }
 
 /**
- * Hangul-first treemap label: full names wrap at 6+ chars; size follows density
+ * Hangul-first treemap label: full names wrap at 10+ chars; size follows density
  * and box geometry without ticker-style clipping.
  */
 export function layoutTreemapLabel(input: {
