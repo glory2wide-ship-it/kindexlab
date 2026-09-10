@@ -1,12 +1,12 @@
 /** Verifies strict rank area order, coverage (no gaps), and layout variants. */
 function maxLeaderShareForTest(count: number): number {
-  // Dense heatmaps (15–20) keep #1 near 10–11%. Small boards may lead larger.
-  if (count >= 20) return 0.12;
-  if (count >= 15) return 0.13;
-  if (count >= 10) return 0.15;
-  if (count >= 6) return 0.28;
-  if (count >= 4) return 0.4;
-  return 0.5;
+  // Dense heatmaps (15–20) keep #1 near 12–14%. Small boards may lead larger.
+  if (count >= 20) return 0.145;
+  if (count >= 15) return 0.16;
+  if (count >= 10) return 0.18;
+  if (count >= 6) return 0.3;
+  if (count >= 4) return 0.42;
+  return 0.55;
 }
 
 async function main() {
@@ -52,10 +52,10 @@ async function main() {
     if (count >= 2 && shares[0]! < shares[1]! * 1.08) {
       throw new Error(`#1/#2 contrast too weak for n=${count}: ${shares[0]} vs ${shares[1]}`);
     }
-    if (count >= 15 && shares[0]! > 0.145) {
+    if (count >= 15 && shares[0]! > 0.17) {
       throw new Error(`#1 too large for dense map n=${count}: ${shares[0]}`);
     }
-    if (count >= 15 && (shares.at(-1) ?? 0) < 0.025) {
+    if (count >= 15 && (shares.at(-1) ?? 0) < 0.022) {
       throw new Error(`tail too small for readable names n=${count}: ${shares.at(-1)}`);
     }
   }

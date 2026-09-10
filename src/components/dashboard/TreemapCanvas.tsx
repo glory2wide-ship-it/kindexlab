@@ -131,7 +131,7 @@ export function TreemapView({
     try {
       if (!visible.length) return [];
       const byId = new Map(visible.map((entity) => [entity.id, entity]));
-      const layoutSeed = `${category}:${visible[0]?.id ?? "empty"}:${visible.length}`;
+      const layoutSeed = `${category}:${visible[0]?.heatmapGroup ?? visible[0]?.type ?? "all"}:${visible[0]?.id ?? "empty"}:${visible.length}`;
       return layoutHeatmapLeaves(
         visible.map((entity, index) => {
           const tile = heatmapTileLabel(entity);
@@ -146,9 +146,8 @@ export function TreemapView({
         width,
         height,
         2,
-        isMobileViewport
-          ? { seed: layoutSeed }
-          : { variant: "squarify" },
+        // Seeded packing so category / submenu boards do not all look identical.
+        { seed: layoutSeed },
       ).flatMap((box) => {
         const entity = byId.get(box.id);
         if (!entity) return [];
@@ -158,7 +157,7 @@ export function TreemapView({
     } catch {
       return [];
     }
-  }, [category, height, isMobileViewport, timeframe, visible, width]);
+  }, [category, height, timeframe, visible, width]);
 
   function moveHover(event: MouseEvent, entity: RankingEntity, change: number) {
     const displayRank = displayRankById.get(entity.id) ?? entity.rank;

@@ -67,6 +67,19 @@ function heatmapNameDedupeKey(name: string): string {
     .toLowerCase();
 }
 
+/** Drop company/drama noise that Trends mis-tags as celebrity (e.g. 대우건설). */
+function isNoiseCelebrityEntity(
+  entity: Pick<RankingEntity, "type" | "name" | "heatmapGroup" | "slug">,
+): boolean {
+  if (entity.type !== "celebrity") return false;
+  const group = entity.heatmapGroup ?? "";
+  const slug = entity.slug ?? "";
+  if (group === "스타" || slug.startsWith("star-reputation-index") || !group) {
+    return !isLikelyCelebrityName(entity.name);
+  }
+  return !isLikelyCelebrityName(entity.name);
+}
+
 export interface HeatmapBoardPayload {
   slug: string;
   title: string;
@@ -128,7 +141,12 @@ export function isRetiredHeatmapEntity(
 export function withoutHeadlineHeatmapItems<
   T extends Pick<RankingEntity, "type" | "slug" | "heatmapGroup" | "tags" | "name">,
 >(items: T[]): T[] {
-  return items.filter((item) => !isHeadlineHeatmapEntity(item) && !isRetiredHeatmapEntity(item));
+  return items.filter(
+    (item) =>
+      !isHeadlineHeatmapEntity(item) &&
+      !isRetiredHeatmapEntity(item) &&
+      !isNoiseCelebrityEntity(item),
+  );
 }
 
 function normalizeBoardRanking(def: BoardDefinition, rows: BoardRankEntry[]): BoardRankEntry[] {

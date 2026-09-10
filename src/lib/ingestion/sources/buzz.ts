@@ -1,4 +1,5 @@
 import { catalogEntries, matchCatalog } from "@/lib/ingestion/catalog";
+import { isLikelyCelebrityName } from "@/lib/boards/celebrity";
 import { fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
 import { namesOverlap, normalizeName } from "@/lib/ingestion/names";
 import { parseNumber, parseRssItems } from "@/lib/ingestion/parse";
@@ -176,17 +177,9 @@ export function classifyBuzzType(name: string, tags: string[]): EntityType {
   if (/영화|박스오피스|개봉작|극장/.test(blob)) return "movie";
   if (/아이돌|K-?POP|걸그룹|보이그룹/.test(blob)) return "kpop";
   if (/트로트|미스터트롯|미스트롯|성인가요|가요무대|7080|트롯/.test(blob)) return "trot";
-  if (/배우|연예인|스타 평판/.test(blob)) return "celebrity";
+  if (/배우|연예인|스타 평판/.test(blob) && isLikelyCelebrityName(name)) return "celebrity";
   // Person-shaped Hangul names only — never dump Trends noise into celebrity.
-  const person = name.replace(/\s*\([^)]*\)\s*/g, " ").replace(/^\[[^\]]+\]\s*/, "").trim();
-  const hangul = person.replace(/[^가-힣]/g, "");
-  if (
-    hangul.length >= 2 &&
-    hangul.length <= 6 &&
-    !/(건설|엔터테인먼트|그룹|은행|증권|전자|카페|아파트)/.test(person)
-  ) {
-    return "celebrity";
-  }
+  if (isLikelyCelebrityName(name)) return "celebrity";
   return "tv_show";
 }
 

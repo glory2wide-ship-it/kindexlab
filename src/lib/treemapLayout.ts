@@ -13,18 +13,18 @@ export interface TreemapBox {
 }
 
 /** Soft typical share for the leader — kept modest so lower tiles stay readable. */
-export const RANK_1_AREA_RATIO = 0.1;
-/** Soft ceiling for rank 1 on dense boards (~50% below prior megatile era). */
-export const RANK_TOP_AREA_CAP = 0.1;
+export const RANK_1_AREA_RATIO = 0.12;
+/** Soft ceiling for rank 1 on dense boards (~20% above prior compact era). */
+export const RANK_TOP_AREA_CAP = 0.12;
 export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
 /** Soft ceiling used by helpers; live layout uses dynamic caps by tile count. */
 export const RANK_BELOW_CAP = RANK_1_AREA_RATIO - 0.001;
 /** Soft ceiling for near-square helper aspect (max(w,h)/min(w,h)). */
 export const RANK_1_MAX_ASPECT = 1.35;
 /** Neighbor step after #1 — keeps #2 well below the leader without starving the tail. */
-export const RANK_AREA_STEP = 0.78;
+export const RANK_AREA_STEP = 0.8;
 /** Soft floor so lower-rank tiles keep readable label area. */
-export const RANK_TAIL_FLOOR = 0.032;
+export const RANK_TAIL_FLOOR = 0.03;
 
 export type HeatmapLayoutVariant =
   | "squarify"
@@ -73,11 +73,11 @@ function zipfExponent(count: number): number {
 function maxLeaderShare(count: number, _step = RANK_AREA_STEP): number {
   void _step;
   if (count >= 20) return RANK_TOP_AREA_CAP;
-  if (count >= 15) return 0.11;
-  if (count >= 10) return 0.13;
-  if (count >= 6) return 0.17;
-  if (count >= 4) return 0.24;
-  return 0.32;
+  if (count >= 15) return 0.132;
+  if (count >= 10) return 0.156;
+  if (count >= 6) return 0.2;
+  if (count >= 4) return 0.28;
+  return 0.36;
 }
 
 /**
@@ -350,6 +350,11 @@ export function pickHeatmapLayoutVariant(seed: string): HeatmapLayoutVariant {
     "bands-top",
     "spine-left",
     "slice-dice",
+    // Re-weight common readable packs so menus feel distinct without chaos.
+    "bands-top",
+    "spine-left",
+    "squarify",
+    "mirror-x",
   ];
   return variants[hashSeed(seed) % variants.length]!;
 }
@@ -546,21 +551,20 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
   values = renormalize(enforceStrictDescending(renormalize(values), Math.max(step, 0.88)));
 
   /**
-   * Dense heatmaps (10+): blend toward uniform so #1/#2 shrink ~50% vs the prior
-   * megatile era, while lower ranks gain area for readable names.
+   * Dense heatmaps (10+): mild uniform blend so tails stay readable, while
+   * #1–#3 land near their ~20% larger caps.
    */
   if (n >= 10) {
     const uniform = 1 / n;
-    // Higher mix → flatter map. Keeps #1 near ~11–13% on 15–20 tile boards.
-    const mix = n >= 18 ? 0.64 : n >= 14 ? 0.6 : 0.55;
+    // Keep Zipf dominant so #1 approaches ~12% on 20-tile boards.
+    const mix = n >= 18 ? 0.34 : n >= 14 ? 0.32 : 0.28;
     values = values.map((value) => mix * uniform + (1 - mix) * value);
-    values = renormalize(enforceStrictDescending(values, 0.97));
+    values = renormalize(enforceStrictDescending(values, 0.96));
 
-    const cap1 = n >= 18 ? 0.1 : n >= 14 ? 0.11 : 0.13;
-    // #2 ≤ ~75% of prior megatile era (~15% → ≤7.5–8.5%).
-    const cap2 = Math.min(cap1 * 0.78, n >= 18 ? 0.072 : n >= 14 ? 0.08 : 0.1);
+    const cap1 = n >= 18 ? 0.12 : n >= 14 ? 0.132 : 0.156;
+    const cap2 = Math.min(cap1 * 0.8, n >= 18 ? 0.086 : n >= 14 ? 0.096 : 0.12);
+    const cap3 = Math.min(cap2 * 0.86, n >= 18 ? 0.074 : n >= 14 ? 0.082 : 0.1);
 
-    // Cap #1, then force #2 clearly below #1, spilling excess into ranks 3+.
     const spillFrom = (index: number, target: number) => {
       if (values[index]! <= target + 1e-12) return;
       const excess = values[index]! - target;
@@ -573,9 +577,27 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
       }
     };
 
+    const pullFromTail = (index: number, floor: number) => {
+      if (values[index]! >= floor - 1e-12) return;
+      let need = floor - values[index]!;
+      values[index] = floor;
+      for (let i = values.length - 1; i > index && need > 1e-10; i--) {
+        const give = Math.min(need, Math.max(0, values[i]! - RANK_TAIL_FLOOR * 0.7));
+        if (give <= 0) continue;
+        values[i] = values[i]! - give;
+        need -= give;
+      }
+      if (need > 1e-10) values[index] = floor - need;
+    };
+
     spillFrom(0, cap1);
-    spillFrom(1, Math.min(cap2, values[0]! * 0.78));
-    values = enforceStrictDescending(values, 0.97);
+    spillFrom(1, Math.min(cap2, values[0]! * 0.8));
+    if (values.length > 2) spillFrom(2, Math.min(cap3, values[1]! * 0.86));
+    // If Zipf+mix undershot, lift #1–#3 toward their visual targets.
+    pullFromTail(0, cap1 * 0.96);
+    pullFromTail(1, Math.min(cap2 * 0.96, values[0]! * 0.8));
+    if (values.length > 2) pullFromTail(2, Math.min(cap3 * 0.96, values[1]! * 0.86));
+    values = enforceStrictDescending(values, 0.96);
 
     // Unit-sum without re-inflating the capped head.
     const sum = values.reduce((total, value) => total + value, 0) || 1;
@@ -585,11 +607,11 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
       const restTarget = Math.max(1e-9, 1 - head);
       const restSum = rest.reduce((total, value) => total + value, 0) || 1;
       values = [head, ...rest.map((value) => (value / restSum) * restTarget)];
-      values = enforceStrictDescending(values, 0.97);
+      values = enforceStrictDescending(values, 0.96);
       // If descending crushed mass, top up from the bottom within ceilings.
       let left = 1 - values.reduce((total, value) => total + value, 0);
       for (let i = values.length - 1; i >= 1 && left > 1e-10; i--) {
-        const room = values[i - 1]! * 0.97 - values[i]!;
+        const room = values[i - 1]! * 0.96 - values[i]!;
         if (room <= 0) continue;
         const add = Math.min(room, left);
         values[i] = values[i]! + add;

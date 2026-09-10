@@ -94,8 +94,8 @@ function liveRankingForBoard(
   const rows = snapshot.items
     .filter((item) => typeSet.has(item.type))
     .filter((item) => {
-      // 스타 board: reject company / drama / Trends noise masquerading as celebrity.
-      if (def.slug === "star-reputation-index") {
+      // 스타 board / celebrity tape: reject company / drama / Trends noise.
+      if (def.slug === "star-reputation-index" || item.type === "celebrity") {
         return isLikelyCelebrityName(item.name);
       }
       return passesKpopTrotBoardFilter(def.slug, item.name);

@@ -6,7 +6,7 @@ import { namesOverlap, normalizeName } from "@/lib/ingestion/names";
 import type { BoardRankEntry } from "@/lib/boards/types";
 
 const COMPANY_NOISE =
-  /(건설|엔터테인먼트|entertainment|홀딩스|그룹|은행|증권|카드|보험|전자|중공업|자동차|항공|통신|제약|바이오|카페|아파트|래미안|힐스테이트|아이파크|주식회사|\binc\b|\bltd\b|jyp|sm\b|hybe|yg\b)/i;
+  /(건설|엔터테인먼트|entertainment|홀딩스|그룹|은행|증권|카드|보험|전자|중공업|자동차|항공|통신|제약|바이오|카페|아파트|래미안|힐스테이트|아이파크|주식회사|공사|공단|산업|케미칼|케미컬|해운|물산|제철|시멘트|대우|현대건설|삼성물산|엘지|LG\b|SK\b|포스코|한화|롯데건설|\binc\b|\bltd\b|jyp|sm\b|hybe|yg\b)/i;
 
 const DRAMA_OR_TITLE_NOISE =
   /(이\s*온다|시즌|에피소드|드라마|영화|개봉|예고편|공식\s*티저|ost\b|뮤비|mv\b|대\s*페예노르트|대\s*레알)/i;
@@ -21,6 +21,10 @@ export function isLikelyCelebrityName(name: string): boolean {
   if (COMPANY_NOISE.test(cleaned) || DRAMA_OR_TITLE_NOISE.test(cleaned)) return false;
   if (NON_PERSON_TOKENS.test(cleaned.replace(/\s+/g, ""))) return false;
   if (/\d{2,}/.test(cleaned)) return false;
+  // Company-shaped endings even when the stem is short (대우건설, ○○은행).
+  if (/(건설|은행|증권|카드|보험|전자|중공업|홀딩스|물산|제철|케미칼|케미컬)$/.test(cleaned)) {
+    return false;
+  }
   // Pure English brand-like tokens (all caps / long ascii) are usually noise.
   if (/^[A-Za-z0-9 .&'-]{8,}$/.test(cleaned) && !/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?$/.test(cleaned)) {
     return false;

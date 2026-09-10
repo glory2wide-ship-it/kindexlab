@@ -4,9 +4,9 @@ import {
   heatmapLabelDisplayLength,
 } from "@/lib/heatmap-display-name";
 
-const MIN_NAME = 13;
-const READABLE_NAME = 14;
-const MAX_NAME = 28;
+const MIN_NAME = 14.5;
+const READABLE_NAME = 15.5;
+const MAX_NAME = 30;
 const MIN_RATE = 12;
 const MAX_RATE = 18;
 const MIN_ARTIST = 10;
@@ -219,13 +219,18 @@ function densityNameSize(input: {
   const shortBoost = chars <= 4 && maxLines === 1 ? 1.04 : 1;
   size *= shortBoost;
 
-  const floor = Math.min(MIN_NAME, Math.max(11, heightCap * 0.9));
+  const floor = Math.min(MIN_NAME, Math.max(12.5, heightCap * 0.92));
   const ceiling = Math.max(floor, Math.min(MAX_NAME, heightCap));
   size = clamp(size, floor, ceiling);
 
   // Multi-line long names: nudge size up — wrapping already frees width.
   if (maxLines >= 2 && displayLen >= HEATMAP_WRAP_MIN_CHARS) {
-    size = Math.min(ceiling, size * 1.14);
+    size = Math.min(ceiling, size * 1.16);
+  }
+
+  // Small tail tiles: prefer a larger floor over ultra-dense shrink.
+  if (input.innerH < 48 || input.innerW < 70) {
+    size = Math.max(size, Math.min(ceiling, MIN_NAME));
   }
 
   // Measure against the longest soft-wrapped line so type can grow.
@@ -357,9 +362,9 @@ export function layoutTreemapLabel(input: {
     }
   }
 
-  const nameFloor = Math.min(MIN_NAME, Math.max(11, nameBudget * 0.28));
+  const nameFloor = Math.min(MIN_NAME, Math.max(12.5, nameBudget * 0.34));
   while (stack > innerH && nameSize > nameFloor) {
-    nameSize -= 0.3;
+    nameSize -= 0.25;
     stack = nameH();
     if (usedArtist) stack += gap + artistSize;
     if (usedRate) stack += gap + rateSize;
