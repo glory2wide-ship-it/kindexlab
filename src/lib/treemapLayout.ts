@@ -12,13 +12,30 @@ export interface TreemapBox {
   y1: number;
 }
 
-/** Soft typical share for the leader on a ~15–20 tile Finviz-style board. */
-export const RANK_1_AREA_RATIO = 0.15;
+/** Soft typical share for the leader — hard-capped at 10% of the map. */
+export const RANK_1_AREA_RATIO = 0.1;
+/** Hard ceiling for rank 1 and rank 2 shares (mobile + desktop). */
+export const RANK_TOP_AREA_CAP = 0.1;
 export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
 /** Soft ceiling used by helpers; live layout uses dynamic caps by tile count. */
 export const RANK_BELOW_CAP = RANK_1_AREA_RATIO - 0.001;
 /** Soft ceiling for near-square helper aspect (max(w,h)/min(w,h)). */
 export const RANK_1_MAX_ASPECT = 1.25;
+
+export type HeatmapLayoutVariant =
+  | "squarify"
+  | "mirror-x"
+  | "mirror-y"
+  | "bands-top"
+  | "spine-left"
+  | "slice-dice";
+
+export interface HeatmapLayoutOptions {
+  /** Packing recipe — mobile picks a seeded variant for visual variety. */
+  variant?: HeatmapLayoutVariant;
+  /** Stable seed (category / top id) so the same board keeps one look per session. */
+  seed?: string;
+}
 
 export interface HeatmapSizeInput {
   id: string;
@@ -39,21 +56,18 @@ function safeScore(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-/** Milder Zipf on denser boards — Finviz market maps step down smoothly, not cliff-like. */
+/** Flatter Zipf so #1/#2 stay ≤10% and mid/low ranks stay readable. */
 function zipfExponent(count: number): number {
-  if (count >= 20) return 0.92;
-  if (count >= 15) return 0.98;
-  if (count >= 10) return 1.05;
-  return 1.15;
+  if (count >= 20) return 0.52;
+  if (count >= 15) return 0.58;
+  if (count >= 10) return 0.68;
+  if (count >= 6) return 0.78;
+  return 0.88;
 }
 
-/** Soft max share for the largest tile so one box does not dominate the map. */
-function maxLeaderShare(count: number): number {
-  if (count <= 4) return 0.38;
-  if (count <= 6) return 0.34;
-  if (count <= 10) return 0.26;
-  if (count <= 15) return 0.2;
-  return 0.17;
+/** Hard max share for #1 (and soft guide for early redistribution). */
+function maxLeaderShare(_count: number): number {
+  return RANK_TOP_AREA_CAP;
 }
 
 /**
@@ -82,10 +96,10 @@ function readabilityAreaBoost(name?: string): number {
 }
 
 /**
- * Strict 1 ≥ 2 ≥ 3 … with a visible step so each next rank is smaller on screen.
- * `step` is the max share of the previous tile (e.g. 0.94 → at most 94% of #n-1).
+ * Strict 1 ≥ 2 ≥ 3 … with a gentler step so the tail keeps usable area.
+ * `step` is the max share of the previous tile (e.g. 0.97 → at most 97% of #n-1).
  */
-function enforceStrictDescending(values: number[], step = 0.94): number[] {
+function enforceStrictDescending(values: number[], step = 0.97): number[] {
   const out = [...values];
   for (let i = 1; i < out.length; i++) {
     const ceiling = out[i - 1]! * step;
@@ -308,16 +322,149 @@ function squarifyFill(
   ];
 }
 
+function hashSeed(seed: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+export function pickHeatmapLayoutVariant(seed: string): HeatmapLayoutVariant {
+  const variants: HeatmapLayoutVariant[] = [
+    "squarify",
+    "mirror-x",
+    "mirror-y",
+    "bands-top",
+    "spine-left",
+    "slice-dice",
+  ];
+  return variants[hashSeed(seed) % variants.length]!;
+}
+
+function mirrorBoxes(
+  boxes: TreemapBox[],
+  width: number,
+  height: number,
+  axis: "x" | "y",
+): TreemapBox[] {
+  return boxes.map((box) => {
+    if (axis === "x") {
+      return {
+        ...box,
+        x0: width - box.x1,
+        x1: width - box.x0,
+      };
+    }
+    return {
+      ...box,
+      y0: height - box.y1,
+      y1: height - box.y0,
+    };
+  });
+}
+
+/** Top band for #1–#2, squarified remainder below — reads differently from pure squarify. */
+function layoutBandsTop(
+  nodes: PanelNode[],
+  width: number,
+  height: number,
+  padding: number,
+): TreemapBox[] {
+  const ordered = [...nodes].sort((a, b) => a.rank - b.rank || b.value - a.value);
+  if (ordered.length <= 2) {
+    return squarifyPanel(ordered, 0, 0, width, height, padding);
+  }
+  const total = ordered.reduce((sum, node) => sum + node.value, 0) || 1;
+  const head = ordered.slice(0, Math.min(2, ordered.length));
+  const tail = ordered.slice(head.length);
+  const headShare = head.reduce((sum, node) => sum + node.value, 0) / total;
+  // Full-width band height matches allocated area share so #1/#2 stay ≤10% each.
+  const bandH = Math.max(36, Math.min(height - 36, height * headShare));
+  const gap = Math.max(0, padding);
+  return [
+    ...squarifyPanel(head, 0, 0, width, bandH, padding),
+    ...squarifyPanel(tail, 0, Math.min(bandH + gap, height), width, height, padding),
+  ];
+}
+
+/** Left spine for #1–#3, squarified remainder on the right. */
+function layoutSpineLeft(
+  nodes: PanelNode[],
+  width: number,
+  height: number,
+  padding: number,
+): TreemapBox[] {
+  const ordered = [...nodes].sort((a, b) => a.rank - b.rank || b.value - a.value);
+  if (ordered.length <= 3) {
+    return squarifyPanel(ordered, 0, 0, width, height, padding);
+  }
+  const total = ordered.reduce((sum, node) => sum + node.value, 0) || 1;
+  const head = ordered.slice(0, 3);
+  const tail = ordered.slice(3);
+  const headShare = head.reduce((sum, node) => sum + node.value, 0) / total;
+  // Full-height spine width matches allocated area share.
+  const spineW = Math.max(40, Math.min(width - 40, width * headShare));
+  const gap = Math.max(0, padding);
+  return [
+    ...squarifyPanel(head, 0, 0, spineW, height, padding),
+    ...squarifyPanel(tail, Math.min(spineW + gap, width), 0, width, height, padding),
+  ];
+}
+
+/** Alternate horizontal/vertical strips (slice-and-dice) for a distinct mobile rhythm. */
+function layoutSliceDice(
+  nodes: PanelNode[],
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  gap: number,
+  vertical: boolean,
+): TreemapBox[] {
+  if (!nodes.length) return [];
+  if (nodes.length === 1) {
+    return [{ id: nodes[0]!.id, rank: nodes[0]!.rank, x0, y0, x1, y1 }];
+  }
+  const w = x1 - x0;
+  const h = y1 - y0;
+  if (w < 8 || h < 8) {
+    return layoutStrip(nodes, x0, y0, x1, y1, 0, h >= w);
+  }
+
+  // Split off the head chunk (1–3 tiles), recurse on the remainder with flipped axis.
+  const take = Math.min(nodes.length - 1, nodes.length >= 8 ? 3 : nodes.length >= 5 ? 2 : 1);
+  const head = nodes.slice(0, take);
+  const rest = nodes.slice(take);
+  const total = nodes.reduce((sum, node) => sum + node.value, 0) || 1;
+  const headValue = head.reduce((sum, node) => sum + node.value, 0);
+  const headShare = headValue / total;
+
+  if (vertical) {
+    const cut = y0 + Math.max(12, Math.min(h - 12, h * headShare));
+    return [
+      ...layoutStrip(head, x0, y0, x1, cut, gap, false),
+      ...layoutSliceDice(rest, x0, Math.min(cut + gap, y1), x1, y1, gap, false),
+    ];
+  }
+  const cut = x0 + Math.max(12, Math.min(w - 12, w * headShare));
+  return [
+    ...layoutStrip(head, x0, y0, cut, y1, gap, true),
+    ...layoutSliceDice(rest, Math.min(cut + gap, x1), y0, x1, y1, gap, true),
+  ];
+}
+
 /**
- * Finviz-style squarified treemap over the full canvas.
- * Largest tiles (by score×rank weight) are packed first so the leader naturally
- * anchors near a corner with near-square neighbors — no forced left-column stack.
+ * Squarified (or variant) treemap over the full canvas.
+ * Mobile can seed a different packing recipe so boards do not all look identical.
  */
 export function layoutHeatmapLeaves(
   items: HeatmapSizeInput[],
   width: number,
   height: number,
   padding = 2,
+  options?: HeatmapLayoutOptions,
 ): TreemapBox[] {
   if (!items.length || width <= 0 || height <= 0) return [];
 
@@ -331,14 +478,32 @@ export function layoutHeatmapLeaves(
     rank: item.rank ?? index + 1,
     value: Math.max(allocation.ratios.get(item.id) ?? 0, 1e-6),
   }));
-  // Squarify expects largest-first; that also tends to park #1 top-left like Finviz.
   nodes.sort((a, b) => b.value - a.value || a.rank - b.rank);
-  return squarifyPanel(nodes, 0, 0, width, height, padding);
+
+  const variant =
+    options?.variant ??
+    (options?.seed ? pickHeatmapLayoutVariant(options.seed) : "squarify");
+
+  if (variant === "bands-top") {
+    return layoutBandsTop(nodes, width, height, padding);
+  }
+  if (variant === "spine-left") {
+    return layoutSpineLeft(nodes, width, height, padding);
+  }
+  if (variant === "slice-dice") {
+    const ordered = [...nodes].sort((a, b) => a.rank - b.rank || b.value - a.value);
+    return layoutSliceDice(ordered, 0, 0, width, height, Math.max(0, padding), height >= width);
+  }
+
+  const packed = squarifyPanel(nodes, 0, 0, width, height, padding);
+  if (variant === "mirror-x") return mirrorBoxes(packed, width, height, "x");
+  if (variant === "mirror-y") return mirrorBoxes(packed, width, height, "y");
+  return packed;
 }
 
 /**
- * Continuous Finviz-like area shares for every tile (including rank 1).
- * Rank order is strict (1 > 2 > 3 …). Score and name length only nudge sizes.
+ * Continuous area shares for every tile.
+ * Rank 1 and 2 are hard-capped at 10% of the map so lower ranks stay readable.
  */
 export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSizeAllocation {
   const ratios = new Map<string, number>();
@@ -360,50 +525,69 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
   let values = ordered.map(({ item, rank }) =>
     finvizWeight(rank, item.score, peak, exponent) * readabilityAreaBoost(item.name),
   );
-  values = renormalize(enforceStrictDescending(renormalize(values), 0.94));
+  values = renormalize(enforceStrictDescending(renormalize(values), 0.97));
 
   const leaderCap = maxLeaderShare(n);
-  for (let guard = 0; guard < 8 && values[0]! > leaderCap + 1e-9; guard += 1) {
-    const excess = values[0]! - leaderCap;
-    values[0] = leaderCap;
-    const restSum = values.slice(1).reduce((sum, value) => sum + value, 0) || 1;
-    for (let i = 1; i < values.length; i++) {
-      values[i] = values[i]! + excess * (values[i]! / restSum);
-    }
-    values = renormalize(enforceStrictDescending(values, 0.94));
+  const secondCap = Math.min(RANK_TOP_AREA_CAP, leaderCap);
+
+  // Cap #1/#2 at 10%, keep #1 ≥ #2, pour the rest into ranks 3+ (may exceed #2 —
+  // that is intentional so lower names stay readable under the leader caps).
+  values[0] = Math.min(values[0]!, leaderCap);
+  if (n > 1) values[1] = Math.min(values[1]!, secondCap, values[0]! * 0.97);
+
+  const head = values[0]! + (n > 1 ? values[1]! : 0);
+  const tailNeed = Math.max(0, 1 - head);
+  if (n <= 2) {
+    if (n === 2) values[1] = Math.min(secondCap, 1 - values[0]!);
+    values[0] = Math.min(leaderCap, 1 - (values[1] ?? 0));
+  } else {
+    const rawTail = values.slice(2).map((value) => Math.max(value, 1e-9));
+    const rawSum = rawTail.reduce((sum, value) => sum + value, 0) || 1;
+    let tail = rawTail.map((value) => (value / rawSum) * tailNeed);
+    // Descending within the tail only.
+    tail = enforceStrictDescending(tail, 0.97);
+    const tailSum = tail.reduce((sum, value) => sum + value, 0) || 1;
+    tail = tail.map((value) => (value / tailSum) * tailNeed);
+    values = [values[0]!, values[1]!, ...tail];
   }
-  // Final hard clamp — never let #1 reclaim share above the cap.
-  if (values[0]! > leaderCap) {
-    const scale = (1 - leaderCap) / Math.max(1e-9, 1 - values[0]!);
-    const head = leaderCap;
-    const tail = values.slice(1).map((value) => value * scale);
-    values = [head, ...tail];
-    values = renormalize(enforceStrictDescending(values, 0.94));
-    values[0] = Math.min(values[0]!, leaderCap);
-    const used = values.reduce((sum, value) => sum + value, 0) || 1;
-    if (Math.abs(used - 1) > 1e-6) {
-      const fix = (1 - values[0]!) / Math.max(1e-9, used - values[0]!);
-      for (let i = 1; i < values.length; i++) values[i] = values[i]! * fix;
+
+  // Tiny-tile floor on the tail so the bottom ranks stay tappable.
+  const minShare = Math.min(0.03, 0.72 / n);
+  if (n > 2) {
+    let deficit = 0;
+    for (let i = 2; i < values.length; i++) {
+      if (values[i]! < minShare) {
+        deficit += minShare - values[i]!;
+        values[i] = minShare;
+      }
+    }
+    if (deficit > 0) {
+      // Borrow from the largest mid/low tiles first (still under no #2 ceiling).
+      for (let i = 2; i < values.length && deficit > 1e-9; i++) {
+        const give = Math.max(0, values[i]! - minShare);
+        const take = Math.min(give, deficit);
+        values[i]! -= take;
+        deficit -= take;
+      }
+      // Re-normalize tail to exact leftover after head.
+      const headNow = values[0]! + values[1]!;
+      const tailNow = values.slice(2);
+      const tailSum = tailNow.reduce((sum, value) => sum + value, 0) || 1;
+      const scale = Math.max(0, 1 - headNow) / tailSum;
+      for (let i = 2; i < values.length; i++) values[i] = values[i]! * scale;
     }
   }
 
-  // Tiny-tile floor so the tail stays clickable — then re-assert rank order.
-  const minShare = Math.min(0.016, 0.48 / n);
-  let deficit = 0;
-  for (let i = 0; i < values.length; i++) {
-    if (values[i]! < minShare) {
-      deficit += minShare - values[i]!;
-      values[i] = minShare;
-    }
+  // Final guarantee on leader caps + #1 ≥ #2.
+  values[0] = Math.min(values[0]!, leaderCap);
+  if (n > 1) values[1] = Math.min(values[1]!, secondCap, values[0]! * 0.97);
+  if (n > 2) {
+    const headNow = values[0]! + values[1]!;
+    const tail = values.slice(2);
+    const tailSum = tail.reduce((sum, value) => sum + value, 0) || 1;
+    const scale = Math.max(0, 1 - headNow) / tailSum;
+    for (let i = 2; i < values.length; i++) values[i] = values[i]! * scale;
   }
-  if (deficit > 0) {
-    const headLen = Math.max(1, Math.ceil(n * 0.35));
-    const headSum = values.slice(0, headLen).reduce((sum, value) => sum + value, 0) || 1;
-    for (let i = 0; i < headLen; i++) {
-      values[i] = Math.max(minShare, values[i]! - deficit * (values[i]! / headSum));
-    }
-  }
-  values = renormalize(enforceStrictDescending(values, 0.94));
 
   ordered.forEach(({ item }, index) => {
     ratios.set(item.id, values[index] ?? 0);

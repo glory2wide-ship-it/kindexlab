@@ -131,6 +131,7 @@ export function TreemapView({
     try {
       if (!visible.length) return [];
       const byId = new Map(visible.map((entity) => [entity.id, entity]));
+      const layoutSeed = `${category}:${visible[0]?.id ?? "empty"}:${visible.length}`;
       return layoutHeatmapLeaves(
         visible.map((entity, index) => {
           const tile = heatmapTileLabel(entity);
@@ -138,13 +139,16 @@ export function TreemapView({
             id: entity.id,
             rank: index + 1,
             score: scoreForTimeframe(entity, timeframe),
-            // Area nudge uses the short paint label length — not the canonical name.
+            // Full name length nudges area so long titles stay readable.
             name: tile.title,
           };
         }),
         width,
         height,
         2,
+        isMobileViewport
+          ? { seed: layoutSeed }
+          : { variant: "squarify" },
       ).flatMap((box) => {
         const entity = byId.get(box.id);
         if (!entity) return [];
@@ -154,7 +158,7 @@ export function TreemapView({
     } catch {
       return [];
     }
-  }, [height, timeframe, visible, width]);
+  }, [category, height, isMobileViewport, timeframe, visible, width]);
 
   function moveHover(event: MouseEvent, entity: RankingEntity, change: number) {
     const displayRank = displayRankById.get(entity.id) ?? entity.rank;
@@ -338,17 +342,18 @@ export function TreemapView({
                         suppressHydrationWarning
                         style={{
                           display: "-webkit-box",
-                          WebkitLineClamp: label?.nameLines ?? 2,
+                          WebkitLineClamp: label?.nameLines ?? 3,
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           fontSize: nameFontSize,
                           lineHeight: 1.22,
                           letterSpacing: "-0.03em",
-                          wordBreak: "break-all",
+                          whiteSpace: "pre-line",
+                          wordBreak: "break-word",
                         }}
                       >
-                        {tile.title}
+                        {label?.name ?? tile.title}
                       </p>
                       <p
                         className="mt-0.5 w-full font-semibold"
@@ -431,16 +436,17 @@ export function TreemapView({
                           suppressHydrationWarning
                           style={{
                             display: "-webkit-box",
-                            WebkitLineClamp: label?.nameLines ?? 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            fontSize: nameFontSize,
-                            lineHeight: 1.22,
-                            letterSpacing: "-0.03em",
-                            wordBreak: "break-all",
-                          }}
-                        >
+                          WebkitLineClamp: label?.nameLines ?? 3,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          fontSize: nameFontSize,
+                          lineHeight: 1.22,
+                          letterSpacing: "-0.03em",
+                          whiteSpace: "pre-line",
+                          wordBreak: "break-word",
+                        }}
+                      >
                           {label?.name ?? tile.title}
                         </p>
                       ) : null}

@@ -1,12 +1,15 @@
-import { heatmapLabelCharCount } from "@/lib/heatmap-display-name";
+import {
+  heatmapLabelCharCount,
+  heatmapLabelDisplayLength,
+} from "@/lib/heatmap-display-name";
 
 const MIN_NAME = 11;
-const MAX_NAME = 26;
+const MAX_NAME = 28;
 const MIN_RATE = 12;
 const MAX_RATE = 18;
 const MIN_ARTIST = 10;
 const MAX_ARTIST = 14;
-const NAME_LINE_HEIGHT = 1.16;
+const NAME_LINE_HEIGHT = 1.14;
 
 export interface TreemapLabelLayout {
   showName: boolean;
@@ -89,19 +92,51 @@ function nameBlockHeight(size: number, lines: number): number {
 }
 
 /**
- * Prefer one clean line for Hangul. Two lines only when the tile is roomy and
- * the (already shortened) label is still long.
+ * Names with 6+ characters (spaces/symbols included) wrap to 2+ lines so type
+ * can stay larger. Very long titles may use a third line when the tile allows.
  */
-function maxLinesForTile(width: number, height: number, charCount: number): number {
-  if (charCount >= 8 && height >= 56 && width >= 72) return 2;
+function maxLinesForTile(width: number, height: number, displayLen: number): number {
+  if (displayLen < 6) return 1;
+  if (displayLen >= 16 && height >= 64 && width >= 70) return 3;
+  if (height >= 36 && width >= 44) return 2;
   return 1;
 }
 
 /**
- * Stable Hangul density sizing — not Finviz "fill the cell" maximization.
- *
- * Similar character counts → similar pt across tiles; box height still caps
- * the type so short labels stay tidy instead of exploding to fill the cell.
+ * Insert soft line breaks so names with 6+ characters (spaces/symbols included)
+ * paint on 2+ lines and can keep a larger type size.
+ */
+export function softWrapHeatmapName(name: string, maxLines = 2): string {
+  const text = name.replace(/\s+/g, " ").trim();
+  if (text.length < 6 || maxLines < 2) return text;
+
+  const linesWanted = text.length >= 16 && maxLines >= 3 ? 3 : 2;
+  // Prefer existing spaces / punctuation as break points.
+  const softBreaks: number[] = [];
+  for (let i = 1; i < text.length - 1; i++) {
+    const ch = text[i]!;
+    if (ch === " " || ch === "·" || ch === "/" || ch === "-" || ch === "·") softBreaks.push(i);
+  }
+
+  if (linesWanted === 2) {
+    const mid = Math.ceil(text.length / 2);
+    const atSpace = softBreaks.reduce(
+      (best, index) => (Math.abs(index - mid) < Math.abs(best - mid) ? index : best),
+      softBreaks[0] ?? mid,
+    );
+    if (softBreaks.length && Math.abs(atSpace - mid) <= Math.max(3, Math.floor(text.length * 0.35))) {
+      return `${text.slice(0, atSpace).trim()}\n${text.slice(atSpace).trim()}`;
+    }
+    return `${text.slice(0, mid)}\n${text.slice(mid)}`;
+  }
+
+  const third = Math.ceil(text.length / 3);
+  return `${text.slice(0, third)}\n${text.slice(third, third * 2)}\n${text.slice(third * 2)}`;
+}
+
+/**
+ * Density sizing with forced multi-line for long names — wrapping shortens each
+ * line so the font can grow instead of shrinking to fit one row.
  */
 function densityNameSize(input: {
   text: string;
@@ -109,43 +144,57 @@ function densityNameSize(input: {
   innerH: number;
   omitRate: boolean;
 }): { size: number; lines: number; maxLines: number } {
+  const displayLen = heatmapLabelDisplayLength(input.text);
   const chars = heatmapLabelCharCount(input.text);
-  const maxLines = maxLinesForTile(input.innerW + 12, input.innerH + 12, chars);
+  const maxLines = maxLinesForTile(input.innerW + 12, input.innerH + 12, displayLen);
 
-  // Character-aware width budget (Hangul ≈ square em).
-  const perChar = input.innerW / Math.max(chars, 1);
-  let size = perChar * (chars <= 3 ? 0.96 : chars <= 5 ? 0.9 : chars <= 8 ? 0.86 : 0.8);
+  // When wrapping, size against chars-per-line so long names stay large.
+  const perLineChars = Math.max(1, Math.ceil(chars / maxLines));
+  const perChar = input.innerW / perLineChars;
+  let size = perChar * (perLineChars <= 3 ? 0.94 : perLineChars <= 5 ? 0.9 : 0.84);
 
-  // Short Hangul gets more of the vertical budget; tiny tiles need room too.
   const heightShare =
-    chars <= 3 ? (input.omitRate ? 0.55 : 0.5) : input.omitRate ? 0.46 : 0.38;
+    maxLines >= 2
+      ? input.omitRate
+        ? 0.58
+        : 0.5
+      : chars <= 3
+        ? input.omitRate
+          ? 0.55
+          : 0.5
+        : input.omitRate
+          ? 0.46
+          : 0.38;
   const heightCap = input.innerH * heightShare;
-  const shortBoost = chars <= 4 ? 1.04 : chars >= 11 ? 0.92 : 1;
+  const shortBoost = chars <= 4 && maxLines === 1 ? 1.04 : 1;
   size *= shortBoost;
 
-  // Adaptive floor: demand MIN_NAME only when the cell can actually hold it.
-  const floor = Math.min(MIN_NAME, Math.max(8.5, heightCap * 0.92));
+  const floor = Math.min(MIN_NAME, Math.max(8.5, heightCap * 0.9));
   const ceiling = Math.max(floor, Math.min(MAX_NAME, heightCap));
   size = clamp(size, floor, ceiling);
 
-  if (maxLines === 2) size *= 0.88;
+  // Multi-line long names: nudge size up — wrapping already frees width.
+  if (maxLines >= 2 && displayLen >= 6) {
+    size = Math.min(ceiling, size * 1.12);
+  }
 
-  size = fitWrappedSize(input.text, size, input.innerW, floor, maxLines);
-  let lines = Math.min(maxLines, wrapLineCount(input.text, size, input.innerW));
+  // Measure against the longest soft-wrapped line so type can grow.
+  const wrapped = softWrapHeatmapName(input.text, maxLines);
+  const longestLine = wrapped
+    .split("\n")
+    .reduce((best, line) => (line.length > best.length ? line : best), "");
+  size = fitSizeToWidth(longestLine || input.text, size, input.innerW, floor);
+
+  let lines = Math.min(maxLines, Math.max(1, wrapped.split("\n").length));
   while (size > floor && nameBlockHeight(size, lines) > input.innerH * 0.92) {
     size -= 0.3;
-    lines = Math.min(maxLines, wrapLineCount(input.text, size, input.innerW));
   }
-  return {
-    size,
-    lines: Math.min(maxLines, wrapLineCount(input.text, size, input.innerW)),
-    maxLines,
-  };
+  return { size, lines, maxLines };
 }
 
 /**
- * Hangul-first treemap label: short names stay tidy; size follows density and
- * box geometry without overfilling the cell like Latin tickers on Finviz.
+ * Hangul-first treemap label: full names wrap at 6+ chars; size follows density
+ * and box geometry without ticker-style clipping.
  */
 export function layoutTreemapLabel(input: {
   width: number;
@@ -170,7 +219,7 @@ export function layoutTreemapLabel(input: {
   const innerH = Math.max(12, h - padY * 2);
 
   const showRate = !omitRate && h >= 34;
-  const rateBudget = showRate ? Math.min(MAX_RATE + 2, innerH * 0.2) : 0;
+  const rateBudget = showRate ? Math.min(MAX_RATE + 2, innerH * 0.18) : 0;
   const nameBudget = Math.max(MIN_NAME, innerH - (showRate ? rateBudget + 3 : 0));
 
   const fitted = densityNameSize({
@@ -197,8 +246,9 @@ export function layoutTreemapLabel(input: {
   const gap = 3;
   let usedArtist = showArtist;
   let usedRate = showRate;
-  const nameH = () =>
-    nameBlockHeight(nameSize, Math.min(maxLines, wrapLineCount(name, nameSize, innerW)));
+  const wrappedName = softWrapHeatmapName(name, maxLines);
+  const wrappedLines = Math.max(1, wrappedName.split("\n").length);
+  const nameH = () => nameBlockHeight(nameSize, Math.min(maxLines, wrappedLines));
   let stack = nameH();
   if (usedArtist) stack += gap + artistSize;
   if (usedRate) stack += gap + rateSize;
@@ -227,15 +277,21 @@ export function layoutTreemapLabel(input: {
     if (usedRate) stack += gap + rateSize;
   }
 
-  const fittedLines = Math.min(maxLines, wrapLineCount(name, nameSize, innerW));
+  const fittedLines = Math.min(maxLines, wrappedLines);
+  const longest = wrappedName.split("\n").reduce((best, line) =>
+    measureTextWidth(line, nameSize) > measureTextWidth(best, nameSize) ? line : best,
+  "");
   const displayName =
-    fittedLines === 1 && wrapLineCount(name, nameSize, innerW) > 1
-      ? ellipsize(name, nameSize, innerW)
-      : name;
+    measureTextWidth(longest, nameSize) > innerW
+      ? wrappedName
+          .split("\n")
+          .map((line) => ellipsize(line, nameSize, innerW))
+          .join("\n")
+      : wrappedName;
   const displayArtist = usedArtist && artist ? ellipsize(artist, artistSize, innerW) : "";
   const displayRate = usedRate ? ellipsize(rateText, rateSize, innerW) : "";
   const mid = y + h / 2 + 1;
-  const finalNameBlock = nameBlockHeight(nameSize, fittedLines);
+  const finalNameBlock = nameBlockHeight(nameSize, Math.max(1, fittedLines));
   let finalStack = finalNameBlock;
   if (usedArtist) finalStack += gap + artistSize;
   if (usedRate) finalStack += gap + rateSize;
@@ -266,7 +322,7 @@ export function layoutTreemapLabel(input: {
     rateSize: Math.round(rateSize * 10) / 10,
     typeSize: Math.round(rateSize * 10) / 10,
     metaSize: Math.round(artistSize * 10) / 10,
-    nameLines: fittedLines,
+    nameLines: Math.max(1, fittedLines),
     padX,
     padY: 4,
     nameY: Math.round(nameY * 10) / 10,
