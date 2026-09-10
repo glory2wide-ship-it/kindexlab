@@ -1,4 +1,10 @@
 /** Shared tense / timeline rules for briefing and today-analysis generation. */
+
+import {
+  isTrendDisclaimerOnly,
+  stripTrendDisclaimer,
+} from "@/lib/editorial/disclaimer";
+
 export function tenseConsistencyRules(): string {
   return [
     "[시제 및 시간 정합성 엄격 준수 — 위반 시 유효성 검증 실패]",
@@ -149,7 +155,14 @@ export function isKindexFeatureRankTemplate(text: string): boolean {
 export function isUnusableKindexFeatureBody(text: string): boolean {
   const t = text.replace(/\s+/g, " ").trim();
   if (!t) return true;
-  return isKindexFeatureMetaDefinition(t) || isKindexFeatureRankTemplate(t);
+  // LLM often dumps the mandatory closing disclaimer into ❺ and skips data copy.
+  if (isTrendDisclaimerOnly(t)) return true;
+  const withoutDisclaimer = stripTrendDisclaimer(t);
+  if (!withoutDisclaimer) return true;
+  return (
+    isKindexFeatureMetaDefinition(withoutDisclaimer) ||
+    isKindexFeatureRankTemplate(withoutDisclaimer)
+  );
 }
 
 function toHonorificSignalClause(raw: string): string {
@@ -309,7 +322,8 @@ function resolveKindexParagraph(
   candidate: string | undefined,
   fallback: string,
 ): string {
-  const cleaned = candidate?.replace(/\s+/g, " ").trim() ?? "";
+  // Drop a misplaced closing disclaimer before judging ❺ usability.
+  const cleaned = stripTrendDisclaimer(candidate?.replace(/\s+/g, " ").trim() ?? "");
   if (!cleaned || isUnusableKindexFeatureBody(cleaned)) return fallback;
   return cleaned;
 }

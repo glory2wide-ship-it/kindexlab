@@ -1,6 +1,9 @@
 /**
  * Mandatory closing line for every KinDex editorial surface:
  * daily briefings, Update briefings, Update keyword / 오늘의 분석 articles.
+ *
+ * Never use this sentence as the sole body of「KinDex 데이터가 보여주는 특징」.
+ * That section needs rank/trend interpretation; the disclaimer is a closing notice.
  */
 export const TREND_ANALYSIS_DISCLAIMER =
   "본 글은 단순 트렌드 분석이며 투자 권유가 아닙니다.";
@@ -8,6 +11,21 @@ export const TREND_ANALYSIS_DISCLAIMER =
 export function hasTrendDisclaimer(text: string | null | undefined): boolean {
   if (!text) return false;
   return text.includes(TREND_ANALYSIS_DISCLAIMER);
+}
+
+/** Remove the mandatory disclaimer so section bodies can be judged on real copy. */
+export function stripTrendDisclaimer(text: string): string {
+  return text
+    .split(TREND_ANALYSIS_DISCLAIMER)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** True when the text is empty once the disclaimer is removed. */
+export function isTrendDisclaimerOnly(text: string | null | undefined): boolean {
+  if (!text?.trim()) return false;
+  return !stripTrendDisclaimer(text);
 }
 
 /** Append the disclaimer once when the body does not already carry it. */

@@ -7,7 +7,7 @@
  *          / ❺ KinDex 데이터가 보여주는 특징 (한 문단) → takeaways「핵심 요약」직전
  * KinDex 숫자는 산출 강의가 아니라 관심·화제 트렌드 해석.
  */
-import { TREND_ANALYSIS_DISCLAIMER } from "@/lib/editorial/disclaimer";
+import { TREND_ANALYSIS_DISCLAIMER, stripTrendDisclaimer } from "@/lib/editorial/disclaimer";
 import {
   buildKindexFeatureParagraph,
   editionFreshnessRules,
@@ -295,7 +295,8 @@ export function buildHybridAnalysisSystemPrompt(channel?: string): string {
 - sections[3].heading="❹ …" 전망 자연 소제목 (예: "❹ ${outlookHint}"). "${HYBRID_LEGACY_OUTLOOK_HEADING}" 금지.
 - sections[4].heading="❺ ${HYBRID_FIXED_HEADINGS.kindexFeature}" ← 제목 고정, paragraphs 정확히 1개, takeaways(핵심 요약) 직전
 - ❶~❹ 각 섹션 paragraphs 3~4개. ❺만 paragraphs 1개.
-- ❹ 마지막 문단의 마지막 문장은 반드시: ${TREND_ANALYSIS_DISCLAIMER}`,
+- ❺ 본문은 KinDex 순위·관심 속도·보드 안 상대 위치 해석만 씁니다. 면책 문구(${TREND_ANALYSIS_DISCLAIMER})를 ❺ paragraphs에 넣지 마세요.
+- 면책 문구는 ❹ 마지막 문단의 마지막 문장으로만 둡니다: ${TREND_ANALYSIS_DISCLAIMER}`,
   ]
     .join("\n\n")
     .trim();
@@ -413,7 +414,12 @@ export function applyHybridAnalysisHeadings<T extends { heading: string; heading
       .filter(Boolean)
       .join(" ")
       .trim();
-    const usable = merged && !isUnusableKindexFeatureBody(merged) ? merged : kindexFallback;
+    // Disclaimer-only ❺ must fall back — strip first so leftover data copy can survive.
+    const withoutDisclaimer = stripTrendDisclaimer(merged);
+    const usable =
+      withoutDisclaimer && !isUnusableKindexFeatureBody(withoutDisclaimer)
+        ? withoutDisclaimer
+        : kindexFallback;
     return [usable];
   })();
 
@@ -526,6 +532,7 @@ export function buildDataJournalistUserPrompt(params: {
     "- 3번 섹션: 실제 독자 관점의 실질 핵심 (소제목·본문 모두 이 키워드 고유 정보)",
     "- 4번 섹션: 뉴스·데이터 기반의 신중 전망(일정·변수·확인 포인트, 공통 템플릿 소제목 금지)",
     "- 5번 섹션: KinDex 순위·변동을 ❶~❹의 신청·일정·정책 축과 연결해 한 문단으로 해석 (개념 정의·순위 나열 템플릿 금지)",
+    `- 5번 섹션에 면책 문구(${TREND_ANALYSIS_DISCLAIMER})를 넣지 마세요. 면책은 ❹ 마지막 문장으로만.`,
     "- KinDex 산출 방식·점수 척도 강의 금지. 있는 숫자는 ❺에서 본문 스토리와 함께 관심 트렌드로 해석.",
     "- ❶~❹ paragraphs 3~4개(각 문단 2~4문장). ❺ paragraphs 1개. 문장 45~90자, 단문 연속·한 문장 문단 연달아 쓰기 금지. 높임말(합니다체) 필수.",
     `- 포커스 핵심어 "${focusCore}"를 title·excerpt·본문·FAQ 합쳐 5~6회만 자연 배치하세요.`,

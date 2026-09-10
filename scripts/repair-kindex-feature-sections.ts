@@ -8,6 +8,7 @@
 import { writeAnalysis, type CachedAnalysis } from "../src/lib/analysis/store";
 import {
   buildKindexFeatureParagraph,
+  ensureKindexFeatureSectionPlacement,
   extractStoryBeatsFromSections,
   isKindexFeatureSectionHeading,
   isUnusableKindexFeatureBody,
@@ -108,11 +109,12 @@ function patchEntry(
     storyBeats: extractStoryBeatsFromSections(sections),
   });
 
-  const nextSections = sections.map((section) =>
-    isKindexFeatureSectionHeading(section.heading)
-      ? { ...section, paragraphs: [paragraph] }
-      : section,
-  );
+  const nextSections = ensureKindexFeatureSectionPlacement(sections, {
+    keyword,
+    signalFacts: signalFactsForSlug(entry.slug, keyword, boards),
+    storyBeats: extractStoryBeatsFromSections(sections),
+    fallbackParagraph: paragraph,
+  });
 
   let bodyMarkdown = entry.article.bodyMarkdown;
   if (bodyMarkdown?.includes(KINDEX_FEATURE_META_BOILERPLATE)) {

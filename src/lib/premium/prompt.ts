@@ -53,7 +53,8 @@ export const STATIC_SYSTEM_PROMPT = [
   `[출력 포맷 — 절대 준수]
 - 응답은 오직 지정된 JSON 객체 하나만 반환합니다. 코드블록·설명 문장 금지.
 - 스키마: title, excerpt, sections[{heading, headingLevel, paragraphs[]}], table{caption, headers[], rows[][]}, faq[{question, answer}], externalLink{href, label}, internalLink{href, label}, takeaways[]
-- 본문 마지막 문단은 반드시 다음 문장으로 끝냅니다: ${TREND_ANALYSIS_DISCLAIMER}`,
+- 본문 마지막 문단은 반드시 다음 문장으로 끝냅니다: ${TREND_ANALYSIS_DISCLAIMER}
+- 위 면책 문장을 「KinDex 데이터가 보여주는 특징」(❺) 본문 대신 쓰지 마세요. ❺는 순위·관심 해석 한 문단입니다.`,
 ]
   .join("\n\n")
   .trim();
@@ -148,6 +149,7 @@ export function buildSinglePassUserPrompt(params: BriefingInputParams): string {
     "- 포커스 키워드를 2회 이상 쓴 뒤에는 '가수', '이번 공연', '해당 무대', '이번 일정'처럼 확인 가능한 대체 표현을 섞어 반복을 피하세요.",
     `- sections는 ${sectionCount}개. heading에 ❶❷❸❹❺와 이 사안 고유명사를 넣으세요. ❺ 제목은 반드시 "KinDex 데이터가 보여주는 특징".`,
     "- ❶ 핵심 사건·팩트 맥락  ❷ Why(왜 지금 주목·시장 배경)  ❸ How(독자 일상·소비·활용 요령, 목록형 체크리스트 금지)  ❹ 전망·파급(확인된 일정·신호만)  ❺ KinDex 데이터가 보여주는 특징(한 문단 · takeaways/핵심 요약 직전).",
+    `- ❺ 본문은 KinDex 데이터 해석만. 면책 문구(${TREND_ANALYSIS_DISCLAIMER})를 ❺에 넣지 마세요. 면책은 본문 최후 문단으로만.`,
     `- 각 섹션 paragraphs는 ${paraPerSection}. ❶~❹ 각 문단은 ${sentences}문장. 한 문장은 공백 제외 45~90자(최소 40자). 단문 연속·한 문장 문단 연달아 쓰기 금지.`,
     `- title+excerpt+sections+faq 합계 공백 제외 ${charBand}(목표 ${charTarget}). 단순 사실 나열·패딩으로 채우지 마세요.`,
     "- table 1개: 지표·일정·비교·수치(헤더 3열+, 행 2~4). faq는 Full/Sparse 3개+·Shorts 1~2개(답변 각 2~3문장).",

@@ -32,6 +32,58 @@ async function main() {
   assert("rank-template detected", isKindexFeatureRankTemplate(oldGlue));
   assert("rank-template unusable", isUnusableKindexFeatureBody(oldGlue));
   assert(
+    "disclaimer-only ❺ unusable",
+    isUnusableKindexFeatureBody("본 글은 단순 트렌드 분석이며 투자 권유가 아닙니다."),
+  );
+
+  const disclaimerHybrid = applyHybridAnalysisHeadings(
+    [
+      {
+        heading: "오늘의 결론",
+        paragraphs: ["리센느는 브랜드평판 1위와 캠페인 발탁이 겹친 구간입니다."],
+      },
+      {
+        heading: "왜 지금 관심이 높아졌나",
+        paragraphs: ["신인 브랜드 지표와 AI 캠페인이 동시에 움직였습니다."],
+      },
+      {
+        heading: "팬덤 소통 접점",
+        paragraphs: ["음원 스트리밍과 모바일 캠페인이 유입 통로입니다."],
+      },
+      {
+        heading: "향후 무대 확장",
+        paragraphs: ["하반기 신보와 방송 일정이 파급 변수입니다."],
+      },
+      {
+        heading: "KinDex 데이터가 보여주는 특징",
+        paragraphs: ["본 글은 단순 트렌드 분석이며 투자 권유가 아닙니다."],
+      },
+    ],
+    {
+      channel: "entertainment",
+      categoryHint: "kpop",
+      focusKeyword: "RESCENE (리센느)",
+      signalFacts: [
+        "RESCENE (리센느)는 해당 히트맵에서 1위에 있습니다.",
+        "직전 대비 순위 변동은 정체(0%)입니다.",
+      ],
+    },
+  );
+  const disclaimerKindex = disclaimerHybrid.find((section) => section.heading.includes("KinDex"));
+  assert(
+    "hybrid replaces disclaimer-only ❺",
+    Boolean(
+      disclaimerKindex &&
+        !isUnusableKindexFeatureBody(disclaimerKindex.paragraphs[0] ?? "") &&
+        !(disclaimerKindex.paragraphs[0] ?? "").includes("투자 권유가 아닙니다"),
+    ),
+    disclaimerKindex?.paragraphs[0]?.slice(0, 160),
+  );
+  assert(
+    "DJ system bans disclaimer in ❺",
+    /면책 문구/.test(buildHybridAnalysisSystemPrompt("entertainment")),
+  );
+  assert(
     "heading digits preserved (100만)",
     stripNumberedHeadingPrefix("❶ 100만 인파가 몰린 한강공원") === "100만 인파가 몰린 한강공원",
   );
