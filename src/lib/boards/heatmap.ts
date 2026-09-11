@@ -2,7 +2,7 @@ import { rankingPath } from "@/lib/slugs";
 import { LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import { computeBoardIndex, toneRankEntry } from "@/lib/boards/board-index";
 import { volumePerScoreForBoard } from "@/lib/heatmap-channel-scale";
-import { dropNamesForFilter, deriveDemographics, selectRanking } from "@/lib/boards/demographics";
+import { dropNamesForFilter, deriveDemographics, isUnusableRankName, selectRanking } from "@/lib/boards/demographics";
 import {
   compositePerBoard,
   rankLimitForBoard,
@@ -479,6 +479,7 @@ export function buildHeatmapItems({
     if (preferLive && liveClean.length) {
       const typeSet = new Set(liveEntityTypesForBoard(selected.slug));
       const boardLive = liveClean.filter((item) => {
+        if (isUnusableRankName(item.name ?? "")) return false;
         if (item.tags?.includes(selected.slug)) {
           return passesKpopTrotBoardFilter(selected.slug, item.name);
         }
@@ -509,6 +510,7 @@ export function buildHeatmapItems({
             ? Math.max(boardLimit * 3, 48)
             : boardLimit;
         const push = (entity: RankingEntity) => {
+          if (isUnusableRankName(entity.name ?? "")) return;
           const key = heatmapNameDedupeKey(entity.name ?? "");
           if (!key || seen.has(key) || seen.has(entity.id) || seen.has(entity.slug)) return;
           seen.add(key);

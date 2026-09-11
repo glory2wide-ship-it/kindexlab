@@ -21,14 +21,16 @@ const cases: Array<{
   { name: "김치찌개", width: 140, height: 90, minSize: 12, maxSize: 30, minLines: 1 },
   { name: "웰니스관광", width: 340, height: 280, minSize: 14, maxSize: 30, minLines: 1 },
   { name: "마약김밥", width: 220, height: 150, minSize: 13, maxSize: 30, minLines: 1 },
-  { name: "혈압", width: 80, height: 56, minSize: 10, maxSize: 14, minLines: 1 },
+  // Area budget (not shorter-side %) is the binding 25% rule — short names may exceed
+  // 0.25 * min(w,h) while still painting ≤ 25% of tile area.
+  { name: "혈압", width: 80, height: 56, minSize: 10, maxSize: 22, minLines: 1 },
   // Small tile: must still paint the FULL name (shrink/wrap — never ellipsize).
   {
     name: "소상공인 전기요금 지원사업",
     width: 96,
     height: 72,
     minSize: 8,
-    maxSize: 18, // 25% of min(96,72)=18
+    maxSize: 22,
     minLines: 1,
     maxLines: 2,
   },
@@ -60,10 +62,17 @@ for (const item of cases) {
   const linesOk = lines >= (item.minLines ?? 1) && lines <= (item.maxLines ?? 2);
   const fullName =
     painted.replace(/\s+/g, "") === item.name.replace(/\s+/g, "") && !/…|\.\.\./.test(painted);
-  const ok = inRange && !overflow && linesOk && fullName;
+  const longestWidth = Math.max(
+    ...painted.split("\n").map((line) => measureTextWidth(line, size)),
+    0,
+  );
+  const blockH = lines <= 1 ? size : size * (1 + (lines - 1) * 1.28);
+  const areaRatio = (longestWidth * blockH) / (item.width * item.height);
+  const areaOk = areaRatio <= 0.2501;
+  const ok = inRange && !overflow && linesOk && fullName && areaOk;
   if (!ok) failed = true;
   console.log(
-    `${ok ? "ok" : "BAD"} ${size.toFixed(1).padStart(5)}px  L${label?.nameLines}  len=${item.name.length}  full=${fullName}  ${item.name}`,
+    `${ok ? "ok" : "BAD"} ${size.toFixed(1).padStart(5)}px  L${label?.nameLines}  area=${(areaRatio * 100).toFixed(1)}%  len=${item.name.length}  full=${fullName}  ${item.name}`,
   );
 }
 

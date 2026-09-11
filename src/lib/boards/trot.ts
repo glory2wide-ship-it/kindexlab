@@ -2,6 +2,7 @@
  * Trot / 성인가요 artist guards — keep K-POP and 트로트·가요 heatmaps disjoint.
  */
 
+import { isUnusableRankName } from "@/lib/boards/demographics";
 import { getBoard } from "@/lib/boards/registry";
 import { namesOverlap, normalizeName } from "@/lib/ingestion/names";
 
@@ -38,14 +39,21 @@ function stripDecorators(name: string): string {
 
 function hitsSeedList(name: string, seeds: readonly string[]): boolean {
   const cleaned = stripDecorators(name);
-  if (!cleaned) return false;
+  if (!cleaned || cleaned.length < 2) return false;
   const compact = normalizeName(cleaned);
+  // Punctuation-only names normalize to "" — never treat "" as a seed hit
+  // (`"임영웅".includes("")` is always true).
+  if (!compact || compact.length < 2) return false;
   for (const seed of seeds) {
     const subject = stripDecorators(seed);
     if (!subject) continue;
     if (namesOverlap(subject, cleaned)) return true;
     const seedKey = normalizeName(subject);
-    if (seedKey && (compact === seedKey || compact.includes(seedKey) || seedKey.includes(compact))) {
+    if (
+      seedKey &&
+      seedKey.length >= 2 &&
+      (compact === seedKey || compact.includes(seedKey) || seedKey.includes(compact))
+    ) {
       return true;
     }
   }
@@ -55,7 +63,7 @@ function hitsSeedList(name: string, seeds: readonly string[]): boolean {
 /** True when the name belongs on the 트로트·가요 board. */
 export function isLikelyTrotArtist(name: string): boolean {
   const cleaned = stripDecorators(name);
-  if (!cleaned) return false;
+  if (!cleaned || isUnusableRankName(cleaned)) return false;
   if (TROT_KEYWORDS.test(cleaned)) return true;
   if (hitsSeedList(cleaned, trotSeedNames())) return true;
   return false;
@@ -64,7 +72,7 @@ export function isLikelyTrotArtist(name: string): boolean {
 /** True when the name is a known K-POP idol/group seed (exclude from trot live). */
 export function isLikelyKpopIdol(name: string): boolean {
   const cleaned = stripDecorators(name);
-  if (!cleaned) return false;
+  if (!cleaned || isUnusableRankName(cleaned)) return false;
   if (/아이돌|걸그룹|보이그룹|K-?POP/i.test(cleaned)) return true;
   if (hitsSeedList(cleaned, kpopSeedNames()) && !isLikelyTrotArtist(cleaned)) return true;
   return false;

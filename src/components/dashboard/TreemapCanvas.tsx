@@ -243,7 +243,8 @@ export function TreemapView({
            */
           const layoutNameSize = label?.nameSize ?? 16;
           const mobileTitleScale = !isMobileViewport ? 1 : 0.94;
-          const nameSizeCapEarly = Math.min(w, h) * 0.25;
+          // Layout already enforces name paint area ≤ 25% of the tile; don't re-cap by shorter side.
+          const nameSizeCapEarly = Math.min(w, h) * 0.4;
           const nameFontSize = Math.min(nameSizeCapEarly, layoutNameSize * mobileTitleScale);
           const headlineFontSize = Math.min(
             nameSizeCapEarly,

@@ -1,16 +1,21 @@
 import { cache } from "react";
 import { computeBoardIndex } from "@/lib/boards/board-index";
-import { deriveDemographics } from "@/lib/boards/demographics";
+import { deriveDemographics, isUnusableRankName } from "@/lib/boards/demographics";
 import {
   toHeatmapPayload,
   type HeatmapBoardPayload,
 } from "@/lib/boards/heatmap";
 import { liveEntityTypesForBoard } from "@/lib/boards/entity-type";
 import { isLikelyCelebrityName } from "@/lib/boards/celebrity";
-import { passesKpopTrotBoardFilter } from "@/lib/boards/trot";
+import {
+  isLikelyKpopIdol,
+  isLikelyTrotArtist,
+  passesKpopTrotBoardFilter,
+} from "@/lib/boards/trot";
 import { rankLimitForBoard } from "@/lib/boards/limits";
 import { menuBoardsForChannel, isHeadlineNewsBoard } from "@/lib/boards/registry";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
+import { normalizeCachedBoard } from "@/lib/boards/store";
 import type { BoardDefinition, BoardRankEntry, CachedBoard } from "@/lib/boards/types";
 import { COMPOSITE_INDEX_ID } from "@/lib/ingestion/composite";
 import { snapshotToPayload } from "@/lib/ingestion/compose";
@@ -67,7 +72,7 @@ function liveRankingForBoard(
       .filter((item) => {
         if (!passesKpopTrotBoardFilter(def.slug, item.name)) return false;
         const name = sanitizeLiveBoardName(def.slug, item.name);
-        if (!name || name.length < 2) return false;
+        if (!name || name.length < 2 || isUnusableRankName(name)) return false;
         const key = name.replace(/\s+/g, "").toLowerCase();
         if (!key || seen.has(key)) return false;
         seen.add(key);
@@ -98,12 +103,19 @@ function liveRankingForBoard(
       if (def.slug === "star-reputation-index" || item.type === "celebrity") {
         return isLikelyCelebrityName(item.name);
       }
+      // Typed trot/kpop live rows: trust ingest type, only drop clear cross-board idols.
+      if (def.slug === "trot-kayo-fandom-power" && item.type === "trot") {
+        return !isLikelyKpopIdol(item.name) || isLikelyTrotArtist(item.name);
+      }
+      if (def.slug === "kpop-fandom-power" && item.type === "kpop") {
+        return !isLikelyTrotArtist(item.name);
+      }
       return passesKpopTrotBoardFilter(def.slug, item.name);
     })
     .sort((a, b) => a.rank - b.rank || b.buzzScore - a.buzzScore)
     .filter((item) => {
       const name = sanitizeLiveBoardName(def.slug, item.name);
-      if (!name || name.length < 2) return false;
+      if (!name || name.length < 2 || isUnusableRankName(name)) return false;
       const key = name.replace(/\s+/g, "").toLowerCase();
       if (!key || seen.has(key)) return false;
       seen.add(key);
@@ -124,6 +136,33 @@ function liveRankingForBoard(
   return rows.length >= MIN_LIVE_BOARD_ROWS ? rows : undefined;
 }
 
+function mergeLiveBoardRanking(
+  live: BoardRankEntry[],
+  cached: CachedBoard,
+  limit: number,
+): BoardRankEntry[] {
+  const nameKey = (name: string) => name.replace(/\s+/g, "").toLowerCase();
+  const seen = new Set<string>();
+  const merged: BoardRankEntry[] = [];
+  const push = (row: BoardRankEntry) => {
+    const name = (row.name ?? "").trim();
+    if (!name || isUnusableRankName(name)) return;
+    const key = nameKey(name);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    merged.push({ ...row, name, rank: merged.length + 1 });
+  };
+  for (const row of live) {
+    if (merged.length >= limit) break;
+    push(row);
+  }
+  for (const row of cached.ranking ?? []) {
+    if (merged.length >= limit) break;
+    push(row);
+  }
+  return merged;
+}
+
 function withLiveChartOverlay(
   def: BoardDefinition,
   cached: CachedBoard,
@@ -131,15 +170,20 @@ function withLiveChartOverlay(
 ): HeatmapBoardPayload {
   const live = liveRankingForBoard(def, snapshot);
   if (!live) return toHeatmapPayload(def, cached);
-  const overlay: CachedBoard = {
+  const limit = rankLimitForBoard(def);
+  // Live leads, then pad with cached/seed ranking so heatmaps still fill 20 tiles.
+  const merged = mergeLiveBoardRanking(live, cached, limit);
+  const overlay = normalizeCachedBoard({
     ...cached,
-    ranking: live,
-    demographics: deriveDemographics(live, def),
-  };
-  const index = computeBoardIndex(live, def.slug);
-  overlay.indexValue = index.value;
-  overlay.indexChangeRate = index.changeRate;
-  return toHeatmapPayload(def, overlay);
+    ranking: merged,
+    demographics: deriveDemographics(merged, def),
+  });
+  const index = computeBoardIndex(overlay.ranking, def.slug);
+  return toHeatmapPayload(def, {
+    ...overlay,
+    indexValue: index.value,
+    indexChangeRate: index.changeRate,
+  });
 }
 
 /**

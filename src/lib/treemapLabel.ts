@@ -99,10 +99,37 @@ function maxLinesForTile(width: number, height: number, displayLen: number): num
   return 1;
 }
 
-/** Cap name size to 25% of the shorter tile side so type never dominates the box. */
+/** Soft font-size ceiling — area budget below is the binding 25% rule. */
 function maxNameSizeForTile(width: number, height: number): number {
-  // Upper bound only — 25% of the shorter side (and never above MAX_NAME).
-  return Math.min(MAX_NAME, Math.min(width, height) * 0.25);
+  return Math.min(MAX_NAME, Math.min(width, height) * 0.4);
+}
+
+/** Painted name block (longest line × block height) must stay ≤ 25% of tile area. */
+const NAME_AREA_RATIO = 0.25;
+
+function namePaintArea(size: number, lines: string[]): number {
+  const rows = lines.length ? lines : [""];
+  let longest = 0;
+  for (const line of rows) {
+    longest = Math.max(longest, measureTextWidth(line, size));
+  }
+  return longest * nameBlockHeight(size, Math.max(1, rows.length));
+}
+
+function shrinkNameToAreaBudget(
+  size: number,
+  lines: string[],
+  tileW: number,
+  tileH: number,
+  floor: number,
+): number {
+  const budget = Math.max(1, tileW * tileH * NAME_AREA_RATIO);
+  let next = size;
+  // Keep stepping while over budget; allow one step onto the floor.
+  while (next > floor && namePaintArea(next, lines) > budget) {
+    next = Math.max(floor, next - 0.25);
+  }
+  return next;
 }
 
 /** True when index sits inside paired brackets / quotes. */
@@ -629,36 +656,52 @@ export function layoutTreemapLabel(input: {
     rateY = cursor + rateSize * 0.82;
   }
 
-  // Never let the title exceed 25% of the shorter tile side.
+  // Soft size ceiling, then enforce painted-name area ≤ 25% of the tile box.
   const sizeCap = maxNameSizeForTile(w, h);
   nameSize = Math.min(sizeCap, Math.max(ABSOLUTE_NAME_FLOOR, nameSize));
-  // Re-balance wrap at the capped size, then shrink until the longest row fits.
+  // Re-balance wrap at the capped size, then shrink until width + area budgets pass.
   wrappedName = softWrapHeatmapName(fullName, Math.min(2, maxLines));
   wrappedLines = Math.max(1, wrappedName.split("\n").length);
-  let longestRow = wrappedName
-    .split("\n")
-    .reduce(
-      (best, line) =>
-        measureTextWidth(line, nameSize) > measureTextWidth(best, nameSize) ? line : best,
-      "",
-    );
+  let nameRows = wrappedName.split("\n");
+  let longestRow = nameRows.reduce(
+    (best, line) =>
+      measureTextWidth(line, nameSize) > measureTextWidth(best, nameSize) ? line : best,
+    "",
+  );
   while (nameSize - 0.25 >= ABSOLUTE_NAME_FLOOR && measureTextWidth(longestRow, nameSize) > innerW) {
     nameSize -= 0.25;
   }
+  nameSize = shrinkNameToAreaBudget(nameSize, nameRows, w, h, ABSOLUTE_NAME_FLOOR);
+  // Width may need one more pass after area shrink (same glyphs, smaller size is fine).
+  longestRow = nameRows.reduce(
+    (best, line) =>
+      measureTextWidth(line, nameSize) > measureTextWidth(best, nameSize) ? line : best,
+    "",
+  );
+  while (nameSize - 0.25 >= ABSOLUTE_NAME_FLOOR && measureTextWidth(longestRow, nameSize) > innerW) {
+    nameSize -= 0.25;
+  }
+  // Re-apply area budget after width pass, then publish the wrap we sized against.
+  nameSize = shrinkNameToAreaBudget(nameSize, nameRows, w, h, ABSOLUTE_NAME_FLOOR);
+  // Floor to 0.1px so rounding up cannot push painted area back over 25%.
+  nameSize = Math.floor(nameSize * 10) / 10;
+  nameSize = shrinkNameToAreaBudget(nameSize, nameRows, w, h, ABSOLUTE_NAME_FLOOR);
+  const publishedName = nameRows.join("\n");
+  const publishedLines = Math.max(1, nameRows.length);
 
   return {
     showName: true,
     showRate: usedRate,
     showType: combine,
     showMeta: usedArtist,
-    name: displayName,
+    name: publishedName,
     rate: displayRate,
     meta: displayArtist,
-    nameSize: Math.round(nameSize * 10) / 10,
+    nameSize,
     rateSize: Math.round(rateSize * 10) / 10,
     typeSize: Math.round(rateSize * 10) / 10,
     metaSize: Math.round(artistSize * 10) / 10,
-    nameLines: Math.max(1, fittedLines),
+    nameLines: publishedLines,
     padX,
     padY: 4,
     nameY: Math.round(nameY * 10) / 10,
