@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { INSIGHT_CARD_TYPE } from "@/components/briefing/insight-card-type";
 import { categoryLabel } from "@/lib/briefing/metrics";
 import { isLiveEdition } from "@/lib/briefing/dates";
 import type { BriefingArticle } from "@/lib/types";
@@ -19,21 +20,17 @@ export function FeaturedBriefingCard({
     <article className="rounded-2xl border border-line bg-panel transition-colors hover:border-accent/50">
       <Link href={href} className="block p-5 md:p-8">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-accent/40 px-2 py-0.5 font-sans text-[10px] font-semibold text-accent">
+          <span className={INSIGHT_CARD_TYPE.badge}>
             {kicker}
             {live ? " · Live" : " · Archive"}
           </span>
-          <span className="font-sans text-[11px] text-muted">
+          <span className={INSIGHT_CARD_TYPE.meta}>
             {article.editionDate} · {article.deskLabel || categoryLabel(article.category)}
           </span>
         </div>
-        <h2 className="mt-2 text-lg font-semibold leading-[1.105] tracking-tight md:text-xl md:leading-snug">
-          {article.title}
-        </h2>
-        <p className="mt-2 line-clamp-3 text-sm leading-[1.0625rem] text-muted md:leading-6">
-          {article.excerpt}
-        </p>
-        <span className="mt-4 inline-flex font-medium text-accent">종합 브리핑 본문 읽기 →</span>
+        <h2 className={`mt-2 ${INSIGHT_CARD_TYPE.titleLead}`}>{article.title}</h2>
+        <p className={`mt-2 line-clamp-3 ${INSIGHT_CARD_TYPE.body}`}>{article.excerpt}</p>
+        <span className={`mt-4 ${INSIGHT_CARD_TYPE.cta}`}>종합 브리핑 본문 읽기 →</span>
       </Link>
     </article>
   );

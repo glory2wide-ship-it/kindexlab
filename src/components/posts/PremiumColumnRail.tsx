@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { INSIGHT_CARD_TYPE } from "@/components/briefing/insight-card-type";
 import { channelHref, getPostChannel } from "@/lib/posts/channels";
 import type { FeaturedColumn } from "@/lib/posts/featured";
 
@@ -41,18 +42,14 @@ function ColumnCard({ column, lead = false }: { column: FeaturedColumn; lead?: b
     <article className="rounded-2xl border border-line bg-panel transition-colors hover:border-accent/50">
       <Link href={channelHref(channel, post.slug)} className="block p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-accent/40 px-2 py-0.5 font-sans text-[10px] font-semibold text-accent">
-            {meta.label}
-          </span>
-          <span className="font-sans text-[11px] text-muted">{post.editionDate}</span>
+          <span className={INSIGHT_CARD_TYPE.badge}>{meta.label}</span>
+          <span className={INSIGHT_CARD_TYPE.meta}>{post.editionDate}</span>
         </div>
-        <h3
-          className={`mt-2 font-semibold tracking-tight ${lead ? "text-lg md:text-xl" : "text-sm leading-6"}`}
-        >
+        <h3 className={`mt-2 ${lead ? INSIGHT_CARD_TYPE.titleLead : INSIGHT_CARD_TYPE.title}`}>
           {post.title}
         </h3>
         <p
-          className={`mt-2 text-sm leading-6 text-muted ${lead ? "line-clamp-3" : "line-clamp-2"}`}
+          className={`mt-2 ${INSIGHT_CARD_TYPE.body} ${lead ? "line-clamp-3" : "line-clamp-2"}`}
         >
           {post.excerpt}
         </p>

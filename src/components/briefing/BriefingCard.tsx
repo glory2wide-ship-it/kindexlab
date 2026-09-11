@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { categoryLabel, heatmapHref } from "@/lib/briefing/metrics";
+import { INSIGHT_CARD_TYPE } from "@/components/briefing/insight-card-type";
+import { categoryLabel } from "@/lib/briefing/metrics";
 import { isLiveEdition } from "@/lib/briefing/dates";
 import { channelSectionHref, isPostChannel } from "@/lib/posts/channels";
 import type { BriefingArticle } from "@/lib/types";
@@ -31,33 +32,23 @@ export function BriefingCard({
     <article className="rounded-2xl border border-line bg-panel transition-colors hover:border-accent/50">
       <Link href={articleHref} className="block p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-accent/40 px-2 py-0.5 font-sans text-[10px] font-semibold text-accent">
+          <span className={INSIGHT_CARD_TYPE.badge}>
             {badge}
             {live ? " · Live" : " · Archive"}
           </span>
-          <span className="font-sans text-[11px] text-muted">
+          <span className={INSIGHT_CARD_TYPE.meta}>
             {article.editionDate} · {categoryLabel(article.category)}
           </span>
         </div>
-        <h3
-          className={`mt-2 font-semibold tracking-tight ${
-            lead
-              ? "text-lg leading-[1.105] md:text-xl md:leading-snug"
-              : "text-sm leading-[1.0625rem] md:leading-6"
-          }`}
-        >
+        <h3 className={`mt-2 ${lead ? INSIGHT_CARD_TYPE.titleLead : INSIGHT_CARD_TYPE.title}`}>
           {article.title}
         </h3>
         <p
-          className={`mt-2 text-sm leading-[1.0625rem] text-muted md:leading-6 ${
-            lead ? "line-clamp-3" : "line-clamp-2"
-          }`}
+          className={`mt-2 ${INSIGHT_CARD_TYPE.body} ${lead ? "line-clamp-3" : "line-clamp-2"}`}
         >
           {article.excerpt}
         </p>
-        <span className="mt-3 inline-flex text-sm font-medium leading-[1.0625rem] text-accent md:leading-6">
-          본문 읽기 →
-        </span>
+        <span className={`mt-3 ${INSIGHT_CARD_TYPE.cta}`}>본문 읽기 →</span>
       </Link>
     </article>
   );

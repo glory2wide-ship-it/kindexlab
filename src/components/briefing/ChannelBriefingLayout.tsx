@@ -1,5 +1,6 @@
 import { BriefingCard } from "@/components/briefing/BriefingCard";
 import { FeaturedBriefingCard } from "@/components/briefing/FeaturedBriefingCard";
+import { INSIGHT_CARD_TYPE } from "@/components/briefing/insight-card-type";
 import { UPDATE_KEYWORD_LABEL } from "@/lib/briefing/labels";
 import {
   channelMainLabel,
@@ -86,10 +87,8 @@ export function ChannelBriefingLayout({
                   key={desk.id}
                   className="rounded-2xl border border-dashed border-line bg-panel p-5"
                 >
-                  <span className="rounded-full border border-accent/40 px-2 py-0.5 font-sans text-[10px] font-semibold text-accent">
-                    {desk.label}
-                  </span>
-                  <p className="mt-3 text-sm leading-6 text-muted">
+                  <span className={INSIGHT_CARD_TYPE.badge}>{desk.label}</span>
+                  <p className={`mt-3 ${INSIGHT_CARD_TYPE.body}`}>
                     {desk.label} {UPDATE_KEYWORD_LABEL}는 같은 그리드 규격으로 다음 에디션에 붙습니다.
                   </p>
                 </article>
