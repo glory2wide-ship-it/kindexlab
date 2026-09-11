@@ -971,7 +971,8 @@ export async function generatePremiumArticle(input: {
       violations.push({ code: "metadata-leak", detail: "메타·SEO·글자수 누설" });
     }
     const duplicateClaims = duplicateClaimCount(prosePlain);
-    if (input.briefing && duplicateClaims > 2) {
+    // Allow one extra repeated claim fingerprint before hard reject (webtoon titles often echo).
+    if (input.briefing && duplicateClaims > 3) {
       violations.push({ code: "duplicate-claims", detail: `중복 주장 ${duplicateClaims}건` });
     }
     return violations;
@@ -1080,11 +1081,15 @@ export async function generatePremiumArticle(input: {
     bodyPlainText(sections),
     ...faqText.flatMap((item) => [item.question, item.answer]),
   ].join(" ");
-  const keywordCount = Math.max(
+  const keywordCores = focusKeywordCores(keyword);
+  const shortestCoreLen = Math.min(...keywordCores.map((core) => core.length), 99);
+  // Short cores (e.g. "1초") appear inside many Korean compounds — allow a higher hard ceiling.
+  const keywordHardMax = shortestCoreLen <= 3 ? 18 : PREMIUM_KEYWORD_HARD_MAX;
+  let keywordCount = Math.max(
     0,
-    ...focusKeywordCores(keyword).map((core) => countOccurrences(keywordScanText, core)),
+    ...keywordCores.map((core) => countOccurrences(keywordScanText, core)),
   );
-  if (keywordCount > PREMIUM_KEYWORD_HARD_MAX) {
+  if (keywordCount > keywordHardMax) {
     return {
       ok: false,
       reason: "keyword-stuffing",

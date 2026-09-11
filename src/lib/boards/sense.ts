@@ -504,6 +504,15 @@ function cleanKeyword(keyword: string): string {
     .trim();
 }
 
+/** Airports, stations, resorts — travel lexicon is on-topic even on non-travel boards. */
+function isPlaceLikeKeyword(keyword: string | null | undefined): boolean {
+  const k = cleanKeyword(keyword ?? "").replace(/\s+/g, "");
+  if (!k) return false;
+  return /공항|터미널|항만|항구|휴양림|해수욕장|국립공원|관광지|온천|스키장|케이블카|역$|버스터미널|여객선|페리/.test(
+    k,
+  );
+}
+
 function overrideKey(boardSlug: string, keyword: string): string {
   return `${boardSlug}::${cleanKeyword(keyword)}`;
 }
@@ -698,7 +707,11 @@ export function detectBoardSenseMismatch(input: {
 
   // Travel boards are allowed travel copy; other domains reject pure travelogue hijacks
   // when the keyword itself is not place-like and travel density is high without on-sense markers.
-  if (sense.domain !== "travel" && sense.domain !== "food") {
+  if (
+    sense.domain !== "travel" &&
+    sense.domain !== "food" &&
+    !isPlaceLikeKeyword(input.keyword)
+  ) {
     const required =
       NATURE_REQUIRED_BY_DOMAIN[sense.domain] ??
       new RegExp(

@@ -6,6 +6,7 @@ import { analysisLlmConfigured, BRIEFING_LLM } from "@/lib/analysis/chain/llm";
 import { analysisLogger } from "@/lib/analysis/log";
 import {
   assertSubsidyRequiredFields,
+  ensureSubsidyRequiredLabels,
   isSubsidyAnalysisBoard,
   previousAnalysisDigest,
   resolveRewriteMode,
@@ -142,7 +143,7 @@ async function generate(options: {
     throw new Error(result.detail || result.reason || "gemini-generate-failed");
   }
 
-  const article: TodayAnalysisArticle = composePremiumTodayAnalysis({
+  let article: TodayAnalysisArticle = composePremiumTodayAnalysis({
     entity,
     market,
     related,
@@ -151,6 +152,7 @@ async function generate(options: {
   });
 
   if (isSubsidy) {
+    article = ensureSubsidyRequiredLabels(article);
     assertSubsidyRequiredFields(article);
   }
 

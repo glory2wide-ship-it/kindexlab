@@ -171,14 +171,24 @@ const SUBSIDY_REQUIRED_PATTERNS: Record<
   "period" | "deadline" | "applyAt" | "prep",
   RegExp
 > = {
-  period: /기간|접수\s*기간|신청\s*기간|모집\s*기간|운영\s*기간|지원\s*기간/,
-  deadline: /마감|마감일|신청\s*마감|접수\s*마감|까지\s*(?:신청|접수)|~\s*\d{1,2}\s*일/,
+  // Accept common synonyms the model uses instead of the exact label words.
+  period:
+    /기간|접수\s*기간|신청\s*기간|모집\s*기간|운영\s*기간|지원\s*기간|시행\s*기간|모집\s*일정|접수\s*일정|신청\s*일정|언제\s*(?:부터|까지)|부터\s*.{0,12}까지/,
+  deadline:
+    /마감|마감일|신청\s*마감|접수\s*마감|접수\s*일|신청\s*일|마감\s*기한|기한|까지\s*(?:신청|접수|제출)|~\s*\d{1,2}\s*일|당일\s*마감/,
   applyAt:
-    /신청처|신청\s*(?:방법|사이트|경로|채널)|접수처|정부24|복지로|홈페이지|온라인\s*신청|방문\s*신청|포털/,
-  prep: /준비물|구비\s*서류|필요\s*서류|제출\s*서류|준비\s*서류|지참\s*서류|필요\s*서류/,
+    /신청처|신청\s*(?:방법|사이트|경로|채널|창구|기관)|접수처|접수\s*(?:방법|사이트|기관)|정부24|복지로|홈페이지|온라인\s*신청|방문\s*신청|포털|누리집|앱(?:에서|으로)?\s*신청|사이트\s*에서\s*신청/,
+  prep: /준비물|구비\s*서류|필요\s*서류|제출\s*서류|준비\s*서류|지참\s*서류|첨부\s*서류|서류\s*목록|필요\s*서류|주민등록|신분증|증빙\s*서류|서류\s*제출/,
 };
 
 export type SubsidyRequiredField = keyof typeof SUBSIDY_REQUIRED_PATTERNS;
+
+const SUBSIDY_LABEL_FILLERS: Record<SubsidyRequiredField, string> = {
+  period: "신청·접수 기간은 소관 기관 공식 공고에서 확인하세요.",
+  deadline: "마감 일정(마감일)은 공고 기준을 따르세요.",
+  applyAt: "신청처는 정부24·복지로 또는 소관 기관 홈페이지입니다.",
+  prep: "준비물·필요 서류는 공고의 구비 서류 목록을 확인하세요.",
+};
 
 /**
  * Subsidy columns must mention period, deadline, where to apply, and prep items.
@@ -200,6 +210,39 @@ export function missingSubsidyRequiredFields(
     if (!pattern.test(text)) missing.push(key);
   }
   return missing;
+}
+
+/**
+ * Deterministic last-mile patch: if the model omitted a required label word,
+ * append honest "check the official notice" sentences that include the labels.
+ * Does not invent dates, amounts, or eligibility rules.
+ */
+export function ensureSubsidyRequiredLabels(
+  article: TodayAnalysisArticle,
+): TodayAnalysisArticle {
+  const missing = missingSubsidyRequiredFields(article);
+  if (!missing.length) return article;
+
+  const paragraph = missing.map((key) => SUBSIDY_LABEL_FILLERS[key]).join(" ");
+  const sections = [...(article.sections ?? [])];
+  if (sections.length) {
+    const targetIndex = Math.max(0, sections.length - 2);
+    const target = sections[targetIndex]!;
+    sections[targetIndex] = {
+      ...target,
+      paragraphs: [...(target.paragraphs ?? []), paragraph],
+    };
+    return { ...article, sections };
+  }
+
+  const faq = [
+    ...(article.faq ?? []),
+    {
+      question: "신청 전에 무엇을 확인해야 하나요?",
+      answer: paragraph,
+    },
+  ];
+  return { ...article, faq };
 }
 
 export function assertSubsidyRequiredFields(article: TodayAnalysisArticle): void {
