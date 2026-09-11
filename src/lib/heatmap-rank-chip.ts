@@ -5,6 +5,13 @@
 
 import { entityPlatform, type GamePlatformTag } from "@/lib/boards/game-platforms";
 import { isTwoLineBracketHeatmap } from "@/lib/boards/culture-grants";
+import { REGION_HOUSING_APARTMENTS } from "@/lib/boards/housing-apartments";
+import {
+  isRegionSegment,
+  REGION_LABEL,
+  regionFromName,
+} from "@/lib/boards/regions";
+import type { RegionSegment } from "@/lib/boards/types";
 import {
   boardSlugOf,
   inferBookGenreChip,
@@ -13,6 +20,7 @@ import {
   inferTvChannelChip,
   stripChipBrackets,
 } from "@/lib/heatmap-rank-meta";
+import { namesOverlap } from "@/lib/ingestion/names";
 import { heatmapSourceCaption } from "@/lib/news/headline-title";
 import { parseBracketLabel } from "@/lib/politics/labeled-rank";
 import type { RankingEntity } from "@/lib/types";
@@ -93,15 +101,65 @@ function isBookEntity(entity: Pick<RankingEntity, "type" | "slug" | "heatmapGrou
   return slug === "bestseller-surge-index" || group.includes("도서");
 }
 
+function isHousingRegionEntity(
+  entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">,
+): boolean {
+  if (entity.type === "housing") return true;
+  const slug = boardSlugOf(entity);
+  const group = entity.heatmapGroup ?? "";
+  return (
+    slug === "housing-subscription-hotspot" ||
+    slug.startsWith("housing-") ||
+    group === "지역별 부동산" ||
+    group === "부동산" ||
+    group === "부동산 관심 랭킹" ||
+    group === "부동산 지수"
+  );
+}
+
+/** Resolve 시/도 for 부동산 tiles: region field → name → catalog → bracket. */
+function resolveHousingRegionChip(
+  entity: Pick<RankingEntity, "name" | "region" | "type" | "slug" | "heatmapGroup">,
+): string | undefined {
+  if (entity.region && isRegionSegment(entity.region)) {
+    return REGION_LABEL[entity.region];
+  }
+
+  const fromName = regionFromName(entity.name);
+  if (fromName) return REGION_LABEL[fromName];
+
+  const subject = parseBracketLabel(entity.name)?.subject ?? entity.name;
+  for (const [segment, apartments] of Object.entries(REGION_HOUSING_APARTMENTS) as Array<
+    [RegionSegment, readonly string[]]
+  >) {
+    if (apartments.some((apt) => namesOverlap(apt, subject))) {
+      return REGION_LABEL[segment];
+    }
+  }
+
+  const bracket = parseBracketLabel(entity.name);
+  if (bracket?.org) return stripChipBrackets(bracket.org);
+  return undefined;
+}
+
 /**
  * Chip text shown immediately before the rank badge.
  * Priority: game → TV channel → music genre → star job → book genre → region/agency → menu.
  * Bracket qualifiers render without `[` `]` symbols.
+ * Economy 부동산 tiles prefer the 시/도 label ahead of the rank.
  */
 export function heatmapRankPrefixChip(
   entity: Pick<
     RankingEntity,
-    "name" | "nameEn" | "type" | "slug" | "heatmapGroup" | "platform" | "sourceChannel" | "tags"
+    | "name"
+    | "nameEn"
+    | "type"
+    | "slug"
+    | "heatmapGroup"
+    | "platform"
+    | "sourceChannel"
+    | "tags"
+    | "region"
   >,
   options?: { allowMenuCaption?: boolean },
 ): string | undefined {
@@ -128,6 +186,11 @@ export function heatmapRankPrefixChip(
   if (isBookEntity(entity)) {
     const genre = inferBookGenreChip(entity);
     if (genre) return stripChipBrackets(genre);
+  }
+
+  if (isHousingRegionEntity(entity)) {
+    const regionChip = resolveHousingRegionChip(entity);
+    if (regionChip) return stripChipBrackets(regionChip);
   }
 
   if (wantsBracketChip(entity)) {

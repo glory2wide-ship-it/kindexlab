@@ -61,10 +61,10 @@ export function HeaderRefreshCountdown({
       className="inline-flex h-[25.5px] shrink-0 items-center justify-center gap-1 rounded-md border border-[#16a34a] bg-[#16a34a] px-1.5 index-gothic font-sans font-bold text-white"
       style={{ fontWeight: 700 }}
     >
-      <span className="text-[10.89px] font-bold leading-none tracking-tight whitespace-nowrap text-white">
+      <span className="text-[11.435px] font-bold leading-none tracking-tight whitespace-nowrap text-white">
         LIVE KinDex
       </span>
-      <span className="refresh-countdown text-[13.31px] font-bold tabular-nums leading-none text-white">
+      <span className="refresh-countdown text-[13.976px] font-bold tabular-nums leading-none text-white">
         {pending ? "…" : <FlipBoardText text={formatRefreshClock(remainingSec)} />}
       </span>
     </div>

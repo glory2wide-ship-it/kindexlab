@@ -10,9 +10,9 @@ import { DEFAULT_TRENDS_REVALIDATE_SEC, formatRefreshClock } from "@/lib/refresh
 const SHELL_CLASS =
   "index-gothic inline-flex shrink-0 items-center justify-center gap-1 rounded-md border border-[#16a34a] bg-[#16a34a] px-3 font-sans font-bold text-white";
 const SHELL_STYLE = { height: 30, boxSizing: "border-box" as const, fontWeight: 700 };
-/** Prior clock 14.52px +10% → 15.972px; label 11.88px +10% → 13.068px. */
-const LABEL_CLASS = "text-[13.068px] font-bold leading-none tracking-tight whitespace-nowrap text-white";
-const CLOCK_CLASS = "refresh-countdown text-[15.972px] font-bold tabular-nums leading-none text-white";
+/** Prior 13.068 / 15.972 +5% → 13.721 / 16.771. */
+const LABEL_CLASS = "text-[13.721px] font-bold leading-none tracking-tight whitespace-nowrap text-white";
+const CLOCK_CLASS = "refresh-countdown text-[16.771px] font-bold tabular-nums leading-none text-white";
 
 export function HeatmapCountdownFallback() {
   return (

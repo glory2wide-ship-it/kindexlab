@@ -257,8 +257,8 @@ export function TreemapView({
             chipCount > 0 || showHeaderRate ? 220 : 120,
             Math.max(56, w - 4),
           );
-          // Rank (+ rate) sits top-right. Header taller on desktop when rate stacks below.
-          const rankHeaderHeight = !isMobileViewport && showHeaderRate ? 36 : 28;
+          // Rank header stays one row: ±% · submenu/region · rank.
+          const rankHeaderHeight = 28;
           const rankHeaderX = Math.max(leaf.x0 + 2, leaf.x1 - rankHeaderWidth - 2);
           const nameSizeCap = nameSizeCapEarly;
           return (
@@ -303,16 +303,21 @@ export function TreemapView({
                     height={rankHeaderHeight}
                   >
                     <div
-                      className={`pointer-events-none flex h-full w-full justify-end gap-1 pr-1 text-right ${
-                        isMobileViewport || !showHeaderRate
-                          ? "flex-row items-center"
-                          : "flex-col items-end justify-start gap-0.5"
-                      }`}
+                      className="pointer-events-none flex h-full w-full flex-row items-center justify-end gap-1 pr-1 text-right"
                       style={{ color: fill }}
                     >
+                      {/* Order: ±% → submenu/region chip → rank (rate sits left of submenu). */}
+                      {showHeaderRate ? (
+                        <span
+                          className="shrink-0 font-sans font-semibold tabular-nums leading-none"
+                          style={{ fontSize: headerRateSize }}
+                        >
+                          {rate}
+                        </span>
+                      ) : null}
                       {showChannelTag ? (
                         <span
-                          className="max-w-[36%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
+                          className="max-w-[32%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
                           style={{ fontSize: sourceChipSize, borderColor: "currentColor" }}
                         >
                           {channelTag}
@@ -320,19 +325,11 @@ export function TreemapView({
                       ) : null}
                       {showPrefixChip && prefixChip ? (
                         <span
-                          className="max-w-[48%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
+                          className="max-w-[44%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
                           style={{ fontSize: sourceChipSize, borderColor: "currentColor" }}
                           title={prefixChip}
                         >
                           {prefixChip}
-                        </span>
-                      ) : null}
-                      {isMobileViewport && showHeaderRate ? (
-                        <span
-                          className="shrink-0 font-sans font-semibold tabular-nums leading-none"
-                          style={{ fontSize: headerRateSize }}
-                        >
-                          {rate}
                         </span>
                       ) : null}
                       <span
@@ -341,14 +338,6 @@ export function TreemapView({
                       >
                         {rankBadge}
                       </span>
-                      {!isMobileViewport && showHeaderRate ? (
-                        <span
-                          className="shrink-0 font-sans font-semibold tabular-nums leading-none"
-                          style={{ fontSize: headerRateSize }}
-                        >
-                          {rate}
-                        </span>
-                      ) : null}
                     </div>
                   </foreignObject>
                 ) : null}

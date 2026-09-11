@@ -105,7 +105,29 @@ function maxNameSizeForTile(width: number, height: number): number {
   return Math.min(MAX_NAME, Math.min(width, height) * 0.25);
 }
 
-/** Candidate soft-break indices (between chars), preferring spaces / sense boundaries. */
+/** True when index sits inside (...), [...], 〈...〉, 《...》 pairs. */
+function insidePairedMarks(text: string, index: number): boolean {
+  const pairs: Array<[string, string]> = [
+    ["(", ")"],
+    ["[", "]"],
+    ["（", "）"],
+    ["〈", "〉"],
+    ["《", "》"],
+    ["「", "」"],
+    ["『", "』"],
+  ];
+  for (const [open, close] of pairs) {
+    let depth = 0;
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === open) depth += 1;
+      if (i === index && depth > 0) return true;
+      if (text[i] === close && depth > 0) depth -= 1;
+    }
+  }
+  return false;
+}
+
+/** Candidate soft-break indices — spaces, particles, paren edges first. */
 function softBreakCandidates(text: string): number[] {
   const breaks: number[] = [];
   const tokens = text.split(/(\s+|·|\/|-)/);
@@ -120,11 +142,24 @@ function softBreakCandidates(text: string): number[] {
     cursor = next;
   }
 
-  // Hangul compounds without spaces: mid breaks after 2+ syllables.
-  if (!/\s/.test(text) && text.length >= 5) {
+  // Prefer breaking just after a closing bracket / paren, or just before an opener.
+  for (let i = 1; i < text.length; i++) {
+    const ch = text[i]!;
+    const prev = text[i - 1]!;
+    if (/^[)\]〉》」』）]$/.test(prev) && i < text.length) breaks.push(i);
+    if (/^[(\[〈《「『（]$/.test(ch)) breaks.push(i);
+  }
+
+  // Hangul compounds: allow mid breaks after 2+ syllables, but never split a josa
+  // onto the next line alone, and never break inside paired marks.
+  if (text.length >= 5) {
     for (let i = 2; i < text.length - 1; i++) {
+      if (insidePairedMarks(text, i)) continue;
       const rest = text.slice(i);
+      // Keep trailing particles with the preceding word.
       if (TRAILING_JOSA.test(rest)) continue;
+      const nextChunk = rest.match(/^\S{1,3}/)?.[0] ?? "";
+      if (TRAILING_JOSA.test(nextChunk)) continue;
       breaks.push(i);
     }
   }
@@ -161,10 +196,14 @@ export function softWrapHeatmapName(name: string, maxLines = 2): string {
       const left = text.slice(0, index).trim();
       const right = text.slice(index).trim();
       if (!left || !right) continue;
-      // Prefer the break whose longer line is shortest (by glyph width, not just chars).
+      // Prefer shorter longest-line, then space/paren breaks, then balance.
       const longerWidth = Math.max(measureTextWidth(left, 10), measureTextWidth(right, 10));
       const skew = Math.abs(left.length - right.length);
-      const score = longerWidth * 10 + skew;
+      const atSpace = /\s/.test(text.slice(Math.max(0, index - 1), index + 1));
+      const atParen =
+        /[)\]〉》」』）]$/.test(left) || /^[(\[〈《「『（]/.test(right);
+      const penalty = atSpace ? 0 : atParen ? 8 : 40;
+      const score = longerWidth * 10 + skew + penalty;
       if (score < bestScore) {
         bestScore = score;
         best = index;
