@@ -43,8 +43,9 @@ export function CategoryBoardRail({
     ? "border-accent bg-accent text-black"
     : "border-line text-muted hover:text-ink";
 
+  // Desktop tab labels +15% vs prior 13.2px → 15.18px (mobile unchanged).
   const tabShell =
-    "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[12.1px] leading-none whitespace-nowrap md:inline-block md:w-auto md:px-3 md:text-[13.2px] md:leading-normal md:whitespace-normal";
+    "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[12.1px] leading-none whitespace-nowrap md:inline-block md:w-auto md:px-3 md:text-[15.18px] md:leading-normal md:whitespace-normal";
 
   const orderedKeys = [
     ...boards.slice(0, insertAt).map((board) => board.slug),
