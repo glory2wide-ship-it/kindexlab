@@ -22,6 +22,16 @@ export interface StockQuote {
   changeRate: number;
   currency: "KRW" | "USD";
   observedAt: string;
+  /** Naver integration extras (KR domestic stocks). */
+  marketCap?: string;
+  high52Week?: string;
+  low52Week?: string;
+}
+
+export interface StockFundamentals {
+  marketCap?: string;
+  high52Week?: string;
+  low52Week?: string;
 }
 
 interface CacheEntry {
@@ -29,9 +39,15 @@ interface CacheEntry {
   quote: StockQuote;
 }
 
+interface FundamentalsCacheEntry {
+  at: number;
+  fundamentals: StockFundamentals;
+}
+
 /** Align with heatmap client refresh (DEFAULT_TRENDS_REVALIDATE_SEC = 180). */
 const QUOTE_TTL_MS = 180_000;
 const quoteCache = new Map<string, CacheEntry>();
+const fundamentalsCache = new Map<string, FundamentalsCacheEntry>();
 
 function cacheKey(symbol: StockSymbol): string {
   return `${symbol.market}:${symbol.code}`;
@@ -42,6 +58,67 @@ function parseNumber(raw: unknown): number | null {
   if (typeof raw !== "string") return null;
   const n = Number(raw.replace(/,/g, "").trim());
   return Number.isFinite(n) ? n : null;
+}
+
+function formatKrPriceLabel(raw: string | undefined): string | undefined {
+  if (!raw?.trim()) return undefined;
+  const cleaned = raw.replace(/원/g, "").trim();
+  if (!cleaned) return undefined;
+  return `${cleaned}원`;
+}
+
+/**
+ * Market cap + 52-week range from Naver mobile stock integration (KR only).
+ */
+export async function fetchKrStockFundamentals(code: string): Promise<StockFundamentals | null> {
+  const key = `kr:${code}`;
+  const hit = fundamentalsCache.get(key);
+  const now = Date.now();
+  if (hit && now - hit.at < QUOTE_TTL_MS) return hit.fundamentals;
+
+  try {
+    const data = await fetchJson<{
+      totalInfos?: Array<{ code?: string; key?: string; value?: string }>;
+    }>(`https://m.stock.naver.com/api/stock/${encodeURIComponent(code)}/integration`, {
+      ...QUOTE_FETCH,
+      headers: { Accept: "application/json" },
+    });
+    const infos = data.totalInfos ?? [];
+    const pick = (field: string) =>
+      infos.find((row) => row.code === field)?.value?.trim() || undefined;
+    const fundamentals: StockFundamentals = {
+      marketCap: pick("marketValue"),
+      high52Week: formatKrPriceLabel(pick("highPriceOf52Weeks")),
+      low52Week: formatKrPriceLabel(pick("lowPriceOf52Weeks")),
+    };
+    if (!fundamentals.marketCap && !fundamentals.high52Week && !fundamentals.low52Week) {
+      return null;
+    }
+    fundamentalsCache.set(key, { at: now, fundamentals });
+    return fundamentals;
+  } catch {
+    return null;
+  }
+}
+
+export function peekKrStockFundamentals(code: string): StockFundamentals | undefined {
+  const hit = fundamentalsCache.get(`kr:${code}`);
+  if (!hit) return undefined;
+  if (Date.now() - hit.at >= QUOTE_TTL_MS) return undefined;
+  return hit.fundamentals;
+}
+
+/** Attach fundamentals onto a cached/live KR quote when available. */
+export async function withKrStockFundamentals(quote: StockQuote): Promise<StockQuote> {
+  if (quote.market !== "kr") return quote;
+  if (quote.marketCap || quote.high52Week || quote.low52Week) return quote;
+  const fundamentals = await fetchKrStockFundamentals(quote.code);
+  if (!fundamentals) return quote;
+  const next = { ...quote, ...fundamentals };
+  const key = cacheKey({ market: "kr", code: quote.code });
+  const cached = quoteCache.get(key);
+  if (cached) quoteCache.set(key, { at: cached.at, quote: next });
+  return next;
 }
 
 async function fetchKrQuotes(codes: string[]): Promise<Map<string, StockQuote>> {

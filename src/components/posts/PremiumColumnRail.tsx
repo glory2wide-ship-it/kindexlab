@@ -19,14 +19,6 @@ export function PremiumColumnRail({ columns }: { columns: FeaturedColumn[] }) {
         <h2 id="trend-briefing-heading" className="text-xl font-semibold tracking-tight">
           투데이 브리핑
         </h2>
-        <div className="flex gap-3 text-sm">
-          <Link href="/briefing" className="font-medium text-accent hover:underline">
-            브리핑 허브
-          </Link>
-          <Link href="/briefing/archive" className="text-muted hover:text-ink">
-            인사이트 매거진
-          </Link>
-        </div>
       </div>
 
       <ColumnCard column={lead} lead />

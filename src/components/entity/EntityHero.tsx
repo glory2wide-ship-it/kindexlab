@@ -49,6 +49,9 @@ function MarketQuoteHero({
     unit: string;
     label: string;
     observedAt?: string;
+    marketCap?: string;
+    high52Week?: string;
+    low52Week?: string;
   };
   kicker?: string;
 }) {
@@ -65,6 +68,7 @@ function MarketQuoteHero({
         : entity.heatmapGroup === "주식" || entity.heatmapGroup === "증시·주요 종목"
           ? "국내 주식"
           : TYPE_LABEL[entity.type];
+  const showFundamentals = Boolean(quote.marketCap || quote.high52Week || quote.low52Week);
 
   return (
     <section className="rounded-2xl border border-line bg-panel p-[18px] md:p-8">
@@ -73,6 +77,28 @@ function MarketQuoteHero({
         <div>
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{entity.name}</h1>
           {entity.nameEn ? <p className="mt-1 text-sm text-muted">{entity.nameEn}</p> : null}
+          {showFundamentals ? (
+            <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3 sm:gap-3">
+              {quote.marketCap ? (
+                <div>
+                  <dt className="text-[11px] text-muted">시가총액</dt>
+                  <dd className="mt-0.5 font-sans tabular-nums text-ink">{quote.marketCap}</dd>
+                </div>
+              ) : null}
+              {quote.high52Week ? (
+                <div>
+                  <dt className="text-[11px] text-muted">52주 최고가</dt>
+                  <dd className="mt-0.5 font-sans tabular-nums text-ink">{quote.high52Week}</dd>
+                </div>
+              ) : null}
+              {quote.low52Week ? (
+                <div>
+                  <dt className="text-[11px] text-muted">52주 최저가</dt>
+                  <dd className="mt-0.5 font-sans tabular-nums text-ink">{quote.low52Week}</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : null}
         </div>
         <div className="text-right">
           <p className="font-sans text-sm text-muted">현재가</p>

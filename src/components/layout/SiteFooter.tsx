@@ -14,7 +14,7 @@ export function SiteFooter() {
           <Link href="/about" className="font-semibold hover:text-ink">
             KinDex / 킨덱스 소개
           </Link>
-          <p className="mt-2 text-sm leading-6 text-muted">
+          <p className="mt-2 text-[0.83125rem] leading-[1.425rem] text-muted">
             {CATEGORY_LABELS} 등 국내 이슈·화제성을 주식 지수(INDEX)처럼 보여주는 트렌드
             랭킹. {SITE.domain}에서 제공합니다. 데이터는 관측값이며 실제 투자 정보가 아닙니다.
           </p>

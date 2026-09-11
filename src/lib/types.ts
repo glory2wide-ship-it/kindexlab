@@ -121,6 +121,12 @@ export interface Measurement {
   observedAt?: string;
   /** Percent change against the previous stored observation, when one exists. */
   changeRate?: number;
+  /** Display market cap from Naver (KR stocks), e.g. "1,517조 1,093억". */
+  marketCap?: string;
+  /** 52-week high as display text, e.g. "380,000원". */
+  high52Week?: string;
+  /** 52-week low as display text, e.g. "73,100원". */
+  low52Week?: string;
 }
 
 export interface RankingEntity {

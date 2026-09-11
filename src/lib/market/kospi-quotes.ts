@@ -11,6 +11,7 @@ import {
   formatStockPrice,
   NAVER_FINANCE_SOURCE,
   peekNaverQuoteForName,
+  withKrStockFundamentals,
 } from "@/lib/market/naver-finance";
 import {
   KOSPI_STOCK_BOARD_SLUG,
@@ -71,6 +72,9 @@ type LiveQuote = {
   unit: string;
   observedAt: string;
   priceText: string;
+  marketCap?: string;
+  high52Week?: string;
+  low52Week?: string;
 };
 
 function stripQuoteSuffix(summary: string): string {
@@ -119,6 +123,9 @@ function withQuote(entity: RankingEntity, quote: LiveQuote): RankingEntity {
       source: NAVER_FINANCE_SOURCE,
       changeRate: quote.changeRate,
       observedAt: quote.observedAt,
+      ...(quote.marketCap ? { marketCap: quote.marketCap } : {}),
+      ...(quote.high52Week ? { high52Week: quote.high52Week } : {}),
+      ...(quote.low52Week ? { low52Week: quote.low52Week } : {}),
     },
     summary: `${baseSummary || entity.summary} · ${quote.priceText} (${signed})`.trim(),
   };
@@ -137,6 +144,9 @@ async function attachStockQuotes(entities: RankingEntity[]): Promise<RankingEnti
       unit: quote.currency === "USD" ? "USD" : "원",
       observedAt: quote.observedAt,
       priceText: formatStockPrice(quote),
+      marketCap: quote.marketCap,
+      high52Week: quote.high52Week,
+      low52Week: quote.low52Week,
     });
   });
 }
@@ -201,7 +211,20 @@ export async function attachKospiStockQuotes(
 export async function enrichEntityWithKospiQuote(entity: RankingEntity): Promise<RankingEntity> {
   if (isKospiStockEntity(entity)) {
     const [enriched] = await attachKospiStockQuotes([entity], KOSPI_STOCK_BOARD_SLUG);
-    return enriched ?? entity;
+    if (!enriched) return entity;
+    const quote = peekNaverQuoteForName(enriched.name);
+    if (!quote) return enriched;
+    const withStats = await withKrStockFundamentals(quote);
+    return withQuote(enriched, {
+      price: withStats.price,
+      changeRate: withStats.changeRate,
+      unit: withStats.currency === "USD" ? "USD" : "원",
+      observedAt: withStats.observedAt,
+      priceText: formatStockPrice(withStats),
+      marketCap: withStats.marketCap,
+      high52Week: withStats.high52Week,
+      low52Week: withStats.low52Week,
+    });
   }
   if (isOverseasStockEntity(entity)) {
     const [enriched] = await attachKospiStockQuotes([entity], OVERSEAS_STOCK_BOARD_SLUG);
@@ -229,6 +252,9 @@ export function enrichEntityWithCachedKospiQuote(entity: RankingEntity): Ranking
       unit: quote.currency === "USD" ? "USD" : "원",
       observedAt: quote.observedAt,
       priceText: formatStockPrice(quote),
+      marketCap: quote.marketCap,
+      high52Week: quote.high52Week,
+      low52Week: quote.low52Week,
     });
   }
   if (isCommoditiesFxEntity(entity)) {
