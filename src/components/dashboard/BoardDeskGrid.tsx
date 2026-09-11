@@ -55,8 +55,12 @@ export function BoardDeskGrid({
                 selected ? " border-accent/50 ring-1 ring-accent/25" : " border-line"
               }${desk.hideOnMobile ? " max-md:hidden" : ""}`}
             >
-              <h3 className="text-sm font-semibold leading-5 tracking-tight">
-                <Link href={desk.href} prefetch={false} className="hover:text-accent">
+              <h3 className="flex justify-center">
+                <Link
+                  href={desk.href}
+                  prefetch={false}
+                  className="inline-flex max-w-full truncate rounded-full border border-accent/40 px-2.5 py-0.5 font-sans text-[14.7px] font-semibold leading-[1.09] text-accent transition-colors hover:border-accent hover:bg-accent/5 md:text-[16.8px]"
+                >
                   {desk.label}
                 </Link>
               </h3>
