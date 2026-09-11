@@ -34,7 +34,7 @@ import {
 } from "@/lib/ingestion/sources/tickets";
 import { pickPrimaryWebtoon } from "@/lib/ingestion/sources/webtoon";
 import { channelForBoardSlug } from "@/lib/boards/entity-type";
-import { isNativeChartEntityType } from "@/lib/boards/live-priority";
+import { isNativeChartBoard, isNativeChartEntityType } from "@/lib/boards/live-priority";
 import { attachTimeframeMetrics, changeForEntity, volumeForTimeframe } from "@/lib/timeframes";
 import type {
   CatalogMatch,
@@ -650,8 +650,9 @@ export async function composeLiveSnapshot(
       return [];
     }
     const rows = takeTop(pickCategoryLiveRows(sources, boardSlug), 24);
-    // 도서 보드만 서점 랭킹이 단독 소유. 공연·전시는 티켓 + 뉴스/YouTube 시드를 함께 쓴다.
-    if (boardSlug === "bestseller-surge-index") {
+    // 도서: 서점 랭킹 단독. Native charts: Melon/Naver/KOBIS/Nielsen/games 단독.
+    // 공연·전시는 티켓 + 뉴스/YouTube 시드를 함께 쓴다.
+    if (boardSlug === "bestseller-surge-index" || isNativeChartBoard(boardSlug)) {
       return [];
     }
     return rows.map((row, _i, all) =>
