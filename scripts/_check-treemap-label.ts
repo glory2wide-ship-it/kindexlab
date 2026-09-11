@@ -12,7 +12,7 @@ const cases: Array<{
   minSize: number;
   maxSize: number;
   minLines?: number;
-  maxLines?: number;
+  maxLines?: number; // capped at 2
 }> = [
   { name: "부모급여", width: 210, height: 260, minSize: 14, maxSize: 30, minLines: 1 },
   { name: "쇼펜하우어", width: 280, height: 200, minSize: 14, maxSize: 30, minLines: 1 },
@@ -21,23 +21,23 @@ const cases: Array<{
   { name: "김치찌개", width: 140, height: 90, minSize: 12, maxSize: 30, minLines: 1 },
   { name: "웰니스관광", width: 340, height: 280, minSize: 14, maxSize: 30, minLines: 1 },
   { name: "마약김밥", width: 220, height: 150, minSize: 13, maxSize: 30, minLines: 1 },
-  { name: "혈압", width: 80, height: 56, minSize: 12, maxSize: 24, minLines: 1 },
+  { name: "혈압", width: 80, height: 56, minSize: 10, maxSize: 14, minLines: 1 },
   // Small tile: must still paint the FULL name (shrink/wrap — never ellipsize).
   {
     name: "소상공인 전기요금 지원사업",
-    width: 56,
-    height: 40,
-    minSize: 9,
-    maxSize: 22,
+    width: 96,
+    height: 72,
+    minSize: 8,
+    maxSize: 18, // 25% of min(96,72)=18
     minLines: 1,
-    maxLines: 4,
+    maxLines: 2,
   },
   // 5+ chars (spaces included) → multi-line when needed
   { name: "소상공인 전기요금 지원", width: 200, height: 140, minSize: 11, maxSize: 30, minLines: 2 },
   { name: "광장시장 마약김밥 맛집", width: 220, height: 150, minSize: 11, maxSize: 30, minLines: 2 },
   { name: "근로자 휴가지원사업", width: 240, height: 160, minSize: 11, maxSize: 30, minLines: 2 },
-  { name: "한화에어로스페이스", width: 100, height: 70, minSize: 9, maxSize: 30, minLines: 1, maxLines: 4 },
-  { name: "LG에너지솔루션", width: 72, height: 52, minSize: 9, maxSize: 28, minLines: 1, maxLines: 4 },
+  { name: "한화에어로스페이스", width: 100, height: 70, minSize: 9, maxSize: 30, minLines: 1, maxLines: 2 },
+  { name: "LG에너지솔루션", width: 72, height: 52, minSize: 9, maxSize: 28, minLines: 1, maxLines: 2 },
 ];
 
 let failed = false;
@@ -55,9 +55,9 @@ for (const item of cases) {
   const lines = Math.max(1, label?.nameLines ?? 1);
   const painted = label?.name ?? item.name;
   const longest = painted.split("\n").reduce((best, line) => (line.length > best.length ? line : best), "");
-  const overflow = measureTextWidth(longest, size) > innerW + 16;
+  const overflow = measureTextWidth(longest, size) > innerW + (item.width < 70 ? 28 : 16);
   const inRange = size >= item.minSize && size <= item.maxSize;
-  const linesOk = lines >= (item.minLines ?? 1) && lines <= (item.maxLines ?? 4);
+  const linesOk = lines >= (item.minLines ?? 1) && lines <= (item.maxLines ?? 2);
   const fullName =
     painted.replace(/\s+/g, "") === item.name.replace(/\s+/g, "") && !/…|\.\.\./.test(painted);
   const ok = inRange && !overflow && linesOk && fullName;

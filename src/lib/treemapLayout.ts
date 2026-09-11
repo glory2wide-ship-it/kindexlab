@@ -25,6 +25,8 @@ export const RANK_1_MAX_ASPECT = 1.35;
 export const RANK_AREA_STEP = 0.78;
 /** Soft floor so lower-rank tiles keep readable label area. */
 export const RANK_TAIL_FLOOR = 0.03;
+/** Max tile aspect (max/min side). Prefer near-square; never beyond 16:9 / 9:16. */
+export const MAX_TILE_ASPECT = 16 / 9;
 
 export type HeatmapLayoutVariant =
   | "squarify"
@@ -312,6 +314,8 @@ function squarifyFill(
     const nextWorst = rowWorstAspect(trial, trialValue, short);
     const currentWorst = row.length ? rowWorstAspect(row, rowValue, short) : Number.POSITIVE_INFINITY;
     if (row.length && nextWorst > currentWorst) break;
+    // Prefer stopping before a row would push tiles past 16:9 when the current row is already ok.
+    if (row.length && nextWorst > MAX_TILE_ASPECT && currentWorst <= MAX_TILE_ASPECT) break;
     row.push(nodes[take]!);
     rowValue = trialValue;
     take += 1;
@@ -348,20 +352,20 @@ function hashSeed(seed: string): number {
 }
 
 export function pickHeatmapLayoutVariant(seed: string): HeatmapLayoutVariant {
-  // Only packs that keep #1 top-left and push the lowest rank toward bottom-right.
-  // Seeded mix so category / submenu / timeframe / demo filters feel distinct.
+  // Prefer near-square packs (squarify family). Cascade variants place a near-square
+  // #1 then L-fill so tiles stay within 16:9. Seeded for category / filter variety.
   const variants: HeatmapLayoutVariant[] = [
-    "cascade-br",
     "squarify",
     "bands-top",
     "spine-left",
+    "cascade-br",
+    "squarify",
+    "bands-top",
     "cascade-row",
+    "spine-left",
+    "squarify",
     "slice-dice",
-    "cascade-br",
     "bands-top",
-    "spine-left",
-    "squarify",
-    "cascade-row",
     "cascade-br",
   ];
   return variants[hashSeed(seed) % variants.length]!;
@@ -486,10 +490,11 @@ function layoutSliceDice(
 
 
 
+
 /**
- * Ordered cascade pack: guillotine cuts that assign each rank its exact area
- * share. Cuts open toward the right/bottom so #1 stays top-left and the lowest
- * rank settles bottom-right. `preferRow` biases the first cuts horizontally.
+ * Cascade: near-square #1 in the top-left at its area share, then L-shaped
+ * remainder packed with squarify so lower ranks sit right/bottom — and every
+ * tile stays within the 16:9 aspect budget whenever geometry allows.
  */
 function layoutCascadeBr(
   nodes: PanelNode[],
@@ -498,7 +503,7 @@ function layoutCascadeBr(
   padding: number,
 ): TreemapBox[] {
   const ordered = [...nodes].sort((a, b) => a.rank - b.rank || b.value - a.value);
-  return packCascadeGuillotine(ordered, 0, 0, width, height, Math.max(0, padding), "auto");
+  return packCascadeNearSquare(ordered, width, height, Math.max(0, padding), false);
 }
 
 function layoutCascadeRow(
@@ -508,58 +513,115 @@ function layoutCascadeRow(
   padding: number,
 ): TreemapBox[] {
   const ordered = [...nodes].sort((a, b) => a.rank - b.rank || b.value - a.value);
-  return packCascadeGuillotine(ordered, 0, 0, width, height, Math.max(0, padding), "row");
+  return packCascadeNearSquare(ordered, width, height, Math.max(0, padding), true);
 }
 
-function packCascadeGuillotine(
+function clampTileAspect(w: number, h: number, area: number): { w: number; h: number } {
+  let tw = Math.max(8, w);
+  let th = Math.max(8, h);
+  const aspect = Math.max(tw / th, th / tw);
+  if (aspect <= MAX_TILE_ASPECT) return { w: tw, h: th };
+  // Rebuild from area with the max allowed aspect.
+  if (tw >= th) {
+    tw = Math.sqrt(Math.max(area, 1) * MAX_TILE_ASPECT);
+    th = Math.max(area, 1) / tw;
+  } else {
+    th = Math.sqrt(Math.max(area, 1) * MAX_TILE_ASPECT);
+    tw = Math.max(area, 1) / th;
+  }
+  return { w: Math.max(8, tw), h: Math.max(8, th) };
+}
+
+function packCascadeNearSquare(
   nodes: PanelNode[],
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
+  width: number,
+  height: number,
   gap: number,
-  mode: "auto" | "row" | "col",
+  preferWideLead: boolean,
 ): TreemapBox[] {
   if (!nodes.length) return [];
   if (nodes.length === 1) {
-    return [{ id: nodes[0]!.id, rank: nodes[0]!.rank, x0, y0, x1, y1 }];
-  }
-  const w = x1 - x0;
-  const h = y1 - y0;
-  if (w < 3 || h < 3) {
-    return nodes.map((node) => ({ id: node.id, rank: node.rank, x0, y0, x1, y1 }));
+    return [{ id: nodes[0]!.id, rank: nodes[0]!.rank, x0: 0, y0: 0, x1: width, y1: height }];
   }
 
   const total = nodes.reduce((sum, node) => sum + Math.max(node.value, 1e-9), 0) || 1;
   const lead = nodes[0]!;
   const rest = nodes.slice(1);
-  const leadShare = Math.max(nodeShare(lead.value, total), 1e-6);
+  const mapArea = Math.max(width * height, 1);
+  const leadArea = mapArea * (lead.value / total);
 
-  const cutRow =
-    mode === "row" ||
-    (mode === "auto" && h >= w);
-
-  if (cutRow) {
-    const leadH = Math.max(8, Math.min(h - 8, h * leadShare));
-    const cut = y0 + leadH;
-    const nextMode: "auto" | "row" | "col" = mode === "row" ? "col" : "auto";
-    return [
-      { id: lead.id, rank: lead.rank, x0, y0, x1, y1: cut },
-      ...packCascadeGuillotine(rest, x0, Math.min(cut + gap, y1), x1, y1, gap, nextMode),
-    ];
+  // Near-square lead, capped to 16:9 and to ~58% of each axis so the L remains usable.
+  let side = Math.sqrt(leadArea);
+  let leadW = side;
+  let leadH = leadArea / Math.max(leadW, 1);
+  if (preferWideLead) {
+    leadW = Math.min(width * 0.58, Math.max(side, Math.sqrt(leadArea * 1.35)));
+    leadH = leadArea / Math.max(leadW, 1);
+  }
+  ({ w: leadW, h: leadH } = clampTileAspect(leadW, leadH, leadArea));
+  leadW = Math.min(leadW, Math.max(24, width * 0.58));
+  leadH = Math.min(leadH, Math.max(24, height * 0.58));
+  // Re-assert area after clamps.
+  const areaNow = leadW * leadH;
+  if (areaNow > 1e-6 && Math.abs(areaNow - leadArea) / leadArea > 0.08) {
+    const scale = Math.sqrt(leadArea / areaNow);
+    leadW *= scale;
+    leadH *= scale;
+    leadW = Math.min(leadW, width - 16);
+    leadH = Math.min(leadH, height - 16);
+    ({ w: leadW, h: leadH } = clampTileAspect(leadW, leadH, leadW * leadH));
+    leadW = Math.min(leadW, width - 16);
+    leadH = Math.min(leadH, height - 16);
   }
 
-  const leadW = Math.max(8, Math.min(w - 8, w * leadShare));
-  const cut = x0 + leadW;
-  const nextMode: "auto" | "row" | "col" = mode === "col" ? "row" : "auto";
-  return [
-    { id: lead.id, rank: lead.rank, x0, y0, x1: cut, y1 },
-    ...packCascadeGuillotine(rest, Math.min(cut + gap, x1), y0, x1, y1, gap, nextMode),
+  const x1 = Math.min(width, Math.max(16, leadW));
+  const y1 = Math.min(height, Math.max(16, leadH));
+  const boxes: TreemapBox[] = [
+    { id: lead.id, rank: lead.rank, x0: 0, y0: 0, x1, y1 },
   ];
+  if (!rest.length) return boxes;
+
+  const rightW = width - x1 - gap;
+  const bottomH = height - y1 - gap;
+  const restTotal = rest.reduce((sum, node) => sum + node.value, 0) || 1;
+
+  if (rightW >= 28 && bottomH >= 28) {
+    const rightArea = rightW * y1;
+    const bottomArea = width * bottomH;
+    const rightTarget = rightArea / Math.max(rightArea + bottomArea, 1);
+    let acc = 0;
+    let split = Math.max(1, Math.min(rest.length - 1, Math.ceil(rest.length * 0.4)));
+    for (let i = 0; i < rest.length - 1; i++) {
+      acc += rest[i]!.value / restTotal;
+      if (acc >= rightTarget * 0.9) {
+        split = i + 1;
+        break;
+      }
+    }
+    const rightNodes = rest.slice(0, split);
+    const bottomNodes = rest.slice(split);
+    boxes.push(...squarifyPanel(rightNodes, Math.min(x1 + gap, width), 0, width, y1, gap));
+    if (bottomNodes.length) {
+      boxes.push(...squarifyPanel(bottomNodes, 0, Math.min(y1 + gap, height), width, height, gap));
+    }
+    return boxes;
+  }
+  if (rightW >= 28) {
+    boxes.push(...squarifyPanel(rest, Math.min(x1 + gap, width), 0, width, height, gap));
+    return boxes;
+  }
+  boxes.push(...squarifyPanel(rest, 0, Math.min(y1 + gap, height), width, height, gap));
+  return boxes;
 }
 
-function nodeShare(value: number, total: number): number {
-  return Math.max(value, 1e-9) / Math.max(total, 1e-9);
+function tileAspect(box: TreemapBox): number {
+  const w = Math.max(box.x1 - box.x0, 1e-6);
+  const h = Math.max(box.y1 - box.y0, 1e-6);
+  return Math.max(w / h, h / w);
+}
+
+function worstTileAspect(boxes: TreemapBox[]): number {
+  return boxes.reduce((worst, box) => Math.max(worst, tileAspect(box)), 1);
 }
 
 export function layoutHeatmapLeaves(
@@ -587,25 +649,30 @@ export function layoutHeatmapLeaves(
     options?.variant ??
     (options?.seed ? pickHeatmapLayoutVariant(options.seed) : "squarify");
 
-  if (variant === "bands-top") {
-    return layoutBandsTop(nodes, width, height, padding);
-  }
-  if (variant === "spine-left") {
-    return layoutSpineLeft(nodes, width, height, padding);
-  }
-  if (variant === "slice-dice") {
-    const ordered = [...nodes].sort((a, b) => a.rank - b.rank || b.value - a.value);
-    return layoutSliceDice(ordered, 0, 0, width, height, Math.max(0, padding), height >= width);
-  }
-  if (variant === "cascade-br") {
-    return layoutCascadeBr(nodes, width, height, padding);
-  }
-  if (variant === "cascade-row") {
-    return layoutCascadeRow(nodes, width, height, padding);
-  }
+  const pack = (): TreemapBox[] => {
+    if (variant === "bands-top") {
+      return layoutBandsTop(nodes, width, height, padding);
+    }
+    if (variant === "spine-left") {
+      return layoutSpineLeft(nodes, width, height, padding);
+    }
+    if (variant === "slice-dice") {
+      const ordered = [...nodes].sort((a, b) => a.rank - b.rank || b.value - a.value);
+      return layoutSliceDice(ordered, 0, 0, width, height, Math.max(0, padding), height >= width);
+    }
+    if (variant === "cascade-br") {
+      return layoutCascadeBr(nodes, width, height, padding);
+    }
+    if (variant === "cascade-row") {
+      return layoutCascadeRow(nodes, width, height, padding);
+    }
+    return squarifyPanel(nodes, 0, 0, width, height, padding);
+  };
 
-  // Default: full-canvas squarify — no gaps. Larger ranks pack first (top-left);
-  // lower ranks settle toward the right / bottom.
+  const packed = pack();
+  if (!packed.length) return packed;
+  if (worstTileAspect(packed) <= MAX_TILE_ASPECT + 0.12) return packed;
+  // Variant produced strips beyond ~16:9 — fall back to squarify for readability.
   return squarifyPanel(nodes, 0, 0, width, height, padding);
 }
 

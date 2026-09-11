@@ -6,14 +6,14 @@ import {
 
 const MIN_NAME = 15.5;
 /** Shrink below MIN_NAME before ever clipping a name. */
-const ABSOLUTE_NAME_FLOOR = 10;
-const MAX_NAME = 28;
+const ABSOLUTE_NAME_FLOOR = 8;
+const MAX_NAME = 26;
 const MIN_RATE = 12;
 const MAX_RATE = 18;
 const MIN_ARTIST = 10;
 const MAX_ARTIST = 14;
 const NAME_LINE_HEIGHT = 1.28;
-const ABSOLUTE_MAX_LINES = 4;
+const ABSOLUTE_MAX_LINES = 2;
 
 /** Korean particles / endings — keep with the preceding word when breaking. */
 const TRAILING_JOSA =
@@ -91,13 +91,18 @@ function nameBlockHeight(size: number, lines: number): number {
  * Hangul stock names (5–9 chars) wrap when the box is narrow.
  */
 function maxLinesForTile(width: number, height: number, displayLen: number): number {
+  // Long names wrap to at most 2 lines — never 3+.
   if (displayLen <= 3) return 1;
-  if (displayLen >= 16 && height >= 56 && width >= 60) return ABSOLUTE_MAX_LINES;
-  if (displayLen >= 10 && height >= 48 && width >= 52) return 3;
   if (height >= 28 && width >= 36 && displayLen >= 5) return 2;
   if (height >= 32 && width >= 40) return 2;
   if (displayLen >= HEATMAP_WRAP_MIN_CHARS) return 2;
   return 1;
+}
+
+/** Cap name size to 25% of the shorter tile side so type never dominates the box. */
+function maxNameSizeForTile(width: number, height: number): number {
+  // Upper bound only — 25% of the shorter side (and never above MAX_NAME).
+  return Math.min(MAX_NAME, Math.min(width, height) * 0.25);
 }
 
 /** Candidate soft-break indices (between chars), preferring spaces / sense boundaries. */
@@ -142,27 +147,34 @@ export function softWrapHeatmapName(name: string, maxLines = 2): string {
   const text = name.replace(/\s+/g, " ").trim();
   if (!text || maxLines < 2 || text.length < 5) return text;
 
-  const linesWanted = Math.min(maxLines, text.length >= 16 ? 4 : text.length >= 10 ? 3 : 2);
+  const linesWanted = Math.min(2, maxLines, text.length >= 5 ? 2 : 1);
   const candidates = softBreakCandidates(text);
 
   if (linesWanted === 2) {
     const mid = Math.ceil(text.length / 2);
-    const at = pickBreakNear(text, mid, candidates);
-    const loose =
-      candidates.length > 0 && Math.abs(at - mid) <= Math.max(4, Math.floor(text.length * 0.4));
-    const cut = loose ? at : mid;
-    const left = text.slice(0, cut).trim();
-    const right = text.slice(cut).trim();
-    if (!left || !right) return text;
-    if (left.length === 1 || right.length === 1) {
-      const safer = candidates.find((index) => index >= 2 && text.length - index >= 2);
-      if (safer != null) {
-        return `${text.slice(0, safer).trim()}\n${text.slice(safer).trim()}`;
+    const pool = candidates.length ? candidates : [mid];
+    // Minimize the longer line so both rows stay paintably short.
+    let best = mid;
+    let bestScore = Number.POSITIVE_INFINITY;
+    for (const index of pool) {
+      if (index < 2 || text.length - index < 2) continue;
+      const left = text.slice(0, index).trim();
+      const right = text.slice(index).trim();
+      if (!left || !right) continue;
+      // Prefer the break whose longer line is shortest (by glyph width, not just chars).
+      const longerWidth = Math.max(measureTextWidth(left, 10), measureTextWidth(right, 10));
+      const skew = Math.abs(left.length - right.length);
+      const score = longerWidth * 10 + skew;
+      if (score < bestScore) {
+        bestScore = score;
+        best = index;
       }
     }
+    const left = text.slice(0, best).trim();
+    const right = text.slice(best).trim();
+    if (!left || !right) return text;
     return `${left}\n${right}`;
   }
-
   const segment = Math.ceil(text.length / linesWanted);
   const cuts: number[] = [];
   for (let i = 1; i < linesWanted; i++) {
@@ -202,7 +214,7 @@ function densityNameSize(input: {
     input.innerH >= 28 &&
     measureTextWidth(input.text, MIN_NAME) > input.innerW
   ) {
-    maxLines = input.innerH >= 52 ? 3 : 2;
+    maxLines = 2;
   }
 
   const perLineChars = Math.max(1, Math.ceil(chars / maxLines));
@@ -226,7 +238,7 @@ function densityNameSize(input: {
   size *= shortBoost;
 
   const preferredFloor = Math.min(MIN_NAME, Math.max(ABSOLUTE_NAME_FLOOR, heightCap * 0.55));
-  const ceiling = Math.max(preferredFloor, Math.min(MAX_NAME, heightCap));
+  const ceiling = Math.max(preferredFloor, Math.min(MAX_NAME, heightCap, maxNameSizeForTile(input.innerW + 12, input.innerH + 12)));
   size = clamp(size, preferredFloor, ceiling);
 
   if (maxLines >= 2 && displayLen >= 5) {
@@ -410,7 +422,22 @@ export function layoutTreemapLabel(input: {
     rateY = cursor + rateSize * 0.82;
   }
 
-  nameSize = Math.max(ABSOLUTE_NAME_FLOOR, nameSize);
+  // Never let the title exceed 25% of the shorter tile side.
+  const sizeCap = maxNameSizeForTile(w, h);
+  nameSize = Math.min(sizeCap, Math.max(ABSOLUTE_NAME_FLOOR, nameSize));
+  // Re-balance wrap at the capped size, then shrink until the longest row fits.
+  wrappedName = softWrapHeatmapName(fullName, Math.min(2, maxLines));
+  wrappedLines = Math.max(1, wrappedName.split("\n").length);
+  let longestRow = wrappedName
+    .split("\n")
+    .reduce(
+      (best, line) =>
+        measureTextWidth(line, nameSize) > measureTextWidth(best, nameSize) ? line : best,
+      "",
+    );
+  while (nameSize - 0.25 >= ABSOLUTE_NAME_FLOOR && measureTextWidth(longestRow, nameSize) > innerW) {
+    nameSize -= 0.25;
+  }
 
   return {
     showName: true,

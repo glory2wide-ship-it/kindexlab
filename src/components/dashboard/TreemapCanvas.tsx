@@ -196,8 +196,10 @@ export function TreemapView({
           const priceLabel = heatmapPriceLabel(entity);
           const rank = displayRankById.get(entity.id) ?? leaf.rank ?? entity.rank;
           const rankBadge = formatHeatmapRank(rank);
-          /** Ranks 10+ or cramped tiles: name only — hide ±%. */
-          const omitRate = rank >= 10 || w < 72 || h < 44;
+          /** Hide ±% in the name block — rate moves next to the rank badge. */
+          const omitRate = true;
+          /** Show ±% beside/below the rank when the header has room. */
+          const showHeaderRate = rank < 10 && w >= 56 && h >= 28;
           const group = groupLabel(entity);
           const tile = heatmapTileLabel(entity);
           const isHeadline = entity.type === "headline_news";
@@ -238,27 +240,34 @@ export function TreemapView({
            */
           const layoutNameSize = label?.nameSize ?? 16;
           const mobileTitleScale = !isMobileViewport ? 1 : 0.94;
-          const nameFontSize = layoutNameSize * mobileTitleScale;
-          const headlineFontSize = isMobileViewport
-            ? headlineTitleSize(w, h) * mobileTitleScale
-            : headlineTitleSize(w, h);
-          const rateFontSize = (label?.rateSize ?? 16.5) * (isMobileViewport ? 0.9 : 1);
-          const showTileRate = !omitRate && label?.showRate !== false;
+          const nameSizeCapEarly = Math.min(w, h) * 0.25;
+          const nameFontSize = Math.min(nameSizeCapEarly, layoutNameSize * mobileTitleScale);
+          const headlineFontSize = Math.min(
+            nameSizeCapEarly,
+            isMobileViewport
+              ? headlineTitleSize(w, h) * mobileTitleScale
+              : headlineTitleSize(w, h),
+          );
+          // Rate matches rank size (header); no separate body rate.
+          const headerRateSize = rankSize;
+          const showTileRate = false;
           const href = entityHref(entity);
           const chipCount = (showChannelTag ? 1 : 0) + (showPrefixChip ? 1 : 0);
           const rankHeaderWidth = Math.min(
-            chipCount > 0 ? 200 : 120,
-            Math.max(48, w - 4),
+            chipCount > 0 || showHeaderRate ? 220 : 120,
+            Math.max(56, w - 4),
           );
-          // Rank badge sits top-right on both viewports (mobile previously top-left).
+          // Rank (+ rate) sits top-right. Header taller on desktop when rate stacks below.
+          const rankHeaderHeight = !isMobileViewport && showHeaderRate ? 36 : 28;
           const rankHeaderX = Math.max(leaf.x0 + 2, leaf.x1 - rankHeaderWidth - 2);
+          const nameSizeCap = nameSizeCapEarly;
           return (
             <Link
               key={`${entity.id}-${rank}`}
               href={href}
               prefetch={false}
               className="cursor-pointer"
-              aria-label={`${channelTag ? `${channelTag} ` : ""}${prefixChip && showPrefixChip ? `${prefixChip} ` : ""}${group} ${rankBadge} ${tile.title}${priceLabel ? ` ${priceLabel}` : ""}${omitRate ? "" : ` ${rate}`}`}
+              aria-label={`${channelTag ? `${channelTag} ` : ""}${prefixChip && showPrefixChip ? `${prefixChip} ` : ""}${group} ${rankBadge} ${tile.title}${priceLabel ? ` ${priceLabel}` : ""}${showHeaderRate ? ` ${rate}` : ""}`}
               data-heatmap-rank={rank}
               onPointerDown={() => {
                 router.prefetch(href);
@@ -289,17 +298,21 @@ export function TreemapView({
                 {showRank ? (
                   <foreignObject
                     x={rankHeaderX}
-                    y={leaf.y0 + 3}
+                    y={leaf.y0 + 2}
                     width={rankHeaderWidth}
-                    height={28}
+                    height={rankHeaderHeight}
                   >
                     <div
-                      className="pointer-events-none flex h-full w-full items-center justify-end gap-1 pr-1 text-right"
+                      className={`pointer-events-none flex h-full w-full justify-end gap-1 pr-1 text-right ${
+                        isMobileViewport || !showHeaderRate
+                          ? "flex-row items-center"
+                          : "flex-col items-end justify-start gap-0.5"
+                      }`}
                       style={{ color: fill }}
                     >
                       {showChannelTag ? (
                         <span
-                          className="max-w-[42%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
+                          className="max-w-[36%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
                           style={{ fontSize: sourceChipSize, borderColor: "currentColor" }}
                         >
                           {channelTag}
@@ -307,11 +320,19 @@ export function TreemapView({
                       ) : null}
                       {showPrefixChip && prefixChip ? (
                         <span
-                          className="max-w-[55%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
+                          className="max-w-[48%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
                           style={{ fontSize: sourceChipSize, borderColor: "currentColor" }}
                           title={prefixChip}
                         >
                           {prefixChip}
+                        </span>
+                      ) : null}
+                      {isMobileViewport && showHeaderRate ? (
+                        <span
+                          className="shrink-0 font-sans font-semibold tabular-nums leading-none"
+                          style={{ fontSize: headerRateSize }}
+                        >
+                          {rate}
                         </span>
                       ) : null}
                       <span
@@ -320,15 +341,23 @@ export function TreemapView({
                       >
                         {rankBadge}
                       </span>
+                      {!isMobileViewport && showHeaderRate ? (
+                        <span
+                          className="shrink-0 font-sans font-semibold tabular-nums leading-none"
+                          style={{ fontSize: headerRateSize }}
+                        >
+                          {rate}
+                        </span>
+                      ) : null}
                     </div>
                   </foreignObject>
                 ) : null}
                 {isHeadline ? (
                   <foreignObject
                     x={leaf.x0 + 4}
-                    y={leaf.y0 + (showRank ? 32 : 6)}
+                    y={leaf.y0 + (showRank ? rankHeaderHeight + 4 : 6)}
                     width={Math.max(w - 8, 0)}
-                    height={Math.max(h - (showRank ? 40 : 10), 0)}
+                    height={Math.max(h - (showRank ? rankHeaderHeight + 10 : 10), 0)}
                   >
                     <div
                       className="pointer-events-none flex h-full w-full flex-col items-center justify-center px-0.5 text-center"
@@ -344,29 +373,22 @@ export function TreemapView({
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           fontSize: headlineFontSize,
-                          lineHeight: 1.25,
+                          lineHeight: 1.28,
                           letterSpacing: "-0.01em",
-                          wordBreak: "break-all",
+                          wordBreak: "keep-all",
                         }}
                       >
                         {displayTitle}
                       </p>
-                      {showTileRate && h >= 48 ? (
-                        <p
-                          className="mt-1 font-bold tabular-nums"
-                          style={{ fontSize: rateFontSize }}
-                        >
-                          {label?.rate ?? rate}
-                        </p>
-                      ) : null}
+                      {/* rate moved to rank header */}
                     </div>
                   </foreignObject>
                 ) : (
                   <foreignObject
                     x={leaf.x0 + 6}
-                    y={leaf.y0 + (showRank ? 26 : 6)}
+                    y={leaf.y0 + (showRank ? rankHeaderHeight + 2 : 6)}
                     width={Math.max(w - 12, 0)}
-                    height={Math.max(h - (showRank ? 34 : 12), 0)}
+                    height={Math.max(h - (showRank ? rankHeaderHeight + 8 : 12), 0)}
                   >
                     <div
                       className="pointer-events-none flex h-full w-full flex-col items-center justify-center px-0.5 text-center"
@@ -377,10 +399,13 @@ export function TreemapView({
                           className="heatmap-tile-name w-full font-semibold tracking-tight"
                           suppressHydrationWarning
                           style={{
-                            // Full name only: wrap/shrink in layoutTreemapLabel — never CSS-ellipsis.
-                            overflow: "visible",
+                            // Full name, max 2 lines: wrap/shrink in layoutTreemapLabel.
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
                             fontSize: nameFontSize,
-                            lineHeight: 1.3,
+                            lineHeight: 1.28,
                             letterSpacing: "-0.01em",
                             whiteSpace: "pre-line",
                             wordBreak: "keep-all",
@@ -408,14 +433,7 @@ export function TreemapView({
                           {label.meta}
                         </p>
                       ) : null}
-                      {showTileRate && h >= 28 ? (
-                        <p
-                          className="mt-1 font-bold tabular-nums"
-                          style={{ fontSize: rateFontSize }}
-                        >
-                          {label?.rate ?? rate}
-                        </p>
-                      ) : null}
+                      {/* rate moved to rank header */}
                     </div>
                   </foreignObject>
                 )}

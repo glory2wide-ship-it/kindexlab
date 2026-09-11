@@ -15,6 +15,7 @@ async function main() {
     pickHeatmapLayoutVariant,
     RANK_1_AREA_RATIO,
     RANK_TOP_AREA_CAP,
+    MAX_TILE_ASPECT,
   } = await import("@/lib/treemapLayout");
 
   for (const count of [3, 5, 10, 15, 20]) {
@@ -116,6 +117,17 @@ async function main() {
     if (variant === "squarify" && !lowerTowardEdge) {
       throw new Error(`${variant} lower ranks should sit further right/bottom`);
     }
+
+    const aspects = byRank.map((box) => {
+      const tw = Math.max(box.x1 - box.x0, 1e-6);
+      const th = Math.max(box.y1 - box.y0, 1e-6);
+      return Math.max(tw / th, th / tw);
+    });
+    const worstAspect = Math.max(...aspects);
+    if (worstAspect > MAX_TILE_ASPECT + 0.2) {
+      throw new Error(`${variant} tile aspect ${worstAspect.toFixed(2)} exceeds ~16:9`);
+    }
+
     console.log(
       `variant ${variant.padEnd(12)} 1위 ${(leadShare * 100).toFixed(1)}%  2위 ${(secondShare * 100).toFixed(1)}%  cover ${(coverage * 100).toFixed(1)}%  tiles ${painted.length}`,
     );
