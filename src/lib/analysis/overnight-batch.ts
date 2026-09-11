@@ -69,8 +69,8 @@ export async function runHeatmapAnalysisOvernight(
     delayMs?: number;
     onProgress?: (item: HeatmapOvernightItem, position: number, total: number) => void;
     /**
-     * Called after each wave finishes. Used by CI to push `cache.json` so a
-     * 6h Actions timeout does not discard already-written articles.
+     * Called after each wave finishes. CI may use this for progress reports or
+     * rare time-gated git checkpoints (not per-batch pushes — Vercel billing).
      */
     onBatchComplete?: (info: {
       batchIndex: number;

@@ -4,8 +4,13 @@
  * Uses Gemini Batch (−50%) when GEMINI_USE_BATCH=1. Fresh TTL hits are skipped
  * unless --force. First-click detail pages stay on Live API (see pipeline.ts).
  *
- * In CI, each successful batch checkpoints `src/data/analysis/cache.json` to
- * GitHub so a 6h Actions timeout cannot discard already-written articles.
+ * Articles are written to disk as they finish. CI pushes cache.json once at the
+ * end (workflow `always()` step) so a 6h timeout still keeps work — without
+ * mid-run pushes that would spam Vercel deploys.
+ *
+ * Optional rare mid-run git checkpoints (no Vercel deploy): set
+ * ANALYSIS_CHECKPOINT_INTERVAL_MS (e.g. 10800000 = 3h). Commit messages use
+ * `[vercel skip]`. Default interval is 0 (no mid-run pushes).
  *
  * Usage:
  *   npx tsx scripts/generate-heatmap-analysis.ts
@@ -35,16 +40,24 @@ import { formatKrw, resetGeminiUsage, snapshotGeminiUsage } from "../src/lib/ops
 import { POST_CHANNELS } from "../src/lib/posts/channels";
 import type { PostChannel } from "../src/lib/posts/types";
 
-/** GitHub-hosted runners hard-cap at 6h — push cache mid-run so cancels keep articles. */
+/** Rare mid-run git push only (default off). Final publish is the workflow step. */
 function checkpointEnabled(): boolean {
   if (process.env.ANALYSIS_CHECKPOINT === "0") return false;
   return process.env.ANALYSIS_CHECKPOINT === "1" || process.env.CI === "true";
 }
 
+/** 0 = no mid-run pushes (preferred — avoids Vercel deploy spam). */
+function checkpointIntervalMs(): number {
+  const parsed = Number.parseInt(process.env.ANALYSIS_CHECKPOINT_INTERVAL_MS ?? "0", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
 function pushAnalysisCacheCheckpoint(message: string): void {
+  // `[vercel skip]` so optional mid-run git backups do not bill a deployment.
+  const withSkip = message.includes("[vercel skip]") ? message : `${message} [vercel skip]`;
   const result = spawnSync(
     "bash",
-    ["scripts/ci-checkpoint-analysis-cache.sh", message, "src/data/analysis/cache.json"],
+    ["scripts/ci-checkpoint-analysis-cache.sh", withSkip, "src/data/analysis/cache.json"],
     { stdio: "inherit", env: process.env },
   );
   if (result.status !== 0) {
@@ -148,15 +161,26 @@ async function main() {
 
   const market = await getRankings();
   const doCheckpoint = checkpointEnabled();
-  if (doCheckpoint) {
+  const intervalMs = checkpointIntervalMs();
+  let lastCheckpointAt = Date.now();
+  let midRunPushes = 0;
+
+  if (doCheckpoint && intervalMs > 0) {
     console.log(
-      "[checkpoint] CI mid-run push enabled (GitHub-hosted max 6h — save articles before cancel)",
+      `[checkpoint] rare mid-run git push every ${Math.round(intervalMs / 60_000)}m with [vercel skip] (final publish is still 1× at job end)`,
+    );
+  } else {
+    console.log(
+      "[checkpoint] mid-run push disabled — disk writes + single final workflow push (avoids Vercel deploy spam)",
     );
   }
 
   let latestItems: HeatmapOvernightItem[] = [];
+  // Do not git-push on SIGTERM: the workflow `always()` step publishes once.
   const onSignal = (signal: string) => {
-    console.warn(`[checkpoint] received ${signal} — pushing cache before exit`);
+    console.warn(
+      `[checkpoint] received ${signal} — writing partial report; final workflow step will push cache`,
+    );
     try {
       void writeGenerationReportArtifacts(
         buildAnalysisReport(editionDate, latestItems, [
@@ -168,11 +192,6 @@ async function main() {
       );
     } catch (error) {
       console.warn("[checkpoint] partial report write failed", error);
-    }
-    if (doCheckpoint) {
-      pushAnalysisCacheCheckpoint(
-        `chore: checkpoint heatmap analysis (signal ${signal}, ${latestItems.filter((i) => i.ok && !i.skipped).length} generated)`,
-      );
     }
   };
   process.once("SIGTERM", () => onSignal("SIGTERM"));
@@ -218,9 +237,13 @@ async function main() {
         console.warn("[checkpoint] report artifact write failed", error);
       }
 
-      if (!doCheckpoint || batchGenerated === 0) return;
+      // Mid-run pushes are opt-in and time-gated only (never per-batch).
+      if (!doCheckpoint || intervalMs <= 0 || batchGenerated === 0) return;
+      if (Date.now() - lastCheckpointAt < intervalMs) return;
+      midRunPushes += 1;
+      lastCheckpointAt = Date.now();
       pushAnalysisCacheCheckpoint(
-        `chore: checkpoint heatmap analysis (${generatedSoFar} generated, ${position}/${total})`,
+        `chore: checkpoint heatmap analysis (${generatedSoFar} generated, ${position}/${total}, mid ${midRunPushes})`,
       );
     },
   });

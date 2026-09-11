@@ -7,9 +7,10 @@ name: Heatmap today's analysis
 # Cron: 05:00 KST (after 04:00 briefings start; before morning traffic).
 #
 # GitHub-hosted runners hard-cap at 6 hours — we cannot raise that. Instead:
-#   1) generate script checkpoints cache.json after each successful batch
-#   2) final commit step runs even when the job is cancelled (timeout)
-# so already-written articles are pushed instead of discarded.
+#   articles are written to disk continuously, then ONE final cache push runs
+#   even when the job is cancelled (timeout). Mid-run pushes stay off by default
+#   so Vercel is not billed for dozens of deploys (optional rare git-only
+#   backups: ANALYSIS_CHECKPOINT_INTERVAL_MS, commits include [vercel skip]).
 #
 # Email report → glory2wide@gmail.com after generation. Requires repo secrets:
 #   RESEND_API_KEY  OR  SMTP_USER + SMTP_PASS (Gmail app password)
@@ -86,8 +87,10 @@ jobs:
           GEMINI_USE_BATCH: "true"
           GEMINI_BATCH_CONCURRENCY: "4"
           ANALYSIS_OVERNIGHT_BATCH_SIZE: "20"
-          # Mid-run git push after each successful batch (survives 6h cancel).
+          # Mid-run git push OFF (0). Salvage = disk + single final always() push.
+          # Set e.g. 10800000 (3h) only if you want rare git backups with [vercel skip].
           ANALYSIS_CHECKPOINT: "1"
+          ANALYSIS_CHECKPOINT_INTERVAL_MS: "0"
           CI: "true"
           GEMINI_MAX_CONCURRENCY: "4"
           TRENDS_DATA_SOURCE: live
