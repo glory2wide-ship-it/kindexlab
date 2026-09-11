@@ -10,6 +10,13 @@ const cases: Array<[string, string]> = [
   ["스포츠강좌이용권", "스포츠강좌\n이용권"],
   ["소상공인 전기요금 지원", "소상공인\n전기요금 지원"],
   ["연극〈더 헬멧〉", "연극〈더 헬멧〉"],
+  // Unspaced English → always 1 line; spaced English may wrap at space.
+  ["LEMONADE", "LEMONADE"],
+  ["Whiplash", "Whiplash"],
+  ["Counter-Strike", "Counter-Strike"],
+  ["LOVE ATTACK", "LOVE\nATTACK"],
+  // compact ≤7 still prefers one line even with a space
+  ["Plus Two", "Plus Two"],
 ];
 
 let failed = false;

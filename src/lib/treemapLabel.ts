@@ -102,9 +102,11 @@ function maxLinesForTile(
   height: number,
   displayLen: number,
   absoluteMax: number,
+  text = "",
 ): number {
   // SoftWrap enforces ≤7 → 1 line (except strong brands / episode tails).
   // Tile geometry may still allow 2+ lines so brand / episode splits can paint.
+  if (text && isUnspacedLatinName(text)) return 1;
   if (displayLen <= 3) return 1;
   if (absoluteMax >= 3 && height >= 40 && width >= 44 && displayLen >= 8) return 3;
   if (height >= 28 && width >= 36 && displayLen >= 5) return Math.min(2, absoluteMax);
@@ -446,6 +448,18 @@ function compactNameLen(text: string): number {
   return text.replace(/\s+/g, "").length;
 }
 
+/**
+ * One English token with no whitespace (e.g. LEMONADE, Whiplash, Counter-Strike).
+ * These must stay on a single heatmap line — shrink type instead of mid-word wrap.
+ * Spaced English (LOVE ATTACK) may still wrap at the space.
+ */
+export function isUnspacedLatinName(text: string): boolean {
+  const trimmed = text.replace(/\s+/g, " ").trim();
+  if (!trimmed || /\s/.test(trimmed)) return false;
+  if (/[가-힣]/.test(trimmed)) return false;
+  return /[A-Za-z]/.test(trimmed);
+}
+
 /** Map a compact-string index back onto the spaced source string. */
 function indexInSpacedText(text: string, compactIndex: number): number {
   let compact = 0;
@@ -478,6 +492,10 @@ function strongBrandBreakAt(text: string): number | null {
 export function softWrapHeatmapName(name: string, maxLines = 2): string {
   const text = name.replace(/\s+/g, " ").trim();
   if (!text || maxLines < 2) return text;
+
+  // Unspaced English tokens never mid-break (LEMONADE, Whiplash).
+  // Spaced English may wrap at whitespace (LOVE ATTACK).
+  if (isUnspacedLatinName(text)) return text;
 
   const compactLen = compactNameLen(text);
   // ≤7 chars: one line by default (SK하이닉스, 소비자물가지수).
@@ -602,15 +620,23 @@ function densityNameSize(input: {
   const absoluteMax = input.absoluteMaxLines ?? ABSOLUTE_MAX_LINES_DEFAULT;
   const displayLen = heatmapLabelDisplayLength(input.text);
   const chars = heatmapLabelCharCount(input.text);
-  let maxLines = maxLinesForTile(input.innerW + 12, input.innerH + 12, displayLen, absoluteMax);
+  let maxLines = maxLinesForTile(
+    input.innerW + 12,
+    input.innerH + 12,
+    displayLen,
+    absoluteMax,
+    input.text,
+  );
 
   // Short names (≤7) stay one line unless a strong brand / episode split exists.
   // Longer names may force wrap when a single line cannot fit at MIN_NAME.
+  // Unspaced Latin always shrinks on one line — never mid-word wrap.
   const compactLen = compactNameLen(input.text);
   if (
     maxLines === 1 &&
     input.innerH >= 28 &&
-    measureTextWidth(input.text, MIN_NAME) > input.innerW
+    measureTextWidth(input.text, MIN_NAME) > input.innerW &&
+    !isUnspacedLatinName(input.text)
   ) {
     if (
       compactLen > 7 ||
