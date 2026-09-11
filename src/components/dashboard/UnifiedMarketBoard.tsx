@@ -27,11 +27,17 @@ export function UnifiedMarketBoard({
   const [pending, startTransition] = useTransition();
 
   return (
-    <>
-      <div className="order-2 -mx-4">
+    /*
+     * One flex column so ticker→heatmap spacing does not depend on the landing
+     * page Suspense/client boundary (which can swallow parent gap-* between
+     * fragment siblings). Mobile gap-3 matches CategoryChrome ticker→채널 옵션.
+     * Desktop keeps md:gap-4 to stay aligned with category chrome.
+     */
+    <div className="order-2 flex flex-col gap-3 md:gap-4">
+      <div className="-mx-4">
         {items.length ? <TickerTape items={items} /> : null}
       </div>
-      <div className="order-3 space-y-3">
+      <div className="space-y-3">
         <MarketWorkspace
           items={items}
           initialView="treemap"
@@ -44,6 +50,6 @@ export function UnifiedMarketBoard({
           onRefresh={() => startTransition(() => router.refresh())}
         />
       </div>
-    </>
+    </div>
   );
 }

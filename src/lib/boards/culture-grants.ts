@@ -4,7 +4,7 @@ import { formatBracketLabel, parseBracketLabel } from "@/lib/politics/labeled-ra
 
 /** Culture/living grants only — travel·관광 사업은 여행 카테고리 보드로 분리. */
 export const CULTURE_GRANT_SLUG = "culture-leisure-grant-ranking";
-export const CULTURE_GRANT_TITLE = "문화/생활 정부 지원금";
+export const CULTURE_GRANT_TITLE = "정부지원금";
 
 /**
  * Travel-grant subjects (and orgs) that must never appear on the culture board.

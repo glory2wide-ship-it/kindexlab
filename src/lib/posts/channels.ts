@@ -83,7 +83,7 @@ export const POST_CHANNELS: {
     eyebrow: "CULTURE & LIVING",
     indexTitle: "문화/생활",
     description:
-      "문화/생활 정부 지원금, 공연, 전시·팝업스토어, 도서·베스트셀러, 건강정보, 요리 레시피, 자동차, 이슈 키워드를 한 데스크에서 읽습니다.",
+      "정부지원금, 공연, 전시·팝업스토어, 도서·베스트셀러, 건강정보, 요리 레시피, 자동차, 이슈 키워드를 한 데스크에서 읽습니다.",
     indexTitleDesktop: "트렌디한 삶의 방식과 소비 지형도, 문화·생활 지수",
     descriptionDesktop:
       "문화, 라이프스타일, 트렌드 아이템까지 일상 속 모든 관심사의 실시간 랭킹.",

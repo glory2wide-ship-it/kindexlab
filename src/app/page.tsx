@@ -128,8 +128,9 @@ export default function HomePage() {
         Category chips live in the root GlobalStickyMobileCategoryBar.
       */}
       {/*
-        Match category chrome: H1 → ticker → heatmap are flex siblings so the
-        ticker↔heatmap gap is gap-3 / md:gap-4 (not nested flush).
+        H1 → (ticker+heatmap) → desks. Ticker↔heatmap gap is owned inside
+        UnifiedMarketBoard (gap-3 / md:gap-4) so it matches category chrome
+        even when Suspense/client boundaries nest the board.
       */}
       <div className="flex flex-col gap-3 md:gap-4">
         <div className="order-1">
@@ -142,16 +143,18 @@ export default function HomePage() {
             </div>
           }
         >
-          <HomeHeatmapSection />
+          <div className="order-2">
+            <HomeHeatmapSection />
+          </div>
         </Suspense>
         <Suspense
           fallback={
-            <div className="order-4">
+            <div className="order-3">
               <DesksSkeleton />
             </div>
           }
         >
-          <div className="order-4 space-y-4">
+          <div className="order-3 space-y-4">
             <HomeDesksSection />
           </div>
         </Suspense>

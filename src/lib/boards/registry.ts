@@ -438,7 +438,7 @@ export const BOARDS: BoardDefinition[] = [
       "문체부·문예위·콘진원 등 문화·생활·체육·예술 분야 정부·공공 지원사업의 검색·신청 관심도 (여행·관광 사업 제외)",
     affiliateCategory: "국내 숙박 · 나들이",
     queries: ["문화누리카드", "청춘문화패스", "스포츠강좌이용권", "예술인 생활안정자금", "통합문화이용권"],
-    focusKeyword: "문화/생활 정부 지원금",
+    focusKeyword: "정부지원금",
     supportKeyword: "문화 복지 지원",
     seeds: [...CULTURE_GRANT_SEEDS],
     rankGuidance:
