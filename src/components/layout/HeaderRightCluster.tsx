@@ -1,6 +1,5 @@
 "use client";
 
-import { KstClock } from "@/components/layout/KstClock";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 const LIVE_GREEN = "#22c55e";
@@ -31,7 +30,7 @@ function LiveBadge() {
 }
 
 /**
- * Desktop (md+): clock + LIVE + theme. Search sits on the section-tab row.
+ * Desktop (md+): LIVE + theme. Search sits on the section-tab row.
  * Mobile: LIVE + theme only.
  */
 export function HeaderRightCluster() {
@@ -40,9 +39,6 @@ export function HeaderRightCluster() {
       data-header-right
       className="flex min-w-0 shrink-0 items-center overflow-visible md:ml-auto"
     >
-      <div className="hidden min-w-0 flex-1 items-center justify-end px-1 sm:px-2 md:flex md:px-3">
-        <KstClock />
-      </div>
       <div className="flex shrink-0 items-center gap-1 md:gap-2.5">
         <LiveBadge />
         <ThemeToggle />

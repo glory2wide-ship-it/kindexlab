@@ -128,13 +128,15 @@ if (heatmapLabelDisplayLength(long) < HEATMAP_WRAP_MIN_CHARS) failed = true;
 
 
 const wrapCases: Array<[string, string]> = [
-  // ≤7 compact chars → one line (unless strong brand tail)
+  // ≤7 compact chars → one line (unless strong brand / episode tail)
   ["SK하이닉스", "SK하이닉스"],
   ["소비자물가지수", "소비자물가지수"],
   ["기후동행카드", "기후동행카드"],
   ["문화누리카드", "문화누리카드"],
   ["든든전세주택", "든든전세주택"],
   ["상인푸르지오", "상인\n푸르지오"],
+  ["라이브투데이1부", "라이브투데이\n1부"],
+  ["2026KBO리그", "2026\nKBO리그"],
   // Longer / spaced names may wrap linguistically
   ["연극〈더 헬멧〉", "연극〈더 헬멧〉"],
   ["스포츠강좌이용권", "스포츠강좌\n이용권"],
@@ -147,6 +149,41 @@ for (const [input, expect] of wrapCases) {
   const ok = got === expect;
   if (!ok) failed = true;
   console.log(`${ok ? "ok" : "BAD"} semantic wrap ${JSON.stringify(input)} → ${JSON.stringify(got)}`);
+}
+
+// 공연·도서: long titles may use 3 lines + higher area budget for larger type.
+{
+  const book = layoutTreemapLabel({
+    width: 120,
+    height: 100,
+    y: 0,
+    name: "세이노의 가르침 특별판 한정본",
+    rate: "+1.2%",
+    typeLabel: "",
+    omitRate: true,
+    entityType: "book",
+  });
+  const perf = layoutTreemapLabel({
+    width: 110,
+    height: 96,
+    y: 0,
+    name: "뮤지컬 〈레미제라블〉 10주년",
+    rate: "+2.0%",
+    typeLabel: "",
+    omitRate: true,
+    entityType: "performance",
+  });
+  const bookLines = book?.nameLines ?? 0;
+  const perfLines = perf?.nameLines ?? 0;
+  const bookOk = Boolean(book) && bookLines >= 1 && bookLines <= 3 && (book?.nameSize ?? 0) >= 9;
+  const perfOk = Boolean(perf) && perfLines >= 1 && perfLines <= 3 && (perf?.nameSize ?? 0) >= 9;
+  if (!bookOk || !perfOk) failed = true;
+  console.log(
+    `${bookOk ? "ok" : "BAD"} book long-title L${bookLines} ${book?.nameSize?.toFixed(1)}px ${JSON.stringify(book?.name)}`,
+  );
+  console.log(
+    `${perfOk ? "ok" : "BAD"} performance long-title L${perfLines} ${perf?.nameSize?.toFixed(1)}px ${JSON.stringify(perf?.name)}`,
+  );
 }
 
 const wrapped = softWrapHeatmapName(long, 2);

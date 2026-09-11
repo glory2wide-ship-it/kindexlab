@@ -13,7 +13,14 @@ const MAX_RATE = 18;
 const MIN_ARTIST = 10;
 const MAX_ARTIST = 14;
 const NAME_LINE_HEIGHT = 1.28;
-const ABSOLUTE_MAX_LINES = 2;
+const ABSOLUTE_MAX_LINES_DEFAULT = 2;
+/** Long titles (공연·도서) may use a third line so type can stay larger. */
+const ABSOLUTE_MAX_LINES_LONG_TITLE = 3;
+
+/** Entity types that prefer larger type via up to 3 wrap lines. */
+export function allowsLongTitleWrap(entityType?: string): boolean {
+  return entityType === "performance" || entityType === "book";
+}
 
 /** Korean particles / endings — keep with the preceding word when breaking. */
 const TRAILING_JOSA =
@@ -90,13 +97,19 @@ function nameBlockHeight(size: number, lines: number): number {
  * How many lines the tile may use. Prefer wrapping over clipping — even short
  * Hangul stock names (5–9 chars) wrap when the box is narrow.
  */
-function maxLinesForTile(width: number, height: number, displayLen: number): number {
-  // SoftWrap enforces ≤7 → 1 line (except strong brands like 상인|푸르지오).
-  // Tile geometry may still allow 2 lines so brand splits can paint.
+function maxLinesForTile(
+  width: number,
+  height: number,
+  displayLen: number,
+  absoluteMax: number,
+): number {
+  // SoftWrap enforces ≤7 → 1 line (except strong brands / episode tails).
+  // Tile geometry may still allow 2+ lines so brand / episode splits can paint.
   if (displayLen <= 3) return 1;
-  if (height >= 28 && width >= 36 && displayLen >= 5) return 2;
-  if (height >= 32 && width >= 40) return 2;
-  if (displayLen >= HEATMAP_WRAP_MIN_CHARS) return 2;
+  if (absoluteMax >= 3 && height >= 40 && width >= 44 && displayLen >= 8) return 3;
+  if (height >= 28 && width >= 36 && displayLen >= 5) return Math.min(2, absoluteMax);
+  if (height >= 32 && width >= 40) return Math.min(2, absoluteMax);
+  if (displayLen >= HEATMAP_WRAP_MIN_CHARS) return Math.min(2, absoluteMax);
   return 1;
 }
 
@@ -105,8 +118,10 @@ function maxNameSizeForTile(width: number, height: number): number {
   return Math.min(MAX_NAME, Math.min(width, height) * 0.4);
 }
 
-/** Painted name block (longest line × block height) must stay ≤ 25% of tile area. */
+/** Painted name block (longest line × block height) must stay ≤ this share of tile area. */
 const NAME_AREA_RATIO = 0.25;
+/** 공연·도서: slightly higher so long titles can keep larger type across 3 lines. */
+const NAME_AREA_RATIO_LONG_TITLE = 0.34;
 
 function namePaintArea(size: number, lines: string[]): number {
   const rows = lines.length ? lines : [""];
@@ -123,8 +138,9 @@ function shrinkNameToAreaBudget(
   tileW: number,
   tileH: number,
   floor: number,
+  areaRatio = NAME_AREA_RATIO,
 ): number {
-  const budget = Math.max(1, tileW * tileH * NAME_AREA_RATIO);
+  const budget = Math.max(1, tileW * tileH * areaRatio);
   let next = size;
   // Keep stepping while over budget; allow one step onto the floor.
   while (next > floor && namePaintArea(next, lines) > budget) {
@@ -256,6 +272,56 @@ const COMPOUND_HEAD_UNITS = [
 
 type BreakKind = "space" | "paren" | "semantic" | "mid";
 
+/** Episode / part tails: 라이브투데이|1부, …|특집 */
+const EPISODE_TAIL_RE = /^(?:\d+[부회화편]|특집|스페셜)/;
+
+/** Year opener: 2026|KBO리그 */
+const YEAR_PREFIX_RE = /^(?:19|20)\d{2}/;
+
+function episodeBreakAt(text: string): number | null {
+  const compact = text.replace(/\s+/g, "");
+  const match = compact.match(/^(.*?)(\d+[부회화편]|특집|스페셜)$/);
+  if (!match?.[1] || match[1].length < 2) return null;
+  return indexInSpacedText(text, match[1].length);
+}
+
+function yearPrefixBreakAt(text: string): number | null {
+  const compact = text.replace(/\s+/g, "");
+  const match = compact.match(/^((?:19|20)\d{2})(.+)$/);
+  if (!match?.[2] || match[2].length < 2) return null;
+  const rest = match[2];
+  // Short pure-Hangul remainder can stay one line; Latin/long tails wrap after the year.
+  if (rest.length <= 3 && /^[가-힣]+$/.test(rest)) return null;
+  return indexInSpacedText(text, 4);
+}
+
+function isStructuralBreak(text: string, index: number): boolean {
+  if (insidePairedMarks(text, index)) return false;
+  const right = text.slice(index).replace(/^\s+/, "");
+  const leftCompact = text.slice(0, index).replace(/\s+/g, "");
+  if (EPISODE_TAIL_RE.test(right) && leftCompact.length >= 2) return true;
+  if (YEAR_PREFIX_RE.test(leftCompact) && leftCompact.length === 4 && right.length >= 2) {
+    return true;
+  }
+  // Hangul/Latin → digit (라이브투데이|1부) when not already covered.
+  const prev = text[index - 1] ?? "";
+  const next = text[index] ?? "";
+  if (/[가-힣A-Za-z]/.test(prev) && /\d/.test(next)) return true;
+  return false;
+}
+
+function structuralBreaks(text: string): number[] {
+  const breaks: number[] = [];
+  const episodeAt = episodeBreakAt(text);
+  if (episodeAt != null) breaks.push(episodeAt);
+  const yearAt = yearPrefixBreakAt(text);
+  if (yearAt != null) breaks.push(yearAt);
+  for (let i = 1; i < text.length; i++) {
+    if (isStructuralBreak(text, i)) breaks.push(i);
+  }
+  return [...new Set(breaks)].sort((a, b) => a - b);
+}
+
 function classifyBreak(text: string, index: number): BreakKind {
   if (/\s/.test(text.slice(Math.max(0, index - 1), index + 1))) return "space";
   if (/[·\/-]/.test(text.slice(Math.max(0, index - 1), index + 1))) return "space";
@@ -267,6 +333,7 @@ function classifyBreak(text: string, index: number): BreakKind {
   ) {
     return "paren";
   }
+  if (isStructuralBreak(text, index)) return "semantic";
   for (const tail of COMPOUND_TAIL_UNITS) {
     if (right.startsWith(tail) && left.replace(/\s+/g, "").length >= 2) return "semantic";
   }
@@ -344,9 +411,12 @@ function softBreakCandidates(text: string): number[] {
   const spaces = spaceOrDelimBreaks(text);
   const parens = parenEdgeBreaks(text);
   const semantic = semanticCompoundBreaks(text);
+  const structural = structuralBreaks(text);
 
-  // Always keep paren + semantic with spaces — paren must beat inner spaces.
-  const preferred = [...new Set([...spaces, ...parens, ...semantic])].sort((a, b) => a - b);
+  // Structural (year / episode) + paren + semantic with spaces.
+  const preferred = [...new Set([...structural, ...spaces, ...parens, ...semantic])].sort(
+    (a, b) => a - b,
+  );
   if (preferred.length) return preferred;
 
   const mid: number[] = [];
@@ -401,17 +471,25 @@ function strongBrandBreakAt(text: string): number | null {
 /**
  * Soft-wrap the full name. Never truncates — callers shrink type instead.
  * Break priority: whitespace (outside brackets) → paren edges → compound
- * head/tail units → mid-Hangul last resort.
- * Compact length ≤ 7 stays one line unless a strong brand tail splits it.
+ * head/tail units → year / episode structure → mid-Hangul last resort.
+ * Compact length ≤ 7 stays one line unless a strong brand or episode/year
+ * structural split applies.
  */
 export function softWrapHeatmapName(name: string, maxLines = 2): string {
   const text = name.replace(/\s+/g, " ").trim();
   if (!text || maxLines < 2) return text;
 
   const compactLen = compactNameLen(text);
-  // ≤7 chars: one line by default (SK하이닉스, 소비자물가지수). Brand compounds may wrap.
+  // ≤7 chars: one line by default (SK하이닉스, 소비자물가지수).
+  // Episode tails (라이브투데이|1부) and strong brands may still wrap.
   if (compactLen <= 7) {
     if (maxLines < 2) return text;
+    const episodeAt = episodeBreakAt(text);
+    if (episodeAt != null && episodeAt >= 2) {
+      const left = text.slice(0, episodeAt).trim();
+      const right = text.slice(episodeAt).trim();
+      if (left && right) return `${left}\n${right}`;
+    }
     const brandAt = strongBrandBreakAt(text);
     if (brandAt == null || brandAt < 2) return text;
     const left = text.slice(0, brandAt).trim();
@@ -419,7 +497,21 @@ export function softWrapHeatmapName(name: string, maxLines = 2): string {
     return left && right ? `${left}\n${right}` : text;
   }
 
-  const linesWanted = Math.min(2, maxLines);
+  // Prefer a forced year split when the remainder is a Latin+Hangul unit
+  // (2026|KBO리그) — or keep one line only when that would look worse.
+  const yearAt = yearPrefixBreakAt(text);
+  if (yearAt != null && maxLines >= 2) {
+    const left = text.slice(0, yearAt).trim();
+    const right = text.slice(yearAt).trim();
+    if (left && right && compactNameLen(right) <= 8) {
+      // Short remainder after year: wrap year / rest (or stay one line if tiny).
+      if (maxLines === 2 || compactNameLen(text) <= 12) {
+        return `${left}\n${right}`;
+      }
+    }
+  }
+
+  const linesWanted = Math.min(Math.max(2, maxLines), maxLines);
   const candidates = softBreakCandidates(text);
 
   if (linesWanted === 2) {
@@ -434,6 +526,7 @@ export function softWrapHeatmapName(name: string, maxLines = 2): string {
       if (!left || !right) continue;
       // Linguistic breaks dominate; width only tie-breaks.
       const kind = classifyBreak(text, index);
+      const structuralBonus = isStructuralBreak(text, index) ? -80 : 0;
       const kindPenalty =
         kind === "paren" ? 0 : kind === "space" ? 10 : kind === "semantic" ? 20 : 500;
       const longerWidth = Math.max(measureTextWidth(left, 10), measureTextWidth(right, 10));
@@ -458,7 +551,13 @@ export function softWrapHeatmapName(name: string, maxLines = 2): string {
         }
       }
       const score =
-        kindPenalty * 1000 + longerWidth * 10 + skew + headBonus + tailBonus + headUnitBonus;
+        kindPenalty * 1000 +
+        longerWidth * 10 +
+        skew +
+        headBonus +
+        tailBonus +
+        headUnitBonus +
+        structuralBonus;
       if (score < bestScore) {
         bestScore = score;
         best = index;
@@ -496,12 +595,16 @@ function densityNameSize(input: {
   innerW: number;
   innerH: number;
   omitRate: boolean;
+  absoluteMaxLines?: number;
+  areaRatio?: number;
+  sizeBoost?: number;
 }): { size: number; lines: number; maxLines: number; wrapped: string } {
+  const absoluteMax = input.absoluteMaxLines ?? ABSOLUTE_MAX_LINES_DEFAULT;
   const displayLen = heatmapLabelDisplayLength(input.text);
   const chars = heatmapLabelCharCount(input.text);
-  let maxLines = maxLinesForTile(input.innerW + 12, input.innerH + 12, displayLen);
+  let maxLines = maxLinesForTile(input.innerW + 12, input.innerH + 12, displayLen, absoluteMax);
 
-  // Short names (≤7) stay one line unless a strong brand split exists.
+  // Short names (≤7) stay one line unless a strong brand / episode split exists.
   // Longer names may force wrap when a single line cannot fit at MIN_NAME.
   const compactLen = compactNameLen(input.text);
   if (
@@ -509,8 +612,12 @@ function densityNameSize(input: {
     input.innerH >= 28 &&
     measureTextWidth(input.text, MIN_NAME) > input.innerW
   ) {
-    if (compactLen > 7 || strongBrandBreakAt(input.text) != null) {
-      maxLines = 2;
+    if (
+      compactLen > 7 ||
+      strongBrandBreakAt(input.text) != null ||
+      episodeBreakAt(input.text) != null
+    ) {
+      maxLines = Math.min(2, absoluteMax);
     }
   }
 
@@ -519,20 +626,24 @@ function densityNameSize(input: {
   let size = perChar * (perLineChars <= 3 ? 0.94 : perLineChars <= 5 ? 0.9 : 0.84);
 
   const heightShare =
-    maxLines >= 2
+    maxLines >= 3
       ? input.omitRate
-        ? 0.72
-        : 0.62
-      : chars <= 3
+        ? 0.86
+        : 0.74
+      : maxLines >= 2
         ? input.omitRate
-          ? 0.55
-          : 0.5
-        : input.omitRate
-          ? 0.46
-          : 0.38;
+          ? 0.72
+          : 0.62
+        : chars <= 3
+          ? input.omitRate
+            ? 0.55
+            : 0.5
+          : input.omitRate
+            ? 0.46
+            : 0.38;
   const heightCap = input.innerH * heightShare;
   const shortBoost = chars <= 4 && maxLines === 1 ? 1.1 : chars <= 6 && maxLines === 1 ? 1.05 : 1;
-  size *= shortBoost;
+  size *= shortBoost * (input.sizeBoost ?? 1);
 
   const preferredFloor = Math.min(MIN_NAME, Math.max(ABSOLUTE_NAME_FLOOR, heightCap * 0.55));
   const ceiling = Math.max(preferredFloor, Math.min(MAX_NAME, heightCap, maxNameSizeForTile(input.innerW + 12, input.innerH + 12)));
@@ -540,6 +651,9 @@ function densityNameSize(input: {
 
   if (maxLines >= 2 && displayLen >= 5) {
     size = Math.min(ceiling, size * 1.08);
+  }
+  if (maxLines >= 3 && displayLen >= 8) {
+    size = Math.min(ceiling, size * 1.06);
   }
 
   let wrapped = softWrapHeatmapName(input.text, maxLines);
@@ -555,7 +669,7 @@ function densityNameSize(input: {
 
   // Still overflowing width at the absolute floor → add a line if possible.
   while (
-    maxLines < ABSOLUTE_MAX_LINES &&
+    maxLines < absoluteMax &&
     input.innerH >= 28 &&
     measureTextWidth(longestLine || input.text, size) > input.innerW
   ) {
@@ -596,12 +710,19 @@ export function layoutTreemapLabel(input: {
   artist?: string;
   metaLabel?: string;
   forceType?: boolean;
+  /** When performance / book, allow 3 lines and a higher area budget. */
+  entityType?: string;
 }): TreemapLabelLayout | null {
   const { width: w, height: h, y, name, rate, typeLabel, artist, omitRate } = input;
   if (w < 28 || h < 18) return null;
 
   const fullName = name.replace(/\s+/g, " ").trim();
   if (!fullName) return null;
+
+  const longTitle = allowsLongTitleWrap(input.entityType);
+  const absoluteMaxLines = longTitle ? ABSOLUTE_MAX_LINES_LONG_TITLE : ABSOLUTE_MAX_LINES_DEFAULT;
+  const areaRatio = longTitle ? NAME_AREA_RATIO_LONG_TITLE : NAME_AREA_RATIO;
+  const sizeBoost = longTitle ? 1.12 : 1;
 
   const padX = w >= 100 ? 10 : 6;
   const padY = h >= 90 ? 12 : h >= 56 ? 9 : 6;
@@ -620,6 +741,9 @@ export function layoutTreemapLabel(input: {
     innerW,
     innerH: nameBudget,
     omitRate: !showRate,
+    absoluteMaxLines,
+    areaRatio,
+    sizeBoost,
   });
   let nameSize = fitted.size;
   let maxLines = fitted.maxLines;
@@ -662,6 +786,9 @@ export function layoutTreemapLabel(input: {
       innerW,
       innerH,
       omitRate: true,
+      absoluteMaxLines,
+      areaRatio,
+      sizeBoost,
     });
     nameSize = refit.size;
     maxLines = refit.maxLines;
@@ -719,11 +846,11 @@ export function layoutTreemapLabel(input: {
     rateY = cursor + rateSize * 0.82;
   }
 
-  // Soft size ceiling, then enforce painted-name area ≤ 25% of the tile box.
+  // Soft size ceiling, then enforce painted-name area budget.
   const sizeCap = maxNameSizeForTile(w, h);
   nameSize = Math.min(sizeCap, Math.max(ABSOLUTE_NAME_FLOOR, nameSize));
   // Re-balance wrap at the capped size, then shrink until width + area budgets pass.
-  wrappedName = softWrapHeatmapName(fullName, Math.min(2, maxLines));
+  wrappedName = softWrapHeatmapName(fullName, Math.min(absoluteMaxLines, maxLines));
   wrappedLines = Math.max(1, wrappedName.split("\n").length);
   let nameRows = wrappedName.split("\n");
   let longestRow = nameRows.reduce(
@@ -734,7 +861,7 @@ export function layoutTreemapLabel(input: {
   while (nameSize - 0.25 >= ABSOLUTE_NAME_FLOOR && measureTextWidth(longestRow, nameSize) > innerW) {
     nameSize -= 0.25;
   }
-  nameSize = shrinkNameToAreaBudget(nameSize, nameRows, w, h, ABSOLUTE_NAME_FLOOR);
+  nameSize = shrinkNameToAreaBudget(nameSize, nameRows, w, h, ABSOLUTE_NAME_FLOOR, areaRatio);
   // Width may need one more pass after area shrink (same glyphs, smaller size is fine).
   longestRow = nameRows.reduce(
     (best, line) =>
@@ -745,10 +872,10 @@ export function layoutTreemapLabel(input: {
     nameSize -= 0.25;
   }
   // Re-apply area budget after width pass, then publish the wrap we sized against.
-  nameSize = shrinkNameToAreaBudget(nameSize, nameRows, w, h, ABSOLUTE_NAME_FLOOR);
-  // Floor to 0.1px so rounding up cannot push painted area back over 25%.
+  nameSize = shrinkNameToAreaBudget(nameSize, nameRows, w, h, ABSOLUTE_NAME_FLOOR, areaRatio);
+  // Floor to 0.1px so rounding up cannot push painted area back over budget.
   nameSize = Math.floor(nameSize * 10) / 10;
-  nameSize = shrinkNameToAreaBudget(nameSize, nameRows, w, h, ABSOLUTE_NAME_FLOOR);
+  nameSize = shrinkNameToAreaBudget(nameSize, nameRows, w, h, ABSOLUTE_NAME_FLOOR, areaRatio);
   const publishedName = nameRows.join("\n");
   const publishedLines = Math.max(1, nameRows.length);
 

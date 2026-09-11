@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FlipBoardNumber } from "@/components/dashboard/FlipBoardNumber";
-import { formatKst } from "@/lib/format";
+import { formatKst, formatPoints, formatRate } from "@/lib/format";
 import { COMPOSITE_INDEX_ID, withIndexPoints } from "@/lib/ingestion/composite";
 import { indexPath } from "@/lib/indices";
 import {
@@ -77,13 +77,16 @@ export function MarketOverview({
     <section className="index-gothic grid grid-cols-3 gap-2 font-sans sm:gap-3 md:flex md:flex-nowrap md:gap-2">
       {indices.map((index) => {
         const resolved = withIndexPoints(index);
+        const up = resolved.changeRate > 0;
+        const down = resolved.changeRate < 0;
         const composite = resolved.id === COMPOSITE_INDEX_ID || resolved.id === selectedId;
+        const points = resolved.changePoints ?? 0;
         const hideOnMobile = mobileHidden?.has(index.id);
         return (
           <Link
-            key={`${index.id}-${resolved.value}`}
+            key={`${index.id}-${resolved.value}-${resolved.changeRate}`}
             href={index.href ?? indexPath(index.id)}
-            aria-label={`${index.label} ${resolved.value.toFixed(2)}`}
+            aria-label={`${index.label} ${resolved.value.toFixed(2)} ${formatRate(Number(resolved.changeRate))}`}
             className={`relative min-w-0 overflow-hidden rounded-xl border bg-panel p-2 shadow-sm transition-colors hover:border-accent/50 @container sm:p-3 md:flex-1 ${
               composite ? "border-accent/50 ring-1 ring-accent/25" : "border-line"
             }${hideOnMobile ? " max-md:hidden" : ""}`}
@@ -98,6 +101,14 @@ export function MarketOverview({
               <p className={labelClass}>{index.label}</p>
               <p className={scoreClass}>
                 <FlipBoardNumber value={index.value} playToken={flashNonce} />
+              </p>
+              <p
+                className={`index-gothic mt-1 flex flex-col gap-0.5 font-sans text-[10px] font-semibold tabular-nums leading-tight sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-1.5 sm:text-[11px] md:text-[13.2px] ${
+                  up ? "text-up" : down ? "text-down" : "text-muted"
+                }`}
+              >
+                <span>{formatRate(Number(resolved.changeRate))}</span>
+                <span className="sm:opacity-90">{formatPoints(points)}</span>
               </p>
             </div>
           </Link>

@@ -214,6 +214,7 @@ export function TreemapView({
             typeLabel: "",
             heatmapRank: rank,
             omitRate,
+            entityType: entity.type,
           });
           const fill = heatText(change);
           const baseRankSize = w >= 120 && h >= 56 ? 16.5 : 13.5;
@@ -392,7 +393,7 @@ export function TreemapView({
                           className="heatmap-tile-name w-full font-semibold tracking-tight"
                           suppressHydrationWarning
                           style={{
-                            // Full name, max 2 lines: wrap/shrink in layoutTreemapLabel.
+                            // Full name: wrap/shrink in layoutTreemapLabel (up to 3 lines for 공연·도서).
                             display: "-webkit-box",
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: "vertical",
