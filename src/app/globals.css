@@ -196,6 +196,28 @@ body {
   height: 1.15em;
 }
 
+/* Header KST clock — same gothic + flip density as LIVE countdown, ink on panel. */
+.kst-flip-clock .flip-board {
+  gap: 0.04em;
+  vertical-align: middle;
+}
+
+.kst-flip-clock .flip-glyph {
+  width: 0.58em;
+  height: 1.05em;
+  border-radius: 0.1em;
+}
+
+.kst-flip-clock .flip-punct {
+  width: 0.22em;
+}
+
+.kst-flip-clock .flip-glyph-face,
+.kst-flip-clock .flip-half-bottom .flip-glyph-face,
+.kst-flip-clock .flip-leaf-bottom .flip-glyph-face {
+  height: 1.05em;
+}
+
 /* Compact airport flip digits inside green LIVE KinDex countdown shells.
  * Glyph faces use the same green as the shell — no darker inset behind digits. */
 .refresh-countdown .flip-board {

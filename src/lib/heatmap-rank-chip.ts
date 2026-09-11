@@ -144,7 +144,7 @@ function resolveHousingRegionChip(
 
 /**
  * Chip text shown immediately before the rank badge.
- * Priority: game → TV channel → music genre → star job → book genre → region/agency → menu.
+ * Priority: game → TV → music → star → book → menu (category composite) → region/agency.
  * Bracket qualifiers render without `[` `]` symbols.
  * Economy 부동산 tiles prefer the 시/도 label ahead of the rank.
  */
@@ -163,6 +163,12 @@ export function heatmapRankPrefixChip(
   >,
   options?: { allowMenuCaption?: boolean },
 ): string | undefined {
+  // Category composite (정치/경제 첫 화면): always show submenu name before rank.
+  if (options?.allowMenuCaption) {
+    const menu = heatmapSourceCaption(entity as RankingEntity);
+    if (menu) return stripChipBrackets(menu);
+  }
+
   if (isGameEntity(entity)) {
     const platform = entityPlatform(entity);
     if (platform) return stripChipBrackets(formatHeatmapGameChip(platform));
@@ -196,11 +202,6 @@ export function heatmapRankPrefixChip(
   if (wantsBracketChip(entity)) {
     const bracket = parseBracketLabel(entity.name);
     if (bracket?.org) return stripChipBrackets(bracket.org);
-  }
-
-  if (options?.allowMenuCaption) {
-    const menu = heatmapSourceCaption(entity as RankingEntity);
-    if (menu) return stripChipBrackets(menu);
   }
 
   return undefined;

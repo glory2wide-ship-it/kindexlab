@@ -318,14 +318,6 @@ export function MarketWorkspace({
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             {viewToggle(false)}
-            <button
-              type="button"
-              onClick={() => setMethodOpen(true)}
-              className="inline-flex items-center rounded-md border border-line px-3 text-[13.2px] text-muted hover:text-ink"
-              style={{ height: 30, boxSizing: "border-box" }}
-            >
-              랭킹 산출 방식
-            </button>
             <HeatmapCountdown
               intervalSec={refreshIntervalSec}
               refreshing={refreshing}
@@ -441,11 +433,23 @@ export function MarketWorkspace({
           상승 초록 · 하락 빨강 · 보합 차콜 · 히트맵 {sortedItems.length} · 리스트 {listItems.length}
           종목
         </span>
-        {view === "treemap" && sortedItems.length > 0 ? (
-          <HeatmapLegend />
-        ) : (
-          <span>KinDex Hierarchical Heatmap</span>
-        )}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {view === "treemap" && sortedItems.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setMethodOpen(true)}
+              className="inline-flex items-center rounded-md border border-line px-3 text-[13.2px] text-muted hover:text-ink"
+              style={{ height: 30, boxSizing: "border-box" }}
+            >
+              랭킹 산출 방식
+            </button>
+          ) : null}
+          {view === "treemap" && sortedItems.length > 0 ? (
+            <HeatmapLegend />
+          ) : (
+            <span>KinDex Hierarchical Heatmap</span>
+          )}
+        </div>
       </div>
 
       <MethodologyModal open={methodOpen} onClose={() => setMethodOpen(false)} channel={channel} />

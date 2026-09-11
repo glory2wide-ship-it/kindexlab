@@ -224,13 +224,16 @@ export function TreemapView({
             showChannelTags && entity.sourceChannel
               ? CHANNEL_SHORT_LABEL[entity.sourceChannel as PostChannel]
               : undefined;
-          const showChannelTag = Boolean(channelTag) && w >= 74 && h >= 26;
-          const prefixChip = heatmapRankPrefixChip(entity, {
-            allowMenuCaption: showSourceCaptions,
-          });
+          const showChannelTag = Boolean(channelTag) && w >= 56 && h >= 22;
+          /** Landing unified map: category tag only — skip genre/platform chips. */
+          const prefixChip = showChannelTags
+            ? undefined
+            : heatmapRankPrefixChip(entity, {
+                allowMenuCaption: showSourceCaptions,
+              });
           const sourceChipSize = Math.max(8, rankSize - 1.5);
           /** Platform / region / agency / submenu chip immediately before the rank. */
-          const showPrefixChip = Boolean(prefixChip) && w >= 64 && h >= 24;
+          const showPrefixChip = Boolean(prefixChip) && w >= 52 && h >= 22;
           const displayTitle = isHeadline
             ? summarizeHeadlineTitle(entity.name)
             : (label?.name ?? tile.title);
