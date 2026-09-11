@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { DemographicTabs } from "@/components/boards/DemographicTabs";
+import { DemographicTabs, RegionFilterTabs } from "@/components/boards/DemographicTabs";
 import { HeatmapCountdownFallback } from "@/components/dashboard/HeatmapCountdown";
 import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundary";
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
@@ -353,41 +353,43 @@ export function MarketWorkspace({
           )}
 
           {/*
-            Desktop/tablet: 분봉 left of 성별 on one row.
-            Compact padding/gaps so Galaxy Tab widths fit without a scrollbar.
+            Desktop/tablet: row1 = 분봉 + 성별 + 연령.
+            Region (시/도) always sits on the next row when the board supports it.
           */}
-          <div className="flex flex-row flex-nowrap items-center gap-x-1.5 overflow-x-hidden">
-            {hideTimeframes ? null : (
-              <div className="flex shrink-0 flex-nowrap gap-0.5 rounded-lg bg-board p-0.5">
-                {TIMEFRAMES.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setTimeframe(option.id)}
-                    className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[12px] font-medium tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[13.2px] lg:tracking-normal ${
-                      timeframe === option.id
-                        ? "bg-ink text-board md:bg-accent md:text-black"
-                        : "text-muted hover:bg-panel hover:text-ink"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-row flex-nowrap items-center gap-x-1.5 overflow-x-hidden">
+              {hideTimeframes ? null : (
+                <div className="flex shrink-0 flex-nowrap gap-0.5 rounded-lg bg-board p-0.5">
+                  {TIMEFRAMES.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setTimeframe(option.id)}
+                      className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[12px] font-medium tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[13.2px] lg:tracking-normal ${
+                        timeframe === option.id
+                          ? "bg-ink text-board md:bg-accent md:text-black"
+                          : "text-muted hover:bg-panel hover:text-ink"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-            <div className="min-w-0 shrink">
-              <DemographicTabs
-                gender={gender}
-                age={age}
-                onGender={setGender}
-                onAge={setAge}
-                boardSlug={boardSlug}
-                region={region}
-                onRegion={setRegion}
-                showRegion={showRegion}
-              />
+              <div className="min-w-0 shrink">
+                <DemographicTabs
+                  gender={gender}
+                  age={age}
+                  onGender={setGender}
+                  onAge={setAge}
+                  boardSlug={boardSlug}
+                />
+              </div>
             </div>
+            {showRegion ? (
+              <RegionFilterTabs region={region} onRegion={setRegion} />
+            ) : null}
           </div>
           {demoActive ? (
             <p className="text-[11px] leading-5 text-muted">
