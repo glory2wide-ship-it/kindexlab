@@ -65,7 +65,6 @@ const CULTURE_NEWS_BOARDS = new Set([
   "health-info-ranking",
   "recipe-ranking",
   "car-review-ranking",
-  "culture-issue-keywords",
   "ott-buzz-ranking",
 ]);
 

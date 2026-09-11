@@ -1,5 +1,6 @@
 /**
  * Smoke checks for live-first heatmap gate + soft subsidy seed padding.
+ * Uses rates-finance-products (not retired issue-keyword boards).
  */
 import assert from "node:assert/strict";
 import { buildHeatmapItems, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
@@ -7,13 +8,19 @@ import { countLivePreferRows, preferLiveChannelComposite } from "@/lib/boards/li
 import { ensureSubsidyRanking } from "@/lib/politics/labeled-rank";
 import type { RankingEntity } from "@/lib/types";
 
-function fakeLive(name: string, tags: string[], channel: "economy" | "culture" | "travel"): RankingEntity {
+function fakeLive(
+  name: string,
+  tags: string[],
+  channel: "economy" | "culture" | "travel",
+  type: RankingEntity["type"] = "finance_product",
+  slug = `rates-finance-products--${name}`,
+): RankingEntity {
   return {
     id: `id-${name}`,
-    slug: `slug-${name}`,
+    slug,
     name,
     nameEn: "",
-    type: "economy_issue",
+    type,
     rank: 1,
     previousRank: 1,
     buzzScore: 80,
@@ -28,8 +35,8 @@ function fakeLive(name: string, tags: string[], channel: "economy" | "culture" |
   };
 }
 
-const boardTape = fakeLive("씨드종목", ["board-tape", "economy-issue-keywords"], "economy");
-const liveChart = fakeLive("네이버뉴스이슈", ["live-chart", "economy-issue-keywords"], "economy");
+const boardTape = fakeLive("씨드종목", ["board-tape", "rates-finance-products"], "economy");
+const liveChart = fakeLive("네이버뉴스이슈", ["live-chart", "rates-finance-products"], "economy");
 
 assert.equal(countLivePreferRows([boardTape, liveChart], "economy"), 1);
 assert.equal(preferLiveChannelComposite("economy", undefined, 1), false);
@@ -52,20 +59,20 @@ assert.equal(
 
 const boards: HeatmapBoardPayload[] = [
   {
-    slug: "economy-issue-keywords",
-    title: "경제 이슈",
-    shortTitle: "경제 이슈",
+    slug: "rates-finance-products",
+    title: "금리·금융상품",
+    shortTitle: "금리·금융",
     channel: "economy",
     ranking: [{ rank: 1, name: "보드시드", score: 90, changeRate: 1, note: "" }],
     indexValue: 90,
     indexChangeRate: 1,
-    unitLabel: "이슈",
+    unitLabel: "상품",
   },
 ];
 
 const liveItems = [
   liveChart,
-  fakeLive("유튜브이슈", ["live-chart", "economy-issue-keywords"], "economy"),
+  fakeLive("유튜브이슈", ["live-chart", "rates-finance-products"], "economy"),
   fakeLive("추가라이브", ["live-chart", "rates-finance-products"], "economy"),
   boardTape,
 ];
@@ -81,6 +88,35 @@ assert.ok(composite.length >= 3);
 assert.equal(composite[0]?.name, "네이버뉴스이슈");
 assert.ok(!composite.slice(0, 3).some((item) => item.tags?.includes("board-tape")));
 
+// Retired issue-keyword entities must not paint on heatmaps.
+const retired = buildHeatmapItems({
+  boards: [
+    {
+      slug: "economy-issue-keywords",
+      title: "이슈 키워드",
+      shortTitle: "이슈 키워드",
+      channel: "economy",
+      ranking: [{ rank: 1, name: "금투세", score: 90, changeRate: 1, note: "" }],
+      indexValue: 90,
+      indexChangeRate: 1,
+      unitLabel: "키워드",
+    },
+  ],
+  liveItems: [
+    fakeLive(
+      "금투세",
+      ["live-chart", "economy-issue-keywords"],
+      "economy",
+      "economy_issue",
+      "economy-issue-keywords--금투세",
+    ),
+  ],
+  gender: "all",
+  age: "all",
+  preferLive: true,
+});
+assert.equal(retired.length, 0);
+
 const subsidy = ensureSubsidyRanking([
   { rank: 1, name: "[국세청] 근로장려금 특례", score: 95, changeRate: 2, note: "" },
   { rank: 2, name: "[보건복지부] 부모급여 확대", score: 90, changeRate: 1, note: "" },
@@ -88,10 +124,10 @@ const subsidy = ensureSubsidyRanking([
 ]);
 assert.ok(subsidy.some((row) => row.name.includes("근로장려금")));
 assert.ok(subsidy.length >= 3);
-// Live labeled names should not be wiped when enough rows exist.
 assert.ok(subsidy.length <= 30);
 
 console.log("live-first smoke ok", {
   compositeTop: composite.slice(0, 3).map((item) => item.name),
   subsidyCount: subsidy.length,
+  retiredCount: retired.length,
 });

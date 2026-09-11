@@ -36,9 +36,7 @@ const TARGET_SLUGS = [
   "housing-subscription-hotspot",
   "kospi-fomo-index",
   "rates-finance-products",
-  "economy-issue-keywords",
   "health-info-ranking",
-  "culture-issue-keywords",
 ];
 
 function toBoardChartEntity(

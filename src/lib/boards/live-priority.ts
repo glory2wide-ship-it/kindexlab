@@ -45,10 +45,8 @@ export const THIN_LIVE_BOARD_SLUGS = new Set([
   "housing-subscription-hotspot",
   "rates-finance-products",
   "kospi-fomo-index",
-  "economy-issue-keywords",
   "health-info-ranking",
   "car-review-ranking",
-  "culture-issue-keywords",
   "performance-ticket-ranking",
   "exhibition-popup-ranking",
 ]);

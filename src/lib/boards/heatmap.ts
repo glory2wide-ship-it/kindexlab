@@ -122,7 +122,13 @@ export function isHeadlineHeatmapEntity(
   return false;
 }
 
-/** Retired menus (숏폼 밈, 헤드라인, 정치뉴스 시청률) must never reappear on heatmaps. */
+/** Retired economy/culture issue-keyword boards (desktop 이슈 키워드 / mobile 핫 키워드). */
+const RETIRED_ISSUE_KEYWORD_BOARD_SLUGS = new Set([
+  "economy-issue-keywords",
+  "culture-issue-keywords",
+]);
+
+/** Retired menus (숏폼 밈, 헤드라인, 정치뉴스 시청률, 이슈 키워드) must never reappear on heatmaps. */
 export function isRetiredHeatmapEntity(
   entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup" | "tags">,
 ): boolean {
@@ -130,13 +136,19 @@ export function isRetiredHeatmapEntity(
   if (entity.type === "headline_news") return true;
   // Rail no longer lists 정치뉴스 시청률 — keep it off 종합 / channel heatmaps.
   if (entity.type === "political_ratings") return true;
+  // Economy/culture 이슈 키워드 menus retired — drop typed + tagged leftovers.
+  if (entity.type === "economy_issue" || entity.type === "culture_issue") return true;
   const boardSlug = entity.slug.includes("--") ? entity.slug.split("--")[0] : entity.slug;
   if (boardSlug === "shortform-meme-velocity") return true;
+  if (RETIRED_ISSUE_KEYWORD_BOARD_SLUGS.has(boardSlug)) return true;
   if (isHeadlineNewsBoard(boardSlug)) return true;
+  const tags = entity.tags ?? [];
+  if (tags.some((tag) => RETIRED_ISSUE_KEYWORD_BOARD_SLUGS.has(tag))) return true;
   const group = entity.heatmapGroup ?? "";
   if (group.includes("숏폼 밈") || group === "숏폼") return true;
   if (group.includes("헤드라인")) return true;
   if (group.includes("정치뉴스")) return true;
+  if (group.includes("이슈 키워드") || group === "핫 키워드") return true;
   return false;
 }
 

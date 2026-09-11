@@ -75,7 +75,7 @@ export const ECONOMY_ENTITY_TYPES: EntityType[] = [
   "commodities_fx",
   "inflation",
   "startup_franchise",
-  "economy_issue",
+  // economy_issue retired with the 이슈 키워드 rail
   "economy_board",
 ];
 
@@ -87,7 +87,7 @@ export const CULTURE_ENTITY_TYPES: EntityType[] = [
   "health_info",
   "recipe",
   "car_review",
-  "culture_issue",
+  // culture_issue retired with the 이슈 키워드 rail
   "culture_board",
 ];
 

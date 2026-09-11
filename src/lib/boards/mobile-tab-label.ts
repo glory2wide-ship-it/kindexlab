@@ -9,10 +9,8 @@ const MOBILE_BOARD_TAB_LABEL: Record<string, string> = {
   "government-subsidy-search": "정부지원금",
   "housing-subscription-hotspot": "부동산",
   "startup-franchise-index": "창업",
-  "economy-issue-keywords": "핫 키워드",
   // Culture
   "exhibition-popup-ranking": "전시 팝업",
-  "culture-issue-keywords": "핫 키워드",
   // Politics
   "policy-controversy-index": "핫 키워드",
 };
@@ -25,7 +23,6 @@ const MOBILE_BY_SHORT_TITLE: Record<string, string> = {
   "여행 정부지원금": "정부지원금",
   "지역별 부동산": "부동산",
   "창업·프랜차이즈": "창업",
-  "이슈 키워드": "핫 키워드",
   "전시·팝업스토어": "전시 팝업",
 };
 

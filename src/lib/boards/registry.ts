@@ -322,6 +322,8 @@ export const BOARDS: BoardDefinition[] = [
     id: "eco-keywords",
     slug: "economy-issue-keywords",
     channel: "economy",
+    /** Retired — removed from economy rail, LIVE crawl, board refresh, and heatmaps. */
+    railHidden: true,
     title: "이슈 키워드",
     shortTitle: "이슈 키워드",
     criteria: "세금·규제·경기 등 경제 이슈 키워드 검색·댓글 화력",
@@ -834,6 +836,8 @@ export const BOARDS: BoardDefinition[] = [
     id: "cul-issue",
     slug: "culture-issue-keywords",
     channel: "culture",
+    /** Retired — removed from culture rail, LIVE crawl, board refresh, and heatmaps. */
+    railHidden: true,
     title: "이슈 키워드",
     shortTitle: "이슈 키워드",
     criteria: "공연 취소·오버투어리즘·문화패스 등 문화 이슈 검색·댓글 화력",
