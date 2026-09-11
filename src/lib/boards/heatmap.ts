@@ -53,6 +53,7 @@ import {
   ensureSubsidyRanking,
   labeledNameEn,
 } from "@/lib/politics/labeled-rank";
+import { matchPoliticsYoutubeSeed } from "@/lib/politics/youtube-seeds";
 import { influencerSeedNames } from "@/lib/politics/youtube-seeds";
 import { attachTimeframeMetrics } from "@/lib/timeframes";
 import type { EntityType, RankingEntity } from "@/lib/types";
@@ -481,6 +482,13 @@ export function buildHeatmapItems({
       const typeSet = new Set(liveEntityTypesForBoard(selected.slug));
       const boardLive = liveClean.filter((item) => {
         if (isUnusableRankName(item.name ?? "")) return false;
+        // Pundit board: YouTube channels belong on 정치 유튜브 only.
+        if (
+          selected.slug === "political-pundit-ranking" &&
+          matchPoliticsYoutubeSeed(item.name ?? "")?.influencer
+        ) {
+          return false;
+        }
         if (item.tags?.includes(selected.slug)) {
           return passesKpopTrotBoardFilter(selected.slug, item.name);
         }

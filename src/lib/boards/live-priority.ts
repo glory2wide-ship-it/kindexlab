@@ -39,7 +39,26 @@ export const THIN_LIVE_BOARD_SLUGS = new Set([
   "overseas-travel-ranking",
   "governor-approval-index",
   "startup-franchise-index",
+  "trot-kayo-fandom-power",
+  "party-support-chart",
+  "political-pundit-ranking",
+  "housing-subscription-hotspot",
+  "rates-finance-products",
+  "kospi-fomo-index",
+  "economy-issue-keywords",
+  "health-info-ranking",
+  "car-review-ranking",
+  "culture-issue-keywords",
+  "performance-ticket-ranking",
+  "exhibition-popup-ranking",
 ]);
+
+/** Economy/culture menus also crawl denser even when not in the thin set. */
+export function needsDenseLiveCrawl(channel: string, slug: string): boolean {
+  if (THIN_LIVE_BOARD_SLUGS.has(slug)) return true;
+  if (channel === "economy" || channel === "culture") return true;
+  return false;
+}
 
 export function isNativeChartBoard(slug: string): boolean {
   return NATIVE_CHART_BOARD_SLUGS.has(slug);

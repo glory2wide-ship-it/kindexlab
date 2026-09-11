@@ -2,7 +2,12 @@
  * Live news + YouTube crawls for economy / culture / travel heatmap boards.
  * Emits ChartRows tagged with boardSlug so compose can stamp live-chart entities.
  */
-import { isNativeChartBoard, isThinLiveBoard } from "@/lib/boards/live-priority";
+import {
+  HEATMAP_SCREEN_LIVE_CAP,
+  isNativeChartBoard,
+  isThinLiveBoard,
+  needsDenseLiveCrawl,
+} from "@/lib/boards/live-priority";
 import { getBoard, menuBoardsForChannel } from "@/lib/boards/registry";
 import { fetchYoutubeFallback } from "@/lib/context/fallback-youtube";
 import { officialUrlSeeds } from "@/lib/context/official-url-seeds";
@@ -89,8 +94,11 @@ function boardSpecsForChannel(channel: PostChannel): LiveBoardSpec[] {
       boardSlug: board.slug,
       channel,
       label: board.shortTitle,
-      // Thin boards crawl more queries so seed-matching can reach the screen-20 head.
-      queries: board.queries.slice(0, isThinLiveBoard(board.slug) ? 5 : 2),
+      // Dense boards crawl more queries so seed-matching can reach the screen-20 head.
+      queries: board.queries.slice(
+        0,
+        needsDenseLiveCrawl(channel, board.slug) ? Math.min(5, board.queries.length || 5) : 2,
+      ),
       seeds: board.seeds,
       grant:
         board.slug.includes("grant") ||
@@ -138,11 +146,12 @@ async function collectNewsTitles(
     }
   }
 
-  const queryCap = isThinLiveBoard(spec.boardSlug) ? Math.min(5, spec.queries.length) : 2;
+  const dense = needsDenseLiveCrawl(spec.channel, spec.boardSlug);
+  const queryCap = dense ? Math.min(5, Math.max(2, spec.queries.length)) : 2;
   for (const query of spec.queries.slice(0, queryCap)) {
     try {
       const retrieval = await retrieveNewsForKeyword(query, {
-        limit: spec.preferNaver ? 10 : isThinLiveBoard(spec.boardSlug) ? 10 : 6,
+        limit: spec.preferNaver ? 10 : dense ? 10 : 6,
         lookbackHours: 72,
         trustedOnly: false,
         allowMarketTape: true,
@@ -205,12 +214,14 @@ function rankTitlesToRows(
     }
   };
 
+  const dense = needsDenseLiveCrawl(spec.channel, spec.boardSlug);
+  const seedWeight = dense ? 2.2 : 1.5;
   let seedHits = 0;
   for (const row of titles) {
     const hits = matchSeedNames(row.title, spec.seeds);
     if (hits.length) {
       seedHits += hits.length;
-      for (const name of hits) bump(name, row.weight * 1.5, row.via);
+      for (const name of hits) bump(name, row.weight * seedWeight, row.via);
     }
   }
 
@@ -229,6 +240,23 @@ function rankTitlesToRows(
       if (/네이버|블로그|카페|클릭|속보|영상|포토|무조건|충격|이유/i.test(topic)) continue;
       if (/\s/.test(topic) && topic.length > 18) continue;
       bump(topic, row.weight * 0.8, row.via);
+    }
+  }
+
+  // Force seed head for boards that must paint person/party lists even when news is thin.
+  const FORCE_SEED_BOARDS = new Set([
+    "trot-kayo-fandom-power",
+    "party-support-chart",
+    "political-pundit-ranking",
+    "star-reputation-index",
+  ]);
+  if (FORCE_SEED_BOARDS.has(spec.boardSlug) || (dense && counts.size < HEATMAP_SCREEN_LIVE_CAP)) {
+    for (const [index, seed] of spec.seeds.entries()) {
+      if (index >= HEATMAP_SCREEN_LIVE_CAP + 4) break;
+      const key = normalizeName(seed);
+      if (!key || counts.has(key)) continue;
+      // Soft baseline so real news hits still rank above pure pads.
+      bump(seed, Math.max(0.6, 4.5 - index * 0.12), "seed-pad");
     }
   }
 
@@ -261,6 +289,21 @@ export async function fetchCategoryLiveSources(): Promise<SourceResult[]> {
   const specs = channels.flatMap(boardSpecsForChannel);
   // Cap concurrent board crawls to avoid hammering news/YouTube APIs.
   const concurrency = 4;
+  const out: SourceResult[] = [];
+  for (let i = 0; i < specs.length; i += concurrency) {
+    const batch = specs.slice(i, i + concurrency);
+    const settled = await Promise.all(batch.map(fetchBoardLive));
+    out.push(...settled);
+  }
+  return out;
+}
+
+/** Targeted category-live crawl for a subset of board slugs (thin-board refresh). */
+export async function fetchCategoryLiveForSlugs(slugs: string[]): Promise<SourceResult[]> {
+  const want = new Set(slugs);
+  const channels: PostChannel[] = ["economy", "culture", "travel", "entertainment", "politics"];
+  const specs = channels.flatMap(boardSpecsForChannel).filter((spec) => want.has(spec.boardSlug));
+  const concurrency = 3;
   const out: SourceResult[] = [];
   for (let i = 0; i < specs.length; i += concurrency) {
     const batch = specs.slice(i, i + concurrency);

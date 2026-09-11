@@ -7,6 +7,7 @@ import {
 } from "@/lib/boards/heatmap";
 import { liveEntityTypesForBoard } from "@/lib/boards/entity-type";
 import { isLikelyCelebrityName } from "@/lib/boards/celebrity";
+import { matchPoliticsYoutubeSeed } from "@/lib/politics/youtube-seeds";
 import {
   isLikelyKpopIdol,
   isLikelyTrotArtist,
@@ -80,6 +81,12 @@ function itemToRankEntry(
 function passesBoardLiveFilter(def: BoardDefinition, item: RankingEntity): boolean {
   if (def.slug === "star-reputation-index" || item.type === "celebrity") {
     return isLikelyCelebrityName(item.name);
+  }
+  if (
+    def.slug === "political-pundit-ranking" &&
+    matchPoliticsYoutubeSeed(item.name)?.influencer
+  ) {
+    return false;
   }
   if (def.slug === "trot-kayo-fandom-power" && item.type === "trot") {
     return !isLikelyKpopIdol(item.name) || isLikelyTrotArtist(item.name);

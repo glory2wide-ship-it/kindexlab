@@ -35,7 +35,7 @@ const FEEDS: { id: string; label: string; url: string; type: PoliticsEntityType;
   {
     id: "news-party",
     label: "Google News 정당 지지도",
-    url: "https://news.google.com/rss/search?q=%EC%A0%95%EB%8B%B9%20%EC%A7%80%EC%A7%80%EB%8F%84%20OR%20%EC%97%AC%EB%A1%A0%EC%A1%B0%EC%82%AC&hl=ko&gl=KR&ceid=KR:ko",
+    url: "https://news.google.com/rss/search?q=%EC%A0%95%EB%8B%B9%20%EC%A7%80%EC%A7%80%EB%8F%84%20OR%20%EC%97%AC%EB%A1%A0%EC%A1%B0%EC%82%AC%20OR%20%EB%8D%94%EB%B6%88%EC%96%B4%EB%AF%BC%EC%A3%BC%EB%8B%B9%20OR%20%EA%B5%AD%EB%AF%BC%EC%9D%98%ED%9E%98%20OR%20%EC%A1%B0%EA%B5%AD%ED%98%81%EC%8B%A0%EB%8B%B9%20OR%20%EA%B0%9C%ED%98%81%EC%8B%A0%EB%8B%B9%20OR%20%EC%A0%95%EC%9D%98%EB%8B%B9&hl=ko&gl=KR&ceid=KR:ko",
     type: "party_support",
     tag: "정당",
   },
@@ -147,11 +147,11 @@ function politicsFallbackQuery(feed: (typeof FEEDS)[number]): string {
     case "news-politics-search":
       return "정치 국회 대선";
     case "news-party":
-      return "정당 지지도 여론조사";
+      return "정당 지지도 여론조사 더불어민주당 국민의힘 조국혁신당 개혁신당 정의당";
     case "news-politician":
       return "정치인 지지율 대선 후보";
     case "news-pundit":
-      return "정치 평론 시사 토론";
+      return "시사평론가 유시민 진중권 전원책 김종배 황희두 배종찬";
     case "news-pol-influencer":
       return "정치 유튜브 시사 채널";
     case "news-pol-ratings":

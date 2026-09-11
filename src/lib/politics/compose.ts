@@ -1,6 +1,8 @@
 import { catalogByType, matchPoliticsCatalog, politicsProducts, POLITICS_CATALOG } from "@/lib/politics/catalog";
 import { carryForwardInfluencerEntities } from "@/lib/politics/fail-safe";
 import { politicsSlug, seedPoliticsRankings } from "@/lib/politics/seed";
+import { PARTY_SUBJECTS } from "@/lib/politics/support-series";
+import { PUNDIT_SEEDS } from "@/lib/politics/labeled-rank";
 import { POLITICS_TYPE_LABEL, POLITICS_TYPE_ORDER, type PoliticsEntityType } from "@/lib/politics/types";
 import {
   influencerSeedNames,
@@ -107,9 +109,26 @@ function canonicalizeInfluencerTitle(title: string): string {
 }
 
 function rowsForType(sources: SourceResult[], type: PoliticsEntityType): ChartRow[] {
-  const tagged = sources
-    .filter((source) => source.id.startsWith("news-") || source.id === "google-trends" || source.id === "youtube-politics-seeds")
-    .flatMap((source) => source.items.filter((item) => (item.tags ?? []).includes(type)));
+  // Pundit board: news + catalog person matches only — never YouTube channel seeds.
+  const taggedSources =
+    type === "political_pundit"
+      ? sources.filter((source) => source.id.startsWith("news-") || source.id === "google-trends")
+      : sources.filter(
+          (source) =>
+            source.id.startsWith("news-") ||
+            source.id === "google-trends" ||
+            source.id === "youtube-politics-seeds",
+        );
+  const tagged = taggedSources.flatMap((source) =>
+    source.items.filter((item) => {
+      if (!(item.tags ?? []).includes(type)) return false;
+      // Drop channel-shaped titles from the pundit pool even if mis-tagged.
+      if (type === "political_pundit" && matchPoliticsYoutubeSeed(item.title)?.influencer) {
+        return false;
+      }
+      return true;
+    }),
+  );
   const mentioned = sources.flatMap((source) =>
     source.items.flatMap((item) =>
       matchPoliticsCatalog(`${item.title} ${item.subtitle ?? ""}`)
@@ -149,15 +168,13 @@ function rowsForType(sources: SourceResult[], type: PoliticsEntityType): ChartRo
       : [];
   const dualSeeds =
     type === "political_influencer"
-      ? POLITICS_YOUTUBE_SEEDS.filter((seed) => seed.influencer && seed.types.includes("political_pundit")).map(
-          (seed, index) => ({
-            rank: index + 1,
-            title: seed.name,
-            subtitle: seed.nameEn,
-            metric: Math.max(20, 70 - index * 4),
-            tags: ["political_influencer", "시사", "유튜브"],
-          }),
-        )
+      ? POLITICS_YOUTUBE_SEEDS.filter((seed) => seed.influencer).map((seed, index) => ({
+          rank: index + 1,
+          title: seed.name,
+          subtitle: seed.nameEn,
+          metric: Math.max(20, 70 - index * 4),
+          tags: ["political_influencer", "시사", "유튜브"],
+        }))
       : [];
   return mergeRows([tagged, mentioned, headlines, trends, youtube, dualSeeds]).slice(0, PER_TYPE);
 }
@@ -174,6 +191,50 @@ function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRo
       tags: [...entry.tags, type],
     }));
   const withCatalog = [...crawled, ...extras];
+
+  // Party board: always surface PARTY_SUBJECTS so thin news still paints a full live head.
+  if (type === "party_support") {
+    for (const [index, name] of PARTY_SUBJECTS.entries()) {
+      const exists = withCatalog.some(
+        (row) => namesOverlap(row.title, name) || namesOverlap(name, row.title),
+      );
+      if (exists) continue;
+      withCatalog.push({
+        rank: withCatalog.length + 1,
+        title: name,
+        subtitle: catalogByType("party_support").find((entry) => entry.name === name)?.nameEn,
+        metric: Math.max(6, 40 - index * 3),
+        tags: ["party_support", "live-chart", "party-support-chart", "seed"],
+      });
+    }
+  }
+
+  // Pundit board: pad person seeds (never YouTube channel names).
+  if (type === "political_pundit") {
+    for (const [index, seed] of PUNDIT_SEEDS.entries()) {
+      const person = seed.replace(/\s*\([^)]*\)\s*$/, "").trim();
+      const exists = withCatalog.some(
+        (row) =>
+          namesOverlap(row.title, seed) ||
+          namesOverlap(row.title, person) ||
+          namesOverlap(person, row.title),
+      );
+      if (exists) continue;
+      withCatalog.push({
+        rank: withCatalog.length + 1,
+        title: seed,
+        subtitle: person,
+        metric: Math.max(5, 36 - index * 2),
+        tags: ["political_pundit", "live-chart", "political-pundit-ranking", "seed"],
+      });
+    }
+    // Drop any remaining YouTube channel titles.
+    for (let i = withCatalog.length - 1; i >= 0; i--) {
+      const row = withCatalog[i]!;
+      if (matchPoliticsYoutubeSeed(row.title)?.influencer) withCatalog.splice(i, 1);
+    }
+  }
+
   if (type === "political_influencer") {
     for (const name of influencerSeedNames()) {
       const exists = withCatalog.some((row) => namesOverlap(row.title, name) || namesOverlap(name, row.title));
@@ -201,7 +262,11 @@ function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRo
       return (right.metric ?? 0) - (left.metric ?? 0);
     });
   }
-  return withCatalog.slice(0, Math.max(PER_TYPE, type === "political_influencer" ? 20 : PER_TYPE)).map((row, index) => ({
+  const cap =
+    type === "political_influencer" || type === "party_support" || type === "political_pundit"
+      ? 20
+      : PER_TYPE;
+  return withCatalog.slice(0, Math.max(PER_TYPE, cap)).map((row, index) => ({
     ...row,
     rank: index + 1,
     title: type === "political_influencer" ? canonicalizeInfluencerTitle(row.title) : row.title,

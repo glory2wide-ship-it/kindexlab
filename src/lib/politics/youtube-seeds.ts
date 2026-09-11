@@ -25,7 +25,7 @@ export const POLITICS_YOUTUBE_SEEDS: PoliticsYoutubeSeed[] = [
     handle: "@gyeomsonisnothing",
     aliases: ["김어준", "뉴스공장", "겸손은 힘들다", "겸손은힘들다", "김어준의 뉴스공장"],
     influencer: true,
-    types: ["political_influencer", "political_pundit"],
+    types: ["political_influencer"],
   },
   {
     name: "김용민TV",
@@ -65,7 +65,7 @@ export const POLITICS_YOUTUBE_SEEDS: PoliticsYoutubeSeed[] = [
     channelId: "UCOqCunaF9qVN8bXwsK0HT3g",
     aliases: ["펜앤마이크", "펜앤마이크TV", "정규재"],
     influencer: true,
-    types: ["political_influencer", "political_pundit"],
+    types: ["political_influencer"],
   },
   {
     name: "이봉규TV",
@@ -82,7 +82,7 @@ export const POLITICS_YOUTUBE_SEEDS: PoliticsYoutubeSeed[] = [
     handle: "@maebulshow",
     aliases: ["최욱", "매불쇼 라이브"],
     influencer: true,
-    types: ["political_influencer", "political_pundit"],
+    types: ["political_influencer"],
   },
   {
     name: "고성국TV",
@@ -90,7 +90,7 @@ export const POLITICS_YOUTUBE_SEEDS: PoliticsYoutubeSeed[] = [
     channelId: "",
     aliases: ["고성국"],
     influencer: true,
-    types: ["political_influencer", "political_pundit"],
+    types: ["political_influencer"],
   },
   {
     name: "황희두TV",
@@ -98,7 +98,7 @@ export const POLITICS_YOUTUBE_SEEDS: PoliticsYoutubeSeed[] = [
     channelId: "",
     aliases: ["황희두"],
     influencer: true,
-    types: ["political_influencer", "political_pundit"],
+    types: ["political_influencer"],
   },
   {
     name: "열린공감TV",
@@ -114,7 +114,7 @@ export const POLITICS_YOUTUBE_SEEDS: PoliticsYoutubeSeed[] = [
     channelId: "",
     aliases: ["시사탱크", "장성민"],
     influencer: true,
-    types: ["political_influencer", "political_pundit"],
+    types: ["political_influencer"],
   },
   {
     name: "전원책TV",
@@ -122,7 +122,7 @@ export const POLITICS_YOUTUBE_SEEDS: PoliticsYoutubeSeed[] = [
     channelId: "",
     aliases: ["전원책"],
     influencer: true,
-    types: ["political_influencer", "political_pundit"],
+    types: ["political_influencer"],
   },
   {
     name: "뉴스타파",

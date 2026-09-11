@@ -1,5 +1,6 @@
 import { catalogEntries, matchCatalog } from "@/lib/ingestion/catalog";
 import { isLikelyCelebrityName } from "@/lib/boards/celebrity";
+import { isLikelyTrotArtist } from "@/lib/boards/trot";
 import { fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
 import { namesOverlap, normalizeName } from "@/lib/ingestion/names";
 import { parseNumber, parseRssItems } from "@/lib/ingestion/parse";
@@ -176,7 +177,9 @@ export function classifyBuzzType(name: string, tags: string[]): EntityType {
   if (/예능|드라마|방송|뉴스/.test(blob)) return "tv_show";
   if (/영화|박스오피스|개봉작|극장/.test(blob)) return "movie";
   if (/아이돌|K-?POP|걸그룹|보이그룹/.test(blob)) return "kpop";
-  if (/트로트|미스터트롯|미스트롯|성인가요|가요무대|7080|트롯/.test(blob)) return "trot";
+  if (/트로트|미스터트롯|미스트롯|성인가요|가요무대|7080|트롯/.test(blob) || isLikelyTrotArtist(name)) {
+    return "trot";
+  }
   if (/배우|연예인|스타 평판/.test(blob) && isLikelyCelebrityName(name)) return "celebrity";
   // Person-shaped Hangul names only — never dump Trends noise into celebrity.
   if (isLikelyCelebrityName(name)) return "celebrity";
