@@ -66,7 +66,7 @@ export interface BoardPump {
   pinnedComment: string;
 }
 
-export type BoardSourceKind = "chain" | "template";
+export type BoardSourceKind = "chain" | "template" | "live";
 
 export interface BoardProvenance {
   kind: BoardSourceKind;
@@ -76,6 +76,10 @@ export interface BoardProvenance {
   /** True when the LLM returned a usable demographic block. */
   demographicsFromLlm: boolean;
   buildMs: number;
+  /** Runtime overlay: how many live-chart rows led the painted screen head. */
+  liveScreenLead?: number;
+  /** Runtime overlay source tag: live | chain | template. */
+  overlaySource?: "live" | "chain" | "template";
 }
 
 export interface CachedBoard {

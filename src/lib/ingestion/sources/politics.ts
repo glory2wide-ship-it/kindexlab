@@ -1,4 +1,5 @@
 import { fetchText, nowIso } from "@/lib/ingestion/http";
+import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
 import { parseRssItems } from "@/lib/ingestion/parse";
 import { matchPoliticsCatalog } from "@/lib/politics/catalog";
 import type { ChartRow, SourceResult } from "@/lib/ingestion/types";
@@ -90,49 +91,133 @@ function cleanHeadline(title: string): string {
     .trim();
 }
 
-async function fetchFeed(feed: (typeof FEEDS)[number]): Promise<SourceResult> {
-  try {
-    const xml = await fetchText(feed.url, {
-      headers: {
-        Accept: "application/rss+xml,application/xml,text/xml,*/*",
-        Referer: "https://news.google.com/",
-      },
-    });
-    const counts = new Map<string, ChartRow>();
-    let headlineRank = 0;
-    for (const item of parseRssItems(xml)) {
-      const headline = cleanHeadline(item.title);
-      if (feed.type === "headline_news" && headline.length >= 6 && headline.length <= 48) {
-        headlineRank += 1;
-        const key = `h:${headline}`;
-        if (!counts.has(key)) {
-          counts.set(key, {
-            rank: headlineRank,
-            title: headline,
-            // Feed position only. Turning it into a metric saturates the
-            // politics bonus at its cap, which put every board's top row on the
-            // same score and froze that block at the head of the board.
-            tags: [feed.tag, feed.type],
-            subtitle: item.title,
-          });
-        }
-      }
-      for (const match of matchPoliticsCatalog(item.title)) {
-        const key = match.name;
-        const current = counts.get(key);
+function ingestPoliticsTitles(
+  feed: (typeof FEEDS)[number],
+  titles: { title: string; via?: string }[],
+): ChartRow[] {
+  const counts = new Map<string, ChartRow>();
+  let headlineRank = 0;
+  for (const item of titles) {
+    const headline = cleanHeadline(item.title);
+    if (feed.type === "headline_news" && headline.length >= 6 && headline.length <= 48) {
+      headlineRank += 1;
+      const key = `h:${headline}`;
+      if (!counts.has(key)) {
         counts.set(key, {
-          rank: 0,
-          title: match.name,
-          subtitle: match.nameEn,
-          metric: (current?.metric ?? 0) + 1,
-          tags: [...new Set([...(current?.tags ?? []), feed.tag, match.type, ...match.tags])],
+          rank: headlineRank,
+          title: headline,
+          // Feed position only. Turning it into a metric saturates the
+          // politics bonus at its cap, which put every board's top row on the
+          // same score and froze that block at the head of the board.
+          tags: [feed.tag, feed.type, item.via ?? "google-rss"].filter(Boolean),
+          subtitle: item.title,
         });
       }
     }
-    const items = [...counts.values()]
-      .sort((a, b) => (b.metric ?? 0) - (a.metric ?? 0) || a.rank - b.rank)
-      .slice(0, 40)
-      .map((item, index) => ({ ...item, rank: index + 1 }));
+    for (const match of matchPoliticsCatalog(item.title)) {
+      const key = match.name;
+      const current = counts.get(key);
+      counts.set(key, {
+        rank: 0,
+        title: match.name,
+        subtitle: match.nameEn,
+        metric: (current?.metric ?? 0) + 1,
+        tags: [
+          ...new Set([
+            ...(current?.tags ?? []),
+            feed.tag,
+            match.type,
+            ...match.tags,
+            item.via ?? "google-rss",
+          ]),
+        ],
+      });
+    }
+  }
+  return [...counts.values()]
+    .sort((a, b) => (b.metric ?? 0) - (a.metric ?? 0) || a.rank - b.rank)
+    .slice(0, 40)
+    .map((item, index) => ({ ...item, rank: index + 1 }));
+}
+
+/** Query keywords used when Google News RSS is empty/failing. */
+function politicsFallbackQuery(feed: (typeof FEEDS)[number]): string {
+  switch (feed.id) {
+    case "news-politics":
+    case "news-politics-search":
+      return "정치 국회 대선";
+    case "news-party":
+      return "정당 지지도 여론조사";
+    case "news-politician":
+      return "정치인 지지율 대선 후보";
+    case "news-pundit":
+      return "정치 평론 시사 토론";
+    case "news-pol-influencer":
+      return "정치 유튜브 시사 채널";
+    case "news-pol-ratings":
+      return "뉴스데스크 뉴스룸 시청률";
+    case "news-policy":
+      return "지자체 정책 서울시 경기도";
+    case "news-subsidy":
+      return "정부 지원금 근로장려금 청년도약계좌";
+    default:
+      return feed.label;
+  }
+}
+
+async function fetchPoliticsFallbackTitles(
+  feed: (typeof FEEDS)[number],
+): Promise<{ title: string; via: string }[]> {
+  const query = politicsFallbackQuery(feed);
+  try {
+    const retrieval = await retrieveNewsForKeyword(query, {
+      limit: 14,
+      lookbackHours: 72,
+      trustedOnly: false,
+      allowMarketTape: true,
+      skipAliasFilter: true,
+      preferNaver: true,
+    });
+    return retrieval.docs.map((doc) => ({
+      title: doc.title,
+      via: doc.source || "naver-news",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function fetchFeed(feed: (typeof FEEDS)[number]): Promise<SourceResult> {
+  try {
+    let titles: { title: string; via?: string }[] = [];
+    let rssError: string | undefined;
+    try {
+      const xml = await fetchText(feed.url, {
+        headers: {
+          Accept: "application/rss+xml,application/xml,text/xml,*/*",
+          Referer: "https://news.google.com/",
+        },
+      });
+      titles = parseRssItems(xml).map((item) => ({ title: item.title, via: "google-rss" }));
+    } catch (error) {
+      rssError = error instanceof Error ? error.message : "rss failed";
+    }
+
+    let items = ingestPoliticsTitles(feed, titles);
+    // P0-4: Naver / Serper (via retrieveNewsForKeyword) when RSS is empty or failed.
+    if (items.length === 0) {
+      const fallback = await fetchPoliticsFallbackTitles(feed);
+      items = ingestPoliticsTitles(feed, fallback);
+      if (items.length) {
+        return result(feed.id, `${feed.label} (fallback)`, items);
+      }
+      return result(
+        feed.id,
+        feed.label,
+        [],
+        rssError ?? "no rows after RSS + Naver/Serper fallback",
+      );
+    }
     return result(feed.id, feed.label, items);
   } catch (error) {
     return result(feed.id, feed.label, [], error instanceof Error ? error.message : "failed");

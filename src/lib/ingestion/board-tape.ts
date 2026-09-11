@@ -9,6 +9,7 @@ import { menuBoardsForChannel, isHeadlineNewsBoard } from "@/lib/boards/registry
 import { readBoard } from "@/lib/boards/store";
 import type { CachedBoard } from "@/lib/boards/types";
 import type { PostChannel } from "@/lib/posts/types";
+import { HEATMAP_SCREEN_LIVE_CAP } from "@/lib/boards/live-priority";
 import type { RankingEntity } from "@/lib/types";
 
 const BOARD_CHANNELS: PostChannel[] = ["economy", "culture", "travel"];
@@ -140,16 +141,37 @@ export async function refreshBoardTape(limit = 2): Promise<{
   return { entities, refreshed };
 }
 
+function liveChartCountByBoardSlug(items: RankingEntity[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    if (!item.tags?.includes("live-chart")) continue;
+    const slug =
+      item.tags.find((tag) => tag !== "live-chart" && !tag.includes(":")) ??
+      item.slug.split("--")[0];
+    if (!slug) continue;
+    counts.set(slug, (counts.get(slug) ?? 0) + 1);
+  }
+  return counts;
+}
+
 /**
  * Drop previous published/LLM board-tape rows, keep live-chart crawls
  * (tickets/books), then append the replacement tape.
+ * P2-10: when a board already has ≥ screen-20 live-chart rows, do not promote
+ * template/chain tape for that slug (keeps the viewport live-led).
  */
 export function mergeBoardTape(
   items: RankingEntity[],
   boardEntities: RankingEntity[],
 ): RankingEntity[] {
+  const liveCounts = liveChartCountByBoardSlug(items);
+  const filtered = boardEntities.filter((entity) => {
+    const slug = entity.tags?.[0] ?? entity.slug.split("--")[0];
+    if (!slug) return true;
+    return (liveCounts.get(slug) ?? 0) < HEATMAP_SCREEN_LIVE_CAP;
+  });
   const without = items.filter((item) => !isBoardTapeRow(item));
-  return [...without, ...boardEntities];
+  return [...without, ...filtered];
 }
 
 /** Replace board-tape rows only for the slugs present in `boardEntities`. */
@@ -158,8 +180,15 @@ export function upsertBoardTape(
   boardEntities: RankingEntity[],
 ): RankingEntity[] {
   if (!boardEntities.length) return items;
+  const liveCounts = liveChartCountByBoardSlug(items);
+  const allowed = boardEntities.filter((entity) => {
+    const slug = entity.tags?.[0] ?? entity.slug.split("--")[0];
+    if (!slug) return true;
+    return (liveCounts.get(slug) ?? 0) < HEATMAP_SCREEN_LIVE_CAP;
+  });
+  if (!allowed.length) return items;
   const slugs = new Set(
-    boardEntities
+    allowed
       .map((item) => item.tags?.[0] ?? item.slug.split("--")[0])
       .filter(Boolean),
   );
@@ -169,5 +198,5 @@ export function upsertBoardTape(
     const boardSlug = item.tags?.[0] ?? item.slug.split("--")[0];
     return !slugs.has(boardSlug);
   });
-  return [...kept, ...boardEntities];
+  return [...kept, ...allowed];
 }

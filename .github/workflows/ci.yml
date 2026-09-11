@@ -17,3 +17,5 @@ jobs:
       - run: npm ci
       - run: npm run landing:check
       - run: npm run briefing:check
+      - run: npm run live:first
+      - run: npm run live:gates

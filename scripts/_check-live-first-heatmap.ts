@@ -34,7 +34,7 @@ const liveChart = fakeLive("네이버뉴스이슈", ["live-chart", "economy-issu
 assert.equal(countLivePreferRows([boardTape, liveChart], "economy"), 1);
 assert.equal(preferLiveChannelComposite("economy", undefined, 1), false);
 assert.equal(preferLiveChannelComposite("economy", undefined, 3), true);
-assert.equal(preferLiveChannelComposite("economy", "kospi-fomo-index", 10), false);
+assert.equal(preferLiveChannelComposite("economy", "kospi-fomo-index", 10), true);
 assert.equal(preferLiveChannelComposite("culture", undefined, 5), true);
 assert.equal(preferLiveChannelComposite("travel", undefined, 5), true);
 

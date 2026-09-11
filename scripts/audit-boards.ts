@@ -2,13 +2,20 @@
  * Quality gate for the ranking boards. Reads the on-disk cache and checks the
  * contract each board must satisfy: full ranking, distinct demographic segments,
  * minimum body length, a ranking table, three FAQ entries and a shorts script.
+ * Also reports provenance kind (chain / template / live) and any overlay hints.
  *
  *   npm run boards:audit
  */
 import { AGE_SEGMENTS, GENDER_SEGMENTS } from "../src/lib/boards/demographics";
+import {
+  HEATMAP_SCREEN_LIVE_CAP,
+  countScreenLiveLead,
+  isLivePreferEntity,
+} from "../src/lib/boards/live-priority";
 import { BOARDS } from "../src/lib/boards/registry";
 import { listBoards } from "../src/lib/boards/store";
 import type { BoardRankEntry, CachedBoard } from "../src/lib/boards/types";
+import { readPersistedSnapshot } from "../src/lib/ingestion/job";
 
 const MIN_CHARS = 1_000;
 const MIN_ROWS = 10;
@@ -73,10 +80,12 @@ function audit(entry: CachedBoard): string[] {
 async function main() {
   const entries = await listBoards();
   const bySlug = new Map(entries.map((entry) => [entry.slug, entry]));
+  const snapshot = readPersistedSnapshot();
 
   let ok = 0;
   let failed = 0;
   const missing: string[] = [];
+  const provenanceCounts = { chain: 0, template: 0, live: 0, other: 0 };
 
   for (const board of BOARDS) {
     const entry = bySlug.get(board.slug);
@@ -85,13 +94,35 @@ async function main() {
       continue;
     }
     const failures = audit(entry);
+    const kind = entry.provenance?.kind ?? "other";
+    if (kind === "chain" || kind === "template" || kind === "live") {
+      provenanceCounts[kind] += 1;
+    } else {
+      provenanceCounts.other += 1;
+    }
+
+    const liveForBoard =
+      snapshot?.items?.filter(
+        (item) =>
+          isLivePreferEntity(item) &&
+          (item.tags?.includes(board.slug) || item.slug.startsWith(`${board.slug}--`)),
+      ) ?? [];
+    const screenLead = countScreenLiveLead(liveForBoard);
+    const overlaySource =
+      screenLead >= Math.min(8, HEATMAP_SCREEN_LIVE_CAP / 2)
+        ? "live"
+        : kind === "chain"
+          ? "chain"
+          : "template";
+
     if (failures.length) {
       failed += 1;
       console.log(`FAIL ${board.slug} · ${failures.join(" · ")}`);
     } else {
       ok += 1;
       console.log(
-        `ok   ${board.slug} · ${entry.provenance.kind} · ${entry.report.characterCount}자 · ` +
+        `ok   ${board.slug} · provenance=${kind} · overlay=${overlaySource} · ` +
+          `liveScreen=${screenLead}/${HEATMAP_SCREEN_LIVE_CAP} · ${entry.report.characterCount}자 · ` +
           `demo=${entry.provenance.demographicsFromLlm ? "llm" : "derived"}`,
       );
     }
@@ -99,6 +130,9 @@ async function main() {
 
   console.log(
     `\n${ok} passed, ${failed} failed, ${missing.length} not generated (of ${BOARDS.length})`,
+  );
+  console.log(
+    `provenance: chain=${provenanceCounts.chain} template=${provenanceCounts.template} live=${provenanceCounts.live} other=${provenanceCounts.other}`,
   );
   if (missing.length) console.log(`missing: ${missing.join(", ")}`);
   if (failed) process.exitCode = 1;

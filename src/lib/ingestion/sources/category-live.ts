@@ -2,6 +2,7 @@
  * Live news + YouTube crawls for economy / culture / travel heatmap boards.
  * Emits ChartRows tagged with boardSlug so compose can stamp live-chart entities.
  */
+import { isNativeChartBoard, isThinLiveBoard } from "@/lib/boards/live-priority";
 import { getBoard, menuBoardsForChannel } from "@/lib/boards/registry";
 import { fetchYoutubeFallback } from "@/lib/context/fallback-youtube";
 import { officialUrlSeeds } from "@/lib/context/official-url-seeds";
@@ -88,7 +89,8 @@ function boardSpecsForChannel(channel: PostChannel): LiveBoardSpec[] {
       boardSlug: board.slug,
       channel,
       label: board.shortTitle,
-      queries: board.queries.slice(0, 2),
+      // Thin boards crawl more queries so seed-matching can reach the screen-20 head.
+      queries: board.queries.slice(0, isThinLiveBoard(board.slug) ? 5 : 2),
       seeds: board.seeds,
       grant:
         board.slug.includes("grant") ||
@@ -136,10 +138,11 @@ async function collectNewsTitles(
     }
   }
 
-  for (const query of spec.queries.slice(0, 2)) {
+  const queryCap = isThinLiveBoard(spec.boardSlug) ? Math.min(5, spec.queries.length) : 2;
+  for (const query of spec.queries.slice(0, queryCap)) {
     try {
       const retrieval = await retrieveNewsForKeyword(query, {
-        limit: spec.preferNaver ? 10 : 6,
+        limit: spec.preferNaver ? 10 : isThinLiveBoard(spec.boardSlug) ? 10 : 6,
         lookbackHours: 72,
         trustedOnly: false,
         allowMarketTape: true,
@@ -212,8 +215,12 @@ function rankTitlesToRows(
   }
 
   // Only invent free-form topics when seed coverage is thin.
-  // Star board must stay person-seeded — never invent drama/company titles.
-  if (seedHits < 6 && spec.boardSlug !== "star-reputation-index") {
+  // Native chart boards + star board: seed-match only (never invent free topics).
+  if (
+    seedHits < 6 &&
+    spec.boardSlug !== "star-reputation-index" &&
+    !isNativeChartBoard(spec.boardSlug)
+  ) {
     for (const row of titles) {
       if (matchSeedNames(row.title, spec.seeds).length) continue;
       const topic = extractShortTopic(row.title);

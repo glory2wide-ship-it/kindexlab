@@ -34,6 +34,7 @@ import {
 } from "@/lib/ingestion/sources/tickets";
 import { pickPrimaryWebtoon } from "@/lib/ingestion/sources/webtoon";
 import { channelForBoardSlug } from "@/lib/boards/entity-type";
+import { isNativeChartEntityType } from "@/lib/boards/live-priority";
 import { attachTimeframeMetrics, changeForEntity, volumeForTimeframe } from "@/lib/timeframes";
 import type {
   CatalogMatch,
@@ -288,6 +289,30 @@ function toEntity(
       if (tags.length > 5) tags.length = 5;
     }
   }
+  // Native API charts: stamp live-chart + board slug + sourceChannel for overlays.
+  let nativeSourceChannel: PostChannel | undefined;
+  let nativeHeatmapGroup: string | undefined;
+  if (isNativeChartEntityType(knownType)) {
+    const typeToBoard: Partial<Record<EntityType, string>> = {
+      music_chart: "realtime-music-chart",
+      webtoon: "realtime-webtoon-rank",
+      movie: "boxoffice-expectation",
+      tv_rating: "realtime-tv-ratings",
+      tv_show: "realtime-tv-ratings",
+      mobile_game: "game-esports-ranking",
+      pc_game: "game-esports-ranking",
+      console_game: "game-esports-ranking",
+      kpop: "kpop-fandom-power",
+      trot: "trot-kayo-fandom-power",
+    };
+    const boardSlug = typeToBoard[knownType];
+    if (boardSlug && !tags.includes(boardSlug)) tags.unshift(boardSlug);
+    if (!tags.includes("live-chart")) tags.push("live-chart");
+    if (tags.length > 5) tags.length = 5;
+    nativeSourceChannel = (boardSlug && channelForBoardSlug(boardSlug)) || "entertainment";
+    nativeHeatmapGroup = boardSlug ? heatmapGroupForBoardSlug(boardSlug) : undefined;
+  }
+
   const sourceLabel = tags[0] ?? "실시간";
   const nameEn =
     catalog?.nameEn ||
@@ -312,6 +337,8 @@ function toEntity(
     analysis: `${title} 수급은 공개 차트·시청률·웹툰 인기·숏폼 조회·게임 순위·뉴스 피드를 합산한 실시간 스냅샷입니다. 순위 변동은 직전 수집 대비 버즈 점수 변화이며, 상세 분석은 일일 브리핑에서 이어집니다.`,
     products: catalog?.products?.length ? catalog.products : defaultProducts(title, knownType),
     imageUrl: row.imageUrl,
+    sourceChannel: nativeSourceChannel,
+    heatmapGroup: nativeHeatmapGroup,
   };
 }
 

@@ -8,6 +8,7 @@ import {
   rankLimitForBoard,
   rankLimitForChannel,
 } from "@/lib/boards/limits";
+import { isNativeChartEntityType } from "@/lib/boards/live-priority";
 import {
   boardUsesRegionFilter,
   deriveRegionRankings,
@@ -656,14 +657,26 @@ export function buildHeatmapItems({
   };
 
   if (preferLive && liveClean.length) {
-    const liveChart = liveClean.filter((item) => item.tags?.includes("live-chart"));
-    const nonTape = liveClean.filter(
-      (item) => !item.tags?.includes("board-tape") && !item.tags?.includes("live-chart"),
+    const nativeChart = liveClean.filter(
+      (item) =>
+        !item.tags?.includes("board-tape") &&
+        (isNativeChartEntityType(item.type) ||
+          (item.tags?.includes("live-chart") && isNativeChartEntityType(item.type))),
     );
-    // Live crawl first; never lead with published board-tape when preferLive is on.
+    const nativeIds = new Set(nativeChart.map((item) => item.id));
+    const liveChart = liveClean.filter(
+      (item) => item.tags?.includes("live-chart") && !nativeIds.has(item.id),
+    );
+    const nonTape = liveClean.filter(
+      (item) =>
+        !item.tags?.includes("board-tape") &&
+        !item.tags?.includes("live-chart") &&
+        !nativeIds.has(item.id),
+    );
+    // Native chart → strong live-chart → other live → never board-tape first.
     const preferred =
-      liveChart.length || nonTape.length
-        ? [...liveChart, ...nonTape]
+      nativeChart.length || liveChart.length || nonTape.length
+        ? [...nativeChart, ...liveChart, ...nonTape]
         : liveClean.filter((item) => !item.tags?.includes("board-tape"));
     if (preferred.length) {
       const seen = new Set<string>();

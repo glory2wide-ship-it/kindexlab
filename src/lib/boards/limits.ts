@@ -1,3 +1,4 @@
+import { isLivePreferEntity } from "@/lib/boards/live-priority";
 import { POLITICS_HEATMAP_BOARD_NAV, TRAVEL_HEATMAP_BOARD_NAV } from "@/lib/constants/nav";
 import {
   CULTURE_EVENT_REGION_CATALOG_MIN,
@@ -80,13 +81,14 @@ export function channelUsesBoardHeatmap(channel: PostChannel): boolean {
  * Economy/culture/travel board-tape (published/LLM) must not inflate the live gate.
  */
 export function countLivePreferRows(
-  items: { tags?: string[] | null }[],
+  items: { type?: string; tags?: string[] | null }[],
   channel: PostChannel,
 ): number {
   if (channel === "economy" || channel === "culture" || channel === "travel") {
-    return items.filter((item) => item.tags?.includes("live-chart")).length;
+    return items.filter((item) => isLivePreferEntity(item)).length;
   }
-  return items.filter((item) => !item.tags?.includes("board-tape")).length;
+  // Entertainment / politics: native charts + live-chart count; exclude board-tape.
+  return items.filter((item) => isLivePreferEntity(item)).length;
 }
 
 /**

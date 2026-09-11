@@ -13,6 +13,10 @@ import {
   passesKpopTrotBoardFilter,
 } from "@/lib/boards/trot";
 import { rankLimitForBoard } from "@/lib/boards/limits";
+import {
+  HEATMAP_SCREEN_LIVE_CAP,
+  isNativeChartBoard,
+} from "@/lib/boards/live-priority";
 import { menuBoardsForChannel, isHeadlineNewsBoard } from "@/lib/boards/registry";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
 import { normalizeCachedBoard } from "@/lib/boards/store";
@@ -50,90 +54,122 @@ function sanitizeLiveBoardName(slug: string, name: string): string {
 /**
  * Prefer live ingest chart rows for boards that map to snapshot entity types,
  * or board-slug-tagged live-chart rows (tickets, bestsellers, etc.).
+ *
+ * Native chart boards (music/webtoon/movie/TV/games): typed API rows lead;
+ * category-live only fills name gaps. Other boards keep board-tagged live first.
  * Server-only — keeps fs-backed snapshot reads out of client bundles.
  */
+function itemToRankEntry(
+  def: BoardDefinition,
+  item: RankingEntity,
+  index: number,
+): BoardRankEntry {
+  return {
+    rank: index + 1,
+    name: sanitizeLiveBoardName(def.slug, item.name),
+    score: Number(
+      Math.min(99.5, Math.max(12, item.buzzScore > 120 ? item.buzzScore / 10 : item.buzzScore)).toFixed(
+        2,
+      ),
+    ),
+    changeRate: Number((item.fluctuationRate ?? 0).toFixed(2)),
+    note: item.summary?.slice(0, 80) || `${def.shortTitle} 실시간 ${index + 1}위`,
+  };
+}
+
+function passesBoardLiveFilter(def: BoardDefinition, item: RankingEntity): boolean {
+  if (def.slug === "star-reputation-index" || item.type === "celebrity") {
+    return isLikelyCelebrityName(item.name);
+  }
+  if (def.slug === "trot-kayo-fandom-power" && item.type === "trot") {
+    return !isLikelyKpopIdol(item.name) || isLikelyTrotArtist(item.name);
+  }
+  if (def.slug === "kpop-fandom-power" && item.type === "kpop") {
+    return !isLikelyTrotArtist(item.name);
+  }
+  return passesKpopTrotBoardFilter(def.slug, item.name);
+}
+
+function collectTypedLiveItems(
+  def: BoardDefinition,
+  snapshot: NonNullable<ReturnType<typeof readPersistedSnapshot>>,
+): RankingEntity[] {
+  const types = liveEntityTypesForBoard(def.slug);
+  if (!types.length) return [];
+  const typeSet = new Set(types);
+  return snapshot.items
+    .filter((item) => typeSet.has(item.type))
+    .filter((item) => passesBoardLiveFilter(def, item))
+    .sort((a, b) => a.rank - b.rank || b.buzzScore - a.buzzScore);
+}
+
+function collectBoardTaggedLiveItems(
+  def: BoardDefinition,
+  snapshot: NonNullable<ReturnType<typeof readPersistedSnapshot>>,
+): RankingEntity[] {
+  return snapshot.items
+    .filter(
+      (item) =>
+        item.tags?.includes(def.slug) &&
+        (item.tags.includes("live-chart") || item.slug.startsWith(`${def.slug}--`)),
+    )
+    .filter((item) => passesBoardLiveFilter(def, item))
+    .sort((a, b) => a.rank - b.rank || b.buzzScore - a.buzzScore);
+}
+
+function dedupeLiveItemsToRanking(
+  def: BoardDefinition,
+  items: RankingEntity[],
+  limit: number,
+): BoardRankEntry[] {
+  const seen = new Set<string>();
+  const rows: BoardRankEntry[] = [];
+  for (const item of items) {
+    if (rows.length >= limit) break;
+    const name = sanitizeLiveBoardName(def.slug, item.name);
+    if (!name || name.length < 2 || isUnusableRankName(name)) continue;
+    const key = name.replace(/\s+/g, "").toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    rows.push(itemToRankEntry(def, item, rows.length));
+  }
+  return rows;
+}
+
 function liveRankingForBoard(
   def: BoardDefinition,
   snapshot: ReturnType<typeof readPersistedSnapshot>,
 ): BoardRankEntry[] | undefined {
   if (!snapshot?.items?.length) return undefined;
   const limit = rankLimitForBoard(def);
+  const typed = collectTypedLiveItems(def, snapshot);
+  const tagged = collectBoardTaggedLiveItems(def, snapshot);
 
-  const boardTagged = snapshot.items
-    .filter(
-      (item) =>
-        item.tags?.includes(def.slug) &&
-        (item.tags.includes("live-chart") || item.slug.startsWith(`${def.slug}--`)),
-    )
-    .sort((a, b) => a.rank - b.rank || b.buzzScore - a.buzzScore);
-  if (boardTagged.length >= MIN_LIVE_BOARD_ROWS) {
-    const seen = new Set<string>();
-    return boardTagged
-      .filter((item) => {
-        if (!passesKpopTrotBoardFilter(def.slug, item.name)) return false;
-        const name = sanitizeLiveBoardName(def.slug, item.name);
-        if (!name || name.length < 2 || isUnusableRankName(name)) return false;
-        const key = name.replace(/\s+/g, "").toLowerCase();
-        if (!key || seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .slice(0, limit)
-      .map((item, index) => ({
-        rank: index + 1,
-        name: sanitizeLiveBoardName(def.slug, item.name),
-        score: Number(
-          Math.min(99.5, Math.max(12, item.buzzScore > 120 ? item.buzzScore / 10 : item.buzzScore)).toFixed(
-            2,
-          ),
-        ),
-        changeRate: Number((item.fluctuationRate ?? 0).toFixed(2)),
-        note: item.summary?.slice(0, 80) || `${def.shortTitle} 실시간 ${index + 1}위`,
-      }));
+  // Native charts: Melon/Naver/KOBIS/Nielsen/games first; category-live fills gaps only.
+  if (isNativeChartBoard(def.slug)) {
+    const rows = dedupeLiveItemsToRanking(def, [...typed, ...tagged], limit);
+    return rows.length >= MIN_LIVE_BOARD_ROWS ? rows : undefined;
+  }
+  // Non-native with a strong typed pool: typed → tagged gaps (never tagged-only wipe).
+  if (typed.length >= MIN_LIVE_BOARD_ROWS) {
+    const rows = dedupeLiveItemsToRanking(def, [...typed, ...tagged], limit);
+    return rows.length >= MIN_LIVE_BOARD_ROWS ? rows : undefined;
   }
 
-  const types = liveEntityTypesForBoard(def.slug);
-  if (!types.length) return undefined;
-  const typeSet = new Set(types);
-  const seen = new Set<string>();
-  const rows = snapshot.items
-    .filter((item) => typeSet.has(item.type))
-    .filter((item) => {
-      // 스타 board / celebrity tape: reject company / drama / Trends noise.
-      if (def.slug === "star-reputation-index" || item.type === "celebrity") {
-        return isLikelyCelebrityName(item.name);
+  // Menu boards without native charts: board-tagged live-chart still leads.
+  if (tagged.length >= MIN_LIVE_BOARD_ROWS) {
+    const rows = dedupeLiveItemsToRanking(def, tagged, limit);
+    if (rows.length >= MIN_LIVE_BOARD_ROWS) {
+      // P1-5: when tagged head is thin vs screen cap, backfill typed names before seed.
+      if (rows.length < HEATMAP_SCREEN_LIVE_CAP && typed.length) {
+        return dedupeLiveItemsToRanking(def, [...tagged, ...typed], limit);
       }
-      // Typed trot/kpop live rows: trust ingest type, only drop clear cross-board idols.
-      if (def.slug === "trot-kayo-fandom-power" && item.type === "trot") {
-        return !isLikelyKpopIdol(item.name) || isLikelyTrotArtist(item.name);
-      }
-      if (def.slug === "kpop-fandom-power" && item.type === "kpop") {
-        return !isLikelyTrotArtist(item.name);
-      }
-      return passesKpopTrotBoardFilter(def.slug, item.name);
-    })
-    .sort((a, b) => a.rank - b.rank || b.buzzScore - a.buzzScore)
-    .filter((item) => {
-      const name = sanitizeLiveBoardName(def.slug, item.name);
-      if (!name || name.length < 2 || isUnusableRankName(name)) return false;
-      const key = name.replace(/\s+/g, "").toLowerCase();
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, limit)
-    .map((item, index) => ({
-      rank: index + 1,
-      name: sanitizeLiveBoardName(def.slug, item.name),
-      score: Number(
-        Math.min(99.5, Math.max(12, item.buzzScore > 120 ? item.buzzScore / 10 : item.buzzScore)).toFixed(
-          2,
-        ),
-      ),
-      changeRate: Number((item.fluctuationRate ?? 0).toFixed(2)),
-      note: item.summary?.slice(0, 80) || `${def.shortTitle} 실시간 ${index + 1}위`,
-    }));
-  return rows.length >= MIN_LIVE_BOARD_ROWS ? rows : undefined;
+      return rows;
+    }
+  }
+
+  const typedRows = dedupeLiveItemsToRanking(def, typed, limit);
+  return typedRows.length >= MIN_LIVE_BOARD_ROWS ? typedRows : undefined;
 }
 
 function mergeLiveBoardRanking(
