@@ -26,7 +26,6 @@ import {
   rankLimitForChannel,
 } from "@/lib/boards/limits";
 import { isMarketQuoteBoardSlug } from "@/lib/market/kospi-quotes";
-import { DESK_TOP_N } from "@/lib/boards/composite-desk";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { PostChannel } from "@/lib/posts/types";
 import type { MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
@@ -50,6 +49,9 @@ function usesBoardHeatmap(channel: PostChannel): boolean {
 function needsQuotedPaint(channel: PostChannel, board: string): boolean {
   return isMarketQuoteBoardSlug(board) || (channel === "economy" && !board);
 }
+
+/** Rows per submenu desk card — keep local so this client module never imports composite-desk (fs). */
+const BOARD_DESK_TOP_N = 3;
 
 function cacheKeyForBoard(board: string): string {
   return board || "";
@@ -350,7 +352,7 @@ export function ChannelMarketDesk({
         id: board.slug,
         label: board.shortTitle,
         href: boardPath(board.slug),
-        top: rows.slice(0, DESK_TOP_N),
+        top: rows.slice(0, BOARD_DESK_TOP_N),
         hideOnMobile: channel === "politics" && board.slug === "policy-controversy-index",
       };
     });
