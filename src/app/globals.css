@@ -208,7 +208,8 @@ body {
   height: 1.05em;
   border-color: color-mix(in srgb, #ffffff 28%, transparent);
   border-radius: 0.1em;
-  background: #22c55e;
+  /* Match heatmap legend +2% (#16a34a). */
+  background: #16a34a;
 }
 
 .refresh-countdown .flip-punct {
@@ -224,7 +225,7 @@ body {
 }
 
 .refresh-countdown .flip-leaf {
-  background: #22c55e;
+  background: #16a34a;
 }
 
 .refresh-countdown .flip-glyph::after {
@@ -416,3 +417,12 @@ nav[aria-label$="서브 메뉴"] {
 }
 
 
+
+
+/* Heatmap tile titles — gothic face, balanced Hangul tracking. */
+.heatmap-tile-name {
+  font-family: var(--font-gothic), var(--font-sans), sans-serif;
+  font-feature-settings: "ss05" 0;
+  text-wrap: balance;
+  -webkit-font-smoothing: antialiased;
+}

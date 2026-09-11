@@ -6,13 +6,13 @@ import { isNavigating } from "@/lib/nav/progress";
 import { DEFAULT_TRENDS_REVALIDATE_SEC, formatRefreshClock } from "@/lib/refresh";
 
 /** Keep the same outer box as the neighboring "랭킹 산출 방식" control (30px). */
-/** Background matches heatmap legend rightmost green (#22c55e). */
+/** Background matches heatmap legend +2% green (second from right) (#16a34a). */
 const SHELL_CLASS =
-  "inline-flex shrink-0 items-center justify-center gap-1 rounded-md border border-[#22c55e] bg-[#22c55e] px-3 font-sans font-light text-white";
-const SHELL_STYLE = { height: 30, boxSizing: "border-box" as const, fontWeight: 400 };
+  "index-gothic inline-flex shrink-0 items-center justify-center gap-1 rounded-md border border-[#16a34a] bg-[#16a34a] px-3 font-sans font-bold text-white";
+const SHELL_STYLE = { height: 30, boxSizing: "border-box" as const, fontWeight: 700 };
 /** Prior clock 14.52px +10% → 15.972px; label 11.88px +10% → 13.068px. */
-const LABEL_CLASS = "text-[13.068px] font-light leading-none tracking-tight whitespace-nowrap text-white";
-const CLOCK_CLASS = "refresh-countdown text-[15.972px] font-light tabular-nums leading-none text-white";
+const LABEL_CLASS = "text-[13.068px] font-bold leading-none tracking-tight whitespace-nowrap text-white";
+const CLOCK_CLASS = "refresh-countdown text-[15.972px] font-bold tabular-nums leading-none text-white";
 
 export function HeatmapCountdownFallback() {
   return (

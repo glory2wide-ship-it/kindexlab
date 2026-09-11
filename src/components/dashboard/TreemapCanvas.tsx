@@ -71,6 +71,7 @@ export function TreemapView({
   items,
   category,
   timeframe,
+  layoutKey,
   selectedSlug: _selectedSlug,
   onSelect,
   showChannelTags = false,
@@ -79,6 +80,8 @@ export function TreemapView({
   items: RankingEntity[];
   category: CategoryId;
   timeframe: Timeframe;
+  /** Extra seed entropy (gender/age/region/submenu) for packing variety. */
+  layoutKey?: string;
   selectedSlug?: string | null;
   onSelect?: (slug: string) => void;
   /** Landing unified map: show short desk tags (엔터/정치/…) beside the rank. */
@@ -131,7 +134,7 @@ export function TreemapView({
     try {
       if (!visible.length) return [];
       const byId = new Map(visible.map((entity) => [entity.id, entity]));
-      const layoutSeed = `${category}:${visible[0]?.heatmapGroup ?? visible[0]?.type ?? "all"}:${visible[0]?.id ?? "empty"}:${visible.length}`;
+      const layoutSeed = `${category}:${timeframe}:${layoutKey ?? "base"}:${visible[0]?.heatmapGroup ?? visible[0]?.type ?? "all"}:${visible[0]?.id ?? "empty"}:${visible.length}`;
       return layoutHeatmapLeaves(
         visible.map((entity, index) => {
           const tile = heatmapTileLabel(entity);
@@ -157,7 +160,7 @@ export function TreemapView({
     } catch {
       return [];
     }
-  }, [category, height, timeframe, visible, width]);
+  }, [category, height, layoutKey, timeframe, visible, width]);
 
   function moveHover(event: MouseEvent, entity: RankingEntity, change: number) {
     const displayRank = displayRankById.get(entity.id) ?? entity.rank;
@@ -332,7 +335,7 @@ export function TreemapView({
                       style={{ color: fill }}
                     >
                       <p
-                        className="w-full font-extrabold tracking-tight"
+                        className="heatmap-tile-name w-full font-semibold tracking-tight"
                         suppressHydrationWarning
                         style={{
                           display: "-webkit-box",
@@ -342,7 +345,7 @@ export function TreemapView({
                           textOverflow: "ellipsis",
                           fontSize: headlineFontSize,
                           lineHeight: 1.25,
-                          letterSpacing: "-0.03em",
+                          letterSpacing: "-0.01em",
                           wordBreak: "break-all",
                         }}
                       >
@@ -371,14 +374,14 @@ export function TreemapView({
                     >
                       {label?.showName !== false ? (
                         <p
-                          className="w-full font-extrabold tracking-tight"
+                          className="heatmap-tile-name w-full font-semibold tracking-tight"
                           suppressHydrationWarning
                           style={{
                             // Full name only: wrap/shrink in layoutTreemapLabel — never CSS-ellipsis.
                             overflow: "visible",
                             fontSize: nameFontSize,
-                            lineHeight: 1.22,
-                            letterSpacing: "-0.03em",
+                            lineHeight: 1.3,
+                            letterSpacing: "-0.01em",
                             whiteSpace: "pre-line",
                             wordBreak: "keep-all",
                             overflowWrap: "anywhere",

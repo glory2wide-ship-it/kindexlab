@@ -4,15 +4,15 @@ import {
   heatmapLabelDisplayLength,
 } from "@/lib/heatmap-display-name";
 
-const MIN_NAME = 14.5;
+const MIN_NAME = 15.5;
 /** Shrink below MIN_NAME before ever clipping a name. */
-const ABSOLUTE_NAME_FLOOR = 9;
-const MAX_NAME = 30;
+const ABSOLUTE_NAME_FLOOR = 10;
+const MAX_NAME = 28;
 const MIN_RATE = 12;
 const MAX_RATE = 18;
 const MIN_ARTIST = 10;
 const MAX_ARTIST = 14;
-const NAME_LINE_HEIGHT = 1.14;
+const NAME_LINE_HEIGHT = 1.28;
 const ABSOLUTE_MAX_LINES = 4;
 
 /** Korean particles / endings — keep with the preceding word when breaking. */
@@ -222,7 +222,7 @@ function densityNameSize(input: {
           ? 0.46
           : 0.38;
   const heightCap = input.innerH * heightShare;
-  const shortBoost = chars <= 4 && maxLines === 1 ? 1.04 : 1;
+  const shortBoost = chars <= 4 && maxLines === 1 ? 1.1 : chars <= 6 && maxLines === 1 ? 1.05 : 1;
   size *= shortBoost;
 
   const preferredFloor = Math.min(MIN_NAME, Math.max(ABSOLUTE_NAME_FLOOR, heightCap * 0.55));

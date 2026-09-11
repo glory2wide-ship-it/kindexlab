@@ -13,26 +13,26 @@ export interface TreemapBox {
 }
 
 /** Soft typical share for the leader — kept modest so lower tiles stay readable. */
-export const RANK_1_AREA_RATIO = 0.12;
+export const RANK_1_AREA_RATIO = 0.15;
 /** Soft ceiling for rank 1 on dense boards (~20% above prior compact era). */
-export const RANK_TOP_AREA_CAP = 0.12;
+export const RANK_TOP_AREA_CAP = 0.15;
 export const REMAINING_AREA_RATIO = 1 - RANK_1_AREA_RATIO;
 /** Soft ceiling used by helpers; live layout uses dynamic caps by tile count. */
 export const RANK_BELOW_CAP = RANK_1_AREA_RATIO - 0.001;
 /** Soft ceiling for near-square helper aspect (max(w,h)/min(w,h)). */
 export const RANK_1_MAX_ASPECT = 1.35;
 /** Neighbor step after #1 — keeps #2 well below the leader without starving the tail. */
-export const RANK_AREA_STEP = 0.8;
+export const RANK_AREA_STEP = 0.78;
 /** Soft floor so lower-rank tiles keep readable label area. */
 export const RANK_TAIL_FLOOR = 0.03;
 
 export type HeatmapLayoutVariant =
   | "squarify"
-  | "mirror-x"
-  | "mirror-y"
   | "bands-top"
   | "spine-left"
-  | "slice-dice";
+  | "slice-dice"
+  | "cascade-br"
+  | "cascade-row";
 
 export interface HeatmapLayoutOptions {
   /** Packing recipe — mobile picks a seeded variant for visual variety. */
@@ -72,12 +72,17 @@ function zipfExponent(count: number): number {
 /** Soft max share for #1 — prefers the visual cap; additive floor fills the rest. */
 function maxLeaderShare(count: number, _step = RANK_AREA_STEP): number {
   void _step;
-  if (count >= 20) return RANK_TOP_AREA_CAP;
-  if (count >= 15) return 0.132;
-  if (count >= 10) return 0.156;
-  if (count >= 6) return 0.2;
-  if (count >= 4) return 0.28;
-  return 0.36;
+  // #1 is fixed at 15% on normal heatmaps (8+ tiles). Fewer tiles need a
+  // larger leader so a strict descending ladder can still fill the map
+  // (n × 15% < 100% is impossible when every tile is ≤ the previous).
+  if (count >= 8) return RANK_1_AREA_RATIO;
+  if (count === 7) return 0.17;
+  if (count === 6) return 0.2;
+  if (count === 5) return 0.26;
+  if (count === 4) return 0.32;
+  if (count === 3) return 0.42;
+  if (count === 2) return 0.58;
+  return 1;
 }
 
 /**
@@ -343,18 +348,21 @@ function hashSeed(seed: string): number {
 }
 
 export function pickHeatmapLayoutVariant(seed: string): HeatmapLayoutVariant {
+  // Only packs that keep #1 top-left and push the lowest rank toward bottom-right.
+  // Seeded mix so category / submenu / timeframe / demo filters feel distinct.
   const variants: HeatmapLayoutVariant[] = [
+    "cascade-br",
     "squarify",
-    "mirror-x",
-    "mirror-y",
     "bands-top",
     "spine-left",
+    "cascade-row",
     "slice-dice",
-    // Re-weight common readable packs so menus feel distinct without chaos.
+    "cascade-br",
     "bands-top",
     "spine-left",
     "squarify",
-    "mirror-x",
+    "cascade-row",
+    "cascade-br",
   ];
   return variants[hashSeed(seed) % variants.length]!;
 }
@@ -475,6 +483,85 @@ function layoutSliceDice(
  * Squarified (or variant) treemap over the full canvas.
  * Mobile can seed a different packing recipe so boards do not all look identical.
  */
+
+
+
+/**
+ * Ordered cascade pack: guillotine cuts that assign each rank its exact area
+ * share. Cuts open toward the right/bottom so #1 stays top-left and the lowest
+ * rank settles bottom-right. `preferRow` biases the first cuts horizontally.
+ */
+function layoutCascadeBr(
+  nodes: PanelNode[],
+  width: number,
+  height: number,
+  padding: number,
+): TreemapBox[] {
+  const ordered = [...nodes].sort((a, b) => a.rank - b.rank || b.value - a.value);
+  return packCascadeGuillotine(ordered, 0, 0, width, height, Math.max(0, padding), "auto");
+}
+
+function layoutCascadeRow(
+  nodes: PanelNode[],
+  width: number,
+  height: number,
+  padding: number,
+): TreemapBox[] {
+  const ordered = [...nodes].sort((a, b) => a.rank - b.rank || b.value - a.value);
+  return packCascadeGuillotine(ordered, 0, 0, width, height, Math.max(0, padding), "row");
+}
+
+function packCascadeGuillotine(
+  nodes: PanelNode[],
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  gap: number,
+  mode: "auto" | "row" | "col",
+): TreemapBox[] {
+  if (!nodes.length) return [];
+  if (nodes.length === 1) {
+    return [{ id: nodes[0]!.id, rank: nodes[0]!.rank, x0, y0, x1, y1 }];
+  }
+  const w = x1 - x0;
+  const h = y1 - y0;
+  if (w < 3 || h < 3) {
+    return nodes.map((node) => ({ id: node.id, rank: node.rank, x0, y0, x1, y1 }));
+  }
+
+  const total = nodes.reduce((sum, node) => sum + Math.max(node.value, 1e-9), 0) || 1;
+  const lead = nodes[0]!;
+  const rest = nodes.slice(1);
+  const leadShare = Math.max(nodeShare(lead.value, total), 1e-6);
+
+  const cutRow =
+    mode === "row" ||
+    (mode === "auto" && h >= w);
+
+  if (cutRow) {
+    const leadH = Math.max(8, Math.min(h - 8, h * leadShare));
+    const cut = y0 + leadH;
+    const nextMode: "auto" | "row" | "col" = mode === "row" ? "col" : "auto";
+    return [
+      { id: lead.id, rank: lead.rank, x0, y0, x1, y1: cut },
+      ...packCascadeGuillotine(rest, x0, Math.min(cut + gap, y1), x1, y1, gap, nextMode),
+    ];
+  }
+
+  const leadW = Math.max(8, Math.min(w - 8, w * leadShare));
+  const cut = x0 + leadW;
+  const nextMode: "auto" | "row" | "col" = mode === "col" ? "row" : "auto";
+  return [
+    { id: lead.id, rank: lead.rank, x0, y0, x1: cut, y1 },
+    ...packCascadeGuillotine(rest, Math.min(cut + gap, x1), y0, x1, y1, gap, nextMode),
+  ];
+}
+
+function nodeShare(value: number, total: number): number {
+  return Math.max(value, 1e-9) / Math.max(total, 1e-9);
+}
+
 export function layoutHeatmapLeaves(
   items: HeatmapSizeInput[],
   width: number,
@@ -510,13 +597,16 @@ export function layoutHeatmapLeaves(
     const ordered = [...nodes].sort((a, b) => a.rank - b.rank || b.value - a.value);
     return layoutSliceDice(ordered, 0, 0, width, height, Math.max(0, padding), height >= width);
   }
+  if (variant === "cascade-br") {
+    return layoutCascadeBr(nodes, width, height, padding);
+  }
+  if (variant === "cascade-row") {
+    return layoutCascadeRow(nodes, width, height, padding);
+  }
 
-  // Default (and mirrors): full-canvas squarify — no gaps. Larger ranks pack
-  // first (top-left); lower ranks settle toward the right / bottom.
-  const packed = squarifyPanel(nodes, 0, 0, width, height, padding);
-  if (variant === "mirror-x") return mirrorBoxes(packed, width, height, "x");
-  if (variant === "mirror-y") return mirrorBoxes(packed, width, height, "y");
-  return packed;
+  // Default: full-canvas squarify — no gaps. Larger ranks pack first (top-left);
+  // lower ranks settle toward the right / bottom.
+  return squarifyPanel(nodes, 0, 0, width, height, padding);
 }
 
 /**
@@ -529,7 +619,7 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
   if (!items.length) return { ratios, leftover: 0 };
 
   if (items.length === 1) {
-    ratios.set(items[0].id, 1);
+    ratios.set(items[0]!.id, 1);
     return { ratios, leftover: 0 };
   }
 
@@ -538,107 +628,101 @@ export function calculateHeatmapSizeRatios(items: HeatmapSizeInput[]): HeatmapSi
     .sort((a, b) => a.rank - b.rank || a.index - b.index);
 
   const n = ordered.length;
-  const step = RANK_AREA_STEP;
-  const leaderCap = maxLeaderShare(n, step);
-  const peak = Math.max(...ordered.map(({ item }) => safeScore(item.score)), 1);
-  const exponent = zipfExponent(n);
-
-  // Rank-primary weights; name boost helps long titles without flipping order.
-  let values = ordered.map(({ item, rank }) =>
-    finvizWeight(rank, item.score, peak, exponent) *
-    Math.min(1.12, readabilityAreaBoost(item.name)),
-  );
-  values = renormalize(enforceStrictDescending(renormalize(values), Math.max(step, 0.88)));
+  const leader = maxLeaderShare(n);
 
   /**
-   * Dense heatmaps (10+): mild uniform blend so tails stay readable, while
-   * #1–#3 land near their ~20% larger caps.
+   * Solve geometric ratio r so leader·(1−r^n)/(1−r) = 1 and each next tile is
+   * smaller. Guarantees a full map with #1 pinned (15% on 8+ tile boards).
    */
-  if (n >= 10) {
-    const uniform = 1 / n;
-    // Keep Zipf dominant so #1 approaches ~12% on 20-tile boards.
-    const mix = n >= 18 ? 0.34 : n >= 14 ? 0.32 : 0.28;
-    values = values.map((value) => mix * uniform + (1 - mix) * value);
-    values = renormalize(enforceStrictDescending(values, 0.96));
+  let lo = 0.5;
+  let hi = 0.999;
+  for (let iter = 0; iter < 40; iter++) {
+    const mid = (lo + hi) / 2;
+    const span = mid >= 0.999999 ? n : (1 - Math.pow(mid, n)) / (1 - mid);
+    if (leader * span > 1) hi = mid;
+    else lo = mid;
+  }
+  const ratio = lo;
+  let values = Array.from({ length: n }, (_, index) => leader * Math.pow(ratio, index));
+  values = renormalize(values);
+  // Re-assert #1 target after float drift, then keep strict descent.
+  const scale = leader / values[0]!;
+  values = values.map((value) => value * scale);
+  values = renormalize(enforceStrictDescending(values, Math.min(0.98, ratio + 0.02)));
+  // Prefer exact leader on dense boards; accept tiny float error elsewhere.
+  if (n >= 8) {
+    values[0] = leader;
+    const rest = values.slice(1);
+    const restSum = rest.reduce((sum, value) => sum + value, 0) || 1;
+    values = [leader, ...rest.map((value) => (value / restSum) * (1 - leader))];
+    values = enforceStrictDescending(values, 0.995);
+    values[0] = leader;
+    const rest2 = values.slice(1);
+    const restSum2 = rest2.reduce((sum, value) => sum + value, 0) || 1;
+    values = [leader, ...rest2.map((value) => (value / restSum2) * (1 - leader))];
+  }
 
-    const cap1 = n >= 18 ? 0.12 : n >= 14 ? 0.132 : 0.156;
-    const cap2 = Math.min(cap1 * 0.8, n >= 18 ? 0.086 : n >= 14 ? 0.096 : 0.12);
-    const cap3 = Math.min(cap2 * 0.86, n >= 18 ? 0.074 : n >= 14 ? 0.082 : 0.1);
+  // Mild score/name texture that cannot flip order.
+  const peak = Math.max(...ordered.map(({ item }) => safeScore(item.score)), 1);
+  values = values.map((value, index) => {
+    const item = ordered[index]!.item;
+    const scoreNorm = Math.min(1, safeScore(item.score) / peak);
+    const scoreAssist = 0.97 + 0.03 * Math.pow(scoreNorm, 0.9);
+    const nameAssist = Math.min(1.04, readabilityAreaBoost(item.name));
+    return value * scoreAssist * nameAssist;
+  });
+  values = renormalize(enforceStrictDescending(values, 0.995));
+  if (n >= 8) {
+    values[0] = leader;
+    const rest = values.slice(1);
+    const restSum = rest.reduce((sum, value) => sum + value, 0) || 1;
+    values = [leader, ...rest.map((value) => (value / restSum) * (1 - leader))];
+    values = enforceStrictDescending(values, 0.995);
+    values[0] = leader;
+    const rest2 = values.slice(1);
+    const restSum2 = rest2.reduce((sum, value) => sum + value, 0) || 1;
+    values = [leader, ...rest2.map((value) => (value / restSum2) * (1 - leader))];
+  }
 
-    const spillFrom = (index: number, target: number) => {
-      if (values[index]! <= target + 1e-12) return;
-      const excess = values[index]! - target;
-      values[index] = target;
-      const start = index + 1;
-      if (start >= values.length) return;
-      const restSum = values.slice(start).reduce((sum, value) => sum + value, 0) || 1;
-      for (let i = start; i < values.length; i++) {
-        values[i] = values[i]! + excess * (values[i]! / restSum);
-      }
-    };
 
-    const pullFromTail = (index: number, floor: number) => {
-      if (values[index]! >= floor - 1e-12) return;
-      let need = floor - values[index]!;
-      values[index] = floor;
-      for (let i = values.length - 1; i > index && need > 1e-10; i--) {
-        const give = Math.min(need, Math.max(0, values[i]! - RANK_TAIL_FLOOR * 0.7));
+  // Keep the last tiles paintable on dense boards (≥ ~1.8%).
+  if (n >= 12) {
+    const floor = n >= 18 ? 0.018 : 0.02;
+    for (let i = values.length - 1; i >= 1; i--) {
+      if (values[i]! >= floor) continue;
+      let need = floor - values[i]!;
+      values[i] = floor;
+      for (let j = i - 1; j >= 1 && need > 1e-10; j--) {
+        const minKeep = Math.max(floor, values[j + 1]!);
+        const give = Math.min(need, Math.max(0, values[j]! - minKeep));
         if (give <= 0) continue;
-        values[i] = values[i]! - give;
+        values[j] = values[j]! - give;
         need -= give;
       }
-      if (need > 1e-10) values[index] = floor - need;
-    };
-
-    spillFrom(0, cap1);
-    spillFrom(1, Math.min(cap2, values[0]! * 0.8));
-    if (values.length > 2) spillFrom(2, Math.min(cap3, values[1]! * 0.86));
-    // If Zipf+mix undershot, lift #1–#3 toward their visual targets.
-    pullFromTail(0, cap1 * 0.96);
-    pullFromTail(1, Math.min(cap2 * 0.96, values[0]! * 0.8));
-    if (values.length > 2) pullFromTail(2, Math.min(cap3 * 0.96, values[1]! * 0.86));
-    values = enforceStrictDescending(values, 0.96);
-
-    // Unit-sum without re-inflating the capped head.
-    const sum = values.reduce((total, value) => total + value, 0) || 1;
-    if (Math.abs(sum - 1) > 1e-8) {
-      const head = values[0]!;
+    }
+    values = enforceStrictDescending(values, 0.995);
+    if (n >= 8) {
+      values[0] = leader;
       const rest = values.slice(1);
-      const restTarget = Math.max(1e-9, 1 - head);
-      const restSum = rest.reduce((total, value) => total + value, 0) || 1;
-      values = [head, ...rest.map((value) => (value / restSum) * restTarget)];
-      values = enforceStrictDescending(values, 0.96);
-      // If descending crushed mass, top up from the bottom within ceilings.
-      let left = 1 - values.reduce((total, value) => total + value, 0);
-      for (let i = values.length - 1; i >= 1 && left > 1e-10; i--) {
-        const room = values[i - 1]! * 0.96 - values[i]!;
-        if (room <= 0) continue;
-        const add = Math.min(room, left);
-        values[i] = values[i]! + add;
-        left -= add;
-      }
+      const restSum = rest.reduce((sum, value) => sum + value, 0) || 1;
+      values = [leader, ...rest.map((value) => (value / restSum) * (1 - leader))];
+      values = enforceStrictDescending(values, 0.995);
+      values[0] = leader;
+      const rest2 = values.slice(1);
+      const restSum2 = rest2.reduce((sum, value) => sum + value, 0) || 1;
+      values = [leader, ...rest2.map((value) => (value / restSum2) * (1 - leader))];
     }
-  } else if (values[0]! > leaderCap + 1e-9) {
-    let lo = 0.7;
-    let hi = 0.98;
-    for (let iter = 0; iter < 24; iter++) {
-      const mid = (lo + hi) / 2;
-      const sum = (leaderCap * (1 - Math.pow(mid, n))) / (1 - mid);
-      if (sum > 1) hi = mid;
-      else lo = mid;
-    }
-    values = Array.from({ length: n }, (_, index) => leaderCap * Math.pow(lo, index));
-    values = renormalize(enforceStrictDescending(values, Math.max(step, 0.85)));
   }
 
   ordered.forEach(({ item }, index) => {
+
     ratios.set(item.id, values[index] ?? 0);
   });
   const used = [...ratios.values()].reduce((sum, value) => sum + value, 0);
   return { ratios, leftover: Math.max(0, 1 - used) };
 }
 
-/** Area weight used by the strip fallback layout. */
+
 export function tileAreaWeight(input: {
   rank: number;
   count: number;

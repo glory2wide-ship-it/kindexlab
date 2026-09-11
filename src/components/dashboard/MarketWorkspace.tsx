@@ -426,6 +426,7 @@ export function MarketWorkspace({
               items={sortedItems}
               category={category}
               timeframe={timeframe}
+              layoutKey={demoKey}
               showChannelTags={showChannelTags}
               showSourceCaptions={Boolean(channel) && !boardSlug}
             />

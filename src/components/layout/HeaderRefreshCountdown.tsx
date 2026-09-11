@@ -58,13 +58,13 @@ export function HeaderRefreshCountdown({
       aria-label={
         pending ? "대시보드 갱신 중" : `다음 갱신 ${Math.max(0, Math.floor(remainingSec))}초`
       }
-      className="inline-flex h-[25.5px] shrink-0 items-center justify-center gap-1 rounded-md border border-[#22c55e] bg-[#22c55e] px-1.5 font-sans font-light text-white"
-      style={{ fontWeight: 400 }}
+      className="inline-flex h-[25.5px] shrink-0 items-center justify-center gap-1 rounded-md border border-[#16a34a] bg-[#16a34a] px-1.5 index-gothic font-sans font-bold text-white"
+      style={{ fontWeight: 700 }}
     >
-      <span className="text-[10.89px] font-light leading-none tracking-tight whitespace-nowrap text-white">
+      <span className="text-[10.89px] font-bold leading-none tracking-tight whitespace-nowrap text-white">
         LIVE KinDex
       </span>
-      <span className="refresh-countdown text-[13.31px] font-light tabular-nums leading-none text-white">
+      <span className="refresh-countdown text-[13.31px] font-bold tabular-nums leading-none text-white">
         {pending ? "…" : <FlipBoardText text={formatRefreshClock(remainingSec)} />}
       </span>
     </div>
