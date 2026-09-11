@@ -91,7 +91,8 @@ function nameBlockHeight(size: number, lines: number): number {
  * Hangul stock names (5–9 chars) wrap when the box is narrow.
  */
 function maxLinesForTile(width: number, height: number, displayLen: number): number {
-  // Long names wrap to at most 2 lines — never 3+.
+  // SoftWrap enforces ≤7 → 1 line (except strong brands like 상인|푸르지오).
+  // Tile geometry may still allow 2 lines so brand splits can paint.
   if (displayLen <= 3) return 1;
   if (height >= 28 && width >= 36 && displayLen >= 5) return 2;
   if (height >= 32 && width >= 40) return 2;
@@ -177,6 +178,12 @@ const COMPOUND_TAIL_UNITS = [
   "인덱스",
   "휴가지원",
   "전기요금",
+  "푸르지오",
+  "힐스테이트",
+  "래미안",
+  "아이파크",
+  "롯데캐슬",
+  "센트레빌",
   "전세",
   "주택",
   "계좌",
@@ -200,13 +207,27 @@ const COMPOUND_TAIL_UNITS = [
   "파크",
   "타워",
   "랭킹",
-  "지수",
   "펀드",
   "은행",
   "증권",
   "항공",
   "호텔",
   "리조트",
+] as const;
+
+/**
+ * Apartment / branded place tails — may wrap even when compact length ≤ 7
+ * (e.g. 상인|푸르지오). Closed compounds like SK하이닉스 stay one line.
+ */
+const STRONG_BRAND_TAILS = [
+  "푸르지오",
+  "힐스테이트",
+  "래미안",
+  "아이파크",
+  "롯데캐슬",
+  "센트레빌",
+  "더샵",
+  "e편한세상",
 ] as const;
 
 /**
@@ -350,16 +371,55 @@ function pickBreakNear(_text: string, target: number, candidates: number[]): num
   );
 }
 
+
+function compactNameLen(text: string): number {
+  return text.replace(/\s+/g, "").length;
+}
+
+/** Map a compact-string index back onto the spaced source string. */
+function indexInSpacedText(text: string, compactIndex: number): number {
+  let compact = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (/\s/.test(text[i]!)) continue;
+    if (compact === compactIndex) return i;
+    compact += 1;
+  }
+  return text.length;
+}
+
+function strongBrandBreakAt(text: string): number | null {
+  const compact = text.replace(/\s+/g, "");
+  for (const tail of STRONG_BRAND_TAILS) {
+    if (!compact.endsWith(tail)) continue;
+    const headLen = compact.length - tail.length;
+    if (headLen < 2) continue;
+    return indexInSpacedText(text, headLen);
+  }
+  return null;
+}
+
 /**
  * Soft-wrap the full name. Never truncates — callers shrink type instead.
  * Break priority: whitespace (outside brackets) → paren edges → compound
  * head/tail units → mid-Hangul last resort.
+ * Compact length ≤ 7 stays one line unless a strong brand tail splits it.
  */
 export function softWrapHeatmapName(name: string, maxLines = 2): string {
   const text = name.replace(/\s+/g, " ").trim();
-  if (!text || maxLines < 2 || text.length < 5) return text;
+  if (!text || maxLines < 2) return text;
 
-  const linesWanted = Math.min(2, maxLines, text.length >= 5 ? 2 : 1);
+  const compactLen = compactNameLen(text);
+  // ≤7 chars: one line by default (SK하이닉스, 소비자물가지수). Brand compounds may wrap.
+  if (compactLen <= 7) {
+    if (maxLines < 2) return text;
+    const brandAt = strongBrandBreakAt(text);
+    if (brandAt == null || brandAt < 2) return text;
+    const left = text.slice(0, brandAt).trim();
+    const right = text.slice(brandAt).trim();
+    return left && right ? `${left}\n${right}` : text;
+  }
+
+  const linesWanted = Math.min(2, maxLines);
   const candidates = softBreakCandidates(text);
 
   if (linesWanted === 2) {
@@ -441,14 +501,17 @@ function densityNameSize(input: {
   const chars = heatmapLabelCharCount(input.text);
   let maxLines = maxLinesForTile(input.innerW + 12, input.innerH + 12, displayLen);
 
-  // If a single line cannot fit at MIN_NAME, force wrap when height allows.
+  // Short names (≤7) stay one line unless a strong brand split exists.
+  // Longer names may force wrap when a single line cannot fit at MIN_NAME.
+  const compactLen = compactNameLen(input.text);
   if (
     maxLines === 1 &&
-    displayLen >= 5 &&
     input.innerH >= 28 &&
     measureTextWidth(input.text, MIN_NAME) > input.innerW
   ) {
-    maxLines = 2;
+    if (compactLen > 7 || strongBrandBreakAt(input.text) != null) {
+      maxLines = 2;
+    }
   }
 
   const perLineChars = Math.max(1, Math.ceil(chars / maxLines));

@@ -101,12 +101,12 @@ export function heatmapLabelCharCount(label: string): number {
 }
 
 /**
- * Display length including spaces and symbols — used to decide multi-line wrap
- * (5+ → 2 lines or more so full names stay visible on narrow tiles).
+ * Display length including spaces and symbols — used to decide multi-line wrap.
+ * Names with compact length ≤ 7 stay on one line unless a strong brand split applies.
  */
 export function heatmapLabelDisplayLength(label: string): number {
   return label.length || 1;
 }
 
-/** Soft-wrap threshold: spaces and symbols count. Stock names wrap from 5+. */
-export const HEATMAP_WRAP_MIN_CHARS = 5;
+/** Soft-wrap threshold (compact length). ≤7 chars stay on one line by default. */
+export const HEATMAP_WRAP_MIN_CHARS = 8;

@@ -30,13 +30,13 @@ export function KstClock() {
       aria-label="한국 표준시"
     >
       <span
-        className="kst-flip-clock hidden font-medium tracking-tight text-muted sm:inline"
+        className="kst-flip-clock index-gothic hidden font-medium tracking-tight text-muted sm:inline"
         style={{ fontSize: 13 }}
       >
         <FlipBoardText text={dateLine} />
       </span>
       <span
-        className="kst-flip-clock mt-0.5 inline-flex items-center font-semibold tabular-nums tracking-tight"
+        className="kst-flip-clock index-gothic mt-0.5 inline-flex items-center font-semibold tabular-nums tracking-tight"
         style={{ fontSize: 15.5 }}
       >
         <FlipBoardText text={timeLine} />

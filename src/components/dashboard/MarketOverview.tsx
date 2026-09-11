@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FlipBoardNumber } from "@/components/dashboard/FlipBoardNumber";
-import { formatKst, formatPoints, formatRate } from "@/lib/format";
+import { formatKst } from "@/lib/format";
 import { COMPOSITE_INDEX_ID, withIndexPoints } from "@/lib/ingestion/composite";
 import { indexPath } from "@/lib/indices";
 import {
@@ -68,25 +68,22 @@ export function MarketOverview({
     ? "truncate text-[10px] text-muted sm:text-xs md:text-[15.3px]"
     : "truncate text-[10px] text-muted sm:text-xs md:text-[14.4px]";
   const scoreClass = enlargeDesktopScoreExtra
-    ? "kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.7625rem,calc(100cqi/3.824),3.0375rem)]"
+    ? "kpi-score index-gothic mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.7625rem,calc(100cqi/3.824),3.0375rem)]"
     : enlargeDesktopTitleScore
-      ? "kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.41rem,calc(100cqi/4.78),2.43rem)]"
-      : "kpi-score mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.128rem,calc(100cqi/5.975),1.944rem)]";
+      ? "kpi-score index-gothic mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.41rem,calc(100cqi/4.78),2.43rem)]"
+      : "kpi-score index-gothic mt-1.5 font-sans font-semibold tracking-tight sm:mt-2 md:[font-size:clamp(1.128rem,calc(100cqi/5.975),1.944rem)]";
 
   return (
     <section className="index-gothic grid grid-cols-3 gap-2 font-sans sm:gap-3 md:flex md:flex-nowrap md:gap-2">
       {indices.map((index) => {
         const resolved = withIndexPoints(index);
-        const up = resolved.changeRate > 0;
-        const down = resolved.changeRate < 0;
         const composite = resolved.id === COMPOSITE_INDEX_ID || resolved.id === selectedId;
-        const points = resolved.changePoints ?? 0;
         const hideOnMobile = mobileHidden?.has(index.id);
         return (
           <Link
-            key={`${index.id}-${resolved.value}-${resolved.changeRate}`}
+            key={`${index.id}-${resolved.value}`}
             href={index.href ?? indexPath(index.id)}
-            aria-label={`${index.label} ${resolved.value.toFixed(2)} ${formatRate(Number(resolved.changeRate))}`}
+            aria-label={`${index.label} ${resolved.value.toFixed(2)}`}
             className={`relative min-w-0 overflow-hidden rounded-xl border bg-panel p-2 shadow-sm transition-colors hover:border-accent/50 @container sm:p-3 md:flex-1 ${
               composite ? "border-accent/50 ring-1 ring-accent/25" : "border-line"
             }${hideOnMobile ? " max-md:hidden" : ""}`}
@@ -101,14 +98,6 @@ export function MarketOverview({
               <p className={labelClass}>{index.label}</p>
               <p className={scoreClass}>
                 <FlipBoardNumber value={index.value} playToken={flashNonce} />
-              </p>
-              <p
-                className={`mt-1 flex flex-col gap-0.5 font-sans text-[10px] font-semibold tabular-nums leading-tight sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-1.5 sm:text-[11px] md:text-[13.2px] ${
-                  up ? "text-up" : down ? "text-down" : "text-muted"
-                }`}
-              >
-                <span>{formatRate(Number(index.changeRate))}</span>
-                <span className="sm:opacity-90">{formatPoints(points)}</span>
               </p>
             </div>
           </Link>

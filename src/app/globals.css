@@ -196,16 +196,27 @@ body {
   height: 1.15em;
 }
 
-/* Header KST clock — same gothic + flip density as LIVE countdown, ink on panel. */
+/* Header KST clock — gothic digits, no flip-card chrome (no border / inset / midline). */
 .kst-flip-clock .flip-board {
-  gap: 0.04em;
+  gap: 0.02em;
   vertical-align: middle;
 }
 
 .kst-flip-clock .flip-glyph {
   width: 0.58em;
   height: 1.05em;
-  border-radius: 0.1em;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  perspective: none;
+}
+
+.kst-flip-clock .flip-glyph::after {
+  display: none;
+}
+
+.kst-flip-clock .flip-leaf {
+  background: transparent;
 }
 
 .kst-flip-clock .flip-punct {

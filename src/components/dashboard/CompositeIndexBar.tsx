@@ -3,23 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FlipBoardNumber } from "@/components/dashboard/FlipBoardNumber";
-import { formatPoints, formatRate } from "@/lib/format";
 import { COMPOSITE_INDEX_ID, withIndexPoints } from "@/lib/ingestion/composite";
 import { fetchTrendsSnapshot } from "@/lib/liveTrends";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { MarketIndex } from "@/lib/types";
-
-function toneClass(value: number): string {
-  if (value > 0) return "text-up";
-  if (value < 0) return "text-down";
-  return "text-muted";
-}
-
-function arrow(value: number): string {
-  if (value > 0) return "▲";
-  if (value < 0) return "▼";
-  return "–";
-}
 
 export function CompositeIndexBar({
   initial,
@@ -42,9 +29,6 @@ export function CompositeIndexBar({
   }, []);
 
   const resolved = withIndexPoints(index);
-  const up = resolved.changeRate > 0;
-  const down = resolved.changeRate < 0;
-  const points = resolved.changePoints ?? 0;
 
   return (
     <div className="index-gothic sticky top-14 z-30 border-b border-line bg-panel/95 font-sans backdrop-blur-md">
@@ -53,26 +37,17 @@ export function CompositeIndexBar({
           <span className="shrink-0 font-sans text-[11px] font-semibold tracking-[0.14em] text-accent">
             KINDEXLAB 종합지수
           </span>
-          <span
-            className={`relative font-sans text-base font-semibold tabular-nums tracking-tight ${toneClass(index.changeRate)}`}
-          >
+          <span className="relative index-gothic font-sans text-base font-semibold tabular-nums tracking-tight">
             {flashNonce > 0 ? (
               <span
                 key={flashNonce}
                 className="market-live-flash pointer-events-none absolute inset-0 rounded"
               />
             ) : null}
-            <FlipBoardNumber value={index.value} playToken={flashNonce} />
-          </span>
-          <span
-            className={`shrink-0 font-sans text-xs font-semibold tabular-nums ${toneClass(index.changeRate)}`}
-          >
-            {arrow(index.changeRate)} {formatRate(index.changeRate)} {formatPoints(points)}
+            <FlipBoardNumber value={resolved.value} playToken={flashNonce} />
           </span>
         </Link>
-        <p className="hidden min-w-0 truncate text-[11px] text-muted sm:block">
-          {index.note} · 전일 대비 {up ? "상승" : down ? "하락" : "보합"} · 상승 초록 / 하락 빨강
-        </p>
+        <p className="hidden min-w-0 truncate text-[11px] text-muted sm:block">{index.note}</p>
       </div>
     </div>
   );
