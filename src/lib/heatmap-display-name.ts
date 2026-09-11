@@ -26,8 +26,9 @@ function stripParentheticalClauses(name: string): string {
 }
 
 /**
- * Optional helper kept for scripts / non-tile surfaces that still want a trim.
- * Heatmap tiles themselves use the stripped subject name.
+ * Optional helper for scripts / non-tile surfaces that still want a trim.
+ * Heatmap tiles MUST NOT call this — tile paint keeps the full subject name
+ * (wrap + shrink only; no ticker-style abbreviation).
  */
 export function shortenHeatmapLabel(raw: string, maxChars = 12): string {
   const text = compactSpaces(raw);
@@ -101,11 +102,11 @@ export function heatmapLabelCharCount(label: string): number {
 
 /**
  * Display length including spaces and symbols — used to decide multi-line wrap
- * (10+ → 2 lines or more so type can stay larger).
+ * (5+ → 2 lines or more so full names stay visible on narrow tiles).
  */
 export function heatmapLabelDisplayLength(label: string): number {
   return label.length || 1;
 }
 
-/** Soft-wrap threshold: spaces and symbols count. */
-export const HEATMAP_WRAP_MIN_CHARS = 10;
+/** Soft-wrap threshold: spaces and symbols count. Stock names wrap from 5+. */
+export const HEATMAP_WRAP_MIN_CHARS = 5;

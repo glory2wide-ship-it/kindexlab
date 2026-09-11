@@ -374,18 +374,16 @@ export function TreemapView({
                           className="w-full font-extrabold tracking-tight"
                           suppressHydrationWarning
                           style={{
-                            display: "-webkit-box",
-                          WebkitLineClamp: label?.nameLines ?? 3,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          fontSize: nameFontSize,
-                          lineHeight: 1.22,
-                          letterSpacing: "-0.03em",
-                          whiteSpace: "pre-line",
-                          wordBreak: "break-word",
-                        }}
-                      >
+                            // Full name only: wrap/shrink in layoutTreemapLabel — never CSS-ellipsis.
+                            overflow: "visible",
+                            fontSize: nameFontSize,
+                            lineHeight: 1.22,
+                            letterSpacing: "-0.03em",
+                            whiteSpace: "pre-line",
+                            wordBreak: "keep-all",
+                            overflowWrap: "anywhere",
+                          }}
+                        >
                           {label?.name ?? tile.title}
                         </p>
                       ) : null}

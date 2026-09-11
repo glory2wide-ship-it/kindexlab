@@ -12,21 +12,32 @@ const cases: Array<{
   minSize: number;
   maxSize: number;
   minLines?: number;
+  maxLines?: number;
 }> = [
-  { name: "부모급여", width: 210, height: 260, minSize: 14, maxSize: 28, minLines: 1 },
-  { name: "쇼펜하우어", width: 280, height: 200, minSize: 14, maxSize: 28, minLines: 1 },
-  { name: "세이노의 가르침", width: 240, height: 160, minSize: 13, maxSize: 28, minLines: 1 },
-  { name: "문화누리카드", width: 150, height: 110, minSize: 12, maxSize: 28, minLines: 1 },
-  { name: "김치찌개", width: 140, height: 90, minSize: 12, maxSize: 28, minLines: 1 },
-  { name: "웰니스관광", width: 340, height: 280, minSize: 14, maxSize: 28, minLines: 1 },
-  { name: "마약김밥", width: 220, height: 150, minSize: 13, maxSize: 28, minLines: 1 },
-  { name: "혈압", width: 80, height: 56, minSize: 13, maxSize: 22, minLines: 1 },
-  // Small tile: prefer readable type (may ellipsize) over tiny glyphs
-  { name: "소상공인 전기요금 지원사업", width: 56, height: 40, minSize: 13, maxSize: 22, minLines: 1 },
-  // 10+ chars (spaces included) → 2 lines
-  { name: "소상공인 전기요금 지원", width: 200, height: 140, minSize: 12, maxSize: 28, minLines: 2 },
-  { name: "광장시장 마약김밥 맛집", width: 220, height: 150, minSize: 12, maxSize: 28, minLines: 2 },
-  { name: "근로자 휴가지원사업", width: 240, height: 160, minSize: 12, maxSize: 28, minLines: 2 },
+  { name: "부모급여", width: 210, height: 260, minSize: 14, maxSize: 30, minLines: 1 },
+  { name: "쇼펜하우어", width: 280, height: 200, minSize: 14, maxSize: 30, minLines: 1 },
+  { name: "세이노의 가르침", width: 240, height: 160, minSize: 12, maxSize: 30, minLines: 1 },
+  { name: "문화누리카드", width: 150, height: 110, minSize: 11, maxSize: 30, minLines: 1 },
+  { name: "김치찌개", width: 140, height: 90, minSize: 12, maxSize: 30, minLines: 1 },
+  { name: "웰니스관광", width: 340, height: 280, minSize: 14, maxSize: 30, minLines: 1 },
+  { name: "마약김밥", width: 220, height: 150, minSize: 13, maxSize: 30, minLines: 1 },
+  { name: "혈압", width: 80, height: 56, minSize: 12, maxSize: 24, minLines: 1 },
+  // Small tile: must still paint the FULL name (shrink/wrap — never ellipsize).
+  {
+    name: "소상공인 전기요금 지원사업",
+    width: 56,
+    height: 40,
+    minSize: 9,
+    maxSize: 22,
+    minLines: 1,
+    maxLines: 4,
+  },
+  // 5+ chars (spaces included) → multi-line when needed
+  { name: "소상공인 전기요금 지원", width: 200, height: 140, minSize: 11, maxSize: 30, minLines: 2 },
+  { name: "광장시장 마약김밥 맛집", width: 220, height: 150, minSize: 11, maxSize: 30, minLines: 2 },
+  { name: "근로자 휴가지원사업", width: 240, height: 160, minSize: 11, maxSize: 30, minLines: 2 },
+  { name: "한화에어로스페이스", width: 100, height: 70, minSize: 9, maxSize: 30, minLines: 1, maxLines: 4 },
+  { name: "LG에너지솔루션", width: 72, height: 52, minSize: 9, maxSize: 28, minLines: 1, maxLines: 4 },
 ];
 
 let failed = false;
@@ -46,11 +57,13 @@ for (const item of cases) {
   const longest = painted.split("\n").reduce((best, line) => (line.length > best.length ? line : best), "");
   const overflow = measureTextWidth(longest, size) > innerW + 16;
   const inRange = size >= item.minSize && size <= item.maxSize;
-  const linesOk = lines >= (item.minLines ?? 1) && lines <= 3;
-  const ok = inRange && !overflow && linesOk;
+  const linesOk = lines >= (item.minLines ?? 1) && lines <= (item.maxLines ?? 4);
+  const fullName =
+    painted.replace(/\s+/g, "") === item.name.replace(/\s+/g, "") && !/…|\.\.\./.test(painted);
+  const ok = inRange && !overflow && linesOk && fullName;
   if (!ok) failed = true;
   console.log(
-    `${ok ? "ok" : "BAD"} ${size.toFixed(1).padStart(5)}px  L${label?.nameLines}  len=${item.name.length}  ${item.name}`,
+    `${ok ? "ok" : "BAD"} ${size.toFixed(1).padStart(5)}px  L${label?.nameLines}  len=${item.name.length}  full=${fullName}  ${item.name}`,
   );
 }
 
@@ -106,10 +119,10 @@ if (heatmapLabelDisplayLength(long) < HEATMAP_WRAP_MIN_CHARS) failed = true;
 
 const wrapped = softWrapHeatmapName(long, 2);
 if (!wrapped.includes("\n")) {
-  console.error("expected soft wrap for 10+ char spaced name", wrapped);
+  console.error("expected soft wrap for long spaced name", wrapped);
   failed = true;
 }
 console.log(`wrap "${long}" → ${JSON.stringify(wrapped)}`);
 
 if (failed) process.exit(1);
-console.log("label OK: strip brackets + 10+ char multi-line density");
+console.log("label OK: full names only (wrap/shrink, never abbreviate)");

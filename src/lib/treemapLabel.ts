@@ -5,13 +5,15 @@ import {
 } from "@/lib/heatmap-display-name";
 
 const MIN_NAME = 14.5;
-const READABLE_NAME = 15.5;
+/** Shrink below MIN_NAME before ever clipping a name. */
+const ABSOLUTE_NAME_FLOOR = 9;
 const MAX_NAME = 30;
 const MIN_RATE = 12;
 const MAX_RATE = 18;
 const MIN_ARTIST = 10;
 const MAX_ARTIST = 14;
 const NAME_LINE_HEIGHT = 1.14;
+const ABSOLUTE_MAX_LINES = 4;
 
 /** Korean particles / endings — keep with the preceding word when breaking. */
 const TRAILING_JOSA =
@@ -63,16 +65,17 @@ export function measureTextWidth(text: string, fontSize: number): number {
 function fitSizeToWidth(text: string, size: number, maxWidth: number, min: number): number {
   let next = size;
   while (next > min && measureTextWidth(text, next) > maxWidth) {
-    next -= 0.3;
+    next -= 0.25;
   }
   return next;
 }
 
-function ellipsize(text: string, fontSize: number, maxWidth: number): string {
+/** Secondary fields (rate / artist) may ellipsize — never used for the primary name. */
+function ellipsizeSecondary(text: string, fontSize: number, maxWidth: number): string {
   if (measureTextWidth(text, fontSize) <= maxWidth) return text;
   const ellipsis = "…";
   let cut = text.length;
-  while (cut > 1 && measureTextWidth(text.slice(0, cut) + ellipsis, fontSize) > maxWidth) {
+  while (cut > 1 && measureTextWidth(`${text.slice(0, cut)}${ellipsis}`, fontSize) > maxWidth) {
     cut -= 1;
   }
   return cut <= 1 ? ellipsis : `${text.slice(0, cut)}${ellipsis}`;
@@ -84,15 +87,16 @@ function nameBlockHeight(size: number, lines: number): number {
 }
 
 /**
- * Names with 10+ characters (spaces/symbols included) wrap to 2+ lines so type
- * can stay larger. Very long titles may use a third line when the tile allows.
+ * How many lines the tile may use. Prefer wrapping over clipping — even short
+ * Hangul stock names (5–9 chars) wrap when the box is narrow.
  */
 function maxLinesForTile(width: number, height: number, displayLen: number): number {
-  if (displayLen < HEATMAP_WRAP_MIN_CHARS) return 1;
-  if (displayLen >= 18 && height >= 64 && width >= 70) return 3;
-  // Cramped tiles: wrap earlier so each line stays short and type can grow.
-  if (height >= 32 && width >= 40 && displayLen >= 8) return 2;
-  if (height >= 36 && width >= 44) return 2;
+  if (displayLen <= 3) return 1;
+  if (displayLen >= 16 && height >= 56 && width >= 60) return ABSOLUTE_MAX_LINES;
+  if (displayLen >= 10 && height >= 48 && width >= 52) return 3;
+  if (height >= 28 && width >= 36 && displayLen >= 5) return 2;
+  if (height >= 32 && width >= 40) return 2;
+  if (displayLen >= HEATMAP_WRAP_MIN_CHARS) return 2;
   return 1;
 }
 
@@ -106,25 +110,16 @@ function softBreakCandidates(text: string): number[] {
     if (!token) continue;
     const next = cursor + token.length;
     if (/^\s+$/.test(token) || token === "·" || token === "/" || token === "-") {
-      // Break after the separator so the next word starts the new line.
       if (next > 0 && next < text.length) breaks.push(next);
-    } else if (t + 2 < tokens.length && /^\s+$/.test(tokens[t + 1] ?? "")) {
-      // Break before space when following token looks like a josa-only particle.
-      const following = tokens[t + 2] ?? "";
-      if (!TRAILING_JOSA.test(following) && cursor > 0) {
-        /* space break handled above */
-      }
     }
     cursor = next;
   }
 
-  // Hangul compounds without spaces: prefer mid breaks after 2+ syllables,
-  // avoiding a trailing josa stranded alone on the next line.
-  if (!/\s/.test(text) && text.length >= HEATMAP_WRAP_MIN_CHARS) {
+  // Hangul compounds without spaces: mid breaks after 2+ syllables.
+  if (!/\s/.test(text) && text.length >= 5) {
     for (let i = 2; i < text.length - 1; i++) {
       const rest = text.slice(i);
       if (TRAILING_JOSA.test(rest)) continue;
-      // Prefer breaks near the middle.
       breaks.push(i);
     }
   }
@@ -141,27 +136,24 @@ function pickBreakNear(text: string, target: number, candidates: number[]): numb
 }
 
 /**
- * Insert soft line breaks so names with 10+ characters (spaces/symbols included)
- * paint on 2+ lines. Prefers spaces, punctuation, and Hangul sense boundaries
- * (조사·띄어쓰기) over raw mid-string cuts.
+ * Soft-wrap the full name. Never truncates — callers shrink type instead.
  */
 export function softWrapHeatmapName(name: string, maxLines = 2): string {
   const text = name.replace(/\s+/g, " ").trim();
-  if (text.length < HEATMAP_WRAP_MIN_CHARS || maxLines < 2) return text;
+  if (!text || maxLines < 2 || text.length < 5) return text;
 
-  const linesWanted = text.length >= 18 && maxLines >= 3 ? 3 : 2;
+  const linesWanted = Math.min(maxLines, text.length >= 16 ? 4 : text.length >= 10 ? 3 : 2);
   const candidates = softBreakCandidates(text);
 
   if (linesWanted === 2) {
     const mid = Math.ceil(text.length / 2);
     const at = pickBreakNear(text, mid, candidates);
     const loose =
-      candidates.length && Math.abs(at - mid) <= Math.max(4, Math.floor(text.length * 0.4));
+      candidates.length > 0 && Math.abs(at - mid) <= Math.max(4, Math.floor(text.length * 0.4));
     const cut = loose ? at : mid;
     const left = text.slice(0, cut).trim();
     const right = text.slice(cut).trim();
     if (!left || !right) return text;
-    // Avoid a one-syllable orphan on either line when a nearby candidate exists.
     if (left.length === 1 || right.length === 1) {
       const safer = candidates.find((index) => index >= 2 && text.length - index >= 2);
       if (safer != null) {
@@ -171,34 +163,48 @@ export function softWrapHeatmapName(name: string, maxLines = 2): string {
     return `${left}\n${right}`;
   }
 
-  const third = Math.ceil(text.length / 3);
-  const a = pickBreakNear(text, third, candidates);
-  const b = pickBreakNear(
-    text,
-    third * 2,
-    candidates.filter((index) => index > a + 1),
-  );
-  const l1 = text.slice(0, a).trim();
-  const l2 = text.slice(a, b).trim();
-  const l3 = text.slice(b).trim();
-  return [l1, l2, l3].filter(Boolean).join("\n");
+  const segment = Math.ceil(text.length / linesWanted);
+  const cuts: number[] = [];
+  for (let i = 1; i < linesWanted; i++) {
+    const target = segment * i;
+    const filtered = candidates.filter((index) => index > (cuts[cuts.length - 1] ?? 0) + 1);
+    cuts.push(pickBreakNear(text, target, filtered.length ? filtered : candidates));
+  }
+  const parts: string[] = [];
+  let start = 0;
+  for (const cut of cuts) {
+    const slice = text.slice(start, cut).trim();
+    if (slice) parts.push(slice);
+    start = cut;
+  }
+  const tail = text.slice(start).trim();
+  if (tail) parts.push(tail);
+  return parts.join("\n") || text;
 }
 
 /**
- * Density sizing with forced multi-line for long names — wrapping shortens each
- * line so the font can grow instead of shrinking to fit one row.
+ * Density sizing for the *full* name — wrap + shrink, never clip.
  */
 function densityNameSize(input: {
   text: string;
   innerW: number;
   innerH: number;
   omitRate: boolean;
-}): { size: number; lines: number; maxLines: number } {
+}): { size: number; lines: number; maxLines: number; wrapped: string } {
   const displayLen = heatmapLabelDisplayLength(input.text);
   const chars = heatmapLabelCharCount(input.text);
-  const maxLines = maxLinesForTile(input.innerW + 12, input.innerH + 12, displayLen);
+  let maxLines = maxLinesForTile(input.innerW + 12, input.innerH + 12, displayLen);
 
-  // When wrapping, size against chars-per-line so long names stay large.
+  // If a single line cannot fit at MIN_NAME, force wrap when height allows.
+  if (
+    maxLines === 1 &&
+    displayLen >= 5 &&
+    input.innerH >= 28 &&
+    measureTextWidth(input.text, MIN_NAME) > input.innerW
+  ) {
+    maxLines = input.innerH >= 52 ? 3 : 2;
+  }
+
   const perLineChars = Math.max(1, Math.ceil(chars / maxLines));
   const perChar = input.innerW / perLineChars;
   let size = perChar * (perLineChars <= 3 ? 0.94 : perLineChars <= 5 ? 0.9 : 0.84);
@@ -206,8 +212,8 @@ function densityNameSize(input: {
   const heightShare =
     maxLines >= 2
       ? input.omitRate
-        ? 0.58
-        : 0.5
+        ? 0.72
+        : 0.62
       : chars <= 3
         ? input.omitRate
           ? 0.55
@@ -219,77 +225,54 @@ function densityNameSize(input: {
   const shortBoost = chars <= 4 && maxLines === 1 ? 1.04 : 1;
   size *= shortBoost;
 
-  const floor = Math.min(MIN_NAME, Math.max(12.5, heightCap * 0.92));
-  const ceiling = Math.max(floor, Math.min(MAX_NAME, heightCap));
-  size = clamp(size, floor, ceiling);
+  const preferredFloor = Math.min(MIN_NAME, Math.max(ABSOLUTE_NAME_FLOOR, heightCap * 0.55));
+  const ceiling = Math.max(preferredFloor, Math.min(MAX_NAME, heightCap));
+  size = clamp(size, preferredFloor, ceiling);
 
-  // Multi-line long names: nudge size up — wrapping already frees width.
-  if (maxLines >= 2 && displayLen >= HEATMAP_WRAP_MIN_CHARS) {
-    size = Math.min(ceiling, size * 1.16);
+  if (maxLines >= 2 && displayLen >= 5) {
+    size = Math.min(ceiling, size * 1.08);
   }
 
-  // Small tail tiles: prefer a larger floor over ultra-dense shrink.
-  if (input.innerH < 48 || input.innerW < 70) {
-    size = Math.max(size, Math.min(ceiling, MIN_NAME));
-  }
-
-  // Measure against the longest soft-wrapped line so type can grow.
-  const wrapped = softWrapHeatmapName(input.text, maxLines);
-  const longestLine = wrapped
+  let wrapped = softWrapHeatmapName(input.text, maxLines);
+  let longestLine = wrapped
     .split("\n")
     .reduce((best, line) => (line.length > best.length ? line : best), "");
-  size = fitSizeToWidth(longestLine || input.text, size, input.innerW, floor);
+  size = fitSizeToWidth(longestLine || input.text, size, input.innerW, ABSOLUTE_NAME_FLOOR);
 
   let lines = Math.min(maxLines, Math.max(1, wrapped.split("\n").length));
-  while (size > floor && nameBlockHeight(size, lines) > input.innerH * 0.92) {
-    size -= 0.3;
-  }
-  return { size, lines, maxLines };
-}
-
-/**
- * Prefer truncating a long name over painting it unreadably small.
- * Keeps type near READABLE_NAME whenever the box can hold ≥4 glyphs.
- */
-function preferReadableName(
-  name: string,
-  innerW: number,
-  innerH: number,
-  omitRate: boolean,
-): { name: string; size: number; lines: number; maxLines: number } {
-  const fitted = densityNameSize({ text: name, innerW, innerH, omitRate });
-  if (fitted.size >= READABLE_NAME || name.length <= 4) {
-    return { name, ...fitted };
+  while (size - 0.25 >= ABSOLUTE_NAME_FLOOR && nameBlockHeight(size, lines) > input.innerH * 0.94) {
+    size -= 0.25;
   }
 
-  // Binary-search a shorter prefix that paints at readable size.
-  let lo = 4;
-  let hi = name.length;
-  let best = { name, ...fitted };
-  while (lo <= hi) {
-    const mid = Math.floor((lo + hi) / 2);
-    const candidate = ellipsize(name.slice(0, mid), READABLE_NAME, innerW);
-    const trial = densityNameSize({ text: candidate, innerW, innerH, omitRate });
-    if (trial.size >= READABLE_NAME - 0.2) {
-      best = { name: candidate, ...trial };
-      lo = mid + 1;
-    } else {
-      hi = mid - 1;
+  // Still overflowing width at the absolute floor → add a line if possible.
+  while (
+    maxLines < ABSOLUTE_MAX_LINES &&
+    input.innerH >= 28 &&
+    measureTextWidth(longestLine || input.text, size) > input.innerW
+  ) {
+    maxLines += 1;
+    wrapped = softWrapHeatmapName(input.text, maxLines);
+    longestLine = wrapped
+      .split("\n")
+      .reduce((best, line) => (line.length > best.length ? line : best), "");
+    lines = Math.min(maxLines, Math.max(1, wrapped.split("\n").length));
+    size = fitSizeToWidth(
+      longestLine || input.text,
+      Math.max(size, preferredFloor),
+      input.innerW,
+      ABSOLUTE_NAME_FLOOR,
+    );
+    while (size > ABSOLUTE_NAME_FLOOR && nameBlockHeight(size, lines) > input.innerH * 0.94) {
+      size -= 0.25;
     }
   }
 
-  // Absolute floor: never drop below MIN_NAME when any text can fit.
-  if (best.size < MIN_NAME) {
-    const short = ellipsize(name, MIN_NAME, innerW);
-    const trial = densityNameSize({ text: short, innerW, innerH, omitRate: true });
-    return { name: short, size: Math.max(MIN_NAME, trial.size), lines: trial.lines, maxLines: trial.maxLines };
-  }
-  return best;
+  return { size, lines, maxLines, wrapped };
 }
 
 /**
- * Hangul-first treemap label: full names wrap at 10+ chars; size follows density
- * and box geometry without ticker-style clipping.
+ * Hangul-first treemap label: always paints the full name (wrap + shrink).
+ * No ticker-style abbreviation or ellipsis on the primary name.
  */
 export function layoutTreemapLabel(input: {
   width: number;
@@ -308,21 +291,30 @@ export function layoutTreemapLabel(input: {
   const { width: w, height: h, y, name, rate, typeLabel, artist, omitRate } = input;
   if (w < 28 || h < 18) return null;
 
+  const fullName = name.replace(/\s+/g, " ").trim();
+  if (!fullName) return null;
+
   const padX = w >= 100 ? 10 : 6;
   const padY = h >= 90 ? 12 : h >= 56 ? 9 : 6;
   const innerW = Math.max(12, w - padX * 2);
   const innerH = Math.max(12, h - padY * 2);
 
-  // Tiny tiles: drop ±% early so the name can claim the height budget.
+  // Tiny tiles: drop ±% early so the full name can claim the height budget.
   const cramped = w < 72 || h < 44;
-  const showRate = !omitRate && !cramped && h >= 34;
+  let showRate = !omitRate && !cramped && h >= 34;
   const rateBudget = showRate ? Math.min(MAX_RATE + 2, innerH * 0.18) : 0;
-  const nameBudget = Math.max(MIN_NAME, innerH - (showRate ? rateBudget + 3 : 0));
+  const nameBudget = Math.max(ABSOLUTE_NAME_FLOOR, innerH - (showRate ? rateBudget + 3 : 0));
 
-  const readable = preferReadableName(name, innerW, nameBudget, !showRate);
-  let nameSize = readable.size;
-  const maxLines = readable.maxLines;
-  const paintName = readable.name;
+  // Full name only — never prefix-truncate for readability.
+  const fitted = densityNameSize({
+    text: fullName,
+    innerW,
+    innerH: nameBudget,
+    omitRate: !showRate,
+  });
+  let nameSize = fitted.size;
+  let maxLines = fitted.maxLines;
+  let wrappedName = fitted.wrapped;
 
   const combine = Boolean(typeLabel) && w >= 88 && h >= 56;
   const rateText = combine ? `${rate}  ${typeLabel}` : rate;
@@ -339,50 +331,65 @@ export function layoutTreemapLabel(input: {
   const gap = 3;
   let usedArtist = showArtist;
   let usedRate = showRate;
-  const wrappedName = softWrapHeatmapName(paintName, maxLines);
-  const wrappedLines = Math.max(1, wrappedName.split("\n").length);
+  let wrappedLines = Math.max(1, wrappedName.split("\n").length);
   const nameH = () => nameBlockHeight(nameSize, Math.min(maxLines, wrappedLines));
   let stack = nameH();
   if (usedArtist) stack += gap + artistSize;
   if (usedRate) stack += gap + rateSize;
 
+  // Prefer dropping secondary fields over clipping the name.
   if (stack > innerH && usedArtist) {
     usedArtist = false;
     artistSize = 0;
     stack = nameH() + (usedRate ? gap + rateSize : 0);
   }
   if (stack > innerH && usedRate) {
-    const leftover = innerH - nameH() - gap;
-    if (leftover < MIN_RATE) {
-      usedRate = false;
-      rateSize = 0;
-    } else {
-      rateSize = Math.min(rateSize, leftover);
-      stack = nameH() + gap + rateSize;
-    }
+    usedRate = false;
+    rateSize = 0;
+    showRate = false;
+    // Re-fit name with the recovered height.
+    const refit = densityNameSize({
+      text: fullName,
+      innerW,
+      innerH,
+      omitRate: true,
+    });
+    nameSize = refit.size;
+    maxLines = refit.maxLines;
+    wrappedName = refit.wrapped;
+    wrappedLines = Math.max(1, wrappedName.split("\n").length);
+    stack = nameH();
   }
 
-  const nameFloor = Math.min(MIN_NAME, Math.max(12.5, nameBudget * 0.34));
-  while (stack > innerH && nameSize > nameFloor) {
+  while (stack > innerH && nameSize - 0.25 >= ABSOLUTE_NAME_FLOOR) {
     nameSize -= 0.25;
     stack = nameH();
-    if (usedArtist) stack += gap + artistSize;
-    if (usedRate) stack += gap + rateSize;
   }
 
   const fittedLines = Math.min(maxLines, wrappedLines);
-  const longest = wrappedName.split("\n").reduce((best, line) =>
-    measureTextWidth(line, nameSize) > measureTextWidth(best, nameSize) ? line : best,
-  "");
-  const displayName =
-    measureTextWidth(longest, nameSize) > innerW
-      ? wrappedName
-          .split("\n")
-          .map((line) => ellipsize(line, nameSize, innerW))
-          .join("\n")
-      : wrappedName;
-  const displayArtist = usedArtist && artist ? ellipsize(artist, artistSize, innerW) : "";
-  const displayRate = usedRate ? ellipsize(rateText, rateSize, innerW) : "";
+  // Force full name — never ellipsize primary lines.
+  let displayName = wrappedName;
+  let longest = displayName
+    .split("\n")
+    .reduce(
+      (best, line) =>
+        measureTextWidth(line, nameSize) > measureTextWidth(best, nameSize) ? line : best,
+      "",
+    );
+  while (nameSize - 0.25 >= ABSOLUTE_NAME_FLOOR && measureTextWidth(longest, nameSize) > innerW) {
+    nameSize -= 0.25;
+  }
+
+  // Verify every glyph of the canonical name is present (no abbreviation).
+  const paintedCompact = displayName.replace(/\s+/g, "");
+  const fullCompact = fullName.replace(/\s+/g, "");
+  if (paintedCompact !== fullCompact) {
+    displayName = softWrapHeatmapName(fullName, maxLines);
+  }
+
+  const displayArtist =
+    usedArtist && artist ? ellipsizeSecondary(artist, artistSize, innerW) : "";
+  const displayRate = usedRate ? ellipsizeSecondary(rateText, rateSize, innerW) : "";
   const mid = y + h / 2 + 1;
   const finalNameBlock = nameBlockHeight(nameSize, Math.max(1, fittedLines));
   let finalStack = finalNameBlock;
@@ -402,6 +409,8 @@ export function layoutTreemapLabel(input: {
     cursor += gap;
     rateY = cursor + rateSize * 0.82;
   }
+
+  nameSize = Math.max(ABSOLUTE_NAME_FLOOR, nameSize);
 
   return {
     showName: true,
