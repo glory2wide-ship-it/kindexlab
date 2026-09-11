@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-11T10:00:02.484Z",
+  "updatedAt": "2026-09-11T10:26:53.544Z",
   "bySlug": {
     "bestseller-surge-index--세네카-오늘을-빼앗기고-있는-당신에게": {
       "boardSlug": "bestseller-surge-index",
@@ -51,16 +51,6 @@
       "channel": "culture",
       "seenAt": "2026-09-11T10:00:02.484Z"
     },
-    "culture-leisure-grant-ranking--한국공예디자인문화진흥원-전통공예-활성화": {
-      "boardSlug": "culture-leisure-grant-ranking",
-      "channel": "culture",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "culture-leisure-grant-ranking--한국문학번역원-한국문학-번역지원": {
-      "boardSlug": "culture-leisure-grant-ranking",
-      "channel": "culture",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
     "performance-ticket-ranking--경기-브루노-마스-내한공연": {
       "boardSlug": "performance-ticket-ranking",
       "channel": "culture",
@@ -73,31 +63,6 @@
     },
     "commodities-fx-index--국내-금": {
       "boardSlug": "commodities-fx-index",
-      "channel": "economy",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "government-subsidy-search--주택도시보증공사-전세보증금-반환보증": {
-      "boardSlug": "government-subsidy-search",
-      "channel": "economy",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "government-subsidy-search--교육부-국가장학금": {
-      "boardSlug": "government-subsidy-search",
-      "channel": "economy",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "government-subsidy-search--여성가족부-아이돌봄서비스": {
-      "boardSlug": "government-subsidy-search",
-      "channel": "economy",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "government-subsidy-search--기획재정부-민생회복-지원금": {
-      "boardSlug": "government-subsidy-search",
-      "channel": "economy",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "government-subsidy-search--농림축산식품부-청년농업인-영농정착지원": {
-      "boardSlug": "government-subsidy-search",
       "channel": "economy",
       "seenAt": "2026-09-11T10:00:02.484Z"
     },
@@ -336,151 +301,6 @@
       "channel": "entertainment",
       "seenAt": "2026-09-11T10:00:02.484Z"
     },
-    "realtime-tv-ratings--극강케미사남매언니네산지직송3": {
-      "boardSlug": "realtime-tv-ratings",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-tv-ratings--근로복지공단": {
-      "boardSlug": "realtime-tv-ratings",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-tv-ratings--대를-이어-음악": {
-      "boardSlug": "realtime-tv-ratings",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-tv-ratings--기쁜우리좋은날": {
-      "boardSlug": "realtime-tv-ratings",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-tv-ratings--욕망의덫": {
-      "boardSlug": "realtime-tv-ratings",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-tv-ratings--kbs9시뉴스": {
-      "boardSlug": "realtime-tv-ratings",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-tv-ratings--나혼산": {
-      "boardSlug": "realtime-tv-ratings",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-tv-ratings--2026kbo리그": {
-      "boardSlug": "realtime-tv-ratings",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-tv-ratings--인간극장": {
-      "boardSlug": "realtime-tv-ratings",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-webtoon-rank--몽홀": {
-      "boardSlug": "realtime-webtoon-rank",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-webtoon-rank--히어로메이커": {
-      "boardSlug": "realtime-webtoon-rank",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-webtoon-rank--1초": {
-      "boardSlug": "realtime-webtoon-rank",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-webtoon-rank--쿠베라": {
-      "boardSlug": "realtime-webtoon-rank",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-webtoon-rank--ai-닥터": {
-      "boardSlug": "realtime-webtoon-rank",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-webtoon-rank--나이트런": {
-      "boardSlug": "realtime-webtoon-rank",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-webtoon-rank--먹튀범-xx-일지-19세-완전판": {
-      "boardSlug": "realtime-webtoon-rank",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-webtoon-rank--이름-사이-공백": {
-      "boardSlug": "realtime-webtoon-rank",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "realtime-webtoon-rank--헬퍼--우주대선": {
-      "boardSlug": "realtime-webtoon-rank",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "star-reputation-index--유현조": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "star-reputation-index--손연": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "star-reputation-index--문상호": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "star-reputation-index--라이언-와이스": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "star-reputation-index--스테이블코인": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "star-reputation-index--무안국제공항": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "government-support-fund--주택도시보증공사-전세보증금-반환보증": {
-      "boardSlug": "government-support-fund",
-      "channel": "politics",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "government-support-fund--교육부-국가장학금": {
-      "boardSlug": "government-support-fund",
-      "channel": "politics",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "government-support-fund--여성가족부-아이돌봄서비스": {
-      "boardSlug": "government-support-fund",
-      "channel": "politics",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "government-support-fund--기획재정부-민생회복-지원금": {
-      "boardSlug": "government-support-fund",
-      "channel": "politics",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "government-support-fund--농림축산식품부-청년농업인-영농정착지원": {
-      "boardSlug": "government-support-fund",
-      "channel": "politics",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
     "policy-controversy-index--대선": {
       "boardSlug": "policy-controversy-index",
       "channel": "politics",
@@ -521,20 +341,115 @@
       "channel": "politics",
       "seenAt": "2026-09-11T10:00:02.484Z"
     },
+    "culture-leisure-grant-ranking--한국문학번역원-한국문학-번역지원": {
+      "boardSlug": "culture-leisure-grant-ranking",
+      "channel": "culture",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "government-subsidy-search--주택도시보증공사-전세보증금-반환보증": {
+      "boardSlug": "government-subsidy-search",
+      "channel": "economy",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "government-subsidy-search--교육부-국가장학금": {
+      "boardSlug": "government-subsidy-search",
+      "channel": "economy",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "government-subsidy-search--기획재정부-민생회복-지원금": {
+      "boardSlug": "government-subsidy-search",
+      "channel": "economy",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "government-subsidy-search--농림축산식품부-청년농업인-영농정착지원": {
+      "boardSlug": "government-subsidy-search",
+      "channel": "economy",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "realtime-tv-ratings--마블-시네마틱-유니버스": {
+      "boardSlug": "realtime-tv-ratings",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "realtime-tv-ratings--불꽃야구2": {
+      "boardSlug": "realtime-tv-ratings",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "realtime-webtoon-rank--1초": {
+      "boardSlug": "realtime-webtoon-rank",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "realtime-webtoon-rank--ai-닥터": {
+      "boardSlug": "realtime-webtoon-rank",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "star-reputation-index--키움-대-삼성": {
+      "boardSlug": "star-reputation-index",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "star-reputation-index--승무원": {
+      "boardSlug": "star-reputation-index",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "star-reputation-index--이종섭": {
+      "boardSlug": "star-reputation-index",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "star-reputation-index--부천시": {
+      "boardSlug": "star-reputation-index",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "star-reputation-index--벤처-캐피털": {
+      "boardSlug": "star-reputation-index",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "star-reputation-index--아이유": {
+      "boardSlug": "star-reputation-index",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "government-support-fund--주택도시보증공사-전세보증금-반환보증": {
+      "boardSlug": "government-support-fund",
+      "channel": "politics",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "government-support-fund--교육부-국가장학금": {
+      "boardSlug": "government-support-fund",
+      "channel": "politics",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "government-support-fund--기획재정부-민생회복-지원금": {
+      "boardSlug": "government-support-fund",
+      "channel": "politics",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "government-support-fund--농림축산식품부-청년농업인-영농정착지원": {
+      "boardSlug": "government-support-fund",
+      "channel": "politics",
+      "seenAt": "2026-09-11T10:26:53.544Z"
+    },
     "travel-government-grant-ranking--한국관광공사-근로자-휴가지원사업": {
       "boardSlug": "travel-government-grant-ranking",
       "channel": "travel",
-      "seenAt": "2026-09-11T10:00:02.484Z"
+      "seenAt": "2026-09-11T10:26:53.544Z"
     },
     "travel-government-grant-ranking--산림청-자연휴양림-이용권": {
       "boardSlug": "travel-government-grant-ranking",
       "channel": "travel",
-      "seenAt": "2026-09-11T10:00:02.484Z"
+      "seenAt": "2026-09-11T10:26:53.544Z"
     },
     "travel-government-grant-ranking--해양수산부-바다여행-활성화": {
       "boardSlug": "travel-government-grant-ranking",
       "channel": "travel",
-      "seenAt": "2026-09-11T10:00:02.484Z"
+      "seenAt": "2026-09-11T10:26:53.544Z"
     }
   }
 }
