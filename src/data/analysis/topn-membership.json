@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-11T10:34:10.642Z",
+  "updatedAt": "2026-09-11T10:43:36.299Z",
   "bySlug": {
     "bestseller-surge-index--세네카-오늘을-빼앗기고-있는-당신에게": {
       "boardSlug": "bestseller-surge-index",
@@ -48,11 +48,6 @@
     },
     "bestseller-surge-index--오뒷세이아": {
       "boardSlug": "bestseller-surge-index",
-      "channel": "culture",
-      "seenAt": "2026-09-11T10:00:02.484Z"
-    },
-    "performance-ticket-ranking--경기-브루노-마스-내한공연": {
-      "boardSlug": "performance-ticket-ranking",
       "channel": "culture",
       "seenAt": "2026-09-11T10:00:02.484Z"
     },
@@ -366,16 +361,6 @@
       "channel": "economy",
       "seenAt": "2026-09-11T10:26:53.544Z"
     },
-    "realtime-webtoon-rank--1초": {
-      "boardSlug": "realtime-webtoon-rank",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:26:53.544Z"
-    },
-    "realtime-webtoon-rank--ai-닥터": {
-      "boardSlug": "realtime-webtoon-rank",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:26:53.544Z"
-    },
     "government-support-fund--주택도시보증공사-전세보증금-반환보증": {
       "boardSlug": "government-support-fund",
       "channel": "politics",
@@ -421,30 +406,30 @@
       "channel": "entertainment",
       "seenAt": "2026-09-11T10:34:10.642Z"
     },
-    "star-reputation-index--원자력-잠수함": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:34:10.642Z"
+    "exhibition-popup-ranking--서울-뮤지컬-광화문연가": {
+      "boardSlug": "exhibition-popup-ranking",
+      "channel": "culture",
+      "seenAt": "2026-09-11T10:43:36.299Z"
     },
-    "star-reputation-index--메가박스": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:34:10.642Z"
+    "performance-ticket-ranking--서울-뮤지컬-광화문연가": {
+      "boardSlug": "performance-ticket-ranking",
+      "channel": "culture",
+      "seenAt": "2026-09-11T10:43:36.299Z"
     },
-    "star-reputation-index--차정원": {
-      "boardSlug": "star-reputation-index",
+    "realtime-webtoon-rank--최강전설-강해효": {
+      "boardSlug": "realtime-webtoon-rank",
       "channel": "entertainment",
-      "seenAt": "2026-09-11T10:34:10.642Z"
+      "seenAt": "2026-09-11T10:43:36.299Z"
     },
-    "star-reputation-index--가능한-사랑": {
+    "star-reputation-index--인도": {
       "boardSlug": "star-reputation-index",
       "channel": "entertainment",
-      "seenAt": "2026-09-11T10:34:10.642Z"
+      "seenAt": "2026-09-11T10:43:36.299Z"
     },
-    "star-reputation-index--박보검": {
+    "star-reputation-index--결혼식": {
       "boardSlug": "star-reputation-index",
       "channel": "entertainment",
-      "seenAt": "2026-09-11T10:34:10.642Z"
+      "seenAt": "2026-09-11T10:43:36.299Z"
     }
   }
 }
