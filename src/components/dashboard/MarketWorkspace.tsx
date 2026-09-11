@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { DemographicTabs } from "@/components/boards/DemographicTabs";
 import { HeatmapCountdownFallback } from "@/components/dashboard/HeatmapCountdown";
 import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundary";
@@ -57,6 +57,7 @@ export function MarketWorkspace({
   categories = CATEGORIES,
   title = LIVE_INDEX_LABEL,
   subtitle = "등락률·버즈·거래량을 히트맵과 리스트로 읽습니다.",
+  desktopHeader,
   gender: genderProp,
   age: ageProp,
   region: regionProp,
@@ -83,6 +84,8 @@ export function MarketWorkspace({
   categories?: { id: CategoryId; label: string }[];
   title?: string;
   subtitle?: string;
+  /** Replaces desktop title/subtitle (e.g. ranking-board rail). Mobile unchanged. */
+  desktopHeader?: ReactNode;
   gender?: "all" | GenderSegment;
   age?: "all" | AgeSegment;
   region?: "all" | RegionSegment;
@@ -310,13 +313,17 @@ export function MarketWorkspace({
           </div>
         </div>
 
-        {/* Desktop header — unchanged structure */}
-        <div className="hidden flex-wrap items-center justify-between gap-3 md:flex">
-          <div className="min-w-0">
-            <h1 className="text-base font-semibold">{title}</h1>
-            <p className="mt-0.5 text-[13.79px] text-muted">{subtitle}</p>
+        {/* Desktop header — title/subtitle, or custom slot (board rail) */}
+        <div className="hidden flex-wrap items-start justify-between gap-3 md:flex">
+          <div className="min-w-0 flex-1">
+            {desktopHeader ?? (
+              <>
+                <h1 className="text-base font-semibold">{title}</h1>
+                <p className="mt-0.5 text-[13.79px] text-muted">{subtitle}</p>
+              </>
+            )}
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2 pt-0.5">
             {viewToggle(false)}
             <HeatmapCountdown
               intervalSec={refreshIntervalSec}

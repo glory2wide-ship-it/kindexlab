@@ -8,7 +8,6 @@ import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
 import {
   buildHeatmapItems,
-  heatmapBoardTitle,
   type HeatmapAge,
   type HeatmapBoardPayload,
   type HeatmapGender,
@@ -16,7 +15,6 @@ import {
 } from "@/lib/boards/heatmap";
 import { clampAgeForBoard } from "@/lib/boards/age-tabs";
 import { boardPath, getBoard } from "@/lib/boards/registry";
-import { filterLabel } from "@/lib/boards/demographics";
 import { boardUsesRegionFilter, entityMatchesRegion } from "@/lib/boards/regions";
 import {
   channelUsesBoardHeatmap,
@@ -161,7 +159,6 @@ export function ChannelMarketDesk({
       preferLive: preferLiveComposite(initialBoardSlug),
     });
   });
-  const [title, setTitle] = useState(() => heatmapBoardTitle(boards, initialBoardSlug || undefined));
   const [flashNonce, setFlashNonce] = useState(0);
   const [headlineItems, setHeadlineItems] = useState<RankingEntity[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -178,7 +175,6 @@ export function ChannelMarketDesk({
         preferLive: preferLiveComposite(board, nextGender, nextAge),
       });
       setItems(next);
-      setTitle(heatmapBoardTitle(boards, board || undefined));
       setFlashNonce((value) => value + 1);
     },
     [boards, channel, liveItems],
@@ -195,15 +191,13 @@ export function ChannelMarketDesk({
       const cached = defaultFilters ? quotedCacheRef.current.get(key) : undefined;
       if (cached?.length) {
         setItems(cached);
-        setTitle(heatmapBoardTitle(boards, board || undefined));
         setFlashNonce((value) => value + 1);
         return true;
       }
-      // Keep previous tiles; only update the title so KinDex rows never flash.
-      setTitle(heatmapBoardTitle(boards, board || undefined));
+      // Keep previous tiles so KinDex rows never flash while quotes load.
       return false;
     },
-    [boards],
+    [],
   );
 
   const onSelectBoard = useCallback(
@@ -217,13 +211,10 @@ export function ChannelMarketDesk({
         paintQuotedCache(slug, gender, nextAge, nextRegion);
       } else if (gender === "all" && nextAge === "all") {
         applyLocal(slug, gender, nextAge, nextRegion);
-      } else {
-        // Segmented tabs need /api/heatmap (client boards lack demographic tables).
-        setTitle(heatmapBoardTitle(boards, slug || undefined));
       }
       onBoardChange?.(slug);
     },
-    [age, region, gender, channel, boards, paintQuotedCache, applyLocal, onBoardChange],
+    [age, region, gender, channel, paintQuotedCache, applyLocal, onBoardChange],
   );
 
   const selectedDef = selectedSlug ? getBoard(selectedSlug) : undefined;
@@ -241,8 +232,6 @@ export function ChannelMarketDesk({
         // can only replay the unsegmented ranking — skip it for gender/age tabs
         // and wait for /api/heatmap's full demographic tables.
         applyLocal(board, nextGender, nextAge, nextRegion);
-      } else {
-        setTitle(heatmapBoardTitle(boards, board || undefined));
       }
       const params = new URLSearchParams({
         category: channel,
@@ -275,7 +264,6 @@ export function ChannelMarketDesk({
           const nextItems = locked.length ? locked : payload.items;
           if (nextItems.length) {
             setItems(nextItems);
-            if (payload.title) setTitle(payload.title);
             if (
               nextGender === "all" &&
               nextAge === "all" &&
@@ -293,7 +281,7 @@ export function ChannelMarketDesk({
         /* quoted cache or previous tiles already painted */
       }
     },
-    [applyLocal, paintQuotedCache, channel, boards],
+    [applyLocal, paintQuotedCache, channel],
   );
 
   const skipInitialHeatmapFetch = useRef(true);
@@ -358,13 +346,25 @@ export function ChannelMarketDesk({
     });
   }, [boards, liveItems, selectedSlug, items, gender, age, region, channel, flashNonce]);
 
-  const selectedBoard = boards.find((item) => item.slug === selectedSlug);
   const showRegion = boardUsesRegionFilter(selectedSlug);
-  const demo = filterLabel(gender, age, showRegion ? region : "all");
   const showHeatmap = deskKind !== "headlines";
   const tickerItems = deskKind === "headlines" ? headlineItems : showHeatmap ? items : [];
-  const boardRail = (
-    <CategoryBoardRail channel={channel} selectedSlug={selectedSlug} onSelect={onSelectBoard} />
+  /** Mobile keeps the bordered panel; desktop heatmap embeds the rail in its header. */
+  const boardRailPanel = (
+    <CategoryBoardRail
+      channel={channel}
+      selectedSlug={selectedSlug}
+      onSelect={onSelectBoard}
+      variant="panel"
+    />
+  );
+  const boardRailInline = (
+    <CategoryBoardRail
+      channel={channel}
+      selectedSlug={selectedSlug}
+      onSelect={onSelectBoard}
+      variant="inline"
+    />
   );
 
   return (
@@ -373,7 +373,7 @@ export function ChannelMarketDesk({
         {tickerItems.length ? <TickerTape items={tickerItems} /> : null}
       </div>
       <div className="order-3 space-y-3">
-        {boardRail}
+        <div className={showHeatmap ? "md:hidden" : undefined}>{boardRailPanel}</div>
         {deskKind === "headlines" ? (
           <HeadlineNewsRanking channel={channel} onItems={setHeadlineItems} />
         ) : null}
@@ -398,19 +398,7 @@ export function ChannelMarketDesk({
             refreshIntervalSec={DEFAULT_TRENDS_REVALIDATE_SEC}
             refreshing={refreshing}
             onRefresh={onHeatmapRefresh}
-            title={selectedBoard ? selectedBoard.title : title}
-            subtitle={
-              selectedBoard?.slug === "kospi-fomo-index" ||
-              selectedBoard?.slug === "overseas-stock-index"
-                ? `${demo === "전체" ? "전체" : demo} 순위 · 현재가·전일 대비 등락률을 히트맵에 표시합니다. 약 3분마다 갱신됩니다.`
-                : selectedBoard?.slug === "commodities-fx-index"
-                  ? `${demo === "전체" ? "전체" : demo} 순위 · 환율·원자재 시세·등락률을 히트맵에 표시합니다. 약 3분마다 갱신됩니다.`
-                : selectedBoard
-                  ? `${demo === "전체" ? "전체" : demo} 순위 · 100점 척도. 분봉 필터와 성별·연령${showRegion ? "·지역" : ""} 탭이 함께 적용됩니다.`
-                  : channel === "economy"
-                    ? `${demo === "전체" ? "채널 종합" : demo} · 주식·해외 주식·원자재·환율 타일은 현재가(단위)로 표시됩니다.`
-                    : `${demo === "전체" ? "채널 종합" : demo} · 상단 보드 주제와 1:1로 묶인 히트맵입니다.`
-            }
+            desktopHeader={boardRailInline}
           />
         ) : null}
         {showHeatmap && boardDesks.length ? (

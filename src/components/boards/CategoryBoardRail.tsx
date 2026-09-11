@@ -23,10 +23,16 @@ export function CategoryBoardRail({
   channel,
   selectedSlug,
   onSelect,
+  variant = "panel",
 }: {
   channel: PostChannel;
   selectedSlug?: string;
   onSelect?: (slug: string) => void;
+  /**
+   * `panel` — bordered card above the heatmap (mobile keeps this).
+   * `inline` — heading + tabs for the desktop heatmap header slot.
+   */
+  variant?: "panel" | "inline";
 }) {
   const boards = menuBoardsForChannel(channel);
   if (!boards.length) return null;
@@ -113,28 +119,38 @@ export function CategoryBoardRail({
     ...boards.slice(insertAt).map(boardTab),
   ];
 
-  return (
-    <section className="rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3 max-md:py-2.5">
-      <div className="mb-3 hidden flex-wrap items-baseline justify-between gap-2 md:flex">
-        <div>
-          <h2 className="text-base font-semibold">랭킹·지수 보드</h2>
-          {onSelect ? (
-            <p className="mt-0.5 text-[13.79px] text-muted">
-              보드를 고르면 아래 히트맵이 그 주제로 바뀝니다. 종목을 누르면 분석·여론조사 상세가 열립니다.
-            </p>
-          ) : (
-            <p className="mt-0.5 text-[13.79px] text-muted">
-              보드를 고르면 아래 히트맵이 그 주제로 바뀝니다. 성별·연령·분봉 필터가 함께 적용됩니다.
-            </p>
-          )}
-        </div>
-        <Link
-          href={categoryBoardPath(channel)}
-          className="text-xs font-medium text-accent hover:underline"
-        >
-          전체 보기 →
-        </Link>
+  const heading = (
+    <div
+      className={
+        variant === "inline"
+          ? "mb-3 flex flex-wrap items-baseline justify-between gap-2"
+          : "mb-3 hidden flex-wrap items-baseline justify-between gap-2 md:flex"
+      }
+    >
+      <div>
+        <h2 className="text-base font-semibold">랭킹·지수 보드</h2>
+        {onSelect ? (
+          <p className="mt-0.5 text-[13.79px] text-muted">
+            보드를 고르면 아래 히트맵이 그 주제로 바뀝니다. 종목을 누르면 분석·여론조사 상세가 열립니다.
+          </p>
+        ) : (
+          <p className="mt-0.5 text-[13.79px] text-muted">
+            보드를 고르면 아래 히트맵이 그 주제로 바뀝니다. 성별·연령·분봉 필터가 함께 적용됩니다.
+          </p>
+        )}
       </div>
+      <Link
+        href={categoryBoardPath(channel)}
+        className="text-xs font-medium text-accent hover:underline"
+      >
+        전체 보기 →
+      </Link>
+    </div>
+  );
+
+  const body = (
+    <>
+      {heading}
       <ul
         className="grid gap-1.5 md:flex md:flex-wrap md:gap-2"
         style={{ gridTemplateColumns }}
@@ -148,6 +164,16 @@ export function CategoryBoardRail({
           </Link>
         </p>
       ) : null}
+    </>
+  );
+
+  if (variant === "inline") {
+    return <div className="min-w-0">{body}</div>;
+  }
+
+  return (
+    <section className="rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3 max-md:py-2.5">
+      {body}
     </section>
   );
 }
