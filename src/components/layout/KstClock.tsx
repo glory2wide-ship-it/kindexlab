@@ -6,7 +6,7 @@ import { formatLiveKst } from "@/lib/format";
 
 /**
  * Header KST clock — same gothic face + airport flip digits as the
- * LIVE KinDex countdown (compact ink-on-panel glyphs).
+ * LIVE KinDex countdown. Date (Y.M.D) and time share the flip face.
  */
 export function KstClock() {
   const [now, setNow] = useState<Date | null>(null);
@@ -20,7 +20,7 @@ export function KstClock() {
 
   const { dateLine, timeLine } = now
     ? formatLiveKst(now)
-    : { dateLine: "\u00a0", timeLine: "--:--:--" };
+    : { dateLine: "----.--.-- (-)", timeLine: "--:--:--" };
 
   return (
     <time
@@ -30,10 +30,10 @@ export function KstClock() {
       aria-label="한국 표준시"
     >
       <span
-        className="hidden font-medium tracking-tight text-muted sm:inline"
+        className="kst-flip-clock hidden font-medium tracking-tight text-muted sm:inline"
         style={{ fontSize: 13 }}
       >
-        {dateLine}
+        <FlipBoardText text={dateLine} />
       </span>
       <span
         className="kst-flip-clock mt-0.5 inline-flex items-center font-semibold tabular-nums tracking-tight"

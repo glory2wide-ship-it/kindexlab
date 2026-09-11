@@ -23,6 +23,7 @@ import {
 import { boardUsesRegionFilter, ensureFoodRestaurantRanking, ensureHousingApartmentRanking, HOUSING_BOARD_SLUG, isCultureEventVenueOnly } from "@/lib/boards/regions";
 import { EXHIBITION_BOARD_SLUG, PERFORMANCE_BOARD_SLUG } from "@/lib/boards/region-catalogs";
 import { boardUsesKidsAgeTab } from "@/lib/boards/kids-culture";
+import { heatmapNameDisplayRules } from "@/lib/editorial/heatmap-name-rules";
 import type {
   AgeSegment,
   BoardDefinition,
@@ -82,8 +83,9 @@ const SYSTEM = [
   "특히 30대·40대·50대·60대·70대를 같은 순서로 복사하지 마라. 연령이 올라갈수록 데뷔 연차가 오래된 대상의 비중이 커진다.",
   "아동/유치원(kids) 세그먼트가 있으면 어린이·유아·키즈·가족 관람 가능 종목만 넣고, 위키드·데스노트·시카고·아이돌 콘서트·성인 아트전은 금지다.",
   "이름은 실제 고유명사만 쓴다. '영화 A', '종목 1' 같은 플레이스홀더와 장르명(한국 상업영화 등)은 금지다.",
+  heatmapNameDisplayRules(),
   "반드시 지정된 JSON 스키마만 반환한다.",
-].join(" ");
+].join("\n");
 
 function schemaHint(board: BoardDefinition): string {
   const total = rankLimitForBoard(board);

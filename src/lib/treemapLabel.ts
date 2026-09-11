@@ -105,7 +105,7 @@ function maxNameSizeForTile(width: number, height: number): number {
   return Math.min(MAX_NAME, Math.min(width, height) * 0.25);
 }
 
-/** True when index sits inside (...), [...], 〈...〉, 《...》 pairs. */
+/** True when index sits inside paired brackets / quotes. */
 function insidePairedMarks(text: string, index: number): boolean {
   const pairs: Array<[string, string]> = [
     ["(", ")"],
@@ -115,6 +115,8 @@ function insidePairedMarks(text: string, index: number): boolean {
     ["《", "》"],
     ["「", "」"],
     ["『", "』"],
+    ["<", ">"],
+    ["＜", "＞"],
   ];
   for (const [open, close] of pairs) {
     let depth = 0;
@@ -128,15 +130,19 @@ function insidePairedMarks(text: string, index: number): boolean {
 }
 
 /**
- * Common Korean compound tails — prefer breaking *before* these so
- * "기후동행카드" → "기후동행"/"카드", not "기후동"/"행카드".
- * Longer tails first so "지원사업" wins over "사업".
+ * Prefer breaking *before* these compound tails.
+ * Examples: 기후동행|카드, 스포츠강좌|이용권, 든든|전세주택, 청년|도약계좌
+ * Longer units first.
  */
 const COMPOUND_TAIL_UNITS = [
   "에어로스페이스",
   "에너지솔루션",
+  "강좌이용권",
+  "전세주택",
+  "도약계좌",
   "지원사업",
   "지원금",
+  "이용권",
   "솔루션",
   "서비스",
   "플랫폼",
@@ -144,10 +150,15 @@ const COMPOUND_TAIL_UNITS = [
   "인덱스",
   "휴가지원",
   "전기요금",
+  "전세",
+  "주택",
+  "계좌",
   "요금",
   "지원",
   "사업",
   "카드",
+  "바우처",
+  "패스",
   "보험",
   "대출",
   "연금",
@@ -171,6 +182,30 @@ const COMPOUND_TAIL_UNITS = [
   "리조트",
 ] as const;
 
+/**
+ * Prefer breaking *after* these semantic heads (policy / genre / demographic openers).
+ * Examples: 든든|전세주택, 청년|도약계좌, 연극|〈더 헬멧〉
+ */
+const COMPOUND_HEAD_UNITS = [
+  "스포츠강좌",
+  "소상공인",
+  "지역사랑",
+  "기후동행",
+  "든든",
+  "청년",
+  "신혼",
+  "노인",
+  "행복",
+  "희망",
+  "국민",
+  "지역",
+  "연극",
+  "뮤지컬",
+  "영화",
+  "전시",
+  "콘서트",
+] as const;
+
 type BreakKind = "space" | "paren" | "semantic" | "mid";
 
 function classifyBreak(text: string, index: number): BreakKind {
@@ -178,9 +213,19 @@ function classifyBreak(text: string, index: number): BreakKind {
   if (/[·\/-]/.test(text.slice(Math.max(0, index - 1), index + 1))) return "space";
   const left = text.slice(0, index);
   const right = text.slice(index);
-  if (/[)\]〉》」』）]$/.test(left.trimEnd()) || /^[(\[〈《「『（]/.test(right)) return "paren";
+  if (
+    /[)\]〉》」』）>＞]$/.test(left.trimEnd()) ||
+    /^[(\[〈《「『（<＜]/.test(right)
+  ) {
+    return "paren";
+  }
   for (const tail of COMPOUND_TAIL_UNITS) {
     if (right.startsWith(tail) && left.replace(/\s+/g, "").length >= 2) return "semantic";
+  }
+  for (const head of COMPOUND_HEAD_UNITS) {
+    if (left.replace(/\s+/g, "").endsWith(head) && right.replace(/\s+/g, "").length >= 2) {
+      return "semantic";
+    }
   }
   return "mid";
 }
@@ -193,7 +238,10 @@ function spaceOrDelimBreaks(text: string): number[] {
     if (!token) continue;
     const next = cursor + token.length;
     if (/^\s+$/.test(token) || token === "·" || token === "/" || token === "-") {
-      if (next > 0 && next < text.length) breaks.push(next);
+      // Never break on whitespace that sits inside 〈…〉 / (…) / <…>.
+      if (next > 0 && next < text.length && !insidePairedMarks(text, next)) {
+        breaks.push(next);
+      }
     }
     cursor = next;
   }
@@ -205,23 +253,33 @@ function parenEdgeBreaks(text: string): number[] {
   for (let i = 1; i < text.length; i++) {
     const ch = text[i]!;
     const prev = text[i - 1]!;
-    if (/^[)\]〉》」』）]$/.test(prev)) breaks.push(i);
-    if (/^[(\[〈《「『（]$/.test(ch)) breaks.push(i);
+    if (/^[)\]〉》」』）>＞]$/.test(prev)) breaks.push(i);
+    if (/^[(\[〈《「『（<＜]$/.test(ch)) breaks.push(i);
   }
   return breaks;
 }
 
 function semanticCompoundBreaks(text: string): number[] {
   const breaks: number[] = [];
-  const compact = text;
   for (const tail of COMPOUND_TAIL_UNITS) {
     let from = 0;
-    while (from < compact.length) {
-      const at = compact.indexOf(tail, from);
+    while (from < text.length) {
+      const at = text.indexOf(tail, from);
       if (at < 0) break;
-      // Break before the tail unit when enough head remains.
-      if (at >= 2 && at + tail.length <= compact.length) {
-        if (!insidePairedMarks(compact, at)) breaks.push(at);
+      if (at >= 2 && at + tail.length <= text.length && !insidePairedMarks(text, at)) {
+        breaks.push(at);
+      }
+      from = at + 1;
+    }
+  }
+  for (const head of COMPOUND_HEAD_UNITS) {
+    let from = 0;
+    while (from < text.length) {
+      const at = text.indexOf(head, from);
+      if (at < 0) break;
+      const after = at + head.length;
+      if (after >= 2 && after < text.length - 1 && !insidePairedMarks(text, after)) {
+        breaks.push(after);
       }
       from = at + 1;
     }
@@ -230,23 +288,19 @@ function semanticCompoundBreaks(text: string): number[] {
 }
 
 /**
- * Soft-break candidates ranked by linguistic quality.
- * If the name has spaces, mid-Hangul splits are excluded so
- * "소상공인 전기요금 지원" never becomes "소상공인 전"/"기요금 지원".
+ * Soft-break candidates by linguistic quality.
+ * Spaces inside paired marks are ignored so "연극〈더 헬멧〉" breaks before 〈,
+ * not inside the title.
  */
 function softBreakCandidates(text: string): number[] {
   const spaces = spaceOrDelimBreaks(text);
   const parens = parenEdgeBreaks(text);
   const semantic = semanticCompoundBreaks(text);
 
-  if (spaces.length) {
-    return [...new Set([...spaces, ...parens])].sort((a, b) => a - b);
-  }
-
-  const preferred = [...new Set([...parens, ...semantic])].sort((a, b) => a - b);
+  // Always keep paren + semantic with spaces — paren must beat inner spaces.
+  const preferred = [...new Set([...spaces, ...parens, ...semantic])].sort((a, b) => a - b);
   if (preferred.length) return preferred;
 
-  // Last resort: mid-Hangul after 2+ syllables (never orphan a josa).
   const mid: number[] = [];
   if (text.length >= 5) {
     for (let i = 2; i < text.length - 1; i++) {
@@ -271,7 +325,8 @@ function pickBreakNear(_text: string, target: number, candidates: number[]): num
 
 /**
  * Soft-wrap the full name. Never truncates — callers shrink type instead.
- * Break priority: whitespace → paren edges → compound tails → mid-Hangul.
+ * Break priority: whitespace (outside brackets) → paren edges → compound
+ * head/tail units → mid-Hangul last resort.
  */
 export function softWrapHeatmapName(name: string, maxLines = 2): string {
   const text = name.replace(/\s+/g, " ").trim();
@@ -290,14 +345,33 @@ export function softWrapHeatmapName(name: string, maxLines = 2): string {
       const left = text.slice(0, index).trim();
       const right = text.slice(index).trim();
       if (!left || !right) continue;
-      // Prefer linguistic breaks first; balance width only among equals.
+      // Linguistic breaks dominate; width only tie-breaks.
       const kind = classifyBreak(text, index);
       const kindPenalty =
-        kind === "space" ? 0 : kind === "paren" ? 20 : kind === "semantic" ? 40 : 400;
+        kind === "paren" ? 0 : kind === "space" ? 10 : kind === "semantic" ? 20 : 500;
       const longerWidth = Math.max(measureTextWidth(left, 10), measureTextWidth(right, 10));
       const skew = Math.abs(left.length - right.length);
-      // Tiny width term so "소상공인"/"전기요금 지원" beats "소상공인 전기요금"/"지원".
-      const score = kindPenalty * 1000 + longerWidth * 10 + skew;
+      // Prefer a short meaningful head (2–6 chars) when kinds tie —
+      // "든든"/"전세주택", "청년"/"도약계좌", "연극"/"〈…〉".
+      const headBonus = left.length >= 2 && left.length <= 6 ? -15 : 0;
+      // Prefer longer known tails ("이용권" over splitting earlier at "스포츠").
+      let tailBonus = 0;
+      for (const tail of COMPOUND_TAIL_UNITS) {
+        if (right.startsWith(tail) && tail.length >= 3) {
+          tailBonus = -30 - tail.length;
+          break;
+        }
+      }
+      // Prefer longer known heads when left ends with one ("스포츠강좌" > "스포츠").
+      let headUnitBonus = 0;
+      for (const head of COMPOUND_HEAD_UNITS) {
+        if (left.replace(/\s+/g, "").endsWith(head) && head.length >= 4) {
+          headUnitBonus = -20 - head.length;
+          break;
+        }
+      }
+      const score =
+        kindPenalty * 1000 + longerWidth * 10 + skew + headBonus + tailBonus + headUnitBonus;
       if (score < bestScore) {
         bestScore = score;
         best = index;
@@ -316,13 +390,13 @@ export function softWrapHeatmapName(name: string, maxLines = 2): string {
     cuts.push(pickBreakNear(text, target, filtered.length ? filtered : candidates));
   }
   const parts: string[] = [];
-  let start = 0;
+  let startAt = 0;
   for (const cut of cuts) {
-    const slice = text.slice(start, cut).trim();
+    const slice = text.slice(startAt, cut).trim();
     if (slice) parts.push(slice);
-    start = cut;
+    startAt = cut;
   }
-  const tail = text.slice(start).trim();
+  const tail = text.slice(startAt).trim();
   if (tail) parts.push(tail);
   return parts.join("\n") || text;
 }

@@ -119,6 +119,11 @@ if (heatmapLabelDisplayLength(long) < HEATMAP_WRAP_MIN_CHARS) failed = true;
 
 
 const wrapCases: Array<[string, string]> = [
+  ["든든전세주택", "든든\n전세주택"],
+  ["청년도약계좌", "청년\n도약계좌"],
+  ["연극〈더 헬멧〉", "연극\n〈더 헬멧〉"],
+  ["스포츠강좌이용권", "스포츠강좌\n이용권"],
+
   ["소상공인 전기요금 지원", "소상공인\n전기요금 지원"],
   ["기후동행카드", "기후동행\n카드"],
   ["문화누리카드", "문화누리\n카드"],
