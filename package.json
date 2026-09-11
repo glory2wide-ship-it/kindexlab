@@ -32,6 +32,7 @@
         "live:gates": "tsx scripts/_check-live-overlay-gates.ts",
         "live:first": "tsx scripts/_check-live-first-heatmap.ts",
         "live:completeness": "tsx scripts/_check-live-completeness.ts",
+        "live:refresh-thin": "tsx --env-file=.env.local scripts/refresh-thin-live-boards.ts",
         "premium:generate": "tsx --env-file=.env.local scripts/generate-premium.ts",
         "premium:check": "tsx --env-file=.env.local scripts/check-premium-pipeline.ts",
         "premium:try": "tsx --env-file=.env.local scripts/try-premium-article.ts",
