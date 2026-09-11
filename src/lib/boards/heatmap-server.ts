@@ -229,18 +229,29 @@ function withLiveChartOverlay(
   });
 }
 
+/** Process-local slim live tape — avoid re-mapping 1k fat entities per call. */
+let livePayloadMemo: { key: string; payload: RankingsPayload } | undefined;
+
 /**
  * Ingest snapshot as a rankings payload for heatmap assembly.
  * Prefer this over getRankings() so heatmaps track committed crawls even when
  * TRENDS_DATA_SOURCE=mock locally.
+ *
+ * Items are slimmed via `toTileEntity` (no analysis/products/history) and the
+ * result is memoized for the snapshot generation so landing/category cold
+ * paths do not re-walk ~4MB of fat entity fields on every call.
  */
 export function loadHeatmapLivePayload(): RankingsPayload | undefined {
   const snapshot = readPersistedSnapshot();
   if (!snapshot?.items?.length) return undefined;
-  return {
+  const key = `${snapshot.updatedAt}:${snapshot.items.length}`;
+  if (livePayloadMemo?.key === key) return livePayloadMemo.payload;
+  const payload: RankingsPayload = {
     ...snapshotToPayload(snapshot),
-    items: snapshot.items.map(attachTimeframeMetrics),
+    items: snapshot.items.map((item) => toTileEntity(attachTimeframeMetrics(item))),
   };
+  livePayloadMemo = { key, payload };
+  return payload;
 }
 
 async function loadChannelHeatmapPayloadsUncached(
@@ -352,4 +363,5 @@ export function channelLiveMarket(
 /** Drop process memo (tests / after ingest). */
 export function clearChannelHeatmapMemo(): void {
   CHANNEL_BOARD_MEMO.clear();
+  livePayloadMemo = undefined;
 }

@@ -16,9 +16,9 @@ import { rankingUrl } from "@/lib/slugs";
 /**
  * Served from the ISR cache, rebuilt every 3 minutes.
  *
- * All five desks are board-driven, so the landing no longer waits on
- * `getRankings()` before assembling tiles. Briefings ship as slim card DTOs.
- * Suspense streams the H1 shell before board/briefing work finishes.
+ * Heatmap and desk grid stream in separate Suspense boundaries so the desk
+ * cards can paint as soon as the (cached) unified market resolves, without
+ * waiting on the heavier treemap client chunk. Briefings use a slim card index.
  */
 export const revalidate = 180;
 
@@ -45,14 +45,23 @@ function HeatmapSkeleton() {
   );
 }
 
+function DesksSkeleton() {
+  return (
+    <div className="grid animate-pulse gap-4 md:grid-cols-2 xl:grid-cols-5" aria-hidden>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div key={index} className="h-40 rounded-xl border border-line/60 bg-panel" />
+      ))}
+    </div>
+  );
+}
+
 function BriefingSkeleton() {
   return (
     <div className="h-36 animate-pulse rounded-xl border border-line/60 bg-panel" aria-hidden />
   );
 }
 
-async function HomeBoardSection() {
-  // No rankings waterfall — every POST_CHANNEL uses board heatmaps.
+async function HomeHeatmapSection() {
   const unified = await loadUnifiedMarket();
   const updatedAt = new Date().toISOString();
 
@@ -83,22 +92,16 @@ async function HomeBoardSection() {
         status="open"
         refreshIntervalSec={DEFAULT_TRENDS_REVALIDATE_SEC}
       />
-      <div className="order-3 space-y-4 md:order-3">
-        <HomeDesksSection desks={unified.desks} />
-      </div>
     </>
   );
 }
 
-function HomeDesksSection({
-  desks,
-}: {
-  desks: Awaited<ReturnType<typeof loadUnifiedMarket>>["desks"];
-}) {
+async function HomeDesksSection() {
+  const unified = await loadUnifiedMarket();
   return (
     <>
       <ContentSlot placement="intro" label="종합 지수" />
-      <CategoryDeskGrid desks={desks} refreshIntervalSec={DEFAULT_TRENDS_REVALIDATE_SEC} />
+      <CategoryDeskGrid desks={unified.desks} refreshIntervalSec={DEFAULT_TRENDS_REVALIDATE_SEC} />
       <ContentSlot placement="mid" label="종합 지수" />
     </>
   );
@@ -130,12 +133,25 @@ export default function HomePage() {
         </div>
         <Suspense
           fallback={
-            <div className="order-3">
+            <div className="order-2">
               <HeatmapSkeleton />
             </div>
           }
         >
-          <HomeBoardSection />
+          <div className="order-2">
+            <HomeHeatmapSection />
+          </div>
+        </Suspense>
+        <Suspense
+          fallback={
+            <div className="order-3">
+              <DesksSkeleton />
+            </div>
+          }
+        >
+          <div className="order-3 space-y-4">
+            <HomeDesksSection />
+          </div>
         </Suspense>
       </div>
 

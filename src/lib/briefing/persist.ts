@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { isPersistableBriefing } from "@/lib/briefing/quality";
+import { rebuildFeaturedCardsIndex } from "@/lib/briefing/rebuild-featured-cards";
 import type { BriefingArticle } from "@/lib/types";
 
 const extraRel = path.join("src", "data", "briefings", "extra.json");
@@ -72,6 +73,8 @@ export async function persistEdition(articles: BriefingArticle[]): Promise<{
       `${b.editionDate}${b.slug}`.localeCompare(`${a.editionDate}${a.slug}`),
     );
     await writeFile(file, `${JSON.stringify({ articles: merged }, null, 2)}\n`, "utf8");
+    // Keep the landing rail off the fat extra.json parse path.
+    await rebuildFeaturedCardsIndex(merged).catch(() => undefined);
     return { wrote: true, path: extraRel, kept: persistable.length, skipped };
   } catch {
     return { wrote: false, path: extraRel, kept: 0, skipped };
