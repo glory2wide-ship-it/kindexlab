@@ -286,11 +286,13 @@ export const loadChannelHeatmapPayloads = cache(async (channel: PostChannel): Pr
  * a short summary, and enough sparkline for hover — ship those only.
  */
 export function toTileEntity(entity: RankingEntity): RankingEntity {
-  const metric3m = entity.metrics?.["3m"];
   const name =
     entity.type === "performance" || entity.type === "exhibition"
       ? sanitizeTicketEntityName(entity.name)
       : entity.name;
+  // Keep full timeframe metrics when present so desk/landing 3m·5m ranking
+  // uses stable ingest rates instead of refreshBucket jitter after slim.
+  const metrics = entity.metrics;
   return {
     id: entity.id,
     slug: entity.slug,
@@ -309,7 +311,7 @@ export function toTileEntity(entity: RankingEntity): RankingEntity {
     summary: entity.summary
       ? (entity.summary.includes("posterImageUrl") ? `${name} 실시간 티켓` : entity.summary).slice(0, 96)
       : "",
-    metrics: metric3m ? ({ "3m": metric3m } as RankingEntity["metrics"]) : undefined,
+    metrics,
     measurement: entity.measurement,
     href: entity.href,
     heatmapGroup: entity.heatmapGroup,

@@ -42,10 +42,11 @@ export async function GET(request: Request) {
   try {
     const market = loadHeatmapLivePayload();
     if (market?.items?.length) {
-      liveItems = itemsForChannel(market.items, category);
+      // Slim before compose — same as channelLiveMarket / landing pool.
+      liveItems = itemsForChannel(market.items, category).map(toTileEntity);
     } else {
       const rankings = await getRankings();
-      liveItems = itemsForChannel(rankings.items, category);
+      liveItems = itemsForChannel(rankings.items, category).map(toTileEntity);
     }
   } catch {
     liveItems = [];

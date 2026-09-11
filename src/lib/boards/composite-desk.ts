@@ -75,11 +75,18 @@ function tagChannel(items: RankingEntity[], channel: PostChannel): RankingEntity
   return items.map((item) => ({ ...toTileEntity(item), sourceChannel: channel }));
 }
 
-/** Resolve the live rankings tape (ingest snapshot, then getRankings fallback). */
+/**
+ * Resolve the live rankings tape.
+ * Always prefer the ingest heatmap snapshot (same source as category LIVE desks).
+ * Callers may pass getRankings() seed/mock — never let that override a denser snapshot.
+ */
 async function resolveLiveMarket(market?: RankingsPayload): Promise<RankingsPayload | undefined> {
-  if (market?.items?.length) return market;
   const snapshot = loadHeatmapLivePayload();
-  if (snapshot?.items?.length) return snapshot;
+  const snapCount = snapshot?.items?.length ?? 0;
+  const marketCount = market?.items?.length ?? 0;
+  if (snapCount > 0 && snapCount >= marketCount) return snapshot;
+  if (marketCount > 0) return market;
+  if (snapCount > 0) return snapshot;
   try {
     const rankings = await getRankings();
     return rankings?.items?.length ? rankings : undefined;
@@ -103,10 +110,9 @@ async function channelHeatmapPool(
     boards = [];
   }
 
-  // Match ChannelMarketDesk / channelLiveMarket: slim tiles via toTileEntity.
-  // Full attachTimeframeMetrics here would keep distinct stored rates; category
-  // desks strip to metrics["3m"] only, so rankItemsForTimeframe rebuilds
-  // lightHorizonChange rates and picks a different top-4.
+  // Match ChannelMarketDesk / channelLiveMarket: slim via toTileEntity.
+  // Stored window rates are preserved (attachTimeframeMetrics no longer
+  // clobbers them), so 3m top-4 stays aligned with category LIVE desks.
   const liveItems = market?.items?.length
     ? itemsForChannel(market.items, channel).map(toTileEntity)
     : [];

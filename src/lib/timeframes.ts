@@ -637,7 +637,10 @@ export function candlesWindowOhlc(candles: CandlePoint[]): {
 
 export function changeForEntity(entity: RankingEntity, timeframe: Timeframe): number {
   const live = entity.metrics?.[timeframe]?.changeRate;
-  if (metricsAreDistinct(entity.metrics) && !metricsLookLegacySynthetic(entity) && Number.isFinite(live)) {
+  // Trust a stored window rate even on slim tiles (e.g. toTileEntity keeps only "3m").
+  // Requiring metricsAreDistinct forced lightHorizonChange + refreshBucket jitter, so
+  // landing ISR top-4 and category LIVE 3m tops drifted across 3-minute buckets.
+  if (Number.isFinite(live) && !metricsLookLegacySynthetic(entity)) {
     return live as number;
   }
   // Prefer cheap synthetic rates for lists — never build the 31k path here.
@@ -686,7 +689,19 @@ export function buildTimeframeMetrics(entity: RankingEntity): TimeframeMetrics {
 
 export function attachTimeframeMetrics(entity: RankingEntity): RankingEntity {
   if (metricsAreDistinct(entity.metrics) && !metricsLookLegacySynthetic(entity)) return entity;
-  return { ...entity, metrics: buildTimeframeMetrics(entity) };
+  const built = buildTimeframeMetrics(entity);
+  const existing = entity.metrics;
+  if (!existing) return { ...entity, metrics: built };
+  // Preserve any already-stored window (esp. slim "3m"-only tiles) so ranking
+  // does not rewrite ingest rates with a new refreshBucket draw.
+  const merged = { ...built };
+  for (const option of ALL_TIMEFRAMES) {
+    const stored = existing[option.id];
+    if (stored && Number.isFinite(stored.changeRate)) {
+      merged[option.id] = stored;
+    }
+  }
+  return { ...entity, metrics: merged };
 }
 
 /** Shared treemap/list sort: heat, then score, then volume, then existing rank. */

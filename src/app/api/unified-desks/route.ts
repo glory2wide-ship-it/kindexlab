@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getRankings } from "@/lib/api";
 import { loadUnifiedMarket } from "@/lib/boards/composite-desk";
 import { trendsRevalidateSec } from "@/lib/refresh";
 
@@ -9,20 +8,13 @@ export const revalidate = 180;
 
 /** Landing “LIVE 킨덱스 랭킹” client poll — mirrors loadUnifiedMarket desks. */
 export async function GET() {
-  // Serve the cached snapshot; stale data already triggers a background ingest
-  // inside getRankings. Forcing refresh:true here re-ran the full crawl every
-  // 3 minutes from every open landing tab.
-  const market = await getRankings().catch(() => ({
-    updatedAt: new Date().toISOString(),
-    status: "open" as const,
-    indices: [],
-    items: [],
-  }));
-  const unified = await loadUnifiedMarket(market);
+  // Do not pass getRankings() here — seed/mock would override the ingest
+  // snapshot inside resolveLiveMarket and desync landing desks from category LIVE.
+  const unified = await loadUnifiedMarket();
   const maxAge = trendsRevalidateSec();
   return NextResponse.json(
     {
-      updatedAt: market.updatedAt,
+      updatedAt: new Date().toISOString(),
       desks: unified.desks,
     },
     {
