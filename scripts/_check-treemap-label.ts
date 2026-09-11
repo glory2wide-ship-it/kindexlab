@@ -117,6 +117,20 @@ console.log(
 );
 if (heatmapLabelDisplayLength(long) < HEATMAP_WRAP_MIN_CHARS) failed = true;
 
+
+const wrapCases: Array<[string, string]> = [
+  ["소상공인 전기요금 지원", "소상공인\n전기요금 지원"],
+  ["기후동행카드", "기후동행\n카드"],
+  ["문화누리카드", "문화누리\n카드"],
+  ["근로자 휴가지원사업", "근로자\n휴가지원사업"],
+];
+for (const [input, expect] of wrapCases) {
+  const got = softWrapHeatmapName(input, 2);
+  const ok = got === expect;
+  if (!ok) failed = true;
+  console.log(`${ok ? "ok" : "BAD"} semantic wrap ${JSON.stringify(input)} → ${JSON.stringify(got)}`);
+}
+
 const wrapped = softWrapHeatmapName(long, 2);
 if (!wrapped.includes("\n")) {
   console.error("expected soft wrap for long spaced name", wrapped);

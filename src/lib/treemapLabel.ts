@@ -127,13 +127,69 @@ function insidePairedMarks(text: string, index: number): boolean {
   return false;
 }
 
-/** Candidate soft-break indices — spaces, particles, paren edges first. */
-function softBreakCandidates(text: string): number[] {
+/**
+ * Common Korean compound tails — prefer breaking *before* these so
+ * "기후동행카드" → "기후동행"/"카드", not "기후동"/"행카드".
+ * Longer tails first so "지원사업" wins over "사업".
+ */
+const COMPOUND_TAIL_UNITS = [
+  "에어로스페이스",
+  "에너지솔루션",
+  "지원사업",
+  "지원금",
+  "솔루션",
+  "서비스",
+  "플랫폼",
+  "시스템",
+  "인덱스",
+  "휴가지원",
+  "전기요금",
+  "요금",
+  "지원",
+  "사업",
+  "카드",
+  "보험",
+  "대출",
+  "연금",
+  "급여",
+  "관광",
+  "시장",
+  "김밥",
+  "찌개",
+  "센터",
+  "클럽",
+  "하우스",
+  "파크",
+  "타워",
+  "랭킹",
+  "지수",
+  "펀드",
+  "은행",
+  "증권",
+  "항공",
+  "호텔",
+  "리조트",
+] as const;
+
+type BreakKind = "space" | "paren" | "semantic" | "mid";
+
+function classifyBreak(text: string, index: number): BreakKind {
+  if (/\s/.test(text.slice(Math.max(0, index - 1), index + 1))) return "space";
+  if (/[·\/-]/.test(text.slice(Math.max(0, index - 1), index + 1))) return "space";
+  const left = text.slice(0, index);
+  const right = text.slice(index);
+  if (/[)\]〉》」』）]$/.test(left.trimEnd()) || /^[(\[〈《「『（]/.test(right)) return "paren";
+  for (const tail of COMPOUND_TAIL_UNITS) {
+    if (right.startsWith(tail) && left.replace(/\s+/g, "").length >= 2) return "semantic";
+  }
+  return "mid";
+}
+
+function spaceOrDelimBreaks(text: string): number[] {
   const breaks: number[] = [];
   const tokens = text.split(/(\s+|·|\/|-)/);
   let cursor = 0;
-  for (let t = 0; t < tokens.length; t++) {
-    const token = tokens[t] ?? "";
+  for (const token of tokens) {
     if (!token) continue;
     const next = cursor + token.length;
     if (/^\s+$/.test(token) || token === "·" || token === "/" || token === "-") {
@@ -141,33 +197,71 @@ function softBreakCandidates(text: string): number[] {
     }
     cursor = next;
   }
+  return breaks;
+}
 
-  // Prefer breaking just after a closing bracket / paren, or just before an opener.
+function parenEdgeBreaks(text: string): number[] {
+  const breaks: number[] = [];
   for (let i = 1; i < text.length; i++) {
     const ch = text[i]!;
     const prev = text[i - 1]!;
-    if (/^[)\]〉》」』）]$/.test(prev) && i < text.length) breaks.push(i);
+    if (/^[)\]〉》」』）]$/.test(prev)) breaks.push(i);
     if (/^[(\[〈《「『（]$/.test(ch)) breaks.push(i);
   }
+  return breaks;
+}
 
-  // Hangul compounds: allow mid breaks after 2+ syllables, but never split a josa
-  // onto the next line alone, and never break inside paired marks.
+function semanticCompoundBreaks(text: string): number[] {
+  const breaks: number[] = [];
+  const compact = text;
+  for (const tail of COMPOUND_TAIL_UNITS) {
+    let from = 0;
+    while (from < compact.length) {
+      const at = compact.indexOf(tail, from);
+      if (at < 0) break;
+      // Break before the tail unit when enough head remains.
+      if (at >= 2 && at + tail.length <= compact.length) {
+        if (!insidePairedMarks(compact, at)) breaks.push(at);
+      }
+      from = at + 1;
+    }
+  }
+  return breaks;
+}
+
+/**
+ * Soft-break candidates ranked by linguistic quality.
+ * If the name has spaces, mid-Hangul splits are excluded so
+ * "소상공인 전기요금 지원" never becomes "소상공인 전"/"기요금 지원".
+ */
+function softBreakCandidates(text: string): number[] {
+  const spaces = spaceOrDelimBreaks(text);
+  const parens = parenEdgeBreaks(text);
+  const semantic = semanticCompoundBreaks(text);
+
+  if (spaces.length) {
+    return [...new Set([...spaces, ...parens])].sort((a, b) => a - b);
+  }
+
+  const preferred = [...new Set([...parens, ...semantic])].sort((a, b) => a - b);
+  if (preferred.length) return preferred;
+
+  // Last resort: mid-Hangul after 2+ syllables (never orphan a josa).
+  const mid: number[] = [];
   if (text.length >= 5) {
     for (let i = 2; i < text.length - 1; i++) {
       if (insidePairedMarks(text, i)) continue;
       const rest = text.slice(i);
-      // Keep trailing particles with the preceding word.
       if (TRAILING_JOSA.test(rest)) continue;
       const nextChunk = rest.match(/^\S{1,3}/)?.[0] ?? "";
       if (TRAILING_JOSA.test(nextChunk)) continue;
-      breaks.push(i);
+      mid.push(i);
     }
   }
-
-  return [...new Set(breaks)].sort((a, b) => a - b);
+  return mid;
 }
 
-function pickBreakNear(text: string, target: number, candidates: number[]): number {
+function pickBreakNear(_text: string, target: number, candidates: number[]): number {
   if (!candidates.length) return target;
   return candidates.reduce(
     (best, index) => (Math.abs(index - target) < Math.abs(best - target) ? index : best),
@@ -177,6 +271,7 @@ function pickBreakNear(text: string, target: number, candidates: number[]): numb
 
 /**
  * Soft-wrap the full name. Never truncates — callers shrink type instead.
+ * Break priority: whitespace → paren edges → compound tails → mid-Hangul.
  */
 export function softWrapHeatmapName(name: string, maxLines = 2): string {
   const text = name.replace(/\s+/g, " ").trim();
@@ -188,7 +283,6 @@ export function softWrapHeatmapName(name: string, maxLines = 2): string {
   if (linesWanted === 2) {
     const mid = Math.ceil(text.length / 2);
     const pool = candidates.length ? candidates : [mid];
-    // Minimize the longer line so both rows stay paintably short.
     let best = mid;
     let bestScore = Number.POSITIVE_INFINITY;
     for (const index of pool) {
@@ -196,14 +290,14 @@ export function softWrapHeatmapName(name: string, maxLines = 2): string {
       const left = text.slice(0, index).trim();
       const right = text.slice(index).trim();
       if (!left || !right) continue;
-      // Prefer shorter longest-line, then space/paren breaks, then balance.
+      // Prefer linguistic breaks first; balance width only among equals.
+      const kind = classifyBreak(text, index);
+      const kindPenalty =
+        kind === "space" ? 0 : kind === "paren" ? 20 : kind === "semantic" ? 40 : 400;
       const longerWidth = Math.max(measureTextWidth(left, 10), measureTextWidth(right, 10));
       const skew = Math.abs(left.length - right.length);
-      const atSpace = /\s/.test(text.slice(Math.max(0, index - 1), index + 1));
-      const atParen =
-        /[)\]〉》」』）]$/.test(left) || /^[(\[〈《「『（]/.test(right);
-      const penalty = atSpace ? 0 : atParen ? 8 : 40;
-      const score = longerWidth * 10 + skew + penalty;
+      // Tiny width term so "소상공인"/"전기요금 지원" beats "소상공인 전기요금"/"지원".
+      const score = kindPenalty * 1000 + longerWidth * 10 + skew;
       if (score < bestScore) {
         bestScore = score;
         best = index;
