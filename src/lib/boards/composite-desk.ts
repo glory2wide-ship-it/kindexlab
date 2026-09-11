@@ -1,4 +1,5 @@
-import { buildHeatmapItems, withoutHeadlineHeatmapItems, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
+import { getRankings } from "@/lib/providers/trends";
+import { buildHeatmapItems, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
 import { loadChannelHeatmapPayloads, loadHeatmapLivePayload, toTileEntity } from "@/lib/boards/heatmap-server";
 import { countLivePreferRows, preferLiveChannelComposite } from "@/lib/boards/limits";
 import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
@@ -19,8 +20,6 @@ export const LANDING_PER_CHANNEL_TOP = 4;
 export const UNIFIED_HEATMAP_TILES = POST_CHANNELS.length * LANDING_PER_CHANNEL_TOP;
 /** Rows shown on each desk summary card. */
 export const DESK_TOP_N = 3;
-/** Prefer live ingest once a desk has at least this many rows. */
-const MIN_LIVE_CHANNEL_ROWS = 3;
 
 export interface ChannelDesk {
   channel: PostChannel;
@@ -76,44 +75,51 @@ function tagChannel(items: RankingEntity[], channel: PostChannel): RankingEntity
   return items.map((item) => ({ ...toTileEntity(item), sourceChannel: channel }));
 }
 
-/** Board rows for one channel (성별 전체 · 연령 전체) — same filters as the landing toolbar. */
-async function boardPool(channel: PostChannel): Promise<RankingEntity[]> {
-  let boards: HeatmapBoardPayload[] = [];
+/** Resolve the live rankings tape (ingest snapshot, then getRankings fallback). */
+async function resolveLiveMarket(market?: RankingsPayload): Promise<RankingsPayload | undefined> {
+  if (market?.items?.length) return market;
+  const snapshot = loadHeatmapLivePayload();
+  if (snapshot?.items?.length) return snapshot;
   try {
-    boards = await loadChannelHeatmapPayloads(channel);
+    const rankings = await getRankings();
+    return rankings?.items?.length ? rankings : undefined;
   } catch {
-    /* one desk failing to seed must not blank the whole landing board */
+    return undefined;
   }
-  return boards.length ? buildHeatmapItems({ boards, gender: "all", age: "all" }) : [];
 }
 
 /**
- * Landing heatmap pool per channel.
- * Prefer each category's 종합 board composite, then live-chart ingest when boards are thin.
+ * Same pool a category desk uses for 종합 + 성별 전체 + 연령 전체:
+ * live crawl first when coverage is thick enough, otherwise board/seed composite.
  */
 async function channelHeatmapPool(
   channel: PostChannel,
   market?: RankingsPayload,
 ): Promise<RankingEntity[]> {
-  const boards = await boardPool(channel);
-  if (boards.length >= MIN_LIVE_CHANNEL_ROWS) return boards;
+  let boards: HeatmapBoardPayload[] = [];
+  try {
+    boards = await loadChannelHeatmapPayloads(channel);
+  } catch {
+    boards = [];
+  }
 
-  const live = market
-    ? withoutHeadlineHeatmapItems(itemsForChannel(market.items, channel)).map(attachTimeframeMetrics)
+  const liveItems = market?.items?.length
+    ? itemsForChannel(market.items, channel).map(attachTimeframeMetrics)
     : [];
-  const liveCount = countLivePreferRows(live, channel);
-  if (preferLiveChannelComposite(channel, undefined, liveCount, MIN_LIVE_CHANNEL_ROWS)) {
-    const chart = live.filter((item) => item.tags?.includes("live-chart"));
-    const nonTape = live.filter(
-      (item) => !item.tags?.includes("board-tape") && !item.tags?.includes("live-chart"),
-    );
-    const preferred = chart.length || nonTape.length ? [...chart, ...nonTape] : live;
-    if (preferred.length >= MIN_LIVE_CHANNEL_ROWS) return preferred;
-  }
-  if (live.length >= MIN_LIVE_CHANNEL_ROWS && liveCount >= MIN_LIVE_CHANNEL_ROWS) {
-    return live.filter((item) => !item.tags?.includes("board-tape"));
-  }
-  return boards;
+  const preferLive = preferLiveChannelComposite(
+    channel,
+    undefined,
+    countLivePreferRows(liveItems, channel),
+    { gender: "all", age: "all" },
+  );
+
+  return buildHeatmapItems({
+    boards,
+    liveItems,
+    gender: "all",
+    age: "all",
+    preferLive,
+  });
 }
 
 /**
@@ -134,11 +140,11 @@ function deskTopItem(item: RankingEntity): RankingEntity {
 /**
  * The landing page's cross-category board.
  *
- * For each category, take ranks 1–4 under landing defaults (3분봉 · 성별 전체 ·
- * 연령 전체), then round-robin merge so every desk contributes equally.
+ * For each category, take LIVE (or board fallback) ranks 1–4 under landing
+ * defaults (3분봉 · 성별 전체 · 연령 전체), then round-robin merge.
  */
 export async function loadUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMarket> {
-  const resolved = market?.items?.length ? market : loadHeatmapLivePayload();
+  const resolved = await resolveLiveMarket(market);
 
   const loaded = await Promise.all(
     POST_CHANNELS.map(async (meta) => {
