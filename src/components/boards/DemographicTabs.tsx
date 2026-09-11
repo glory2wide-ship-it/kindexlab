@@ -46,9 +46,10 @@ export function DemographicTabs({
 
   return (
     <div className="flex flex-col gap-2">
-    <div className="flex flex-row flex-wrap items-center gap-x-3 gap-y-2">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <div className="flex rounded-lg bg-board p-1">
+    {/* Keep 성별 immediately after any preceding 분봉 strip; avoid wrapping under it on tablets. */}
+    <div className="flex flex-row flex-nowrap items-center gap-x-3">
+      <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 rounded-lg bg-board p-1">
           <button
             type="button"
             onClick={() => onGender("all")}
@@ -69,8 +70,8 @@ export function DemographicTabs({
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
+      <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-nowrap gap-1 rounded-lg bg-board p-1">
           <button
             type="button"
             onClick={() => onAge("all")}
@@ -83,7 +84,7 @@ export function DemographicTabs({
               key={key}
               type="button"
               onClick={() => onAge(key)}
-              className={`${TAB_BASE} ${age === key ? AGE_ON : AGE_OFF}`}
+              className={`${TAB_BASE} shrink-0 ${age === key ? AGE_ON : AGE_OFF}`}
             >
               {AGE_LABEL[key]}
             </button>

@@ -345,16 +345,20 @@ export function MarketWorkspace({
             </div>
           )}
 
-          {/* Desktop: candle (분봉) sits left of gender/age on one row. */}
-          <div className="flex flex-row flex-wrap items-start gap-x-3 gap-y-2">
+          {/*
+            Desktop/tablet: keep 분봉 left of 성별 on one row.
+            Galaxy Tab (~md) used to wrap the wide candle strip onto its own
+            line above gender — nowrap + horizontal scroll preserves order.
+          */}
+          <div className="-mx-1 flex flex-row flex-nowrap items-center gap-x-3 overflow-x-auto px-1 pb-0.5 [scrollbar-width:thin]">
             {hideTimeframes ? null : (
-              <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
+              <div className="flex shrink-0 flex-nowrap gap-1 rounded-lg bg-board p-1">
                 {TIMEFRAMES.map((option) => (
                   <button
                     key={option.id}
                     type="button"
                     onClick={() => setTimeframe(option.id)}
-                    className={`rounded-md px-3 py-1.5 font-sans text-[13.2px] font-medium ${
+                    className={`shrink-0 rounded-md px-2.5 py-1.5 font-sans text-[13.2px] font-medium md:px-3 ${
                       timeframe === option.id
                         ? "bg-ink text-board md:bg-accent md:text-black"
                         : "text-muted hover:bg-panel hover:text-ink"
@@ -366,16 +370,18 @@ export function MarketWorkspace({
               </div>
             )}
 
-            <DemographicTabs
-              gender={gender}
-              age={age}
-              onGender={setGender}
-              onAge={setAge}
-              boardSlug={boardSlug}
-              region={region}
-              onRegion={setRegion}
-              showRegion={showRegion}
-            />
+            <div className="shrink-0">
+              <DemographicTabs
+                gender={gender}
+                age={age}
+                onGender={setGender}
+                onAge={setAge}
+                boardSlug={boardSlug}
+                region={region}
+                onRegion={setRegion}
+                showRegion={showRegion}
+              />
+            </div>
           </div>
           {demoActive ? (
             <p className="text-[11px] leading-5 text-muted">
