@@ -4,12 +4,19 @@ import { countLivePreferRows, preferLiveChannelComposite } from "@/lib/boards/li
 import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
 import { itemsForChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
-import { attachTimeframeMetrics, heatForTimeframe } from "@/lib/timeframes";
+import { attachTimeframeMetrics, rankItemsForTimeframe } from "@/lib/timeframes";
 import { tickerChangeRate } from "@/lib/ticker/rank";
-import type { RankingEntity, RankingsPayload } from "@/lib/types";
+import type { RankingEntity, RankingsPayload, Timeframe } from "@/lib/types";
 
+/**
+ * Landing heatmap defaults — match MarketWorkspace desktop options:
+ * 3분봉 · 성별 전체 · 연령 전체.
+ */
+export const LANDING_HEATMAP_TIMEFRAME: Timeframe = "3m";
+/** Top N per category under those defaults (5 channels × 4 = 20 tiles). */
+export const LANDING_PER_CHANNEL_TOP = 4;
 /** Tiles on the unified landing heatmap (desktop shows all; mobile caps at 15). */
-export const UNIFIED_HEATMAP_TILES = 20;
+export const UNIFIED_HEATMAP_TILES = POST_CHANNELS.length * LANDING_PER_CHANNEL_TOP;
 /** Rows shown on each desk summary card. */
 export const DESK_TOP_N = 3;
 /** Prefer live ingest once a desk has at least this many rows. */
@@ -27,22 +34,6 @@ export interface UnifiedMarket {
   /** Cross-category tiles for the landing heatmap, already capped and re-ranked. */
   items: RankingEntity[];
   desks: ChannelDesk[];
-}
-
-/**
- * Ordering within one channel desk / heatmap pool for the landing board.
- * Prefer overall (종합) rank / buzz so tiles match category-page leaders,
- * not short-term 3m movers that can look mid-pack on the category desk.
- */
-function byOverallRank(a: RankingEntity, b: RankingEntity): number {
-  if (a.rank !== b.rank) return a.rank - b.rank;
-  if (b.buzzScore !== a.buzzScore) return b.buzzScore - a.buzzScore;
-  const heat = heatForTimeframe(b, "3m") - heatForTimeframe(a, "3m");
-  if (heat !== 0) return heat;
-  const move = Math.abs(tickerChangeRate(b)) - Math.abs(tickerChangeRate(a));
-  if (move !== 0) return move;
-  if (b.fluctuationRate !== a.fluctuationRate) return b.fluctuationRate - a.fluctuationRate;
-  return (a.name ?? "").localeCompare(b.name ?? "", "ko");
 }
 
 /**
@@ -85,7 +76,7 @@ function tagChannel(items: RankingEntity[], channel: PostChannel): RankingEntity
   return items.map((item) => ({ ...toTileEntity(item), sourceChannel: channel }));
 }
 
-/** Board rows for one channel, used where the live feed has no coverage. */
+/** Board rows for one channel (성별 전체 · 연령 전체) — same filters as the landing toolbar. */
 async function boardPool(channel: PostChannel): Promise<RankingEntity[]> {
   let boards: HeatmapBoardPayload[] = [];
   try {
@@ -98,8 +89,7 @@ async function boardPool(channel: PostChannel): Promise<RankingEntity[]> {
 
 /**
  * Landing heatmap pool per channel.
- * Prefer each category's 종합 board composite (same leaders as the category page),
- * then fall back to live-chart ingest when boards are still thin.
+ * Prefer each category's 종합 board composite, then live-chart ingest when boards are thin.
  */
 async function channelHeatmapPool(
   channel: PostChannel,
@@ -126,6 +116,15 @@ async function channelHeatmapPool(
   return boards;
 }
 
+/**
+ * Rank one channel the same way MarketWorkspace does for
+ * 3분봉 + 성별 전체 + 연령 전체 (no demographic skew), then keep 1위~4위.
+ */
+function landingTopForChannel(pool: RankingEntity[], channel: PostChannel): RankingEntity[] {
+  const ranked = rankItemsForTimeframe(pool, LANDING_HEATMAP_TIMEFRAME);
+  return tagChannel(ranked.slice(0, LANDING_PER_CHANNEL_TOP), channel);
+}
+
 /** Uses the same 3m change field as the ticker and channel heatmap. */
 function deskTopItem(item: RankingEntity): RankingEntity {
   const enriched = attachTimeframeMetrics(item);
@@ -135,9 +134,8 @@ function deskTopItem(item: RankingEntity): RankingEntity {
 /**
  * The landing page's cross-category board.
  *
- * Uses each category's 종합 board leaders (round-robin across desks) so landing
- * tiles match what readers see near the top of category heatmaps. Live ingest
- * only fills desks whose board composite is still thin.
+ * For each category, take ranks 1–4 under landing defaults (3분봉 · 성별 전체 ·
+ * 연령 전체), then round-robin merge so every desk contributes equally.
  */
 export async function loadUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMarket> {
   const resolved = market?.items?.length ? market : loadHeatmapLivePayload();
@@ -145,7 +143,7 @@ export async function loadUnifiedMarket(market?: RankingsPayload): Promise<Unifi
   const loaded = await Promise.all(
     POST_CHANNELS.map(async (meta) => {
       const pool = await channelHeatmapPool(meta.id, resolved);
-      const ranked = tagChannel([...pool].sort(byOverallRank), meta.id);
+      const ranked = landingTopForChannel(pool, meta.id);
       return { meta, ranked };
     }),
   );
