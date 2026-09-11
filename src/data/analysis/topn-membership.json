@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-11T10:26:53.544Z",
+  "updatedAt": "2026-09-11T10:34:10.642Z",
   "bySlug": {
     "bestseller-surge-index--세네카-오늘을-빼앗기고-있는-당신에게": {
       "boardSlug": "bestseller-surge-index",
@@ -366,16 +366,6 @@
       "channel": "economy",
       "seenAt": "2026-09-11T10:26:53.544Z"
     },
-    "realtime-tv-ratings--마블-시네마틱-유니버스": {
-      "boardSlug": "realtime-tv-ratings",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:26:53.544Z"
-    },
-    "realtime-tv-ratings--불꽃야구2": {
-      "boardSlug": "realtime-tv-ratings",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:26:53.544Z"
-    },
     "realtime-webtoon-rank--1초": {
       "boardSlug": "realtime-webtoon-rank",
       "channel": "entertainment",
@@ -383,36 +373,6 @@
     },
     "realtime-webtoon-rank--ai-닥터": {
       "boardSlug": "realtime-webtoon-rank",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:26:53.544Z"
-    },
-    "star-reputation-index--키움-대-삼성": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:26:53.544Z"
-    },
-    "star-reputation-index--승무원": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:26:53.544Z"
-    },
-    "star-reputation-index--이종섭": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:26:53.544Z"
-    },
-    "star-reputation-index--부천시": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:26:53.544Z"
-    },
-    "star-reputation-index--벤처-캐피털": {
-      "boardSlug": "star-reputation-index",
-      "channel": "entertainment",
-      "seenAt": "2026-09-11T10:26:53.544Z"
-    },
-    "star-reputation-index--아이유": {
-      "boardSlug": "star-reputation-index",
       "channel": "entertainment",
       "seenAt": "2026-09-11T10:26:53.544Z"
     },
@@ -450,6 +410,41 @@
       "boardSlug": "travel-government-grant-ranking",
       "channel": "travel",
       "seenAt": "2026-09-11T10:26:53.544Z"
+    },
+    "realtime-tv-ratings--ssg-대-kia": {
+      "boardSlug": "realtime-tv-ratings",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:34:10.642Z"
+    },
+    "realtime-tv-ratings--감탄": {
+      "boardSlug": "realtime-tv-ratings",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:34:10.642Z"
+    },
+    "star-reputation-index--원자력-잠수함": {
+      "boardSlug": "star-reputation-index",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:34:10.642Z"
+    },
+    "star-reputation-index--메가박스": {
+      "boardSlug": "star-reputation-index",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:34:10.642Z"
+    },
+    "star-reputation-index--차정원": {
+      "boardSlug": "star-reputation-index",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:34:10.642Z"
+    },
+    "star-reputation-index--가능한-사랑": {
+      "boardSlug": "star-reputation-index",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:34:10.642Z"
+    },
+    "star-reputation-index--박보검": {
+      "boardSlug": "star-reputation-index",
+      "channel": "entertainment",
+      "seenAt": "2026-09-11T10:34:10.642Z"
     }
   }
 }
