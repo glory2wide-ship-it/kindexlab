@@ -445,9 +445,9 @@ export function MarketWorkspace({
         )}
       </div>
 
-      {/* Mobile: keep 산출방식 + caption on one line; legend sits to the right when space allows. */}
-      <div className="flex flex-nowrap items-center justify-between gap-2 overflow-hidden border-t border-line bg-panel px-4 py-2 font-sans text-[12px] text-muted">
-        <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
+      {/* Row1: 산출방식 + caption · Row2: color legend */}
+      <div className="flex flex-col gap-2 border-t border-line bg-panel px-4 py-2 font-sans text-[12px] text-muted">
+        <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden">
           {view === "treemap" && sortedItems.length > 0 ? (
             <button
               type="button"
@@ -469,9 +469,11 @@ export function MarketWorkspace({
           </span>
         </div>
         {view === "treemap" && sortedItems.length > 0 ? (
-          <HeatmapLegend className="hidden sm:flex" />
+          <div className="flex justify-start md:justify-end">
+            <HeatmapLegend className="items-start md:items-end" />
+          </div>
         ) : (
-          <span className="hidden shrink-0 md:inline">KinDex Hierarchical Heatmap</span>
+          <span className="hidden md:inline">KinDex Hierarchical Heatmap</span>
         )}
       </div>
 
