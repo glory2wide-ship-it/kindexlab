@@ -1,6 +1,6 @@
 /**
  * Mobile-only short labels for board rail chips.
- * Desktop keeps `shortTitle` / "종합 랭킹" unchanged.
+ * Desktop uses `shortTitle` / "종합".
  */
 const MOBILE_BOARD_TAB_LABEL: Record<string, string> = {
   // Entertainment shares culture grant in the rail
@@ -8,7 +8,7 @@ const MOBILE_BOARD_TAB_LABEL: Record<string, string> = {
   // Economy
   "government-subsidy-search": "정부지원금",
   "housing-subscription-hotspot": "부동산",
-  "startup-franchise-index": "창업",
+  "startup-franchise-index": "창업*소상공",
   // Culture
   "exhibition-popup-ranking": "전시 팝업",
   // Politics
@@ -20,9 +20,11 @@ const MOBILE_BY_SHORT_TITLE: Record<string, string> = {
   "문화/생활 정부 지원금": "정부지원금",
   "문화/생활 정부지원금": "정부지원금",
   "경제 정부지원금": "정부지원금",
+  "정부지원금": "정부지원금",
   "여행 정부지원금": "정부지원금",
   "지역별 부동산": "부동산",
-  "창업·프랜차이즈": "창업",
+  "창업·프랜차이즈": "창업*소상공",
+  "창업*소상공": "창업*소상공",
   "전시·팝업스토어": "전시 팝업",
 };
 

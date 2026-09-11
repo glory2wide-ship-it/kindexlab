@@ -27,7 +27,7 @@ const MENU_BY_TYPE: Partial<Record<EntityType, string>> = {
   overseas_stock: "해외 주식",
   commodities_fx: "원자재·환율",
   inflation: "소비자 물가",
-  startup_franchise: "창업·프랜차이즈",
+  startup_franchise: "창업*소상공",
   economy_issue: "이슈 키워드",
   performance: "공연",
   exhibition: "전시·팝업스토어",

@@ -110,6 +110,7 @@ export function isCultureLivingGrant(name: string): boolean {
 export function isTwoLineBracketHeatmap(heatmapGroup?: string): boolean {
   return (
     heatmapGroup === "경제 정부지원금" ||
+    heatmapGroup === "정부지원금" ||
     heatmapGroup === "음식/맛집 랭킹" ||
     heatmapGroup === "지역별 음식/맛집" ||
     heatmapGroup === "부동산 관심 랭킹" ||

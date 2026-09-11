@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   boardPath,
-  categoryBoardPath,
   compositeTabIndex,
   getBoard,
   isDeskBoard,
@@ -66,7 +65,7 @@ export function CategoryBoardRail({
         className={`${tabShell} ${compositeClass}`}
       >
         <span className="md:hidden">{MOBILE_COMPOSITE_TAB_LABEL}</span>
-        <span className="hidden md:inline">종합 랭킹</span>
+        <span className="hidden md:inline">종합</span>
       </button>
     </li>
   ) : (
@@ -76,7 +75,7 @@ export function CategoryBoardRail({
         className={`${tabShell} border-line text-muted hover:text-ink`}
       >
         <span className="md:hidden">{MOBILE_COMPOSITE_TAB_LABEL}</span>
-        <span className="hidden md:inline">종합 랭킹</span>
+        <span className="hidden md:inline">종합</span>
       </Link>
     </li>
   );
@@ -123,28 +122,20 @@ export function CategoryBoardRail({
     <div
       className={
         variant === "inline"
-          ? "mb-3 flex flex-wrap items-baseline justify-between gap-2"
-          : "mb-3 hidden flex-wrap items-baseline justify-between gap-2 md:flex"
+          ? "mb-3"
+          : "mb-3 hidden md:block"
       }
     >
-      <div>
-        <h2 className="text-base font-semibold">랭킹·지수 보드</h2>
-        {onSelect ? (
-          <p className="mt-0.5 text-[13.79px] text-muted">
-            보드를 고르면 아래 히트맵이 그 주제로 바뀝니다. 종목을 누르면 분석·여론조사 상세가 열립니다.
-          </p>
-        ) : (
-          <p className="mt-0.5 text-[13.79px] text-muted">
-            보드를 고르면 아래 히트맵이 그 주제로 바뀝니다. 성별·연령·분봉 필터가 함께 적용됩니다.
-          </p>
-        )}
-      </div>
-      <Link
-        href={categoryBoardPath(channel)}
-        className="text-xs font-medium text-accent hover:underline"
-      >
-        전체 보기 →
-      </Link>
+      <h2 className="text-base font-semibold">랭킹·지수 보드</h2>
+      {onSelect ? (
+        <p className="mt-0.5 text-[13.79px] text-muted">
+          보드를 고르면 아래 히트맵이 그 주제로 바뀝니다. 종목을 누르면 분석·여론조사 상세가 열립니다.
+        </p>
+      ) : (
+        <p className="mt-0.5 text-[13.79px] text-muted">
+          보드를 고르면 아래 히트맵이 그 주제로 바뀝니다. 성별·연령·분봉 필터가 함께 적용됩니다.
+        </p>
+      )}
     </div>
   );
 
