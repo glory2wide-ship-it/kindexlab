@@ -91,16 +91,32 @@ export function countLivePreferRows(
   return items.filter((item) => isLivePreferEntity(item)).length;
 }
 
+export type PreferLiveHeatmapOptions = {
+  minLive?: number;
+  /** When a gender/age segment is active, never prefer live — live tape is unsegmented. */
+  gender?: string;
+  age?: string;
+};
+
 /**
  * Prefer live crawl for channel 종합 and individual menus when enough live rows exist.
  * Falls back to board/demographic rankings when the live pool is thin.
+ *
+ * Gender/age tabs must disable live-first: the crawl tape has no demographic
+ * slices, so preferLive would paint the same tiles for 남성/여성/20대/….
  */
 export function preferLiveChannelComposite(
   channel: PostChannel,
   board: string | undefined | null,
   liveCount: number,
-  minLive = 3,
+  minLiveOrOptions: number | PreferLiveHeatmapOptions = 3,
 ): boolean {
+  const options =
+    typeof minLiveOrOptions === "number" ? { minLive: minLiveOrOptions } : minLiveOrOptions;
+  const minLive = options.minLive ?? 3;
+  const gender = options.gender ?? "all";
+  const age = options.age ?? "all";
+  if (gender !== "all" || age !== "all") return false;
   void board;
   void channel;
   return liveCount >= minLive;

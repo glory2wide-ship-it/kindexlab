@@ -55,6 +55,7 @@ export async function GET(request: Request) {
     category,
     board,
     countLivePreferRows(liveItems, category),
+    { gender, age },
   );
   const items = (
     await attachKospiStockQuotes(

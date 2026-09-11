@@ -37,6 +37,18 @@ assert.equal(preferLiveChannelComposite("economy", undefined, 3), true);
 assert.equal(preferLiveChannelComposite("economy", "kospi-fomo-index", 10), true);
 assert.equal(preferLiveChannelComposite("culture", undefined, 5), true);
 assert.equal(preferLiveChannelComposite("travel", undefined, 5), true);
+assert.equal(
+  preferLiveChannelComposite("entertainment", undefined, 20, { gender: "male" }),
+  false,
+);
+assert.equal(
+  preferLiveChannelComposite("entertainment", undefined, 20, { age: "20s" }),
+  false,
+);
+assert.equal(
+  preferLiveChannelComposite("entertainment", undefined, 20, { gender: "all", age: "all" }),
+  true,
+);
 
 const boards: HeatmapBoardPayload[] = [
   {

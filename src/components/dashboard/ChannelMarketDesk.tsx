@@ -131,8 +131,15 @@ export function ChannelMarketDesk({
     boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
   );
   const liveItems = liveMarket.items;
-  const preferLiveComposite = (boardSlug: string) =>
-    preferLiveChannelComposite(channel, boardSlug, countLivePreferRows(liveItems, channel));
+  const preferLiveComposite = (
+    boardSlug: string,
+    nextGender: HeatmapGender = "all",
+    nextAge: HeatmapAge = "all",
+  ) =>
+    preferLiveChannelComposite(channel, boardSlug, countLivePreferRows(liveItems, channel), {
+      gender: nextGender,
+      age: nextAge,
+    });
   const quotedCacheRef = useRef<Map<string, RankingEntity[]>>(
     seedQuoteMap(initialQuotedByBoard, initialItems),
   );
@@ -180,7 +187,7 @@ export function ChannelMarketDesk({
         gender: nextGender,
         age: nextAge,
         region: boardUsesRegionFilter(board) ? nextRegion : "all",
-        preferLive: preferLiveComposite(board),
+        preferLive: preferLiveComposite(board, nextGender, nextAge),
       });
       setItems(next);
       setTitle(heatmapBoardTitle(boards, board || undefined));
@@ -220,12 +227,15 @@ export function ChannelMarketDesk({
       if (!boardUsesRegionFilter(slug)) setRegion("all");
       if (needsQuotedPaint(channel, slug)) {
         paintQuotedCache(slug, gender, nextAge, nextRegion);
-      } else {
+      } else if (gender === "all" && nextAge === "all") {
         applyLocal(slug, gender, nextAge, nextRegion);
+      } else {
+        // Segmented tabs need /api/heatmap (client boards lack demographic tables).
+        setTitle(heatmapBoardTitle(boards, slug || undefined));
       }
       onBoardChange?.(slug);
     },
-    [age, region, gender, channel, paintQuotedCache, applyLocal, onBoardChange],
+    [age, region, gender, channel, boards, paintQuotedCache, applyLocal, onBoardChange],
   );
 
   const selectedDef = selectedSlug ? getBoard(selectedSlug) : undefined;
@@ -235,10 +245,16 @@ export function ChannelMarketDesk({
   const fetchHeatmap = useCallback(
     async (board: string, nextGender: HeatmapGender, nextAge: HeatmapAge, nextRegion: HeatmapRegion) => {
       const requestId = ++heatmapRequestRef.current;
+      const demographicFilter = nextGender !== "all" || nextAge !== "all";
       if (needsQuotedPaint(channel, board)) {
         paintQuotedCache(board, nextGender, nextAge, nextRegion);
-      } else {
+      } else if (!demographicFilter) {
+        // Client boards strip demographics (payload size). Optimistic local paint
+        // can only replay the unsegmented ranking — skip it for gender/age tabs
+        // and wait for /api/heatmap's full demographic tables.
         applyLocal(board, nextGender, nextAge, nextRegion);
+      } else {
+        setTitle(heatmapBoardTitle(boards, board || undefined));
       }
       const params = new URLSearchParams({
         category: channel,
@@ -258,7 +274,7 @@ export function ChannelMarketDesk({
         };
         if (requestId !== heatmapRequestRef.current) return;
         if (board && (payload.board ?? "") !== board) {
-          if (!needsQuotedPaint(channel, board)) {
+          if (!needsQuotedPaint(channel, board) && !demographicFilter) {
             applyLocal(board, nextGender, nextAge, nextRegion);
           }
           return;
@@ -282,14 +298,14 @@ export function ChannelMarketDesk({
             return;
           }
         }
-        if (!needsQuotedPaint(channel, board)) {
+        if (!needsQuotedPaint(channel, board) && !demographicFilter) {
           applyLocal(board, nextGender, nextAge, nextRegion);
         }
       } catch {
         /* quoted cache or previous tiles already painted */
       }
     },
-    [applyLocal, paintQuotedCache, channel],
+    [applyLocal, paintQuotedCache, channel, boards],
   );
 
   const skipInitialHeatmapFetch = useRef(true);

@@ -19,7 +19,7 @@ import { summarizeHeadlineTitle } from "@/lib/news/headline-title";
 import { layoutHeatmapLeaves } from "@/lib/treemapLayout";
 import { TREEMAP_FRAME_CLASS, TREEMAP_MAX_ITEMS, MOBILE_TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
 import { heatmapChangeRate, heatmapPriceLabel } from "@/lib/market/kospi-quotes-ui";
-import { scoreForTimeframe } from "@/lib/timeframes";
+import { changeForEntity, scoreForTimeframe } from "@/lib/timeframes";
 import { entityHref } from "@/lib/slugs";
 import { layoutTreemapLabel } from "@/lib/treemapLabel";
 import type { CategoryId, RankingEntity, Timeframe } from "@/lib/types";
@@ -138,10 +138,14 @@ export function TreemapView({
       return layoutHeatmapLeaves(
         visible.map((entity, index) => {
           const tile = heatmapTileLabel(entity);
+          const base = scoreForTimeframe(entity, timeframe);
+          const change = Math.abs(changeForEntity(entity, timeframe));
+          // Fold timeframe heat into area so 3분→월봉 is not only a reorder/recolor.
+          const score = Math.max(0.05, base * (1 + Math.min(0.55, change / 18)));
           return {
             id: entity.id,
             rank: index + 1,
-            score: scoreForTimeframe(entity, timeframe),
+            score,
             // Full name length nudges area so long titles stay readable.
             name: tile.title,
           };
