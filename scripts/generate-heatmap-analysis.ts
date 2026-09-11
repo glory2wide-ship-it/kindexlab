@@ -4,12 +4,16 @@
  * Uses Gemini Batch (−50%) when GEMINI_USE_BATCH=1. Fresh TTL hits are skipped
  * unless --force. First-click detail pages stay on Live API (see pipeline.ts).
  *
+ * In CI, each successful batch checkpoints `src/data/analysis/cache.json` to
+ * GitHub so a 6h Actions timeout cannot discard already-written articles.
+ *
  * Usage:
  *   npx tsx scripts/generate-heatmap-analysis.ts
  *   npx tsx scripts/generate-heatmap-analysis.ts --channel=economy --limit=10
  *   npx tsx scripts/generate-heatmap-analysis.ts --board=overseas-stock-index
  *   npx tsx scripts/generate-heatmap-analysis.ts --force --dry
  */
+import { spawnSync } from "node:child_process";
 import {
   assertRequiredHeatmapBoards,
   listHeatmapAnalysisTargets,
@@ -17,14 +21,68 @@ import {
 import {
   ANALYSIS_OVERNIGHT_BATCH_SIZE,
   runHeatmapAnalysisOvernight,
+  type HeatmapOvernightItem,
 } from "../src/lib/analysis/overnight-batch";
-import { kstDateString } from "../src/lib/briefing/dates";
 import { getRankings } from "../src/lib/api";
+import { kstDateString } from "../src/lib/briefing/dates";
 import { OVERSEAS_STOCK_BOARD_SLUG } from "../src/lib/market/stock-codes";
-import { deliverGenerationReport } from "../src/lib/ops/generation-report";
+import {
+  deliverGenerationReport,
+  writeGenerationReportArtifacts,
+  type GenerationReport,
+} from "../src/lib/ops/generation-report";
 import { formatKrw, resetGeminiUsage, snapshotGeminiUsage } from "../src/lib/ops/gemini-usage";
 import { POST_CHANNELS } from "../src/lib/posts/channels";
 import type { PostChannel } from "../src/lib/posts/types";
+
+/** GitHub-hosted runners hard-cap at 6h — push cache mid-run so cancels keep articles. */
+function checkpointEnabled(): boolean {
+  if (process.env.ANALYSIS_CHECKPOINT === "0") return false;
+  return process.env.ANALYSIS_CHECKPOINT === "1" || process.env.CI === "true";
+}
+
+function pushAnalysisCacheCheckpoint(message: string): void {
+  const result = spawnSync(
+    "bash",
+    ["scripts/ci-checkpoint-analysis-cache.sh", message, "src/data/analysis/cache.json"],
+    { stdio: "inherit", env: process.env },
+  );
+  if (result.status !== 0) {
+    console.warn(`[checkpoint] push failed (exit ${result.status ?? "?"}) — continuing generation`);
+  }
+}
+
+function buildAnalysisReport(
+  editionDate: string,
+  items: HeatmapOvernightItem[],
+  notes: string[],
+): GenerationReport {
+  return {
+    subject: `[KinDex] 오늘의 분석 생성 보고 · ${editionDate}`,
+    editionDate,
+    pipeline: "heatmap-analysis",
+    generatedAt: new Date().toISOString(),
+    cost: snapshotGeminiUsage(),
+    sections: [
+      {
+        title: "오늘의 분석",
+        rows: items.map((item) => ({
+          name: item.keyword,
+          status: item.skipped ? ("skip" as const) : item.ok ? ("ok" as const) : ("fail" as const),
+          meta: `${item.channel}/${item.boardSlug}`,
+          reason: item.skipped
+            ? "ttl-hit"
+            : item.ok
+              ? item.chars
+                ? `${item.chars}자`
+                : undefined
+              : item.reason,
+        })),
+      },
+    ],
+    notes,
+  };
+}
 
 function flag(name: string): string | undefined {
   const match = process.argv.find((arg) => arg.startsWith(`--${name}=`));
@@ -53,63 +111,16 @@ async function main() {
   const batchSize = num("batch", ANALYSIS_OVERNIGHT_BATCH_SIZE) || ANALYSIS_OVERNIGHT_BATCH_SIZE;
   resetGeminiUsage(process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash");
 
-  const focusEnabled =
-    process.argv.includes("--focus") || process.env.ANALYSIS_FOCUS === "1";
-
-  // If focus asks for 지역사랑상품권, ensure it is on the economy board first
-  // (board cache is gitignored, so CI must inject at runtime).
-  if (focusEnabled) {
-    try {
-      const { readFile } = await import("node:fs/promises");
-      const path = await import("node:path");
-      const { spawnSync } = await import("node:child_process");
-      const focusFile = path.join(process.cwd(), "scripts", ".analysis-focus");
-      const line = (await readFile(focusFile, "utf8")).trim().split("\n")[0]?.trim() ?? "";
-      if (line.includes("지역사랑상품권")) {
-        const viaNpx = spawnSync("npx", ["tsx", "scripts/inject-local-love-voucher-board.ts"], {
-          stdio: "inherit",
-          env: process.env,
-        });
-        if (viaNpx.status !== 0) throw new Error("inject-local-love-voucher-board failed");
-      }
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("inject-local-love")) throw error;
-    }
-  }
-
   const all = await listHeatmapAnalysisTargets({ channel, boardSlug });
   assertRequiredHeatmapBoards(all, { channel, boardSlug });
 
-  // Optional one-off focus (safe for overnight cron — requires --focus or ANALYSIS_FOCUS=1):
-  // scripts/.analysis-focus → government-subsidy-search|지역사랑상품권
-  let focused = all;
-  if (focusEnabled) {
-    try {
-      const { readFile } = await import("node:fs/promises");
-      const path = await import("node:path");
-      const focusFile = path.join(process.cwd(), "scripts", ".analysis-focus");
-      const line = (await readFile(focusFile, "utf8")).trim().split("\n")[0]?.trim();
-      if (line && !line.startsWith("#")) {
-        const [focusBoard, focusName] = line.split("|").map((part) => part.trim());
-        focused = all.filter((target) => {
-          const boardOk = !focusBoard || target.boardSlug === focusBoard;
-          const nameOk = !focusName || target.entity.name.includes(focusName);
-          return boardOk && nameOk;
-        });
-        console.log(`[focus] ${line} → ${focused.length} target(s)`);
-      }
-    } catch {
-      // no focus file
-    }
-  }
-
   const byBoard = new Map<string, number>();
-  for (const target of focused) {
+  for (const target of all) {
     byBoard.set(target.boardSlug, (byBoard.get(target.boardSlug) ?? 0) + 1);
   }
   const overseasCount = byBoard.get(OVERSEAS_STOCK_BOARD_SLUG) ?? 0;
   console.log(
-    `[inventory] ${focused.length}건 · edition=${editionDate} · force=${force}` +
+    `[inventory] ${all.length}건 · edition=${editionDate} · force=${force}` +
       (channel ? ` · channel=${channel}` : "") +
       (boardSlug ? ` · board=${boardSlug}` : ""),
   );
@@ -122,9 +133,8 @@ async function main() {
     console.log(`[inventory] 해외 주식(${OVERSEAS_STOCK_BOARD_SLUG})=${overseasCount}건`);
   }
 
-  const limit = num("limit", focused.length);
-  const targets = focused.slice(offset, offset + limit);
-
+  const limit = num("limit", all.length);
+  const targets = all.slice(offset, offset + limit);
   console.log(`[run] ${targets.length}건 / 전체 ${all.length}건 (offset=${offset})`);
 
   if (dryRun) {
@@ -137,6 +147,37 @@ async function main() {
   }
 
   const market = await getRankings();
+  const doCheckpoint = checkpointEnabled();
+  if (doCheckpoint) {
+    console.log(
+      "[checkpoint] CI mid-run push enabled (GitHub-hosted max 6h — save articles before cancel)",
+    );
+  }
+
+  let latestItems: HeatmapOvernightItem[] = [];
+  const onSignal = (signal: string) => {
+    console.warn(`[checkpoint] received ${signal} — pushing cache before exit`);
+    try {
+      void writeGenerationReportArtifacts(
+        buildAnalysisReport(editionDate, latestItems, [
+          `signal=${signal}`,
+          "partial=true",
+          `API 추정 ${formatKrw(snapshotGeminiUsage().estimatedKrw)}`,
+        ]),
+        `heatmap-analysis-${editionDate}`,
+      );
+    } catch (error) {
+      console.warn("[checkpoint] partial report write failed", error);
+    }
+    if (doCheckpoint) {
+      pushAnalysisCacheCheckpoint(
+        `chore: checkpoint heatmap analysis (signal ${signal}, ${latestItems.filter((i) => i.ok && !i.skipped).length} generated)`,
+      );
+    }
+  };
+  process.once("SIGTERM", () => onSignal("SIGTERM"));
+  process.once("SIGINT", () => onSignal("SIGINT"));
+
   const run = await runHeatmapAnalysisOvernight(targets, {
     market,
     editionDate,
@@ -146,6 +187,40 @@ async function main() {
       const tag = item.skipped ? "skip" : item.ok ? "ok" : "fail";
       console.log(
         `[${position}/${total}] ${tag} ${item.keyword} (${item.kind ?? item.reason ?? "-"}) ${item.ms}ms`,
+      );
+    },
+    onBatchComplete: async ({
+      batchIndex,
+      batchCount,
+      position,
+      total,
+      batchItems,
+      itemsSoFar,
+    }) => {
+      latestItems = itemsSoFar;
+      const batchGenerated = batchItems.filter((item) => item.ok && !item.skipped).length;
+      const generatedSoFar = itemsSoFar.filter((item) => item.ok && !item.skipped).length;
+      console.log(
+        `[batch ${batchIndex + 1}/${batchCount}] position=${position}/${total} batchGenerated=${batchGenerated} generatedSoFar=${generatedSoFar}`,
+      );
+
+      try {
+        await writeGenerationReportArtifacts(
+          buildAnalysisReport(editionDate, itemsSoFar, [
+            "partial=true",
+            `progress=${position}/${total}`,
+            `generated=${generatedSoFar}`,
+            `API 추정 ${formatKrw(snapshotGeminiUsage().estimatedKrw)}`,
+          ]),
+          `heatmap-analysis-${editionDate}`,
+        );
+      } catch (error) {
+        console.warn("[checkpoint] report artifact write failed", error);
+      }
+
+      if (!doCheckpoint || batchGenerated === 0) return;
+      pushAnalysisCacheCheckpoint(
+        `chore: checkpoint heatmap analysis (${generatedSoFar} generated, ${position}/${total})`,
       );
     },
   });
@@ -164,48 +239,21 @@ async function main() {
   }
 
   const delivery = await deliverGenerationReport(
-    {
-      subject: `[KinDex] 오늘의 분석 생성 보고 · ${editionDate}`,
-      editionDate,
-      pipeline: "heatmap-analysis",
-      generatedAt: new Date().toISOString(),
-      cost: snapshotGeminiUsage(),
-      sections: [
-        {
-          title: "오늘의 분석",
-          rows: run.items.map((item) => ({
-            name: item.keyword,
-            status: item.skipped ? ("skip" as const) : item.ok ? ("ok" as const) : ("fail" as const),
-            meta: `${item.channel}/${item.boardSlug}`,
-            reason: item.skipped
-              ? "ttl-hit"
-              : item.ok
-                ? item.chars
-                  ? `${item.chars}자`
-                  : undefined
-                : item.reason,
-          })),
-        },
-      ],
-      notes: [
-        `generated=${run.generated}`,
-        `skipped=${run.skipped}`,
-        `failed=${run.failed}`,
-        `geminiBatch=${run.geminiBatch}`,
-        overseasItems.length
-          ? `overseas-stock=${overseasItems.filter((i) => i.ok && !i.skipped).length}/${overseasItems.length}`
-          : undefined,
-        `${seconds}s`,
-        `API 추정 ${formatKrw(snapshotGeminiUsage().estimatedKrw)}`,
-      ].filter((note): note is string => Boolean(note)),
-    },
+    buildAnalysisReport(editionDate, run.items, [
+      `generated=${run.generated}`,
+      `skipped=${run.skipped}`,
+      `failed=${run.failed}`,
+      `geminiBatch=${run.geminiBatch}`,
+      overseasItems.length
+        ? `overseas-stock=${overseasItems.filter((i) => i.ok && !i.skipped).length}/${overseasItems.length}`
+        : undefined,
+      `${seconds}s`,
+      `API 추정 ${formatKrw(snapshotGeminiUsage().estimatedKrw)}`,
+    ].filter((note): note is string => Boolean(note))),
     `heatmap-analysis-${editionDate}`,
   );
   console.log(`[report] ${delivery.detail}`);
 
-  // Partial misses are expected on some nights; report them by email/issue
-  // without failing the whole workflow. Hard failure stays reserved for
-  // zero-output / thrown runs handled by the top-level catch.
   if (run.generated === 0 && targets.length > 0) {
     process.exitCode = 1;
   }

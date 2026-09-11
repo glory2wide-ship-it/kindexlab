@@ -68,6 +68,18 @@ export async function runHeatmapAnalysisOvernight(
     batchSize?: number;
     delayMs?: number;
     onProgress?: (item: HeatmapOvernightItem, position: number, total: number) => void;
+    /**
+     * Called after each wave finishes. Used by CI to push `cache.json` so a
+     * 6h Actions timeout does not discard already-written articles.
+     */
+    onBatchComplete?: (info: {
+      batchIndex: number;
+      batchCount: number;
+      position: number;
+      total: number;
+      batchItems: HeatmapOvernightItem[];
+      itemsSoFar: HeatmapOvernightItem[];
+    }) => void | Promise<void>;
   },
 ): Promise<HeatmapOvernightResult> {
   const useGeminiBatch = geminiBatchEnabled() && briefingProvider() === "gemini";
@@ -150,6 +162,15 @@ export async function runHeatmapAnalysisOvernight(
         items.push(item);
         options.onProgress?.(item, position, targets.length);
       }
+
+      await options.onBatchComplete?.({
+        batchIndex,
+        batchCount: batches.length,
+        position,
+        total: targets.length,
+        batchItems: settled,
+        itemsSoFar: items.slice(),
+      });
 
       if (batchIndex < batches.length - 1 && delayMs > 0) await delay(delayMs);
     }

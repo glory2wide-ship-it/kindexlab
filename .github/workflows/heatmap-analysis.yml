@@ -6,6 +6,11 @@ name: Heatmap today's analysis
 #
 # Cron: 05:00 KST (after 04:00 briefings start; before morning traffic).
 #
+# GitHub-hosted runners hard-cap at 6 hours — we cannot raise that. Instead:
+#   1) generate script checkpoints cache.json after each successful batch
+#   2) final commit step runs even when the job is cancelled (timeout)
+# so already-written articles are pushed instead of discarded.
+#
 # Email report → glory2wide@gmail.com after generation. Requires repo secrets:
 #   RESEND_API_KEY  OR  SMTP_USER + SMTP_PASS (Gmail app password)
 # Without those secrets a GitHub Issue is opened instead of sending Gmail.
@@ -35,6 +40,7 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
+    # 360 = GitHub-hosted hard maximum (cannot go higher on ubuntu-latest).
     timeout-minutes: 360
     permissions:
       contents: write
@@ -62,6 +68,7 @@ jobs:
         id: generate
         run: |
           set -euo pipefail
+          chmod +x scripts/ci-commit-push.sh scripts/ci-checkpoint-analysis-cache.sh
           EDITION="$(TZ=Asia/Seoul date +%F)"
           echo "edition=$EDITION" >> "$GITHUB_OUTPUT"
           ARGS="--date=$EDITION"
@@ -79,17 +86,24 @@ jobs:
           GEMINI_USE_BATCH: "true"
           GEMINI_BATCH_CONCURRENCY: "4"
           ANALYSIS_OVERNIGHT_BATCH_SIZE: "20"
+          # Mid-run git push after each successful batch (survives 6h cancel).
+          ANALYSIS_CHECKPOINT: "1"
+          CI: "true"
           GEMINI_MAX_CONCURRENCY: "4"
           TRENDS_DATA_SOURCE: live
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           REPORT_EMAIL_TO: glory2wide@gmail.com
 
+      # Push whatever landed on disk — including when the job was cancelled at 6h.
       - name: Commit and push analysis cache
-        if: success()
+        if: always() && steps.generate.outcome != 'skipped'
+        continue-on-error: true
         run: |
-          chmod +x scripts/ci-commit-push.sh
-          scripts/ci-commit-push.sh "chore: publish heatmap today's analysis" src/data/analysis/cache.json
+          chmod +x scripts/ci-commit-push.sh scripts/ci-checkpoint-analysis-cache.sh
+          scripts/ci-checkpoint-analysis-cache.sh \
+            "chore: publish heatmap today's analysis (${{ steps.generate.outputs.edition || 'partial' }})" \
+            src/data/analysis/cache.json
 
       - name: Email heatmap analysis report
         if: always() && steps.generate.outcome != 'skipped'
