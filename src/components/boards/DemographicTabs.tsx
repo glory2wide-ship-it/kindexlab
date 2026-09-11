@@ -9,12 +9,13 @@ import { visibleAgeSegments } from "@/lib/boards/age-tabs";
 import { REGION_LABEL, REGION_SEGMENTS } from "@/lib/boards/regions";
 import type { AgeSegment, GenderSegment, RegionSegment } from "@/lib/boards/types";
 
+/** Compact on md/tablet so 분봉+성별+연령 fit one row; roomier from lg up. */
 const TAB_BASE =
-  "rounded-md px-3 py-1.5 text-[13.2px] font-medium transition-[color,background-color,transform] duration-200 ease-out";
-const GENDER_ON = "bg-accent text-black scale-[1.03]";
+  "rounded-md px-1.5 py-1 text-[12px] font-medium tracking-tight transition-[color,background-color,transform] duration-200 ease-out lg:px-3 lg:py-1.5 lg:text-[13.2px] lg:tracking-normal";
+const GENDER_ON = "bg-accent text-black scale-[1.02] lg:scale-[1.03]";
 const GENDER_OFF = "text-muted hover:text-ink";
 /** Mobile keeps ink; desktop matches gender accent. */
-const AGE_ON = "bg-ink text-board scale-[1.03] md:bg-accent md:text-black";
+const AGE_ON = "bg-ink text-board scale-[1.02] md:bg-accent md:text-black lg:scale-[1.03]";
 const AGE_OFF = "text-muted hover:bg-panel hover:text-ink";
 
 /**
@@ -46,10 +47,10 @@ export function DemographicTabs({
 
   return (
     <div className="flex flex-col gap-2">
-    {/* Keep 성별 immediately after any preceding 분봉 strip; avoid wrapping under it on tablets. */}
-    <div className="flex flex-row flex-nowrap items-center gap-x-3">
-      <div className="flex shrink-0 items-center gap-2">
-        <div className="flex shrink-0 rounded-lg bg-board p-1">
+    {/* Keep 성별 right after 분봉; tighter gaps so tablet widths need no scrollbar. */}
+    <div className="flex flex-row flex-nowrap items-center gap-x-1.5 lg:gap-x-3">
+      <div className="flex shrink-0 items-center">
+        <div className="flex shrink-0 rounded-lg bg-board p-0.5 lg:p-1">
           <button
             type="button"
             onClick={() => onGender("all")}
@@ -70,8 +71,8 @@ export function DemographicTabs({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
-        <div className="flex shrink-0 flex-nowrap gap-1 rounded-lg bg-board p-1">
+      <div className="flex shrink-0 items-center">
+        <div className="flex shrink-0 flex-nowrap gap-0.5 rounded-lg bg-board p-0.5 lg:gap-1 lg:p-1">
           <button
             type="button"
             onClick={() => onAge("all")}

@@ -346,19 +346,18 @@ export function MarketWorkspace({
           )}
 
           {/*
-            Desktop/tablet: keep 분봉 left of 성별 on one row.
-            Galaxy Tab (~md) used to wrap the wide candle strip onto its own
-            line above gender — nowrap + horizontal scroll preserves order.
+            Desktop/tablet: 분봉 left of 성별 on one row.
+            Compact padding/gaps so Galaxy Tab widths fit without a scrollbar.
           */}
-          <div className="-mx-1 flex flex-row flex-nowrap items-center gap-x-3 overflow-x-auto px-1 pb-0.5 [scrollbar-width:thin]">
+          <div className="flex flex-row flex-nowrap items-center gap-x-1.5 overflow-x-hidden">
             {hideTimeframes ? null : (
-              <div className="flex shrink-0 flex-nowrap gap-1 rounded-lg bg-board p-1">
+              <div className="flex shrink-0 flex-nowrap gap-0.5 rounded-lg bg-board p-0.5">
                 {TIMEFRAMES.map((option) => (
                   <button
                     key={option.id}
                     type="button"
                     onClick={() => setTimeframe(option.id)}
-                    className={`shrink-0 rounded-md px-2.5 py-1.5 font-sans text-[13.2px] font-medium md:px-3 ${
+                    className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[12px] font-medium tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[13.2px] lg:tracking-normal ${
                       timeframe === option.id
                         ? "bg-ink text-board md:bg-accent md:text-black"
                         : "text-muted hover:bg-panel hover:text-ink"
@@ -370,7 +369,7 @@ export function MarketWorkspace({
               </div>
             )}
 
-            <div className="shrink-0">
+            <div className="min-w-0 shrink">
               <DemographicTabs
                 gender={gender}
                 age={age}
