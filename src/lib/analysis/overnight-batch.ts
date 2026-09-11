@@ -2,10 +2,20 @@ import {
   geminiBatchEnabled,
   briefingProvider,
 } from "@/lib/analysis/chain/llm";
+import {
+  shouldRefreshAnalysis,
+  type AnalysisRewriteMode,
+} from "@/lib/analysis/generation-policy";
 import type { HeatmapAnalysisTarget } from "@/lib/analysis/heatmap-inventory";
 import { analysisLogger } from "@/lib/analysis/log";
 import { refreshAnalysis } from "@/lib/analysis/pipeline";
-import { isExpired, readAnalysis } from "@/lib/analysis/store";
+import { readAnalysis } from "@/lib/analysis/store";
+import {
+  isAnalysisReentry,
+  mergeTopNMembership,
+  readTopNMembership,
+  writeTopNMembership,
+} from "@/lib/analysis/topn-membership";
 import { withGeminiBatchChat } from "@/lib/gemini/batch-chat";
 import { chunk, delay } from "@/lib/premium/batch";
 import type { RankingsPayload } from "@/lib/types";
@@ -27,6 +37,7 @@ export interface HeatmapOvernightItem {
   chars?: number;
   newsDocs?: number;
   reason?: string;
+  rewriteMode?: AnalysisRewriteMode | "full" | "incremental";
   ms: number;
 }
 
@@ -53,11 +64,17 @@ function overnightBatchSize(): number {
 }
 
 /**
- * Regenerates 오늘의 분석 for heatmap inventory via Gemini Batch (−50%) when
- * GEMINI_USE_BATCH=1. Fresh TTL hits are skipped unless `force` is set.
+ * Regenerates 오늘의 분석 for Top-N heatmap inventory via Gemini Batch (−50%)
+ * when GEMINI_USE_BATCH=1.
  *
- * On-demand first-click (`getOrCreateAnalysis`) never calls this — it stays on
- * the Live chatJson path for immediate generation.
+ * Skip / refresh policy (not raw TTL alone):
+ * - Within 2-day cycle → skip (unless force / re-entry / 7-day full rewrite)
+ * - Re-entry into Top-N → refresh immediately (full)
+ * - Every 7 days by lastFullRewriteAt → full rewrite
+ * - Generation failure → keep previous Gemini column (no wipe)
+ * - Rank drop → simply absent from inventory; detail page keeps prior column
+ *
+ * On-demand first-click (`getOrCreateAnalysis`) never calls this — Live path.
  */
 export async function runHeatmapAnalysisOvernight(
   targets: HeatmapAnalysisTarget[],
@@ -67,11 +84,10 @@ export async function runHeatmapAnalysisOvernight(
     force?: boolean;
     batchSize?: number;
     delayMs?: number;
+    /** When set, membership merge is scoped to this channel/board. */
+    channel?: string;
+    boardSlug?: string;
     onProgress?: (item: HeatmapOvernightItem, position: number, total: number) => void;
-    /**
-     * Called after each wave finishes. CI may use this for progress reports or
-     * rare time-gated git checkpoints (not per-batch pushes — Vercel billing).
-     */
     onBatchComplete?: (info: {
       batchIndex: number;
       batchCount: number;
@@ -87,6 +103,8 @@ export async function runHeatmapAnalysisOvernight(
   const delayMs = useGeminiBatch
     ? 0
     : (options.delayMs ?? ANALYSIS_OVERNIGHT_LIVE_DELAY_MS);
+
+  const previousMembership = await readTopNMembership();
 
   const run = async (): Promise<HeatmapOvernightResult> => {
     const batches = chunk(targets, batchSize);
@@ -111,24 +129,42 @@ export async function runHeatmapAnalysisOvernight(
             boardSlug: target.boardSlug,
           };
 
-          if (!options.force) {
-            const cached = await readAnalysis(target.entity.slug);
-            // Match on-demand: never overwrite manual Gemini imports; skip warm chain hits.
-            if (
-              cached &&
-              (cached.provenance.model?.startsWith("import:") ||
-                (!isExpired(cached) && cached.provenance.kind === "chain"))
-            ) {
-              return {
-                ...base,
-                ok: true,
-                skipped: true,
-                kind: cached.provenance.kind,
-                chars: cached.article.characterCount,
-                newsDocs: cached.provenance.newsDocs,
-                ms: Date.now() - startedAt,
-              };
-            }
+          const cached = await readAnalysis(target.entity.slug);
+          const reentry = isAnalysisReentry(previousMembership, target.entity.slug);
+          const decision = shouldRefreshAnalysis(cached, {
+            force: options.force,
+            isReentry: reentry,
+          });
+
+          if (!decision.refresh) {
+            return {
+              ...base,
+              ok: true,
+              skipped: true,
+              kind: cached?.provenance.kind,
+              chars: cached?.article.characterCount,
+              newsDocs: cached?.provenance.newsDocs,
+              reason: decision.reason,
+              rewriteMode: decision.mode,
+              ms: Date.now() - startedAt,
+            };
+          }
+
+          // Manual Gemini imports: never overwrite unless --force.
+          if (
+            !options.force &&
+            cached?.provenance.model?.startsWith("import:")
+          ) {
+            return {
+              ...base,
+              ok: true,
+              skipped: true,
+              kind: cached.provenance.kind,
+              chars: cached.article.characterCount,
+              newsDocs: cached.provenance.newsDocs,
+              reason: "import_locked",
+              ms: Date.now() - startedAt,
+            };
           }
 
           try {
@@ -137,6 +173,9 @@ export async function runHeatmapAnalysisOvernight(
               market: options.market,
               related: target.related,
               editionDate: options.editionDate,
+              boardSlug: target.boardSlug,
+              rewriteMode: decision.mode,
+              previous: cached ?? null,
             });
             return {
               ...base,
@@ -144,13 +183,19 @@ export async function runHeatmapAnalysisOvernight(
               kind: entry.provenance.kind,
               chars: entry.article.characterCount,
               newsDocs: entry.provenance.newsDocs,
+              reason: decision.reason,
+              rewriteMode: decision.mode,
               ms: Date.now() - startedAt,
             };
           } catch (error) {
+            // Keep the previous Gemini column — never wipe on failure.
             return {
               ...base,
               ok: false,
               reason: error instanceof Error ? error.message : "unknown",
+              rewriteMode: decision.mode,
+              chars: cached?.article.characterCount,
+              newsDocs: cached?.provenance.newsDocs,
               ms: Date.now() - startedAt,
             };
           }
@@ -174,6 +219,12 @@ export async function runHeatmapAnalysisOvernight(
 
       if (batchIndex < batches.length - 1 && delayMs > 0) await delay(delayMs);
     }
+
+    const nextMembership = mergeTopNMembership(previousMembership, targets, {
+      channel: options.channel,
+      boardSlug: options.boardSlug,
+    });
+    await writeTopNMembership(nextMembership);
 
     return {
       total: targets.length,

@@ -1,3 +1,4 @@
+import { resolveRewriteMode } from "@/lib/analysis/generation-policy";
 import { BRIEFING_LLM, chatJson, briefingLlmConfigured } from "@/lib/analysis/chain/llm";
 import type { AnalysisLogger } from "@/lib/analysis/log";
 import { boardSlugFromEntitySlug } from "@/lib/analysis/briefing-boards";
@@ -421,6 +422,15 @@ export async function generatePremiumArticle(input: {
   maxCharsOverride?: number;
   /** Use KinDex data-journalist prompt (오늘의 분석). */
   dataJournalist?: boolean;
+  /**
+   * Today's Analysis rewrite policy hint. `auto` resolves after RAG using
+   * news-count (general) or subsidy preference (incremental).
+   */
+  rewriteMode?: "full" | "incremental" | "auto";
+  /** Subsidy / grant topic — prefers incremental on cycle refresh. */
+  isSubsidyTopic?: boolean;
+  /** Prior same-slug column digest for incremental updates. */
+  previousArticleDigest?: string;
 }): Promise<PremiumResult> {
   const { keyword, slug, logger } = input;
   const dataJournalist = Boolean(input.dataJournalist);
@@ -543,6 +553,19 @@ export async function generatePremiumArticle(input: {
     step: "article",
   });
 
+  const resolvedRewrite = resolveRewriteMode({
+    hint: input.rewriteMode ?? "auto",
+    isSubsidy: Boolean(input.isSubsidyTopic),
+    hasPrevious: Boolean(input.previousArticleDigest?.trim()),
+    validNewsCount: context.sources.length,
+  });
+  logger.step("rewrite-mode", {
+    hint: input.rewriteMode ?? "auto",
+    resolved: resolvedRewrite,
+    newsDocs: context.sources.length,
+    isSubsidy: Boolean(input.isSubsidyTopic),
+  });
+
   const user = dataJournalist
     ? buildDataJournalistUserPrompt({
         channel: input.channel ?? "economy",
@@ -555,6 +578,8 @@ export async function generatePremiumArticle(input: {
         maxChars,
         kindexSignals,
         boardSenseBlock,
+        rewriteMode: resolvedRewrite,
+        previousArticleDigest: input.previousArticleDigest,
       })
     : buildSinglePassUserPrompt({
         briefing: Boolean(input.briefing),

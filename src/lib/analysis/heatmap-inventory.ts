@@ -5,6 +5,7 @@ import { seedMissingBoards } from "@/lib/boards/seed";
 import { OVERSEAS_STOCK_BOARD_SLUG } from "@/lib/market/stock-codes";
 import { POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
+import { isWithinAnalysisTopN } from "@/lib/analysis/generation-policy";
 import type { RankingEntity } from "@/lib/types";
 
 export interface HeatmapAnalysisTarget {
@@ -25,7 +26,8 @@ export const REQUIRED_HEATMAP_ANALYSIS_BOARDS: Partial<Record<PostChannel, strin
 };
 
 /**
- * Every name that appears on a category menu heatmap (default 전체/전체/전체).
+ * Top-N names on each category submenu heatmap (default 전체/전체/전체):
+general boards 1–10, subsidy/grant boards 1–15.
  * Dedupes by entity.slug — the same keyword on two boards is generated once.
  */
 export async function listHeatmapAnalysisTargets(options?: {
@@ -67,6 +69,8 @@ export async function listHeatmapAnalysisTargets(options?: {
 
       for (const entity of entities) {
         if (!entity.slug || bySlug.has(entity.slug)) continue;
+        // 오늘의 분석: general boards ranks 1–10, subsidy boards 1–15.
+        if (!isWithinAnalysisTopN(entity.rank, def.slug)) continue;
         const related = entities
           .filter((item) => item.slug !== entity.slug)
           .slice(0, 6);

@@ -1,6 +1,16 @@
-import { analysisPromptChannel } from "@/lib/analysis/briefing-boards";
+import {
+  analysisPromptChannel,
+  boardSlugFromEntitySlug,
+} from "@/lib/analysis/briefing-boards";
 import { analysisLlmConfigured, BRIEFING_LLM } from "@/lib/analysis/chain/llm";
 import { analysisLogger } from "@/lib/analysis/log";
+import {
+  assertSubsidyRequiredFields,
+  isSubsidyAnalysisBoard,
+  previousAnalysisDigest,
+  resolveRewriteMode,
+  type AnalysisRewriteMode,
+} from "@/lib/analysis/generation-policy";
 import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import { sanitizeCachedAnalysisArticle } from "@/lib/analysis/sanitize-cached";
 import {
@@ -57,12 +67,27 @@ async function generate(options: {
   market: RankingsPayload;
   related?: RankingEntity[];
   editionDate: string;
+  boardSlug?: string;
+  rewriteMode?: AnalysisRewriteMode;
+  previous?: CachedAnalysis | null;
 }): Promise<CachedAnalysis> {
   const { entity, market, related, editionDate } = options;
   const keyword = entity.name;
   const logger = analysisLogger(keyword);
+  const boardSlug =
+    options.boardSlug ?? boardSlugFromEntitySlug(entity.slug);
+  const isSubsidy = isSubsidyAnalysisBoard(boardSlug);
+  const previous = options.previous ?? null;
+  const previousDigest = previousAnalysisDigest(previous);
 
-  logger.step("start", { slug: entity.slug, edition: editionDate, pipeline: "briefing-single-pass" });
+  logger.step("start", {
+    slug: entity.slug,
+    edition: editionDate,
+    pipeline: "briefing-single-pass",
+    boardSlug: boardSlug ?? null,
+    rewriteHint: options.rewriteMode ?? "auto",
+    isSubsidy,
+  });
 
   if (!pipelineEnabled()) {
     logger.step("pipeline", { skipped: "ANALYSIS_CHAIN_ENABLED=0" });
@@ -104,6 +129,9 @@ async function generate(options: {
     allowBriefingRepairLlm: true,
     minCharsOverride: ANALYSIS_BRIEFING_MIN,
     maxCharsOverride: ANALYSIS_BRIEFING_MAX,
+    rewriteMode: options.rewriteMode ?? "auto",
+    isSubsidyTopic: isSubsidy,
+    previousArticleDigest: previousDigest || undefined,
   });
 
   if (!result.ok) {
@@ -121,6 +149,18 @@ async function generate(options: {
     editionDate,
     premium: result.article,
   });
+
+  if (isSubsidy) {
+    assertSubsidyRequiredFields(article);
+  }
+
+  const resolvedMode = resolveRewriteMode({
+    hint: options.rewriteMode ?? "auto",
+    isSubsidy,
+    hasPrevious: Boolean(previous && isGeminiAnalysis(previous)),
+    validNewsCount: result.article.sources.length,
+  });
+
   const provenance: AnalysisProvenance = {
     kind: "chain",
     newsDocs: result.article.sources.length,
@@ -140,15 +180,27 @@ async function generate(options: {
   });
 
   const generatedAt = new Date();
+  const generatedAtIso = generatedAt.toISOString();
+  const lastFullRewriteAt =
+    resolvedMode === "full"
+      ? generatedAtIso
+      : previous?.lastFullRewriteAt || previous?.generatedAt || generatedAtIso;
   const entry: CachedAnalysis = {
     slug: entity.slug,
     keyword,
     editionDate,
-    generatedAt: generatedAt.toISOString(),
+    generatedAt: generatedAtIso,
     expiresAt: new Date(generatedAt.getTime() + analysisTtlHours() * 3600_000).toISOString(),
     article,
     provenance: { ...provenance, buildMs: logger.elapsed() },
+    lastFullRewriteAt,
   };
+
+  logger.step("rewrite-mode", {
+    resolved: resolvedMode,
+    newsDocs: result.article.sources.length,
+    lastFullRewriteAt,
+  });
 
   const saved = await writeAnalysis(entry);
   logger.step("cache", {
@@ -175,6 +227,9 @@ function generateOnce(options: {
   market: RankingsPayload;
   related?: RankingEntity[];
   editionDate: string;
+  boardSlug?: string;
+  rewriteMode?: AnalysisRewriteMode;
+  previous?: CachedAnalysis | null;
 }): Promise<CachedAnalysis> {
   const key = `${options.entity.slug}:${options.editionDate}`;
   const running = inFlight.get(key);
@@ -193,7 +248,7 @@ function generateOnce(options: {
  *
  * - First visitor click on a cold slug queues Gemini generation; the page stays
  *   empty until that (or overnight Batch) succeeds — never a template column.
- * - Cached Gemini columns stay valid for ANALYSIS_TTL_HOURS (default 72h / 3 days).
+ * - Cached Gemini columns stay valid for ANALYSIS_TTL_HOURS (default 48h / 2 days).
  * - After expiry, the stale Gemini column is served while a refresh runs.
  */
 export async function getOrCreateAnalysis(options: {
@@ -221,7 +276,7 @@ export async function getOrCreateAnalysis(options: {
     return serveCached(cached, isExpired(cached) ? "stale" : "hit");
   }
 
-  // Same name within the 3-day TTL: reuse Gemini columns only.
+  // Same name within the 2-day TTL: reuse Gemini columns only.
   if (cached && isGeminiAnalysis(cached) && !isExpired(cached)) {
     return serveCached(cached, "hit");
   }
@@ -242,6 +297,18 @@ export async function refreshAnalysis(options: {
   market: RankingsPayload;
   related?: RankingEntity[];
   editionDate?: string;
+  boardSlug?: string;
+  rewriteMode?: AnalysisRewriteMode;
+  previous?: CachedAnalysis | null;
 }): Promise<CachedAnalysis> {
-  return generateOnce({ ...options, editionDate: options.editionDate ?? kstDateString() });
+  const editionDate = options.editionDate ?? kstDateString();
+  const previous =
+    options.previous === undefined
+      ? await readAnalysis(options.entity.slug)
+      : options.previous;
+  return generateOnce({
+    ...options,
+    editionDate,
+    previous: previous ?? null,
+  });
 }

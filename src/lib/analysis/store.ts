@@ -26,6 +26,11 @@ export interface CachedAnalysis {
   expiresAt: string;
   article: TodayAnalysisArticle;
   provenance: AnalysisProvenance;
+  /**
+   * Last full (non-incremental) rewrite. Incremental refreshes must not update
+   * this — the 7-day full-rewrite clock depends on it.
+   */
+  lastFullRewriteAt?: string;
   /** Distribution assets stored as a set with the column. */
   pump?: TrafficPump;
 }
@@ -74,8 +79,8 @@ async function removeShard(slug: string): Promise<void> {
 
 export function analysisTtlHours(): number {
   const parsed = Number.parseInt(process.env.ANALYSIS_TTL_HOURS ?? "", 10);
-  // Default 72h (3 days): same heatmap name keeps the column until then.
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 72;
+  // Default 48h (2 days): overnight cycle + on-demand freshness share this TTL.
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 48;
 }
 
 export function isExpired(entry: CachedAnalysis, now = Date.now()): boolean {

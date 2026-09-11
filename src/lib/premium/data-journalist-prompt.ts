@@ -475,6 +475,9 @@ export function buildDataJournalistUserPrompt(params: {
   kindexSignals?: string;
   /** Board sense / homonym guard (e.g. 코스모스 = book, not flower). */
   boardSenseBlock?: string;
+  /** full = rewrite whole column; incremental = update from prior digest + new facts. */
+  rewriteMode?: "full" | "incremental";
+  previousArticleDigest?: string;
 }): string {
   const floor = params.minChars ?? 1000;
   const ceiling = params.maxChars ?? 1800;
@@ -510,6 +513,23 @@ export function buildDataJournalistUserPrompt(params: {
     `- 5번 소제목(고정): ${HYBRID_FIXED_HEADINGS.kindexFeature} — paragraphs 1개, 핵심 요약 직전`,
     "",
     ...(params.boardSenseBlock?.trim() ? [params.boardSenseBlock.trim(), ""] : []),
+    ...(params.rewriteMode === "incremental"
+      ? [
+          "[증분 갱신 모드]",
+          "이전 칼럼의 골격·확정 팩트는 유지하고, 신규 뉴스·일정·수치만 반영해 갱신하세요.",
+          "전체를 처음부터 다시 쓰지 마세요. 제목·소제목은 필요할 때만 최소 수정하세요.",
+          "지원금 주제면 기간·마감·신청처·준비물 네 항목이 본문에 반드시 남도록 보존·보강하세요.",
+          params.previousArticleDigest?.trim()
+            ? `이전 칼럼 요약:\n${params.previousArticleDigest.trim()}`
+            : "이전 칼럼 요약 없음 — 확인된 신규 팩트만으로 밀도 있게 갱신하세요.",
+          "",
+        ]
+      : [
+          "[전면 재작성 모드]",
+          "이전 문장에 얽매이지 말고 오늘 근거로 칼럼 전체를 새로 작성하세요.",
+          "지원금 주제면 기간·마감·신청처·준비물을 빠짐없이 명시하세요.",
+          "",
+        ]),
     "[KinDex 관심 신호 — 산출 공식 강의 금지. 숫자가 보여주는 관심·화제 트렌드(방향·속도·상대 위치)를 ❺ 한 문단에서 해석]",
     params.kindexSignals?.trim() ||
       "별도 수치 블록 없음 — RAG·연관 키워드만으로 작성하세요.",
