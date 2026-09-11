@@ -103,8 +103,12 @@ async function channelHeatmapPool(
     boards = [];
   }
 
+  // Match ChannelMarketDesk / channelLiveMarket: slim tiles via toTileEntity.
+  // Full attachTimeframeMetrics here would keep distinct stored rates; category
+  // desks strip to metrics["3m"] only, so rankItemsForTimeframe rebuilds
+  // lightHorizonChange rates and picks a different top-4.
   const liveItems = market?.items?.length
-    ? itemsForChannel(market.items, channel).map(attachTimeframeMetrics)
+    ? itemsForChannel(market.items, channel).map(toTileEntity)
     : [];
   const preferLive = preferLiveChannelComposite(
     channel,
