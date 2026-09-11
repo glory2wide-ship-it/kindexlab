@@ -345,35 +345,38 @@ export function MarketWorkspace({
             </div>
           )}
 
-          {hideTimeframes ? null : (
-            <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
-              {TIMEFRAMES.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setTimeframe(option.id)}
-                  className={`rounded-md px-3 py-1.5 font-sans text-[13.2px] font-medium ${
-                    timeframe === option.id
-                      ? "bg-ink text-board md:bg-accent md:text-black"
-                      : "text-muted hover:bg-panel hover:text-ink"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Desktop: candle (분봉) sits left of gender/age on one row. */}
+          <div className="flex flex-row flex-wrap items-start gap-x-3 gap-y-2">
+            {hideTimeframes ? null : (
+              <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
+                {TIMEFRAMES.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setTimeframe(option.id)}
+                    className={`rounded-md px-3 py-1.5 font-sans text-[13.2px] font-medium ${
+                      timeframe === option.id
+                        ? "bg-ink text-board md:bg-accent md:text-black"
+                        : "text-muted hover:bg-panel hover:text-ink"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          <DemographicTabs
-            gender={gender}
-            age={age}
-            onGender={setGender}
-            onAge={setAge}
-            boardSlug={boardSlug}
-            region={region}
-            onRegion={setRegion}
-            showRegion={showRegion}
-          />
+            <DemographicTabs
+              gender={gender}
+              age={age}
+              onGender={setGender}
+              onAge={setAge}
+              boardSlug={boardSlug}
+              region={region}
+              onRegion={setRegion}
+              showRegion={showRegion}
+            />
+          </div>
           {demoActive ? (
             <p className="text-[11px] leading-5 text-muted">
               {filterLabel(gender, age, region)}{" "}

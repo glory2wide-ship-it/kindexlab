@@ -30,17 +30,19 @@ export interface UnifiedMarket {
 }
 
 /**
- * Ordering within one channel desk / heatmap pool.
- * Prefer absolute 3m move so politics·economy cards show movers, not score ties.
+ * Ordering within one channel desk / heatmap pool for the landing board.
+ * Prefer overall (종합) rank / buzz so tiles match category-page leaders,
+ * not short-term 3m movers that can look mid-pack on the category desk.
  */
-function byHeat(a: RankingEntity, b: RankingEntity): number {
+function byOverallRank(a: RankingEntity, b: RankingEntity): number {
+  if (a.rank !== b.rank) return a.rank - b.rank;
+  if (b.buzzScore !== a.buzzScore) return b.buzzScore - a.buzzScore;
   const heat = heatForTimeframe(b, "3m") - heatForTimeframe(a, "3m");
   if (heat !== 0) return heat;
   const move = Math.abs(tickerChangeRate(b)) - Math.abs(tickerChangeRate(a));
   if (move !== 0) return move;
-  if (b.buzzScore !== a.buzzScore) return b.buzzScore - a.buzzScore;
   if (b.fluctuationRate !== a.fluctuationRate) return b.fluctuationRate - a.fluctuationRate;
-  return a.rank - b.rank;
+  return (a.name ?? "").localeCompare(b.name ?? "", "ko");
 }
 
 /**
@@ -95,13 +97,17 @@ async function boardPool(channel: PostChannel): Promise<RankingEntity[]> {
 }
 
 /**
- * Cross-category heatmap pool — live-chart first when enough crawl rows exist;
- * otherwise fall back to menu-board composites.
+ * Landing heatmap pool per channel.
+ * Prefer each category's 종합 board composite (same leaders as the category page),
+ * then fall back to live-chart ingest when boards are still thin.
  */
 async function channelHeatmapPool(
   channel: PostChannel,
   market?: RankingsPayload,
 ): Promise<RankingEntity[]> {
+  const boards = await boardPool(channel);
+  if (boards.length >= MIN_LIVE_CHANNEL_ROWS) return boards;
+
   const live = market
     ? withoutHeadlineHeatmapItems(itemsForChannel(market.items, channel)).map(attachTimeframeMetrics)
     : [];
@@ -117,7 +123,7 @@ async function channelHeatmapPool(
   if (live.length >= MIN_LIVE_CHANNEL_ROWS && liveCount >= MIN_LIVE_CHANNEL_ROWS) {
     return live.filter((item) => !item.tags?.includes("board-tape"));
   }
-  return boardPool(channel);
+  return boards;
 }
 
 /** Uses the same 3m change field as the ticker and channel heatmap. */
@@ -129,8 +135,9 @@ function deskTopItem(item: RankingEntity): RankingEntity {
 /**
  * The landing page's cross-category board.
  *
- * Prefers live-chart ingest (news/YouTube/tickets) when enough rows exist;
- * menu boards fill desks the snapshot does not cover yet.
+ * Uses each category's 종합 board leaders (round-robin across desks) so landing
+ * tiles match what readers see near the top of category heatmaps. Live ingest
+ * only fills desks whose board composite is still thin.
  */
 export async function loadUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMarket> {
   const resolved = market?.items?.length ? market : loadHeatmapLivePayload();
@@ -138,7 +145,7 @@ export async function loadUnifiedMarket(market?: RankingsPayload): Promise<Unifi
   const loaded = await Promise.all(
     POST_CHANNELS.map(async (meta) => {
       const pool = await channelHeatmapPool(meta.id, resolved);
-      const ranked = tagChannel([...pool].sort(byHeat), meta.id);
+      const ranked = tagChannel([...pool].sort(byOverallRank), meta.id);
       return { meta, ranked };
     }),
   );

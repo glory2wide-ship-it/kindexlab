@@ -229,7 +229,7 @@ body {
   height: 1.05em;
 }
 
-/* Compact airport flip digits inside green LIVE KinDex countdown shells.
+/* Compact airport flip digits inside green KinDex Live countdown shells.
  * No border / midline chrome — digits sit flush on the green shell. */
 .refresh-countdown .flip-board {
   gap: 0.04em;
