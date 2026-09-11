@@ -4,8 +4,6 @@ import Link from "next/link";
 import {
   boardPath,
   compositeTabIndex,
-  getBoard,
-  isDeskBoard,
   menuBoardsForChannel,
 } from "@/lib/boards/registry";
 import { MOBILE_COMPOSITE_TAB_LABEL, mobileBoardTabLabel } from "@/lib/boards/mobile-tab-label";
@@ -15,7 +13,7 @@ import type { PostChannel } from "@/lib/posts/types";
 
 /**
  * Ranking-board tabs. When `onSelect` is passed, clicks filter the heatmap
- * below instead of navigating away. "상세" still opens the full board page.
+ * below instead of navigating away.
  * Culture/politics/travel: 종합 → 정부지원금 → …; entertainment has no grant tab.
  */
 export function CategoryBoardRail({
@@ -35,7 +33,6 @@ export function CategoryBoardRail({
 }) {
   const boards = menuBoardsForChannel(channel);
   if (!boards.length) return null;
-  const selected = selectedSlug ? getBoard(selectedSlug) : undefined;
   const composite = !selectedSlug;
   const insertAt = compositeTabIndex(channel);
 
@@ -149,13 +146,6 @@ export function CategoryBoardRail({
       >
         {tabs}
       </ul>
-      {selected && !isDeskBoard(selected) ? (
-        <p className="mt-2 text-[11px] text-muted">
-          <Link href={boardPath(selected.slug)} className="text-accent hover:underline">
-            이 보드 리포트 전체 보기 →
-          </Link>
-        </p>
-      ) : null}
     </>
   );
 
