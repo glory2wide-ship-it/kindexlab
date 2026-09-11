@@ -445,27 +445,33 @@ export function MarketWorkspace({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-panel px-4 py-2 font-sans text-[12px] text-muted">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+      {/* Mobile: keep 산출방식 + caption on one line; legend sits to the right when space allows. */}
+      <div className="flex flex-nowrap items-center justify-between gap-2 overflow-hidden border-t border-line bg-panel px-4 py-2 font-sans text-[12px] text-muted">
+        <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
           {view === "treemap" && sortedItems.length > 0 ? (
             <button
               type="button"
               onClick={() => setMethodOpen(true)}
-              className="inline-flex shrink-0 items-center rounded-md border border-line px-3 text-[13.2px] text-muted hover:text-ink"
-              style={{ height: 30, boxSizing: "border-box" }}
+              className="inline-flex h-[30px] shrink-0 items-center rounded-md border border-line px-2.5 text-[12px] text-muted hover:text-ink md:px-3 md:text-[13.2px]"
+              style={{ boxSizing: "border-box" }}
             >
               랭킹 산출 방식
             </button>
           ) : null}
-          <span>
-            상승 초록 · 하락 빨강 · 보합 차콜 · 히트맵 {sortedItems.length} · 리스트 {listItems.length}
-            종목
+          <span className="min-w-0 truncate whitespace-nowrap">
+            <span className="md:hidden">
+              상승 초록 · 하락 빨강 · 보합 차콜 · {sortedItems.length}종목
+            </span>
+            <span className="hidden md:inline">
+              상승 초록 · 하락 빨강 · 보합 차콜 · 히트맵 {sortedItems.length} · 리스트{" "}
+              {listItems.length}종목
+            </span>
           </span>
         </div>
         {view === "treemap" && sortedItems.length > 0 ? (
-          <HeatmapLegend />
+          <HeatmapLegend className="hidden sm:flex" />
         ) : (
-          <span>KinDex Hierarchical Heatmap</span>
+          <span className="hidden shrink-0 md:inline">KinDex Hierarchical Heatmap</span>
         )}
       </div>
 
