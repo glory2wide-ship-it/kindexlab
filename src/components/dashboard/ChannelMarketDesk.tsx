@@ -1,12 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CategoryBoardRail } from "@/components/boards/CategoryBoardRail";
-import { MarketOverview } from "@/components/dashboard/MarketOverview";
+import { BoardDeskGrid } from "@/components/dashboard/BoardDeskGrid";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
-import { computeBoardIndex } from "@/lib/boards/board-index";
 import {
   buildHeatmapItems,
   heatmapBoardTitle,
@@ -27,7 +26,7 @@ import {
   rankLimitForChannel,
 } from "@/lib/boards/limits";
 import { isMarketQuoteBoardSlug } from "@/lib/market/kospi-quotes";
-import { withIndexPoints } from "@/lib/ingestion/composite";
+import { DESK_TOP_N } from "@/lib/boards/composite-desk";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { PostChannel } from "@/lib/posts/types";
 import type { MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
@@ -163,19 +162,6 @@ export function ChannelMarketDesk({
   const [title, setTitle] = useState(() => heatmapBoardTitle(boards, initialBoardSlug || undefined));
   const [flashNonce, setFlashNonce] = useState(0);
   const [headlineItems, setHeadlineItems] = useState<RankingEntity[]>([]);
-  const [boardIndices, setBoardIndices] = useState<MarketIndex[]>(() =>
-    boards.map((board) => {
-      const index = computeBoardIndex(board.ranking, board.slug);
-      return withIndexPoints({
-        id: board.slug,
-        label: board.shortTitle,
-        value: index.value,
-        changeRate: index.changeRate,
-        note: board.title,
-        href: boardPath(board.slug),
-      });
-    }),
-  );
   const [refreshing, setRefreshing] = useState(false);
 
   const applyLocal = useCallback(
@@ -321,26 +307,6 @@ export function ChannelMarketDesk({
   }, [selectedSlug, gender, age, region, fetchHeatmap, deskKind]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setBoardIndices(
-        boards.map((board) => {
-          const source = board.slug === selectedSlug && items.length ? items : board.ranking;
-          const index = computeBoardIndex(source, board.slug);
-          return withIndexPoints({
-            id: board.slug,
-            label: board.shortTitle,
-            value: index.value,
-            changeRate: index.changeRate,
-            note: board.title,
-            href: boardPath(board.slug),
-          });
-        }),
-      );
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [boards, selectedSlug, items]);
-
-  useEffect(() => {
     if (deskKind !== "headlines") setHeadlineItems([]);
   }, [deskKind]);
 
@@ -358,18 +324,38 @@ export function ChannelMarketDesk({
       .finally(() => setRefreshing(false));
   }, []);
 
-  const liveIndices = liveMarket.indices;
+  /** Submenu ranking cards — same shape as landing LIVE 킨덱스 랭킹 desks. */
+  const boardDesks = useMemo(() => {
+    return boards.map((board) => {
+      const preferLive = preferLiveComposite(board.slug, "all", "all");
+      const cached = quotedCacheRef.current.get(cacheKeyForBoard(board.slug));
+      const rows =
+        board.slug === selectedSlug &&
+        gender === "all" &&
+        age === "all" &&
+        (!boardUsesRegionFilter(selectedSlug) || region === "all") &&
+        items.length
+          ? items
+          : cached?.length
+            ? cached
+            : buildHeatmapItems({
+                boards,
+                liveItems,
+                board: board.slug,
+                gender: "all",
+                age: "all",
+                preferLive,
+              });
+      return {
+        id: board.slug,
+        label: board.shortTitle,
+        href: boardPath(board.slug),
+        top: rows.slice(0, DESK_TOP_N),
+        hideOnMobile: channel === "politics" && board.slug === "policy-controversy-index",
+      };
+    });
+  }, [boards, liveItems, selectedSlug, items, gender, age, region, channel, flashNonce]);
 
-  /**
-   * Summary cards mirror the board rail above them.
-   *
-   * Politics used to fall through to `liveIndices` whenever no board was
-   * selected, which painted a hardcoded 12-index list (대통령지지도, 정치검색지수 …)
-   * that no rail menu maps to. Keying off the rail instead keeps every channel
-   * on one card per menu; the live indices remain the fallback for a channel
-   * that has no boards at all.
-   */
-  const indices = boards.length ? boardIndices : liveIndices;
   const selectedBoard = boards.find((item) => item.slug === selectedSlug);
   const showRegion = boardUsesRegionFilter(selectedSlug);
   const demo = filterLabel(gender, age, showRegion ? region : "all");
@@ -425,26 +411,8 @@ export function ChannelMarketDesk({
             }
           />
         ) : null}
-        {showHeatmap && indices.length ? (
-          <MarketOverview
-            indices={indices}
-            flashNonce={flashNonce}
-            selectedId={selectedSlug || undefined}
-            hideOnMobileIds={
-              channel === "politics" ? (["policy-controversy-index"] as const) : undefined
-            }
-            enlargeDesktopTitleScore={
-              channel === "entertainment" ||
-              channel === "economy" ||
-              channel === "politics" ||
-              channel === "culture"
-            }
-            enlargeDesktopScoreExtra={
-              channel === "entertainment" ||
-              channel === "economy" ||
-              channel === "culture"
-            }
-          />
+        {showHeatmap && boardDesks.length ? (
+          <BoardDeskGrid desks={boardDesks} selectedId={selectedSlug || undefined} />
         ) : null}
       </div>
     </>
