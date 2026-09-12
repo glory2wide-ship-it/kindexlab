@@ -69,19 +69,19 @@ export function DailyBriefing({
       <nav className="mt-6 flex flex-wrap gap-2 text-sm" aria-label="관련 보드">
         <Link
           href="/#heatmap"
-          className="rounded-full border border-line px-3 py-1.5 text-muted hover:text-ink"
+          className="rounded-full border border-line px-3 py-1.5 font-medium text-soft hover:text-ink"
         >
           종합 히트맵
         </Link>
         <Link
           href={categoryHref}
-          className="rounded-full border border-line px-3 py-1.5 text-muted hover:text-ink"
+          className="rounded-full border border-line px-3 py-1.5 font-medium text-soft hover:text-ink"
         >
           {categoryLabel(briefing.category)} 보드
         </Link>
         <Link
           href={`/briefing/archive/${briefing.editionDate}`}
-          className="rounded-full border border-line px-3 py-1.5 text-muted hover:text-ink"
+          className="rounded-full border border-line px-3 py-1.5 font-medium text-soft hover:text-ink"
         >
           {briefing.editionDate} 에디션
         </Link>

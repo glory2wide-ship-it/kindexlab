@@ -38,7 +38,7 @@ export function CategoryBoardRail({
 
   const compositeClass = composite
     ? "border-accent bg-accent text-black"
-    : "border-line text-muted hover:text-ink";
+    : "border-line text-soft hover:text-ink";
 
   // Desktop tab labels +15% vs prior 13.2px → 15.18px (mobile unchanged).
   const tabShell =
@@ -70,7 +70,7 @@ export function CategoryBoardRail({
     <li key="composite" className="min-w-0">
       <Link
         href={`/${channel}`}
-        className={`${tabShell} border-line text-muted hover:text-ink`}
+        className={`${tabShell} border-line text-soft hover:text-ink`}
       >
         <span className="md:hidden">{MOBILE_COMPOSITE_TAB_LABEL}</span>
         <span className="hidden md:inline">종합</span>
@@ -88,7 +88,7 @@ export function CategoryBoardRail({
             type="button"
             onClick={() => onSelect(board.slug)}
             className={`${tabShell} ${
-              active ? "border-accent bg-accent text-black" : "border-line text-muted hover:text-ink"
+              active ? "border-accent bg-accent text-black" : "border-line text-soft hover:text-ink"
             }`}
           >
             <span className="md:hidden">{mobileLabel}</span>
@@ -101,7 +101,7 @@ export function CategoryBoardRail({
       <li key={board.slug} className="min-w-0">
         <Link
           href={boardPath(board.slug)}
-          className={`${tabShell} border-line text-muted hover:text-ink`}
+          className={`${tabShell} border-line text-soft hover:text-ink`}
         >
           <span className="md:hidden">{mobileLabel}</span>
           <span className="hidden md:inline">{board.shortTitle}</span>
