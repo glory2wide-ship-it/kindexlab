@@ -1247,7 +1247,7 @@ export const BOARDS: BoardDefinition[] = [
     channel: "entertainment",
     title: "음원",
     shortTitle: "음원",
-    criteria: "멜론·지니·유튜브 뮤직·스포티파이 등 주요 음원 공급사 차트를 복합 가중해 산출한 랭킹지수",
+    criteria: "애플뮤직·써클차트 공식 피드를 우선하고, 멜론·지니·벅스·스포티파이·유튜브 뮤직 HTML을 soft fallback으로 복합 가중한 랭킹지수",
     affiliateCategory: "무선 이어폰 · 헤드폰",
     queries: ["멜론 실시간 차트", "지니 차트", "스포티파이 코리아 차트", "유튜브 뮤직 차트", "음원 차트 1위"],
     focusKeyword: "음원",

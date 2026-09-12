@@ -404,35 +404,42 @@ export async function fetchYoutubeMusicKr(): Promise<SourceResult> {
 }
 
 export async function fetchMusicSources(): Promise<SourceResult[]> {
+  // Official / JSON feeds first in the family list; HTML scrapes are soft fallback.
   return Promise.all([
+    fetchAppleMusicKr(),
+    fetchCircleDigital(),
+    fetchItunesKr(),
+    fetchSpotifyKr(),
+    fetchYoutubeMusicKr(),
     fetchMelonChart(),
     fetchGenieChart(),
     fetchBugsRealtime(),
-    fetchSpotifyKr(),
-    fetchYoutubeMusicKr(),
-    fetchAppleMusicKr(),
-    fetchItunesKr(),
-    fetchCircleDigital(),
   ]);
 }
 
+/**
+ * Official JSON/API charts carry the board; domestic HTML scrapes are lower-weight
+ * fallback so Melon/Genie/Bugs outages do not dominate or sink the composite.
+ */
 const MUSIC_SOURCE_WEIGHT: Record<string, number> = {
-  melon: 3,
-  genie: 3,
-  bugs: 2,
-  "spotify-kr": 2.5,
-  "youtube-music": 2.5,
-  "apple-music": 1.5,
-  circle: 2,
-  itunes: 1,
+  "apple-music": 3.5,
+  circle: 3.5,
+  itunes: 2,
+  "spotify-kr": 2,
+  "youtube-music": 2,
+  melon: 1.5,
+  genie: 1.5,
+  bugs: 1.25,
 };
+
+const MUSIC_TITLE_PREF = new Set(["apple-music", "circle"]);
 
 function musicKey(row: ChartRow): string {
   return normalizeName(`${row.title}|${row.subtitle ?? ""}`) || normalizeName(row.title);
 }
 
 /**
- * Composite 음원 랭킹지수: Melon / Genie / Bugs / Spotify / YouTube Music / …
+ * Composite 음원 랭킹지수: Apple Music / Circle 우선, Melon·Genie·Bugs HTML은 soft fallback.
  * Weighted Borda count across successful chart pulls.
  */
 export function composeMusicChart(sources: SourceResult[]): ChartRow[] {
@@ -446,6 +453,7 @@ export function composeMusicChart(sources: SourceResult[]): ChartRow[] {
     points: number;
     bestRank: number;
     sources: number;
+    preferredTitle: boolean;
   };
   const map = new Map<string, Acc>();
 
@@ -464,6 +472,7 @@ export function composeMusicChart(sources: SourceResult[]): ChartRow[] {
           points,
           bestRank: row.rank,
           sources: 1,
+          preferredTitle: MUSIC_TITLE_PREF.has(chart.id),
         });
       } else {
         current.points += points;
@@ -471,10 +480,11 @@ export function composeMusicChart(sources: SourceResult[]): ChartRow[] {
         current.sources += 1;
         current.tags = [...new Set([...current.tags, ...(row.tags ?? [])])];
         if (!current.subtitle && row.subtitle) current.subtitle = row.subtitle;
-        // Prefer Melon/Genie title when available.
-        if (chart.id === "melon" || chart.id === "genie") {
+        // Prefer Apple / Circle canonical titles when available.
+        if (MUSIC_TITLE_PREF.has(chart.id) && !current.preferredTitle) {
           current.title = row.title;
           if (row.subtitle) current.subtitle = row.subtitle;
+          current.preferredTitle = true;
         }
       }
     }
@@ -503,6 +513,15 @@ export function pickPrimaryMusic(sources: SourceResult[]): SourceResult | undefi
       items: composed,
     };
   }
-  const order = ["melon", "genie", "bugs", "spotify-kr", "youtube-music", "apple-music", "circle", "itunes"];
+  const order = [
+    "apple-music",
+    "circle",
+    "itunes",
+    "spotify-kr",
+    "youtube-music",
+    "melon",
+    "genie",
+    "bugs",
+  ];
   return order.map((id) => sources.find((item) => item.id === id && item.ok)).find(Boolean);
 }

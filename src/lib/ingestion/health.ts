@@ -9,11 +9,16 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
   "ticketlink-rank",
   // Apple KR topsongs RSS is often empty; apple-music covers the same chart.
   "itunes",
+  // Domestic HTML music scrapes — Apple Music + Circle are the primary music feeds.
+  "melon",
+  "genie",
+  "bugs",
+  "spotify-kr",
   // KOBIS OpenAPI sample keys get revoked; HTML fallback + naver/maxmovie cover movies.
   "kobis-daily",
   // MaxMovie news page flakes; naver-movie + kobis HTML cover the movie board.
   "maxmovie",
-  // Flaky third-party scrapes — covered by Melon/Genie/Bugs, Steam HTML, etc.
+  // Flaky third-party scrapes — covered by Apple/Circle music feeds, Steam HTML, etc.
   "youtube-music",
   "google-trends",
   "youtube-trending",
@@ -23,6 +28,7 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
   // Books board is sparse; family timeout + prior snapshot cover gaps.
   "yes24-bestseller",
   // Nielsen Korea HTML and Interpark ranking pages time out often under load.
+  // No public Nielsen OpenAPI yet — keep soft until a licensed feed lands.
   "nielsen-terrestrial",
   "nielsen-cable",
   "interpark-musical",
@@ -96,10 +102,21 @@ export type TrendsHealthOptions = {
 };
 
 const CRITICAL_SOURCE_IDS = [
-  "melon",
+  "apple-music",
+  "circle",
   "naver-webtoon-weekly",
   "naver-movie",
   "news-ent",
+] as const;
+
+const MUSIC_PRIMARY_IDS = ["apple-music", "circle"] as const;
+const MUSIC_FALLBACK_IDS = [
+  "melon",
+  "genie",
+  "bugs",
+  "spotify-kr",
+  "youtube-music",
+  "itunes",
 ] as const;
 
 function readSnapshotFromDisk(): IngestSnapshot | null {
@@ -184,18 +201,33 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
     return failedSources.some((row) => row.id === id);
   });
   /**
-   * Hard criticals: Melon + Naver movie must stay up.
+   * Hard criticals: Naver movie must stay up.
+   * Music: Apple Music + Circle are primary; HTML scrapes are soft fallback.
+   * Hard-fail music only when every primary and every fallback chart is down.
    * Webtoon weekly often empties under parallel Naver rate-limits while
    * naver-webtoon-daily still covers the desk — treat weekly as soft when
    * daily (or the board row count) is healthy.
    */
-  const HARD_CRITICAL_IDS = new Set(["melon", "naver-movie"]);
+  const HARD_CRITICAL_IDS = new Set(["naver-movie"]);
   const webtoonDailyOk =
     snapshot?.sources?.some((row) => row.id === "naver-webtoon-daily" && row.ok) ?? false;
-  const hardCriticalFailed = criticalFailed.filter((id) => {
+  const musicPrimaryPresent = MUSIC_PRIMARY_IDS.some((id) => presentIds.has(id));
+  const musicPrimaryOk =
+    snapshot?.sources?.some(
+      (row) => (MUSIC_PRIMARY_IDS as readonly string[]).includes(row.id) && row.ok,
+    ) ?? false;
+  const musicFallbackOk =
+    snapshot?.sources?.some(
+      (row) => (MUSIC_FALLBACK_IDS as readonly string[]).includes(row.id) && row.ok,
+    ) ?? false;
+  const musicHardFailed = musicPrimaryPresent && !musicPrimaryOk && !musicFallbackOk;
+  const hardCriticalFailed: string[] = criticalFailed.filter((id) => {
     if (id === "naver-webtoon-weekly" && webtoonDailyOk) return false;
     return HARD_CRITICAL_IDS.has(id);
   });
+  if (musicHardFailed) {
+    hardCriticalFailed.push("music-primary");
+  }
   const softCriticalFailed = criticalFailed.filter((id) => !hardCriticalFailed.includes(id));
   const youtubeOk =
     snapshot?.sources?.some(
@@ -215,7 +247,7 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
       message: `Critical source(s) failed: ${hardCriticalFailed.join(", ")}`,
     });
   } else if (softCriticalFailed.length || youtubeSoftFail) {
-    // Google News / YouTube HTML often 504 while Melon + Naver charts are fine.
+    // Google News / YouTube HTML often 504 while Apple/Circle + Naver charts are fine.
     // Warn (do not fail the cron) when the board still has enough rows.
     const ids = [
       ...softCriticalFailed,

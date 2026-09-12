@@ -62,7 +62,7 @@ const INDEX_META: { id: string; label: string; type?: EntityType; note: string }
   { id: "broadcast", label: "방송지수", type: "tv_show", note: "편성·화제 합산" },
   { id: "celebrity", label: "셀럽지수", type: "celebrity", note: "검색·뉴스 버즈" },
   { id: "influencer", label: "인플지수", type: "influencer", note: "크리에이터 언급" },
-  { id: "music", label: "음원지수", type: "music_chart", note: "멜론·지니·스포티파이·유튜브 뮤직 복합" },
+  { id: "music", label: "음원지수", type: "music_chart", note: "애플뮤직·써클 우선 + 국내 차트 soft fallback" },
   { id: "ratings", label: "시청률지수", type: "tv_rating", note: "닐슨 가구 시청률" },
   { id: "movie", label: "영화지수", type: "movie", note: "KOBIS 박스오피스·포털 영화 순위" },
   { id: "webtoon", label: "웹툰지수", type: "webtoon", note: "네이버·카카오 인기" },

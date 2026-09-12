@@ -88,7 +88,7 @@ export const CHANNEL_ABOUT: Record<PostChannel, ChannelAboutContent> = {
         {
           label: "음원",
           basis: "실시간·일간 음원 순위와 스트리밍·다운로드 신호를 정규화합니다.",
-          sources: "멜론·벅스·지니·애플뮤직·써클차트",
+          sources: "애플뮤직·써클차트(우선), 멜론·벅스·지니(보조)",
         },
         {
           label: "스타",
