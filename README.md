@@ -14,7 +14,7 @@ npm ci
 npm run dev
 ```
 
-기본 개발 서버는 `http://localhost:3000`입니다. Cursor Cloud Agent에서는 `npm run dev:cloud`로 `http://127.0.0.1:43123`에 띄웁니다. `ensure-local-env.sh`는 API 키 없이 mock 랭킹으로 화면을 볼 수 있게 `.env.local`을 만듭니다. 라이브 수집·칼럼 생성·브리핑 LLM은 `.env.example`의 키를 `.env.local`에 넣으면 됩니다. 배포 기본값은 `https://kindexlab.com`입니다.
+기본 개발 서버는 `http://localhost:3000`입니다. Cursor Cloud Agent에서는 `npm run dev:cloud`로 `http://127.0.0.1:43123`에 띄웁니다. `ensure-local-env.sh`는 `.env.local`을 만들고 기본 소스를 live(크롤러 스냅샷)로 둡니다. 픽스처만 보려면 `TRENDS_DATA_SOURCE=mock`과 `TRENDS_ALLOW_MOCK=1`을 명시하세요. 라이브 수집·칼럼 생성·브리핑 LLM은 `.env.example`의 키를 `.env.local`에 넣으면 됩니다. 배포 기본값은 `https://kindexlab.com`입니다.
 
 GitHub 원본과 동기화하려면:
 
@@ -98,4 +98,4 @@ npm run briefing:generate -- --force 2026-08-25
 
 ## 실제 데이터 연결
 
-`src/lib/api.ts`의 `getRankings()`만 교체하면 됩니다. 로컬은 기본이 mock 픽스처이고(`getTrendsSource()`가 Vercel 밖에서 `mock`으로 떨어집니다), 실수집 경로를 확인하려면 `TRENDS_DATA_SOURCE=live`를 설정하거나 `npx tsx scripts/_check-measurement-live.ts`를 씁니다.
+`src/lib/api.ts`의 `getRankings()`만 교체하면 됩니다. 기본 소스는 **live**(크롤러 스냅샷)입니다. 로컬에서 픽스처만 보려면 `TRENDS_DATA_SOURCE=mock`을 명시하세요. Production/Vercel에서는 mock이 무시됩니다(`TRENDS_ALLOW_MOCK=1`로만 허용). 스냅샷 신선도·소스 실패율은 `npm run trends:health` 또는 `GET /api/health/trends`로 검사합니다.

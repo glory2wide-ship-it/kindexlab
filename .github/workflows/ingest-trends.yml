@@ -19,8 +19,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run ingest:trends
+      - name: Ingest live trends
+        id: ingest
+        run: npm run ingest:trends
         env:
+          TRENDS_DATA_SOURCE: live
+          TRENDS_REQUIRE_LIVE: "1"
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
@@ -30,7 +34,14 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Verify snapshot health
+        if: always() && steps.ingest.outcome == 'success'
+        run: npm run trends:health -- --post-ingest
+        env:
+          TRENDS_DATA_SOURCE: live
+          TRENDS_REQUIRE_LIVE: "1"
       - name: Commit and push snapshot
+        if: success()
         run: |
           chmod +x scripts/ci-commit-push.sh
           scripts/ci-commit-push.sh "chore: refresh live entertainment snapshot" src/data/ingestion/snapshot.json

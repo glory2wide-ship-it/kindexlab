@@ -18,6 +18,7 @@
         "briefing:generate": "tsx scripts/generate-briefings.ts",
         "briefing:generate:local": "tsx --env-file=.env.local scripts/generate-briefings.ts",
         "ingest:trends": "tsx scripts/ingest-trends.ts",
+        "trends:health": "tsx scripts/check-trends-health.ts",
         "posts:generate": "tsx scripts/generate-posts.ts",
         "analysis:check": "tsx scripts/check-analysis-override.ts",
     "analysis:audit": "tsx scripts/audit-cache.ts",

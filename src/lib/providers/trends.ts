@@ -26,20 +26,43 @@ import { decodeRouteSlug, slugsMatch } from "@/lib/slugs";
 /**
  * Data-source switch:
  *   TRENDS_DATA_SOURCE=live  → crawler snapshot + on-demand refresh
- *   TRENDS_DATA_SOURCE=mock  → local rankings fixture
+ *   TRENDS_DATA_SOURCE=mock  → local rankings fixture (local only)
  *   unset                    → live (prefer the crawler snapshot)
+ *
+ * Production / Vercel never serve mock unless TRENDS_ALLOW_MOCK=1, so a
+ * mis-set env var cannot silently ship fixture rankings again.
  */
 export type TrendsSource = TrendsPayload["source"];
 
 export function getTrendsSource(): TrendsSource {
-  if (process.env.TRENDS_DATA_SOURCE === "mock") return "mock";
+  if (process.env.TRENDS_DATA_SOURCE === "mock") {
+    const allowMock =
+      process.env.TRENDS_ALLOW_MOCK === "1" ||
+      (process.env.VERCEL !== "1" && process.env.NODE_ENV !== "production");
+    if (!allowMock) {
+      if (!(globalThis as { __kindexMockBlocked?: boolean }).__kindexMockBlocked) {
+        (globalThis as { __kindexMockBlocked?: boolean }).__kindexMockBlocked = true;
+        console.error(
+          "[kindexlab:trends] ignoring TRENDS_DATA_SOURCE=mock in production; serving live snapshot",
+        );
+      }
+      return "live";
+    }
+    if (!(globalThis as { __kindexMockWarned?: boolean }).__kindexMockWarned) {
+      (globalThis as { __kindexMockWarned?: boolean }).__kindexMockWarned = true;
+      console.warn(
+        "[kindexlab:trends] TRENDS_DATA_SOURCE=mock — fixture rankings (set live to use the crawler snapshot)",
+      );
+    }
+    return "mock";
+  }
   return "live";
 }
 
 function loadMockRankings(): RankingsPayload {
-  if (process.env.NODE_ENV === "development" && !(globalThis as { __kindexMockWarned?: boolean }).__kindexMockWarned) {
-    (globalThis as { __kindexMockWarned?: boolean }).__kindexMockWarned = true;
-    console.warn("[kindexlab:trends] using mock fixture");
+  if (!(globalThis as { __kindexMockLoadWarned?: boolean }).__kindexMockLoadWarned) {
+    (globalThis as { __kindexMockLoadWarned?: boolean }).__kindexMockLoadWarned = true;
+    console.warn("[kindexlab:trends] loading mock fixture");
   }
   const items = [
     ...rankings,

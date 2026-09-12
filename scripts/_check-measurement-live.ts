@@ -1,8 +1,7 @@
 /**
- * Local dev serves the mock fixture (getTrendsSource falls back to "mock" off
- * Vercel), so a page fetch cannot show whether measurements survive the real
- * provider path. Force the live source and read the entity the detail page
- * would read.
+ * Force TRENDS_DATA_SOURCE=live and read the entity the detail page would
+ * read, so measurement plumbing can be verified without relying on whatever
+ * .env.local currently says.
  */
 process.env.TRENDS_DATA_SOURCE = "live";
 
