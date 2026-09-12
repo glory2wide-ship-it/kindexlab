@@ -155,9 +155,10 @@ export function MobileDialPicker<T extends string>({
         className="relative min-w-0 flex-1 overflow-hidden rounded-md bg-board"
         style={{ height: 28 }}
       >
-        {/* Selection face behind labels so neighbor glyphs are never covered */}
+        {/* Selection face behind labels — max width keeps full-row region dial
+            boxes similar in size to the narrower timeframe/gender/age dials. */}
         <div
-          className="pointer-events-none absolute inset-y-0.5 left-1/2 z-0 w-[47.25%] -translate-x-1/2 rounded bg-accent/25"
+          className="pointer-events-none absolute inset-y-0.5 left-1/2 z-0 w-[47.25%] max-w-[4.75rem] -translate-x-1/2 rounded bg-accent/30"
           aria-hidden
         />
         <div
@@ -184,8 +185,8 @@ export function MobileDialPicker<T extends string>({
                   onChange(opt.id);
                   scrollToValue(opt.id, "smooth");
                 }}
-                className={`snap-center shrink-0 px-[3.2px] text-center text-[11px] font-bold leading-none whitespace-nowrap ${
-                  active ? "text-ink" : "text-soft"
+                className={`snap-center shrink-0 rounded px-[3.2px] text-center text-[11px] font-bold leading-none whitespace-nowrap ${
+                  active ? "bg-accent/30 text-ink" : "text-soft"
                 }`}
                 aria-pressed={active}
               >
