@@ -50,8 +50,12 @@ export function CategoryBoardRail({
     ...boards.slice(insertAt).map((board) => board.slug),
   ];
   const mobileCols = Math.max(2, Math.ceil(orderedKeys.length / 2));
+  // Weight each column by the wider of the two stacked chips (row1 / row2).
   const colWeights = Array.from({ length: mobileCols }, (_, col) =>
-    mobileBoardTabWidth(orderedKeys[col] ?? ""),
+    Math.max(
+      mobileBoardTabWidth(orderedKeys[col] ?? ""),
+      mobileBoardTabWidth(orderedKeys[col + mobileCols] ?? ""),
+    ),
   );
   const gridTemplateColumns = colWeights.map((w) => `minmax(0, ${w}fr)`).join(" ");
 
@@ -143,7 +147,7 @@ export function CategoryBoardRail({
     <>
       {heading}
       <ul
-        className="grid gap-1.5 md:flex md:flex-wrap md:gap-2"
+        className="grid gap-1.5 md:grid-cols-5 md:gap-2"
         style={{ gridTemplateColumns }}
       >
         {tabs}

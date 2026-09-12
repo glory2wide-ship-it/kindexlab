@@ -19,6 +19,8 @@ export const MOBILE_BOARD_TAB_WIDTH: Record<string, number> = {
   "performance-ticket-ranking": 0.9, // 공연
   "exhibition-popup-ranking": 0.9, // 전시 팝업
   "bestseller-surge-index": 1.54, // 도서·베스트셀러
+  // Economy — startup chip +10% vs default 1.1
+  "startup-franchise-index": 1.21, // 창업*소상공
 };
 
 export function mobileBoardTabWidth(slug: string): number {
