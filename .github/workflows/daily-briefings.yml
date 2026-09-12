@@ -84,6 +84,10 @@ jobs:
           BRIEFING_OVERNIGHT_BATCH_SIZE: "12"
           GEMINI_MAX_CONCURRENCY: "4"
           TRENDS_DATA_SOURCE: live
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
           REPORT_EMAIL_TO: glory2wide@gmail.com
 
       # Persist edition first so a missing mail secret cannot block publish.
