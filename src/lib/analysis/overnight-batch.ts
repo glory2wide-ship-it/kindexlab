@@ -63,6 +63,17 @@ function overnightBatchSize(): number {
   return ANALYSIS_OVERNIGHT_LIVE_SIZE;
 }
 
+/** Empty / insufficient RAG — skip (keep prior column), never count as fail. */
+export function isThinContextFailure(reason: string): boolean {
+  const text = reason.trim();
+  if (!text) return false;
+  return (
+    /^thin-context\b/i.test(text) ||
+    /\bsources=0\b/i.test(text) ||
+    /insufficient grounding/i.test(text)
+  );
+}
+
 /**
  * Regenerates 오늘의 분석 for Top-N heatmap inventory via Gemini Batch (−50%)
  * when GEMINI_USE_BATCH=1.
@@ -188,11 +199,27 @@ export async function runHeatmapAnalysisOvernight(
               ms: Date.now() - startedAt,
             };
           } catch (error) {
+            const message = error instanceof Error ? error.message : "unknown";
+            // Thin RAG must not burn LLM budget or inflate the fail count —
+            // keep the previous column and treat as skip (same as TTL).
+            if (isThinContextFailure(message)) {
+              return {
+                ...base,
+                ok: true,
+                skipped: true,
+                kind: cached?.provenance.kind,
+                reason: "thin-context",
+                rewriteMode: decision.mode,
+                chars: cached?.article.characterCount,
+                newsDocs: cached?.provenance.newsDocs ?? 0,
+                ms: Date.now() - startedAt,
+              };
+            }
             // Keep the previous Gemini column — never wipe on failure.
             return {
               ...base,
               ok: false,
-              reason: error instanceof Error ? error.message : "unknown",
+              reason: message,
               rewriteMode: decision.mode,
               chars: cached?.article.characterCount,
               newsDocs: cached?.provenance.newsDocs,

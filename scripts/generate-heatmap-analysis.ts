@@ -84,7 +84,7 @@ function buildAnalysisReport(
           status: item.skipped ? ("skip" as const) : item.ok ? ("ok" as const) : ("fail" as const),
           meta: `${item.channel}/${item.boardSlug}`,
           reason: item.skipped
-            ? "ttl-hit"
+            ? item.reason ?? "ttl-hit"
             : item.ok
               ? item.chars
                 ? `${item.chars}자`

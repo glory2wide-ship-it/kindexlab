@@ -113,7 +113,7 @@ async function materializeSources(
 
 async function newsSourcesFromRetrieval(
   keyword: string,
-  options: { limit?: number; lookbackHours?: number },
+  options: { limit?: number; lookbackHours?: number; allowMarketTape?: boolean },
 ): Promise<{
   sources: ContextSource[];
   providers: string[];
@@ -122,6 +122,7 @@ async function newsSourcesFromRetrieval(
 }> {
   const limit = options.limit ?? DEFAULT_LIMIT;
   const ladder = options.lookbackHours ? [options.lookbackHours] : [...LOOKBACK_LADDER_HOURS];
+  const allowMarketTape = options.allowMarketTape ?? true;
 
   let providers: string[] = [];
   let sources: ContextSource[] = [];
@@ -135,6 +136,7 @@ async function newsSourcesFromRetrieval(
       // Boards already ingest with trustedOnly:false; matching that here keeps
       // articles that Google labels without a recognised outlet string.
       trustedOnly: false,
+      allowMarketTape,
     });
     providers = retrieval.providers;
     lookbackHours = hours;
@@ -229,6 +231,12 @@ export interface CollectContextOptions {
   channel?: string;
   /** KST edition date — used to label RAG freshness in the prompt block. */
   asOfDate?: string;
+  /**
+   * Keep price/rank/chart headlines in RAG. Default true for analysis/briefing
+   * collection so economy/stock keywords are not left with sources=0 after
+   * MARKET_TAPE stripping (boards already pass true).
+   */
+  allowMarketTape?: boolean;
 }
 
 /**

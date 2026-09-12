@@ -146,6 +146,11 @@ async function generate(options: {
       skipped: result.reason,
       detail: result.detail ?? null,
     });
+    // Prefix thin-context so overnight batch can skip (not fail) even when
+    // detail is "score=N sources=M" without the reason token.
+    if (result.reason === "thin-context") {
+      throw new Error(`thin-context: ${result.detail || "insufficient grounding"}`);
+    }
     throw new Error(result.detail || result.reason || "gemini-generate-failed");
   }
 

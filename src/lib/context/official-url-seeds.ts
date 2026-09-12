@@ -305,5 +305,31 @@ export function officialUrlSeeds(input: {
     ];
   }
 
+  // news-first (entertainment / politics / economy / society default):
+  // Always seed citable search landing pages so empty RAG + missing search API
+  // keys cannot leave sources=[] and fail generation as thin-context.
+  if (strategy === "news-first") {
+    const subject =
+      parseBracketLabel(keyword)?.subject?.trim() ||
+      keyword.replace(/^\[[^\]]+\]\s*/, "");
+    return [
+      {
+        title: `${keyword} 최근 뉴스 검색`,
+        url: `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(keyword)}`,
+        publisher: "네이버 뉴스",
+        snippet: `${keyword} 관련 최근 뉴스. 확인된 고유명사·수치만 인용하세요.`,
+        tier: "news",
+      },
+      {
+        title: `${subject} 관련 웹문서 검색`,
+        url: `https://search.naver.com/search.naver?where=webkr&query=${encodeURIComponent(subject)}`,
+        publisher: "네이버 웹문서",
+        snippet: `${subject} 관련 공식·포털 안내. URL에 없는 수치는 쓰지 마세요.`,
+        tier: "web",
+      },
+      youtubeSearchSource(keyword),
+    ].slice(0, 3);
+  }
+
   return [];
 }
