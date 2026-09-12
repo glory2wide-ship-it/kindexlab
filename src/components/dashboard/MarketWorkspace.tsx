@@ -153,14 +153,29 @@ export function MarketWorkspace({
   const [regionInternal, setRegionInternal] = useState<"all" | RegionSegment>("all");
   const [methodOpen, setMethodOpen] = useState(false);
   const [userPickedView, setUserPickedView] = useState(false);
+  const [userPickedTimeframe, setUserPickedTimeframe] = useState(false);
 
-  /** Desktop toolbar defaults to 5분; mobile keeps the 10분 dial center.
-   * Skip when the caller locked a timeframe (landing SSR = 5m). */
+  /**
+   * Desktop keeps 5분 (landing SSR / refresh countdown).
+   * Mobile always centers the dial on 10분 so neighbors read 5분 | 10분 | 30분,
+   * even when landing passes initialTimeframe="5m" for SSR tile parity.
+   */
   useEffect(() => {
-    if (initialTimeframe) return;
+    if (userPickedTimeframe) return;
     const mq = window.matchMedia("(min-width: 768px)");
-    if (mq.matches) setTimeframe("5m");
-  }, [initialTimeframe]);
+    const apply = () => {
+      if (mq.matches) setTimeframe(initialTimeframe ?? "5m");
+      else setTimeframe("10m");
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, [initialTimeframe, userPickedTimeframe]);
+
+  const pickTimeframe = (value: Timeframe) => {
+    setUserPickedTimeframe(true);
+    setTimeframe(value);
+  };
 
   /** Keep default view in sync on viewport changes; never flash list on desktop. */
   useEffect(() => {
@@ -299,7 +314,7 @@ export function MarketWorkspace({
             <div className="min-w-0 flex-1">
               <MobileHeatmapDials
                 timeframe={timeframe}
-                onTimeframe={setTimeframe}
+                onTimeframe={pickTimeframe}
                 gender={gender}
                 onGender={setGender}
                 age={age}
@@ -378,7 +393,7 @@ export function MarketWorkspace({
                     <button
                       key={option.id}
                       type="button"
-                      onClick={() => setTimeframe(option.id)}
+                      onClick={() => pickTimeframe(option.id)}
                       className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[12.96px] font-semibold tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[14.256px] lg:tracking-normal ${
                         timeframe === option.id
                           ? "bg-ink text-board md:bg-accent md:text-black"

@@ -42,10 +42,12 @@ export function MobileHeatmapDials({
   const afterAll = ages.filter((key) => !["kids", "10s", "20s", "30s"].includes(key));
 
   /**
-   * Keep chronological order so the mobile dial centers on 10분 with
-   * 5분 on the left and 30분 on the right (MarketWorkspace mobile default).
+   * Mobile dial shows only 5·10·30 so the default 10분 center reads as
+   * 5분 | 10분 | 30분 (MarketWorkspace mobile default).
    */
-  const timeOptions = TIMEFRAMES.map((item) => ({ id: item.id, label: item.label }));
+  const timeOptions = TIMEFRAMES.filter((item) =>
+    item.id === "5m" || item.id === "10m" || item.id === "30m",
+  ).map((item) => ({ id: item.id, label: item.label }));
   const genderOptions = [
     { id: "male" as const, label: GENDER_LABEL.male },
     { id: "all" as const, label: "전체" },
