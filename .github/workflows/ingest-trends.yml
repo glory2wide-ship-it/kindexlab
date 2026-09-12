@@ -28,6 +28,8 @@ jobs:
       - run: npm ci
       - name: Ingest live trends
         id: ingest
+        # Bound below the job timeout so a hung family cannot burn the whole runner.
+        timeout-minutes: 12
         run: npm run ingest:trends
         env:
           TRENDS_DATA_SOURCE: live

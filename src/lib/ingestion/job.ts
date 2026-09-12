@@ -13,8 +13,13 @@ import { fetchPoliticsSources } from "@/lib/ingestion/sources/politics";
 import { fetchPoliticsYoutubeSources } from "@/lib/ingestion/sources/youtube-politics";
 import { fetchTicketSources } from "@/lib/ingestion/sources/tickets";
 import { fetchWebtoonSources } from "@/lib/ingestion/sources/webtoon";
-import type { IngestReport, IngestSnapshot } from "@/lib/ingestion/types";
+import type { IngestReport, IngestSnapshot, SourceResult } from "@/lib/ingestion/types";
 import type { RankingsPayload } from "@/lib/types";
+
+/** Cap a single source family so one hung crawl cannot block the job (~47m GHA hang). */
+const FAMILY_TIMEOUT_MS = Number(process.env.INGEST_FAMILY_TIMEOUT_MS ?? 4 * 60 * 1000);
+/** Hard ceiling for all families; keep under workflow timeout-minutes: 15. */
+const OVERALL_TIMEOUT_MS = Number(process.env.INGEST_OVERALL_TIMEOUT_MS ?? 10 * 60 * 1000);
 
 let memorySnapshot: IngestSnapshot | undefined;
 /** Avoid re-parsing the multi-MB snapshot.json on every rankings / heatmap call. */
@@ -59,51 +64,94 @@ function rememberSnapshot(snapshot: IngestSnapshot) {
   diskSnapshotMtimeMs = Date.now();
 }
 
+
+function timeoutError(label: string, ms: number): Error {
+  return new Error(`${label} timed out after ${Math.round(ms / 1000)}s`);
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(timeoutError(label, ms)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function failedFamily(id: string, message: string): SourceResult {
+  return {
+    id: `family:${id}`,
+    label: id,
+    ok: false,
+    count: 0,
+    error: message,
+    fetchedAt: new Date().toISOString(),
+    items: [],
+  };
+}
+
+async function runSourceFamily(
+  id: string,
+  run: () => Promise<SourceResult[]>,
+  deadlineMs: number,
+): Promise<SourceResult[]> {
+  const budget = Math.max(5_000, Math.min(FAMILY_TIMEOUT_MS, deadlineMs - Date.now()));
+  const started = Date.now();
+  try {
+    const results = await withTimeout(run(), budget, `Source family "${id}"`);
+    console.info(
+      `[kindexlab:ingest] ${id} ok in ${Date.now() - started}ms (${results.length} sources)`,
+    );
+    return results;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[kindexlab:ingest] ${id} failed: ${message}`);
+    return [failedFamily(id, message)];
+  }
+}
+
+async function gatherSourceFamilies(): Promise<SourceResult[]> {
+  const deadlineMs = Date.now() + OVERALL_TIMEOUT_MS;
+  const families: Array<[string, () => Promise<SourceResult[]>]> = [
+    ["music", fetchMusicSources],
+    ["movies", fetchMovieSources],
+    ["broadcast", fetchBroadcastSources],
+    ["buzz", fetchBuzzSources],
+    ["webtoon", fetchWebtoonSources],
+    ["shorts", fetchShortsSources],
+    ["games", fetchGameSources],
+    ["politics", fetchPoliticsSources],
+    ["politics-youtube", fetchPoliticsYoutubeSources],
+    ["tickets", fetchTicketSources],
+    ["books", fetchBookSources],
+    ["category-live", fetchCategoryLiveSources],
+  ];
+
+  const batches = await withTimeout(
+    Promise.all(families.map(([id, run]) => runSourceFamily(id, run, deadlineMs))),
+    OVERALL_TIMEOUT_MS,
+    "Ingest source gather",
+  );
+  return batches.flat();
+}
+
 export async function ingestLivePayload(options?: {
   previous?: IngestSnapshot;
 }): Promise<IngestReport> {
   const previous = options?.previous ?? readPersistedSnapshot();
-  const [
-    music,
-    movies,
-    broadcast,
-    buzz,
-    webtoon,
-    shorts,
-    games,
-    politics,
-    politicsYoutube,
-    tickets,
-    books,
-    categoryLive,
-  ] = await Promise.all([
-    fetchMusicSources(),
-    fetchMovieSources(),
-    fetchBroadcastSources(),
-    fetchBuzzSources(),
-    fetchWebtoonSources(),
-    fetchShortsSources(),
-    fetchGameSources(),
-    fetchPoliticsSources(),
-    fetchPoliticsYoutubeSources(),
-    fetchTicketSources(),
-    fetchBookSources(),
-    fetchCategoryLiveSources(),
-  ]);
-  const sources = [
-    ...music,
-    ...movies,
-    ...broadcast,
-    ...buzz,
-    ...webtoon,
-    ...shorts,
-    ...games,
-    ...politics,
-    ...politicsYoutube,
-    ...tickets,
-    ...books,
-    ...categoryLive,
-  ];
+  let sources: SourceResult[];
+  try {
+    sources = await gatherSourceFamilies();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[kindexlab:ingest] gather failed: ${message}`);
+    sources = [failedFamily("ingest", message)];
+  }
   const composed = await composeLiveSnapshot(sources, previous);
   const updatedAt = new Date().toISOString();
   let items = composed.items;

@@ -3,6 +3,9 @@ import { decodeBody } from "@/lib/ingestion/decode";
 const DEFAULT_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
+/** Covers headers + body. Stalled response bodies used to hang past header-only abort. */
+const FETCH_TIMEOUT_MS = Number(process.env.INGEST_FETCH_TIMEOUT_MS ?? 18_000);
+
 const lastHit = new Map<string, number>();
 
 export class HttpError extends Error {
@@ -35,6 +38,25 @@ function headers(extra?: HeadersInit): Headers {
   return result;
 }
 
+function combineSignals(...signals: Array<AbortSignal | undefined | null>): AbortSignal {
+  const active = signals.filter((signal): signal is AbortSignal => Boolean(signal));
+  if (active.length === 0) return new AbortController().signal;
+  if (active.length === 1) return active[0];
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any(active);
+  }
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  for (const signal of active) {
+    if (signal.aborted) {
+      controller.abort();
+      return controller.signal;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+  }
+  return controller.signal;
+}
+
 /**
  * Default `cache: "no-store"` keeps ingest/cron paths fresh.
  * Callers that run on ISR page renders must pass `next: { revalidate }` (or an
@@ -42,18 +64,16 @@ function headers(extra?: HeadersInit): Headers {
  * CDN never serves HTML (`Cache-Control: private, no-store`).
  */
 async function request(url: string, init?: RequestInit, attempt = 0): Promise<Response> {
-  const { cache: initCache, next: initNext, headers: initHeaders, signal: _signal, ...rest } =
+  const { cache: initCache, next: initNext, headers: initHeaders, signal, ...rest } =
     (init ?? {}) as RequestInit & { next?: { revalidate?: number | false } };
   const allowDataCache = Boolean(initNext) || (initCache != null && initCache !== "no-store");
   // Ingest stays polite. ISR quote/board reads skip the long gap so
   // parallel Naver calls do not serialize into multi-second TTFB.
   await throttle(url, allowDataCache ? 40 : 350);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 18_000);
   try {
     const response = await fetch(url, {
       ...rest,
-      signal: controller.signal,
+      signal,
       headers: headers(initHeaders),
       redirect: "follow",
       ...(allowDataCache
@@ -69,7 +89,7 @@ async function request(url: string, init?: RequestInit, attempt = 0): Promise<Re
     }
     return response;
   } catch (error) {
-    if (attempt < 2) {
+    if (attempt < 2 && !(error instanceof Error && error.name === "AbortError")) {
       await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
       return request(url, init, attempt + 1);
     }
@@ -79,6 +99,24 @@ async function request(url: string, init?: RequestInit, attempt = 0): Promise<Re
     throw new HttpError(
       error instanceof Error ? `${error.message} (${url})` : `fetch failed (${url})`,
     );
+  }
+}
+
+async function withFetchTimeout<T>(
+  url: string,
+  init: RequestInit | undefined,
+  run: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const signal = combineSignals(controller.signal, init?.signal);
+  try {
+    return await run(signal);
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new HttpError(`Timeout fetching ${url}`, 408);
+    }
+    throw error;
   } finally {
     clearTimeout(timer);
   }
@@ -88,29 +126,31 @@ export async function fetchBuffer(
   url: string,
   init?: RequestInit,
 ): Promise<{ status: number; contentType: string; buffer: ArrayBuffer }> {
-  const response = await request(url, init);
-  const buffer = await response.arrayBuffer();
-  // Some CDNs return an empty 200 to bots — retry once with a warmer referer.
-  if (buffer.byteLength < 64 && response.status < 400) {
-    const warmHeaders = {
-      ...Object.fromEntries(new Headers(init?.headers).entries()),
-      Referer: `${new URL(url).origin}/`,
-    };
-    const retry = await request(url, { ...init, headers: warmHeaders }, 1);
-    const again = await retry.arrayBuffer();
-    if (again.byteLength >= buffer.byteLength) {
-      return {
-        status: retry.status,
-        contentType: retry.headers.get("content-type") ?? "",
-        buffer: again,
+  return withFetchTimeout(url, init, async (signal) => {
+    const response = await request(url, { ...init, signal });
+    const buffer = await response.arrayBuffer();
+    // Some CDNs return an empty 200 to bots — retry once with a warmer referer.
+    if (buffer.byteLength < 64 && response.status < 400) {
+      const warmHeaders = {
+        ...Object.fromEntries(new Headers(init?.headers).entries()),
+        Referer: `${new URL(url).origin}/`,
       };
+      const retry = await request(url, { ...init, headers: warmHeaders, signal }, 1);
+      const again = await retry.arrayBuffer();
+      if (again.byteLength >= buffer.byteLength) {
+        return {
+          status: retry.status,
+          contentType: retry.headers.get("content-type") ?? "",
+          buffer: again,
+        };
+      }
     }
-  }
-  return {
-    status: response.status,
-    contentType: response.headers.get("content-type") ?? "",
-    buffer,
-  };
+    return {
+      status: response.status,
+      contentType: response.headers.get("content-type") ?? "",
+      buffer,
+    };
+  });
 }
 
 export async function fetchText(url: string, init?: RequestInit): Promise<string> {

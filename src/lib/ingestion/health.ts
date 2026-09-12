@@ -9,6 +9,12 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
   "ticketlink-rank",
   // Apple KR topsongs RSS is often empty; apple-music covers the same chart.
   "itunes",
+  // Synthetic rows when a source family hits its wall-clock budget.
+  "family:category-live",
+  "family:politics-youtube",
+  "family:books",
+  "family:tickets",
+  "family:games",
 ]);
 
 export type TrendsHealthIssue = {

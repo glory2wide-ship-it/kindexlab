@@ -133,6 +133,9 @@ export async function refreshBoardTape(limit = 2): Promise<{
   spawnSync("npx", ["tsx", "scripts/publish-boards.ts", "--kind=chain"], {
     stdio: "inherit",
     env: process.env,
+    // Bound the publish child so a stuck Gemini/board publish cannot hang ingest.
+    timeout: Number(process.env.INGEST_BOARD_PUBLISH_TIMEOUT_MS ?? 120_000),
+    killSignal: "SIGKILL",
   });
 
   const entities = [...byChannel.entries()].flatMap(([channel, boards]) =>
