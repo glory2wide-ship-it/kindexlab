@@ -40,6 +40,10 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
   "interpark-drama",
   "interpark-classic",
   "interpark-exhibit",
+  // PlayStation store API often times out from GHA; Steam still covers games.
+  "playstation-store",
+  // Live YouTube Data API calls flake under cron load; static seeds remain usable.
+  "youtube-politics-seeds",
   // Synthetic rows when a source family hits its wall-clock budget.
   // politics news often contends with heatmap Serper/Naver during overnight Batch;
   // youtube-politics-seeds still covers the politics surface when this times out.
@@ -206,7 +210,7 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
     return failedSources.some((row) => row.id === id);
   });
   /**
-   * Hard criticals: Naver movie must stay up.
+   * Hard criticals: Naver movie only when every theatrical fallback is also down.
    * Music: Apple Music + Circle are primary; HTML scrapes are soft fallback.
    * Hard-fail music only when every primary and every fallback chart is down.
    * Webtoon weekly often empties under parallel Naver rate-limits while
@@ -214,8 +218,20 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
    * daily (or the board row count) is healthy.
    */
   const HARD_CRITICAL_IDS = new Set(["naver-movie"]);
+  const MOVIE_FALLBACK_IDS = [
+    "kobis-daily",
+    "naver-boxoffice",
+    "cgv-chart",
+    "lotte-chart",
+    "maxmovie",
+    "ott-viewership",
+  ] as const;
   const webtoonDailyOk =
     snapshot?.sources?.some((row) => row.id === "naver-webtoon-daily" && row.ok) ?? false;
+  const movieFallbackOk =
+    snapshot?.sources?.some(
+      (row) => (MOVIE_FALLBACK_IDS as readonly string[]).includes(row.id) && row.ok,
+    ) ?? false;
   const musicPrimaryPresent = MUSIC_PRIMARY_IDS.some((id) => presentIds.has(id));
   const musicPrimaryOk =
     snapshot?.sources?.some(
@@ -228,6 +244,7 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
   const musicHardFailed = musicPrimaryPresent && !musicPrimaryOk && !musicFallbackOk;
   const hardCriticalFailed: string[] = criticalFailed.filter((id) => {
     if (id === "naver-webtoon-weekly" && webtoonDailyOk) return false;
+    if (id === "naver-movie" && movieFallbackOk) return false;
     return HARD_CRITICAL_IDS.has(id);
   });
   if (musicHardFailed) {

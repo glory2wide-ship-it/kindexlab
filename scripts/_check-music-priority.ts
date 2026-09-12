@@ -118,6 +118,40 @@ assert(
   "hard fail should mention music-primary",
 );
 
+const movieSoft = evaluateTrendsHealth({
+  snapshot: snap([
+    chart("apple-music", ["A"]),
+    chart("circle", ["B"]),
+    chart("naver-movie", ["M"], false),
+    chart("kobis-daily", ["K"]),
+  ]),
+  rejectMock: false,
+  minItems: 400,
+});
+assert(movieSoft.ok, `naver-movie down should warn when kobis up: ${JSON.stringify(movieSoft.issues)}`);
+assert(
+  movieSoft.issues.some((i) => i.code === "critical_source_failed" && i.level === "warn"),
+  "should soft-warn on naver-movie when movie fallbacks OK",
+);
+
+const movieHard = evaluateTrendsHealth({
+  snapshot: snap([
+    chart("apple-music", ["A"]),
+    chart("circle", ["B"]),
+    chart("naver-movie", ["M"], false),
+    chart("kobis-daily", ["K"], false),
+    chart("naver-boxoffice", ["N"], false),
+    chart("maxmovie", ["X"], false),
+  ]),
+  rejectMock: false,
+  minItems: 400,
+});
+assert(!movieHard.ok, "all movie sources down should hard-fail");
+assert(
+  movieHard.issues.some((i) => i.message.includes("naver-movie")),
+  "hard fail should mention naver-movie",
+);
+
 console.log(
   JSON.stringify(
     {
@@ -128,6 +162,8 @@ console.log(
       healthyOk: healthy.ok,
       softOfficialOk: softOfficial.ok,
       allMusicDownOk: allMusicDown.ok,
+      movieSoftOk: movieSoft.ok,
+      movieHardOk: movieHard.ok,
     },
     null,
     2,

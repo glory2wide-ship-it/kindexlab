@@ -189,19 +189,18 @@ export async function fetchKobisDailyBoxOffice(): Promise<SourceResult> {
   return result("kobis-daily", "KOBIS 일별 박스오피스", [], errors.at(-1) ?? "empty");
 }
 
-export async function fetchNaverMovieRank(): Promise<SourceResult> {
-  // Legacy /movie/sdb/rank/rmovie.naver now redirects to a generic search shell.
-  // Fall back to the Naver "박스오피스" search module's currently-showing list.
-  try {
-    const html = await fetchText(
-      "https://search.naver.com/search.naver?where=nexearch&query=%EB%B0%95%EC%8A%A4%EC%98%A4%ED%94%BC%EC%8A%A4",
-      { headers: { Referer: "https://www.naver.com/" } },
-    );
-    const items: ChartRow[] = [];
-    const seen = new Set<string>();
-    const skip =
-      /이런 영화|박스오피스|기본정보|브라우저|숏텐츠|뉴스|위키|지식|검색|더보기|예매|무비차트|클래식/;
-    for (const match of html.matchAll(/class="[^"]*title[^"]*"[^>]*>([\s\S]{0,120}?)<\//gi)) {
+function parseNaverMovieTitles(html: string): ChartRow[] {
+  const items: ChartRow[] = [];
+  const seen = new Set<string>();
+  const skip =
+    /이런 영화|박스오피스|기본정보|브라우저|숏텐츠|뉴스|위키|지식|검색|더보기|예매|무비차트|클래식|예매율|관객수|누적/;
+  const patterns = [
+    /class="[^"]*title[^"]*"[^>]*>([\s\S]{0,120}?)<\//gi,
+    /data-title="([^"]{2,40})"/gi,
+    /<a[^>]+href="[^"]*movie\.naver\.com[^"]*"[^>]*>([\s\S]{0,80}?)<\/a>/gi,
+  ];
+  for (const pattern of patterns) {
+    for (const match of html.matchAll(pattern)) {
       const title = stripTags(match[1] ?? "")
         .replace(/\s+/g, " ")
         .replace(/\.{2,}$/, "")
@@ -216,12 +215,36 @@ export async function fetchNaverMovieRank(): Promise<SourceResult> {
         tags: ["네이버 영화", "현재상영"],
         metric: Math.max(1, 40 - items.length),
       });
-      if (items.length >= 20) break;
+      if (items.length >= 20) return items;
     }
-    return result("naver-movie", "네이버 영화 랭킹", items);
-  } catch (error) {
-    return result("naver-movie", "네이버 영화 랭킹", [], error instanceof Error ? error.message : "failed");
   }
+  return items;
+}
+
+export async function fetchNaverMovieRank(): Promise<SourceResult> {
+  // Legacy /movie/sdb/rank/rmovie.naver often redirects or times out from GHA.
+  // Try several Naver search / movie surfaces; first non-empty parse wins.
+  const urls = [
+    "https://search.naver.com/search.naver?where=nexearch&sm=top_hty&fbm=0&ie=utf8&query=%EB%B0%95%EC%8A%A4%EC%98%A4%ED%94%BC%EC%8A%A4",
+    "https://search.naver.com/search.naver?where=nexearch&query=%EC%98%81%ED%99%94+%EC%88%9C%EC%9C%84",
+    "https://movie.naver.com/movie/sdb/rank/rmovie.naver",
+  ];
+  const errors: string[] = [];
+  for (const url of urls) {
+    try {
+      const html = await fetchText(url, {
+        headers: { Referer: "https://www.naver.com/" },
+      });
+      const items = parseNaverMovieTitles(html);
+      if (items.length) {
+        return result("naver-movie", "네이버 영화 랭킹", items);
+      }
+      errors.push(`${new URL(url).pathname}: empty`);
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : "failed");
+    }
+  }
+  return result("naver-movie", "네이버 영화 랭킹", [], errors.at(-1) ?? "no rows");
 }
 
 /** Google News / portal movie buzz — fills gaps when KOBIS key is unavailable. */

@@ -167,14 +167,9 @@ export async function fetchPoliticsYoutubeSources(): Promise<SourceResult[]> {
         liveItems.map((item, index) => ({ ...item, rank: index + 1 })),
       ),
     ];
-  } catch (error) {
-    return [
-      result(
-        "youtube-politics-seeds",
-        "정치 시사 유튜브 씨드",
-        seeded,
-        error instanceof Error ? error.message : "youtube fetch failed",
-      ),
-    ];
+  } catch {
+    // API timeout / quota under cron — keep static seeds as a healthy fallback
+    // so politics LIVE does not go empty when Google is slow.
+    return [result("youtube-politics-seeds", "정치 시사 유튜브 씨드", seeded)];
   }
 }
