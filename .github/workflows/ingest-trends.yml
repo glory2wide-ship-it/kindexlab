@@ -2,12 +2,19 @@ name: Ingest live trends
 
 on:
   schedule:
-    - cron: "*/3 * * * *"
+    # Every 10 minutes — ingest often takes 2–5m; tighter crons overlap and race on push.
+    - cron: "*/10 * * * *"
   workflow_dispatch:
+
+# Only one ingest writer at a time; newer runs cancel stale overlaps.
+concurrency:
+  group: ingest-live-trends
+  cancel-in-progress: true
 
 jobs:
   ingest:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:

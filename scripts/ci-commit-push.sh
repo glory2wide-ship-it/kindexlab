@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Commit path(s) and push to the current branch with rebase retries.
-# Survives races with other Actions that also push to main (e.g. ingest every 3m).
+# Commit path(s) and push to the current branch with retries.
+# For generated artifacts (snapshot.json, published.json, …) we never merge:
+# take the latest remote tip, overwrite the target paths with our staged content,
+# commit, and push. That avoids JSON rebase conflicts when multiple bots write main.
 set -euo pipefail
 
 MESSAGE="${1:?commit message required}"
@@ -9,42 +11,59 @@ if [ "$#" -lt 1 ]; then
   echo "usage: $0 <message> <path> [path...]" >&2
   exit 1
 fi
+PATHS=("$@")
 
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
 # -f: overnight analysis cache under src/data/analysis/ is gitignored locally
 # but must still ship to production via this workflow.
-git add -f -- "$@"
+git add -f -- "${PATHS[@]}"
 if git diff --cached --quiet; then
-  echo "No staged changes for: $*"
+  echo "No staged changes for: ${PATHS[*]}"
   exit 0
 fi
 
-git commit -m "$MESSAGE"
+STAGE_DIR="$(mktemp -d)"
+cleanup() { rm -rf "$STAGE_DIR"; }
+trap cleanup EXIT
 
-# Ingest (and similar jobs) often leave unrelated dirty files (AGENTS.md, caches).
-# Those block `git rebase`; drop them so only the commit we just made is pushed.
+for path in "${PATHS[@]}"; do
+  mkdir -p "$STAGE_DIR/$(dirname "$path")"
+  # Prefer the index (what we just staged) so dirty working-tree noise is ignored.
+  git show ":${path}" >"${STAGE_DIR}/${path}"
+done
+
+# Drop unrelated dirty files (AGENTS.md, caches) before we start resetting.
 git reset --hard HEAD
 git clean -fd
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-REMOTE_REF="origin/${BRANCH}"
 
 for attempt in 1 2 3 4 5 6 7 8 9 10; do
   echo "Push attempt ${attempt}…"
   git fetch origin "$BRANCH"
-  if git rebase "$REMOTE_REF"; then
-    if git push origin "HEAD:${BRANCH}"; then
-      echo "Pushed successfully on attempt ${attempt}"
-      exit 0
-    fi
-  else
-    echo "Rebase failed on attempt ${attempt}; aborting rebase"
-    git rebase --abort 2>/dev/null || true
-    git reset --hard HEAD
-    git clean -fd
+  git reset --hard "origin/${BRANCH}"
+  git clean -fd
+
+  for path in "${PATHS[@]}"; do
+    mkdir -p "$(dirname "$path")"
+    cp "${STAGE_DIR}/${path}" "${path}"
+  done
+
+  git add -f -- "${PATHS[@]}"
+  if git diff --cached --quiet; then
+    echo "Remote already has the same content for: ${PATHS[*]}"
+    exit 0
   fi
+
+  git commit -m "$MESSAGE"
+  if git push origin "HEAD:${BRANCH}"; then
+    echo "Pushed successfully on attempt ${attempt}"
+    exit 0
+  fi
+
+  echo "Push rejected on attempt ${attempt}; retrying with a fresher tip"
   sleep $((attempt * 3))
 done
 

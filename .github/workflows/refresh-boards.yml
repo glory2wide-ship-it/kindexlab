@@ -13,6 +13,10 @@ on:
         required: false
         default: "4"
 
+concurrency:
+  group: refresh-ranking-boards
+  cancel-in-progress: false
+
 jobs:
   boards:
     runs-on: ubuntu-latest
