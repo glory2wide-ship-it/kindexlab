@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
-import { LANDING_HEATMAP_TIMEFRAME } from "@/lib/boards/composite-desk";
+import { LANDING_HEATMAP_TIMEFRAME } from "@/lib/boards/landing-constants";
 import { LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { MarketStatus, RankingEntity } from "@/lib/types";

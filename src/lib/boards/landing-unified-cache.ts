@@ -1,3 +1,5 @@
+import "server-only";
+
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";

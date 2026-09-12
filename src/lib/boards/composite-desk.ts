@@ -1,3 +1,5 @@
+import "server-only";
+
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { getRankings } from "@/lib/providers/trends";
@@ -7,6 +9,13 @@ import {
   loadHeatmapLivePayload,
   toTileEntity,
 } from "@/lib/boards/heatmap-server";
+import {
+  DESK_TOP_N,
+  LANDING_HEATMAP_TIMEFRAME,
+  LANDING_PER_CHANNEL_TOP,
+  type ChannelDesk,
+  type UnifiedMarket,
+} from "@/lib/boards/landing-constants";
 import { countLivePreferRows, preferLiveChannelComposite } from "@/lib/boards/limits";
 import {
   readLandingUnifiedCache,
@@ -22,36 +31,21 @@ import type { PostChannel } from "@/lib/posts/types";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import { attachTimeframeMetrics, rankItemsForTimeframe } from "@/lib/timeframes";
 import { tickerChangeRate } from "@/lib/ticker/rank";
-import type { RankingEntity, RankingsPayload, Timeframe } from "@/lib/types";
+import type { RankingEntity, RankingsPayload } from "@/lib/types";
+
+export {
+  DESK_TOP_N,
+  LANDING_HEATMAP_TIMEFRAME,
+  LANDING_PER_CHANNEL_TOP,
+  type ChannelDesk,
+  type UnifiedMarket,
+} from "@/lib/boards/landing-constants";
 
 /** Don't block landing ISR on Naver quote latency — peek cache, race, warm. */
 const KOSPI_QUOTE_BUDGET_MS = 150;
 
-/**
- * Landing heatmap defaults — match MarketWorkspace desktop options:
- * 5분봉 · 성별 전체 · 연령 전체.
- */
-export const LANDING_HEATMAP_TIMEFRAME: Timeframe = "5m";
-/** Top N per category under those defaults (5 channels × 4 = 20 tiles). */
-export const LANDING_PER_CHANNEL_TOP = 4;
 /** Tiles on the unified landing heatmap (desktop shows all; mobile caps at 15). */
 export const UNIFIED_HEATMAP_TILES = POST_CHANNELS.length * LANDING_PER_CHANNEL_TOP;
-/** Rows shown on each desk summary card. */
-export const DESK_TOP_N = 3;
-
-export interface ChannelDesk {
-  channel: PostChannel;
-  label: string;
-  href: string;
-  eyebrow: string;
-  top: RankingEntity[];
-}
-
-export interface UnifiedMarket {
-  /** Cross-category tiles for the landing heatmap, already capped and re-ranked. */
-  items: RankingEntity[];
-  desks: ChannelDesk[];
-}
 
 /**
  * Round-robin merge across desks so every category stays visible near the top.

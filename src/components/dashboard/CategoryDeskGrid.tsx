@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatRate } from "@/lib/format";
 import { stripRowQualifier } from "@/lib/boards/heatmap";
-import type { ChannelDesk } from "@/lib/boards/composite-desk";
+import type { ChannelDesk } from "@/lib/boards/landing-constants";
 import { entityHref } from "@/lib/slugs";
 import { changeForEntity } from "@/lib/timeframes";
 
