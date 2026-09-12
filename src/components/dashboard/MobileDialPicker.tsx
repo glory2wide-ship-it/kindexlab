@@ -190,9 +190,9 @@ export function MobileDialPicker<T extends string>({
           })}
           <span className="w-[30%] shrink-0" aria-hidden />
         </div>
-        {/* Center selection face — fill only, no border; −30% width vs prior 45% */}
+        {/* Center selection face — fill only, no border; +50% width vs prior 31.5% */}
         <div
-          className="pointer-events-none absolute inset-y-0.5 left-1/2 w-[31.5%] -translate-x-1/2 rounded bg-accent/25"
+          className="pointer-events-none absolute inset-y-0.5 left-1/2 w-[47.25%] -translate-x-1/2 rounded bg-accent/25"
           aria-hidden
         />
       </div>
