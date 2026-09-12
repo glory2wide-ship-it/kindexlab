@@ -28,8 +28,9 @@ async function main() {
   );
 
   if (!result.itemCount) {
-    process.exitCode = 1;
-    return;
+    // Family timeouts leave orphaned fetches open; force-exit so CI cannot hang
+    // until the 12m step timeout after health already decided.
+    process.exit(1);
   }
 
   // Post-ingest guard: catch mock env, collapsed crawls, and source outages
@@ -57,8 +58,11 @@ async function main() {
     for (const issue of health.issues) {
       console.error(`[ingest:trends:${issue.level}] ${issue.message}`);
     }
-    process.exitCode = 1;
+    process.exit(1);
   }
+  // Orphaned timed-out source fetches keep the event loop alive; exit cleanly
+  // so a healthy snapshot is committed instead of dying on the step timeout.
+  process.exit(0);
 }
 
 main().catch((error: unknown) => {

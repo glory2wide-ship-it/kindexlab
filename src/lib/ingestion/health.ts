@@ -11,6 +11,8 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
   "itunes",
   // KOBIS OpenAPI sample keys get revoked; HTML fallback + naver/maxmovie cover movies.
   "kobis-daily",
+  // MaxMovie news page flakes; naver-movie + kobis HTML cover the movie board.
+  "maxmovie",
   // Flaky third-party scrapes — covered by Melon/Genie/Bugs, Steam HTML, etc.
   "youtube-music",
   "google-trends",
@@ -18,6 +20,8 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
   "steam-most-played",
   "steam-charts",
   "yes24-ticket-rank",
+  // Books board is sparse; family timeout + prior snapshot cover gaps.
+  "yes24-bestseller",
   // Nielsen Korea HTML and Interpark ranking pages time out often under load.
   "nielsen-terrestrial",
   "nielsen-cable",
@@ -37,13 +41,13 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
 ]);
 
 /**
- * Google News RSS topic feeds (except the critical `news-ent` entertainment
- * wire) flake under concurrent heatmap Batch. Treat them as optional so a
- * healthy Melon/Naver/YouTube snapshot is not rejected for transient 504s.
+ * Google News RSS feeds (including `news-ent`) flake under concurrent heatmap
+ * Batch / outbound pressure. Treat all news-* as optional so a healthy
+ * Melon/Naver chart snapshot is not rejected for transient Google 504s.
+ * Soft critical handling below still warns when news-ent is down.
  */
 export function isOptionalIngestSource(id: string): boolean {
   if (OPTIONAL_INGEST_SOURCES.has(id)) return true;
-  if (id === "news-ent") return false;
   if (id.startsWith("news-")) return true;
   if (id.startsWith("nielsen-")) return true;
   if (id.startsWith("interpark-")) return true;
@@ -179,6 +183,10 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
     if (!presentIds.has(id)) return false;
     return failedSources.some((row) => row.id === id);
   });
+  /** Chart wires that must stay up for LIVE rankings to mean anything. */
+  const HARD_CRITICAL_IDS = new Set(["melon", "naver-webtoon-weekly", "naver-movie"]);
+  const hardCriticalFailed = criticalFailed.filter((id) => HARD_CRITICAL_IDS.has(id));
+  const softCriticalFailed = criticalFailed.filter((id) => !HARD_CRITICAL_IDS.has(id));
   const youtubeOk =
     snapshot?.sources?.some(
       (row) =>
@@ -186,12 +194,29 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
     ) ?? false;
   const youtubePresent =
     presentIds.has("youtube-trending") || presentIds.has("youtube-trending-html");
-  if (criticalFailed.length || (youtubePresent && !youtubeOk)) {
-    const ids = [...criticalFailed, ...(youtubePresent && !youtubeOk ? ["youtube-trending"] : [])];
+  const youtubeSoftFail = youtubePresent && !youtubeOk;
+  const coreChartsOk = hardCriticalFailed.length === 0;
+  const boardRowHealthy = itemCount >= minItems;
+
+  if (hardCriticalFailed.length) {
     issues.push({
       code: "critical_source_failed",
       level: "error",
-      message: `Critical source(s) failed: ${ids.join(", ")}`,
+      message: `Critical source(s) failed: ${hardCriticalFailed.join(", ")}`,
+    });
+  } else if (softCriticalFailed.length || youtubeSoftFail) {
+    // Google News / YouTube HTML often 504 while Melon + Naver charts are fine.
+    // Warn (do not fail the cron) when the board still has enough rows.
+    const ids = [
+      ...softCriticalFailed,
+      ...(youtubeSoftFail ? ["youtube-trending"] : []),
+    ];
+    issues.push({
+      code: "critical_source_failed",
+      level: boardRowHealthy ? "warn" : "error",
+      message: boardRowHealthy
+        ? `Soft critical source(s) failed while core charts OK: ${ids.join(", ")}`
+        : `Critical source(s) failed: ${ids.join(", ")}`,
     });
   }
 
@@ -199,8 +224,7 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
     // When the board still has enough rows and core charts are up, treat a
     // burst of scrape timeouts as a warning — common while heatmap Batch and
     // ingest share outbound quota.
-    const boardHealthy =
-      itemCount >= minItems && criticalFailed.length === 0 && (!youtubePresent || youtubeOk);
+    const boardHealthy = boardRowHealthy && coreChartsOk;
     issues.push({
       code: "too_many_failures",
       level: boardHealthy ? "warn" : "error",
