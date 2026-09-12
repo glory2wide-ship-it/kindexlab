@@ -13,17 +13,18 @@ function DialChevron({
 }) {
   return (
     <span
-      className={`pointer-events-none flex h-[33.6px] w-[15.6px] shrink-0 items-center justify-center text-accent transition-opacity ${
-        visible ? "opacity-100" : "opacity-35"
+      className={`pointer-events-none flex h-[40.32px] w-[18.72px] shrink-0 items-center justify-center transition-opacity ${
+        visible ? "opacity-100" : "opacity-45"
       }`}
+      style={{ color: "color-mix(in srgb, var(--accent) 62%, #000)" }}
       aria-hidden
     >
       <svg
         viewBox="0 0 24 24"
-        className="h-[25.2px] w-[25.2px]"
+        className="h-[30.24px] w-[30.24px]"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
