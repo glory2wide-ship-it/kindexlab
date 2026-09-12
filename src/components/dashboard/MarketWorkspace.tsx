@@ -272,7 +272,7 @@ export function MarketWorkspace({
               className={`inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none md:px-3 md:text-[13.2px] ${
                 selected
                   ? "bg-[#dc2626] text-white"
-                  : "text-soft hover:text-ink"
+                  : "font-semibold text-soft hover:text-ink"
               }`}
             >
               {label}
@@ -316,7 +316,7 @@ export function MarketWorkspace({
                 type="button"
                 onClick={() => setFilterOpen(true)}
                 aria-label="추가 필터"
-                className="inline-flex shrink-0 items-center justify-center rounded-md border border-line bg-board px-1.5 text-[10px] font-medium text-soft"
+                className="inline-flex shrink-0 items-center justify-center rounded-md border border-line bg-board px-1.5 text-[10px] font-semibold text-soft"
                 style={{ height: 28 }}
               >
                 설정
@@ -355,7 +355,9 @@ export function MarketWorkspace({
                   type="button"
                   onClick={() => setCategory(item.id)}
                   className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium ${
-                    category === item.id ? "bg-accent text-black" : "text-soft hover:text-ink"
+                    category === item.id
+                      ? "bg-accent text-black"
+                      : "font-semibold text-soft hover:text-ink"
                   }`}
                 >
                   {item.label}
@@ -377,7 +379,7 @@ export function MarketWorkspace({
                       key={option.id}
                       type="button"
                       onClick={() => setTimeframe(option.id)}
-                      className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[12px] font-medium tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[13.2px] lg:tracking-normal ${
+                      className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[12px] font-semibold tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[13.2px] lg:tracking-normal ${
                         timeframe === option.id
                           ? "bg-ink text-board md:bg-accent md:text-black"
                           : "text-soft hover:bg-panel hover:text-ink"
@@ -502,7 +504,7 @@ export function MarketWorkspace({
                     key={item.id}
                     type="button"
                     onClick={() => setCategory(item.id)}
-                    className={`min-h-10 shrink-0 rounded-md px-3 py-1.5 text-xs font-medium ${
+                    className={`min-h-10 shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold ${
                       category === item.id ? "bg-accent text-black" : "text-soft hover:text-ink"
                     }`}
                   >
@@ -522,7 +524,7 @@ export function MarketWorkspace({
                     key={option.id}
                     type="button"
                     onClick={() => setTimeframe(option.id)}
-                    className={`min-h-10 rounded-md px-3 py-1.5 font-sans text-xs font-medium ${
+                    className={`min-h-10 rounded-md px-3 py-1.5 font-sans text-xs font-semibold ${
                       timeframe === option.id
                         ? "bg-ink text-board"
                         : "text-soft hover:bg-panel hover:text-ink"

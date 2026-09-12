@@ -13,10 +13,10 @@ import type { AgeSegment, GenderSegment, RegionSegment } from "@/lib/boards/type
 const TAB_BASE =
   "rounded-md px-1.5 py-1 text-[12px] font-medium tracking-tight transition-[color,background-color,transform] duration-200 ease-out lg:px-3 lg:py-1.5 lg:text-[13.2px] lg:tracking-normal";
 const GENDER_ON = "bg-accent text-black scale-[1.02] lg:scale-[1.03]";
-const GENDER_OFF = "text-soft hover:text-ink";
+const GENDER_OFF = "font-semibold text-soft hover:text-ink";
 /** Mobile keeps ink; desktop matches gender accent. */
 const AGE_ON = "bg-ink text-board scale-[1.02] md:bg-accent md:text-black lg:scale-[1.03]";
-const AGE_OFF = "text-soft hover:bg-panel hover:text-ink";
+const AGE_OFF = "font-semibold text-soft hover:bg-panel hover:text-ink";
 
 /** 시/도 row — always rendered on its own line below 분봉·성별·연령. */
 export function RegionFilterTabs({

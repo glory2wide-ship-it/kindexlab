@@ -9,7 +9,8 @@
   --panel: #fffdf8;
   --line: #e2dacb;
   --muted: #667085;
-  --soft: #3f4b5f;
+  /* Nav / tab / channel chrome — slightly darker than prior #3f4b5f for scanability */
+  --soft: #2f3a4d;
   --ink: #141821;
   --up: #16a34a;
   --down: #dc2626;
@@ -26,7 +27,8 @@
   --panel: #10131a;
   --line: #232833;
   --muted: #8b93a7;
-  --soft: #c5ccd9;
+  /* Dark mode soft is light-on-dark; nudge brighter (= more visible) */
+  --soft: #d8dee9;
   --ink: #e8eaf1;
   --up: #22c55e;
   --down: #ef4444;

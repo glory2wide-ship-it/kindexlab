@@ -171,7 +171,7 @@ export function MobileDialPicker<T extends string>({
                   onChange(opt.id);
                   scrollToValue(opt.id, "smooth");
                 }}
-                className={`snap-center shrink-0 px-1 text-center text-[11px] font-semibold leading-none whitespace-nowrap ${
+                className={`snap-center shrink-0 px-1 text-center text-[11px] font-bold leading-none whitespace-nowrap ${
                   active ? "text-ink" : "text-soft"
                 }`}
                 aria-pressed={active}

@@ -39,7 +39,7 @@ export function HeaderNav() {
         className={
           allActive
             ? "shrink-0 whitespace-nowrap rounded-md bg-panel px-2 py-1.5 font-medium text-ink md:px-3"
-            : "shrink-0 whitespace-nowrap rounded-md px-2 py-1.5 font-medium text-soft transition-colors hover:bg-panel hover:text-ink md:px-3"
+            : "shrink-0 whitespace-nowrap rounded-md px-2 py-1.5 font-semibold text-soft transition-colors hover:bg-panel hover:text-ink md:px-3"
         }
       >
         <CategoryLabel>전체</CategoryLabel>
@@ -59,7 +59,7 @@ export function HeaderNav() {
             className={
               active
                 ? "shrink-0 whitespace-nowrap rounded-md bg-panel px-2 py-1.5 font-medium text-ink md:px-3"
-                : "shrink-0 whitespace-nowrap rounded-md px-2 py-1.5 font-medium text-soft transition-colors hover:bg-panel hover:text-ink md:px-3"
+                : "shrink-0 whitespace-nowrap rounded-md px-2 py-1.5 font-semibold text-soft transition-colors hover:bg-panel hover:text-ink md:px-3"
             }
           >
             <CategoryLabel>{item.label}</CategoryLabel>

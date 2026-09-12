@@ -38,11 +38,11 @@ export function CategoryBoardRail({
 
   const compositeClass = composite
     ? "border-accent bg-accent text-black"
-    : "border-line text-soft hover:text-ink";
+    : "border-line font-semibold text-soft hover:text-ink";
 
   // Desktop tab labels +15% vs prior 13.2px → 15.18px (mobile unchanged).
   const tabShell =
-    "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[12.1px] leading-none whitespace-nowrap md:inline-block md:w-auto md:px-3 md:text-[15.18px] md:leading-normal md:whitespace-normal";
+    "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[12.1px] font-semibold leading-none whitespace-nowrap md:inline-block md:w-auto md:px-3 md:text-[15.18px] md:leading-normal md:whitespace-normal";
 
   const orderedKeys = [
     ...boards.slice(0, insertAt).map((board) => board.slug),
@@ -70,7 +70,7 @@ export function CategoryBoardRail({
     <li key="composite" className="min-w-0">
       <Link
         href={`/${channel}`}
-        className={`${tabShell} border-line text-soft hover:text-ink`}
+        className={`${tabShell} border-line font-semibold text-soft hover:text-ink`}
       >
         <span className="md:hidden">{MOBILE_COMPOSITE_TAB_LABEL}</span>
         <span className="hidden md:inline">종합</span>
@@ -88,7 +88,9 @@ export function CategoryBoardRail({
             type="button"
             onClick={() => onSelect(board.slug)}
             className={`${tabShell} ${
-              active ? "border-accent bg-accent text-black" : "border-line text-soft hover:text-ink"
+              active
+                ? "border-accent bg-accent text-black"
+                : "border-line font-semibold text-soft hover:text-ink"
             }`}
           >
             <span className="md:hidden">{mobileLabel}</span>
@@ -101,7 +103,7 @@ export function CategoryBoardRail({
       <li key={board.slug} className="min-w-0">
         <Link
           href={boardPath(board.slug)}
-          className={`${tabShell} border-line text-soft hover:text-ink`}
+          className={`${tabShell} border-line font-semibold text-soft hover:text-ink`}
         >
           <span className="md:hidden">{mobileLabel}</span>
           <span className="hidden md:inline">{board.shortTitle}</span>

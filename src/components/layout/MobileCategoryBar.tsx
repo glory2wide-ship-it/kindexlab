@@ -33,7 +33,7 @@ export function MobileCategoryBar({
             className={`${chipClass} ${
               allActive
                 ? "border-accent bg-accent text-black"
-                : "border-line bg-panel text-ink hover:border-accent hover:text-accent"
+                : "border-line bg-panel font-bold text-ink hover:border-accent hover:text-accent"
             }`}
             style={{ height: CHIP_H, fontSize: CHIP_TEXT }}
           >
@@ -49,7 +49,7 @@ export function MobileCategoryBar({
                 className={`${chipClass} ${
                   active
                     ? "border-accent bg-accent text-black"
-                    : "border-line bg-panel text-ink hover:border-accent hover:text-accent"
+                    : "border-line bg-panel font-bold text-ink hover:border-accent hover:text-accent"
                 }`}
                 style={{ height: CHIP_H, fontSize: CHIP_TEXT }}
               >
