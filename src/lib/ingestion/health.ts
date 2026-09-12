@@ -9,7 +9,12 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
   "ticketlink-rank",
   // Apple KR topsongs RSS is often empty; apple-music covers the same chart.
   "itunes",
+  // KOBIS OpenAPI sample keys get revoked; HTML fallback + naver/maxmovie cover movies.
+  "kobis-daily",
   // Synthetic rows when a source family hits its wall-clock budget.
+  // politics news often contends with heatmap Serper/Naver during overnight Batch;
+  // youtube-politics-seeds still covers the politics surface when this times out.
+  "family:politics",
   "family:category-live",
   "family:politics-youtube",
   "family:books",
@@ -174,10 +179,17 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
   }
 
   if (options.rejectUsedPrevious && options.usedPreviousSnapshot) {
+    // Soften when the only pressure was optional family timeouts (common while
+    // heatmap Batch shares Serper/Naver/YouTube quota). Keep a hard fail when
+    // required sources also blew up or the board is critically empty.
+    const onlyOptionalPressure =
+      requiredFailed.length === 0 && itemCount >= Math.max(200, Math.floor(minItems * 0.5));
     issues.push({
       code: "used_previous_snapshot",
-      level: "error",
-      message: "Ingest fell back to the previous snapshot instead of a fresh crawl.",
+      level: onlyOptionalPressure ? "warn" : "error",
+      message: onlyOptionalPressure
+        ? "Ingest reused the previous snapshot after optional family timeouts; board still has enough rows."
+        : "Ingest fell back to the previous snapshot instead of a fresh crawl.",
     });
   }
 

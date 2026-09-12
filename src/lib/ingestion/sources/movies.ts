@@ -53,9 +53,11 @@ async function fetchKobisDailyFromHtml(): Promise<ChartRow[]> {
             Referer: "https://www.kobis.or.kr/kobis/business/stat/boxs/findDailyBoxOfficeList.do",
             "X-Requested-With": "XMLHttpRequest",
           },
+          // searchType must be "search" — an empty value returns the shell page
+          // without tbody_0 rows (OpenAPI sample keys are frequently revoked).
           body: new URLSearchParams({
             loadEnd: "0",
-            searchType: "",
+            searchType: "search",
             sSearchFrom: day,
             sSearchTo: day,
             sMultiMovieYn: "",
@@ -65,12 +67,13 @@ async function fetchKobisDailyFromHtml(): Promise<ChartRow[]> {
         },
       );
       const items: ChartRow[] = [];
-      const tbody = html.match(/<tbody id="tbody_0">([\s\S]*?)<\/tbody>/i)?.[1] ?? html;
+      const tbody = html.match(/<tbody id="tbody_0">([\s\S]*?)<\/tbody>/i)?.[1] ?? "";
       for (const row of tbody.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
         const block = row[1] ?? "";
         const rank = parseNumber(block.match(/<td[^>]*title="(\d+)"/i)?.[1]);
         const title =
           block.match(/mstView\('movie','\d+'\);[^>]*title="([^"]+)"/i)?.[1]?.trim() ||
+          block.match(/<a[^>]*title="([^"]+)"[^>]*onclick="mstView\('movie'/i)?.[1]?.trim() ||
           block.match(/mstView\('movie','\d+'\);[^>]*>([^<]+)</i)?.[1]?.trim();
         if (!title || !rank) continue;
         const cells = [...block.matchAll(/<td[^>]*class="tar"[^>]*>([\s\S]*?)<\/td>/gi)].map((m) =>
@@ -103,6 +106,13 @@ async function fetchKobisDailyFromHtml(): Promise<ChartRow[]> {
   return [];
 }
 
+function isInvalidKobisKey(message: string | undefined): boolean {
+  if (!message) return false;
+  // KOBIS returns e.g. "유효하지않은 키값입니다." / errorCode 320010 when the
+  // published sample key is revoked.
+  return /유효하지\s*않은\s*키|invalid\s*key|faultInfo|320010|320001/i.test(message);
+}
+
 export async function fetchKobisDailyBoxOffice(): Promise<SourceResult> {
   const key = kobisApiKey();
   const errors: string[] = [];
@@ -122,12 +132,14 @@ export async function fetchKobisDailyBoxOffice(): Promise<SourceResult> {
               rankInten?: string;
             }[];
           };
-          faultInfo?: { message?: string };
+          faultInfo?: { message?: string; errorCode?: string };
         }>(
           `https://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json?key=${encodeURIComponent(key)}&targetDt=${targetDt}&itemPerPage=10`,
         );
         if (data.faultInfo?.message) {
           errors.push(data.faultInfo.message);
+          // Bad keys never recover across targetDt retries — jump to HTML.
+          if (isInvalidKobisKey(data.faultInfo.message)) break;
           continue;
         }
         const items = (data.boxOfficeResult?.dailyBoxOfficeList ?? []).flatMap((row, index) => {
@@ -155,7 +167,9 @@ export async function fetchKobisDailyBoxOffice(): Promise<SourceResult> {
         if (items.length) return result("kobis-daily", "KOBIS 일별 박스오피스", items);
         errors.push(`${targetDt}: empty`);
       } catch (error) {
-        errors.push(error instanceof Error ? error.message : "failed");
+        const message = error instanceof Error ? error.message : "failed";
+        errors.push(message);
+        if (isInvalidKobisKey(message)) break;
       }
     }
   } else {
@@ -167,6 +181,7 @@ export async function fetchKobisDailyBoxOffice(): Promise<SourceResult> {
     if (htmlItems.length) {
       return result("kobis-daily", "KOBIS 일별 박스오피스", htmlItems);
     }
+    if (errors.length) errors.push("html fallback empty");
   } catch (error) {
     errors.push(error instanceof Error ? error.message : "html fallback failed");
   }

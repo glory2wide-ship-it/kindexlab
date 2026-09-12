@@ -161,8 +161,19 @@ export async function ingestLivePayload(options?: {
   let usedPreviousSnapshot = false;
 
   const previousCount = previous?.items.length ?? 0;
+  // Heavy optional families (politics / category-live) often time out when
+  // heatmap Batch is hitting the same search APIs. Do not discard an otherwise
+  // healthy crawl just because those families returned empty.
+  const optionalFamilyTimedOut = sources.some(
+    (source) =>
+      !source.ok &&
+      source.id.startsWith("family:") &&
+      /timed out/i.test(source.error ?? ""),
+  );
+  const collapseRatio = optionalFamilyTimedOut ? 0.2 : 0.5;
   const collapsed =
-    previousCount > 0 && items.length < Math.max(40, Math.floor(previousCount * 0.5));
+    previousCount > 0 &&
+    items.length < Math.max(40, Math.floor(previousCount * collapseRatio));
   if ((!items.length || collapsed) && previous?.items.length) {
     items = previous.items;
     indices = previous.indices;
