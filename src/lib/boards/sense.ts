@@ -68,6 +68,16 @@ const NATURE_LEAK =
 const TRAVEL_LEAK =
   /항공권|숙소\s*예약|여행\s*일정|관광지\s*추천|패키지\s*여행|출국\s*준비|여권\s*만료/;
 
+/**
+ * Industrial / investment economy copy must not ship on travel outing boards
+ * when the keyword is only a place name (e.g. 당진 → 산단 투자 유치).
+ */
+export const INDUSTRIAL_ECONOMY_LEAK =
+  /산업\s*단지|산단|투자\s*유치|투자\s*협약|공장\s*(신|증)?설|데이터\s*센터|기업\s*유치|물류\s*단지|산업\s*클러스터|첨단\s*산업|AI\s*데이터|석문|부곡산단|송산\s*\d*\s*산단/;
+
+const TRAVEL_ON_SENSE =
+  /여행|관광|나들이|맛집|숙소|항공|명소|휴양|코스|가볼만한|축제|해수욕장|트레킹|핫플|주말\s*나들이|여행지|관광지/;
+
 /** Pure sports-match framing on game-title boards. */
 const SPORTS_GAME_LEAK =
   /경기\s*결과|득점|홈런|야구\s*중계|축구\s*중계|스포츠\s*중계/;
@@ -226,19 +236,44 @@ const UNIT_PRESETS: Record<string, UnitSensePreset> = {
     domain: "travel",
     senseLabel: "여행지",
     searchQualifiers: ["여행", "관광", "가볼만한곳", "여행코스"],
-    promptRules: ["이 키워드는 여행지명입니다."],
+    promptRules: [
+      "이 키워드는 여행지명입니다.",
+      "산업단지·투자 유치·공장 증설·데이터센터 등 경제·산업 뉴스로 본문을 채우지 마세요.",
+      "여행·관광·나들이·숙소·명소 맥락이 없으면 글을 쓰지 마세요.",
+    ],
+    offSense: {
+      wrong: INDUSTRIAL_ECONOMY_LEAK,
+      required: TRAVEL_ON_SENSE,
+      label: "travel-vs-industrial-economy",
+    },
   },
   도시: {
     domain: "travel",
     senseLabel: "여행 도시",
     searchQualifiers: ["여행", "관광", "항공", "숙소"],
-    promptRules: ["이 키워드는 해외·국내 여행 도시입니다."],
+    promptRules: [
+      "이 키워드는 해외·국내 여행 도시입니다.",
+      "산업단지·투자 유치·공장·데이터센터 중심의 경제 기사로 바꾸지 마세요.",
+    ],
+    offSense: {
+      wrong: INDUSTRIAL_ECONOMY_LEAK,
+      required: TRAVEL_ON_SENSE,
+      label: "travel-city-vs-industrial-economy",
+    },
   },
   장소: {
     domain: "travel",
     senseLabel: "나들이 장소",
     searchQualifiers: ["나들이", "주말", "명소", "추천"],
-    promptRules: ["이 키워드는 주말 나들이 장소입니다."],
+    promptRules: [
+      "이 키워드는 주말 나들이 장소입니다.",
+      "산업단지·투자 유치 등 경제·산업 이슈로 본문을 채우지 마세요.",
+    ],
+    offSense: {
+      wrong: INDUSTRIAL_ECONOMY_LEAK,
+      required: TRAVEL_ON_SENSE,
+      label: "outing-vs-industrial-economy",
+    },
   },
   맛집: {
     domain: "food",
@@ -721,6 +756,18 @@ export function detectBoardSenseMismatch(input: {
       );
     const travel = mismatchFromPair(text, TRAVEL_LEAK, required, `travel-leak:${sense.domain}`);
     if (travel) return travel;
+  }
+
+  // Even when unit offSense is missing (channel mains), reject industrial economy
+  // essays on travel-domain boards.
+  if (sense.domain === "travel") {
+    const industrial = mismatchFromPair(
+      text,
+      INDUSTRIAL_ECONOMY_LEAK,
+      TRAVEL_ON_SENSE,
+      "travel-vs-industrial-economy",
+    );
+    if (industrial) return industrial;
   }
 
   return null;

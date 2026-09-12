@@ -275,15 +275,201 @@ export async function fetchMaxmovieBoxOffice(): Promise<SourceResult> {
   return result("maxmovie", "영화 흥행 뉴스", [], errors.at(-1) ?? "empty");
 }
 
-export async function fetchMovieSources(): Promise<SourceResult[]> {
-  return Promise.all([fetchKobisDailyBoxOffice(), fetchNaverMovieRank(), fetchMaxmovieBoxOffice()]);
+/** Naver search box-office module (more chart-like than currently-showing scrape). */
+export async function fetchNaverBoxOffice(): Promise<SourceResult> {
+  try {
+    const html = await fetchText(
+      "https://search.naver.com/search.naver?where=nexearch&sm=top_hty&fbm=0&ie=utf8&query=%EB%B0%95%EC%8A%A4%EC%98%A4%ED%94%BC%EC%8A%A4",
+      { headers: { Referer: "https://www.naver.com/" } },
+    );
+    const items: ChartRow[] = [];
+    const seen = new Set<string>();
+    const blocks = [
+      ...html.matchAll(/class="[^"]*(?:title|name|this_text)[^"]*"[^>]*>([\s\S]{0,80}?)<\//gi),
+      ...html.matchAll(/data-title="([^"]{2,40})"/gi),
+    ];
+    const skip = /박스오피스|예매율|관객|더보기|영화|순위|예고편|평점|검색/;
+    for (const match of blocks) {
+      const title = stripTags(match[1] ?? "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!title || title.length < 2 || title.length > 40 || skip.test(title)) continue;
+      const key = normalizeName(title);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      items.push({
+        rank: items.length + 1,
+        title,
+        tags: ["네이버", "박스오피스"],
+        metric: Math.max(1, 40 - items.length),
+      });
+      if (items.length >= 15) break;
+    }
+    return result("naver-boxoffice", "네이버 박스오피스", items);
+  } catch (error) {
+    return result(
+      "naver-boxoffice",
+      "네이버 박스오피스",
+      [],
+      error instanceof Error ? error.message : "failed",
+    );
+  }
+}
+
+/** CGV movie chart (reservation / popularity ranking). */
+export async function fetchCgvMovieChart(): Promise<SourceResult> {
+  try {
+    const html = await fetchText("https://www.cgv.co.kr/movies/?lt=1&ft=0", {
+      headers: { Referer: "https://www.cgv.co.kr/" },
+    });
+    const items: ChartRow[] = [];
+    const seen = new Set<string>();
+    for (const match of html.matchAll(
+      /class="[^"]*title[^"]*"[^>]*>\s*<a[^>]*>([\s\S]*?)<\/a>|class="[^"]*box-contents[^"]*"[\s\S]{0,200}?strong[^>]*>([\s\S]*?)<\/strong>/gi,
+    )) {
+      const title = stripTags(match[1] || match[2] || "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!title || title.length < 2 || title.length > 40) continue;
+      if (/예매율|지금\s*상영|무비차트|CGV|더보기/.test(title)) continue;
+      const key = normalizeName(title);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      items.push({
+        rank: items.length + 1,
+        title,
+        tags: ["CGV", "예매차트"],
+        metric: Math.max(1, 35 - items.length),
+      });
+      if (items.length >= 15) break;
+    }
+    return result("cgv-chart", "CGV 무비차트", items);
+  } catch (error) {
+    return result("cgv-chart", "CGV 무비차트", [], error instanceof Error ? error.message : "failed");
+  }
+}
+
+/** Lotte Cinema current ranking list. */
+export async function fetchLotteMovieChart(): Promise<SourceResult> {
+  const urls = [
+    "https://www.lottecinema.co.kr/NLCHS/Movie/List?flag=1",
+    "https://www.lottecinema.co.kr/NLCHS/Movie",
+  ];
+  const errors: string[] = [];
+  for (const url of urls) {
+    try {
+      const html = await fetchText(url, {
+        headers: { Referer: "https://www.lottecinema.co.kr/" },
+      });
+      const items: ChartRow[] = [];
+      const seen = new Set<string>();
+      for (const match of html.matchAll(
+        /class="[^"]*(?:tit|title|movie_name)[^"]*"[^>]*>([\s\S]{0,100}?)<\//gi,
+      )) {
+        const title = stripTags(match[1] ?? "")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (!title || title.length < 2 || title.length > 40) continue;
+        if (/롯데시네마|상영작|예매|더보기|영화\s*목록/.test(title)) continue;
+        const key = normalizeName(title);
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        items.push({
+          rank: items.length + 1,
+          title,
+          tags: ["롯데시네마", "예매차트"],
+          metric: Math.max(1, 35 - items.length),
+        });
+        if (items.length >= 15) break;
+      }
+      if (items.length) return result("lotte-chart", "롯데시네마 영화순위", items);
+      errors.push("empty");
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : "failed");
+    }
+  }
+  return result("lotte-chart", "롯데시네마 영화순위", [], errors.at(-1) ?? "empty");
 }
 
 /**
- * Borda-style merge: KOBIS audience counts weigh heaviest, portal ranks fill gaps.
+ * OTT viewership proxy via FlixPatrol Netflix KR top10 (public HTML).
+ * Soft signal for theatrical composite — optional in health.
+ */
+export async function fetchOttViewershipRank(): Promise<SourceResult> {
+  try {
+    const html = await fetchText("https://flixpatrol.com/top10/netflix/south-korea/", {
+      headers: {
+        Accept: "text/html",
+        Referer: "https://flixpatrol.com/",
+      },
+    });
+    const items: ChartRow[] = [];
+    const seen = new Set<string>();
+    for (const match of html.matchAll(
+      /<a[^>]+href="\/title\/[^"]+"[^>]*>([\s\S]{0,80}?)<\/a>/gi,
+    )) {
+      const title = stripTags(match[1] ?? "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!title || title.length < 2 || title.length > 60) continue;
+      if (/Netflix|Top\s*10|FlixPatrol|Movies|Shows|MORE/i.test(title)) continue;
+      const key = normalizeName(title);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      items.push({
+        rank: items.length + 1,
+        title,
+        tags: ["OTT", "Netflix KR", "시청순위"],
+        metric: Math.max(1, 30 - items.length),
+      });
+      if (items.length >= 10) break;
+    }
+    return result("ott-viewership", "OTT 시청순위(넷플릭스 KR)", items);
+  } catch (error) {
+    return result(
+      "ott-viewership",
+      "OTT 시청순위(넷플릭스 KR)",
+      [],
+      error instanceof Error ? error.message : "failed",
+    );
+  }
+}
+
+const MOVIE_SOURCE_WEIGHT: Record<string, number> = {
+  "kobis-daily": 3.5,
+  "naver-boxoffice": 2.5,
+  "naver-movie": 2.2,
+  "cgv-chart": 2,
+  "lotte-chart": 2,
+  "ott-viewership": 1.4,
+  maxmovie: 1,
+};
+
+export async function fetchMovieSources(): Promise<SourceResult[]> {
+  return Promise.all([
+    fetchKobisDailyBoxOffice(),
+    fetchNaverBoxOffice(),
+    fetchNaverMovieRank(),
+    fetchCgvMovieChart(),
+    fetchLotteMovieChart(),
+    fetchOttViewershipRank(),
+    fetchMaxmovieBoxOffice(),
+  ]);
+}
+
+/**
+ * Borda-style merge: KOBIS + Naver BO + cinema charts + soft OTT signal.
  */
 export function composeMovieChart(sources: SourceResult[]): ChartRow[] {
-  const order = ["kobis-daily", "naver-movie", "maxmovie"] as const;
+  const order = [
+    "kobis-daily",
+    "naver-boxoffice",
+    "naver-movie",
+    "cgv-chart",
+    "lotte-chart",
+    "ott-viewership",
+    "maxmovie",
+  ] as const;
   const charts = order
     .map((id) => sources.find((item) => item.id === id && item.ok))
     .filter((item): item is SourceResult => Boolean(item));
@@ -300,8 +486,8 @@ export function composeMovieChart(sources: SourceResult[]): ChartRow[] {
   };
   const map = new Map<string, Acc>();
 
-  charts.forEach((chart, chartIndex) => {
-    const weight = chart.id === "kobis-daily" ? 3 : chart.id === "naver-movie" ? 2 : 1;
+  charts.forEach((chart) => {
+    const weight = MOVIE_SOURCE_WEIGHT[chart.id] ?? 1;
     for (const row of chart.items.slice(0, 20)) {
       const key = normalizeName(row.title);
       if (!key) continue;
@@ -325,8 +511,7 @@ export function composeMovieChart(sources: SourceResult[]): ChartRow[] {
         current.tags = [...new Set([...current.tags, ...(row.tags ?? [])])];
         if (!current.measurement && row.measurement) current.measurement = row.measurement;
         if (!current.volume && row.volume) current.volume = row.volume;
-        // Prefer KOBIS title casing when present.
-        if (chartIndex === 0) current.title = row.title;
+        if (chart.id === "kobis-daily") current.title = row.title;
       }
     }
   });
@@ -356,6 +541,14 @@ export function pickPrimaryMovie(sources: SourceResult[]): SourceResult | undefi
       items: composed,
     };
   }
-  const order = ["kobis-daily", "naver-movie", "maxmovie"];
+  const order = [
+    "kobis-daily",
+    "naver-boxoffice",
+    "naver-movie",
+    "cgv-chart",
+    "lotte-chart",
+    "ott-viewership",
+    "maxmovie",
+  ];
   return order.map((id) => sources.find((item) => item.id === id && item.ok)).find(Boolean);
 }

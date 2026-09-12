@@ -18,6 +18,11 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
   "kobis-daily",
   // MaxMovie news page flakes; naver-movie + kobis HTML cover the movie board.
   "maxmovie",
+  // Cinema / OTT HTML charts — soft until scrapes prove stable under cron.
+  "naver-boxoffice",
+  "cgv-chart",
+  "lotte-chart",
+  "ott-viewership",
   // Flaky third-party scrapes — covered by Apple/Circle music feeds, Steam HTML, etc.
   "youtube-music",
   "google-trends",

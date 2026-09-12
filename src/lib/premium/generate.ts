@@ -8,6 +8,7 @@ import {
   detectBoardSenseMismatch,
   resolveBoardSense,
 } from "@/lib/boards/sense";
+import { isIndustrialEconomyTravelMismatch } from "@/lib/briefing/travel-topic-guard";
 import {
   buildSparseEnrichmentPrompt,
   canGenerateContext,
@@ -1141,6 +1142,17 @@ export async function generatePremiumArticle(input: {
   });
   if (senseMismatch) {
     return { ok: false, reason: "sense-mismatch", detail: senseMismatch };
+  }
+  if (
+    input.briefing &&
+    input.channel === "travel" &&
+    isIndustrialEconomyTravelMismatch(plainAfter)
+  ) {
+    return {
+      ok: false,
+      reason: "sense-mismatch",
+      detail: "travel-vs-industrial-economy:channel-main",
+    };
   }
   if (input.briefing && hasBriefingBoilerplate(plainAfter)) {
     return {
