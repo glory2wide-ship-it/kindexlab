@@ -183,10 +183,20 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
     if (!presentIds.has(id)) return false;
     return failedSources.some((row) => row.id === id);
   });
-  /** Chart wires that must stay up for LIVE rankings to mean anything. */
-  const HARD_CRITICAL_IDS = new Set(["melon", "naver-webtoon-weekly", "naver-movie"]);
-  const hardCriticalFailed = criticalFailed.filter((id) => HARD_CRITICAL_IDS.has(id));
-  const softCriticalFailed = criticalFailed.filter((id) => !HARD_CRITICAL_IDS.has(id));
+  /**
+   * Hard criticals: Melon + Naver movie must stay up.
+   * Webtoon weekly often empties under parallel Naver rate-limits while
+   * naver-webtoon-daily still covers the desk — treat weekly as soft when
+   * daily (or the board row count) is healthy.
+   */
+  const HARD_CRITICAL_IDS = new Set(["melon", "naver-movie"]);
+  const webtoonDailyOk =
+    snapshot?.sources?.some((row) => row.id === "naver-webtoon-daily" && row.ok) ?? false;
+  const hardCriticalFailed = criticalFailed.filter((id) => {
+    if (id === "naver-webtoon-weekly" && webtoonDailyOk) return false;
+    return HARD_CRITICAL_IDS.has(id);
+  });
+  const softCriticalFailed = criticalFailed.filter((id) => !hardCriticalFailed.includes(id));
   const youtubeOk =
     snapshot?.sources?.some(
       (row) =>

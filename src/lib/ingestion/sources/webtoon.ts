@@ -2,7 +2,9 @@ import { kstDateString } from "@/lib/briefing/dates";
 import { fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
 import type { ChartRow, SourceResult } from "@/lib/ingestion/types";
 
-const NAVER_WEEKS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun", "dailyPlus"] as const;
+const NAVER_WEEKS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+/** Legacy Naver weekday key — kept for daily fallback attempts only. */
+const NAVER_DAILY_PLUS = "dailyPlus";
 
 const NAVER_HEADERS = {
   Accept: "application/json,text/plain,*/*",
@@ -120,7 +122,7 @@ export async function fetchNaverWebtoonDaily(): Promise<SourceResult> {
     { week, order: "view" },
     { week, order: "user" },
     { week: weekFallback, order: "view" },
-    { week: "dailyPlus", order: "view" },
+    { week: NAVER_DAILY_PLUS, order: "view" },
   ];
   const errors: string[] = [];
   for (const attempt of attempts) {
@@ -140,22 +142,44 @@ export async function fetchNaverWebtoonDaily(): Promise<SourceResult> {
 }
 
 export async function fetchNaverWebtoonWeekly(): Promise<SourceResult> {
-  try {
-    const batches = await Promise.all(NAVER_WEEKS.map((week) => fetchNaverWeek(week).catch(() => [] as NaverTitle[])));
-    const titles = uniqueTitles(batches.flat());
-    const items = titles
-      .slice(0, 50)
-      .map((title, index) => rowFromTitle(title, index + 1, "네이버 주간"))
-      .filter((item): item is ChartRow => Boolean(item));
-    return result("naver-webtoon-weekly", "네이버웹툰 주간 인기", items);
-  } catch (error) {
-    return result(
-      "naver-webtoon-weekly",
-      "네이버웹툰 주간 인기",
-      [],
-      error instanceof Error ? error.message : "failed",
-    );
+  const errors: string[] = [];
+  const collected: NaverTitle[] = [];
+  // Sequential weekday pulls — parallel bursts often empty out under CI / GHA
+  // egress pressure even when a single daily request succeeds.
+  for (const week of NAVER_WEEKS) {
+    let batch: NaverTitle[] = [];
+    for (const order of ["view", "user"] as const) {
+      try {
+        batch = await fetchNaverWeek(week, order);
+        if (batch.length) break;
+        errors.push(`${week}/${order}: empty`);
+      } catch (error) {
+        errors.push(
+          `${week}/${order}: ${error instanceof Error ? error.message : "failed"}`,
+        );
+      }
+    }
+    collected.push(...batch);
   }
+  let titles = uniqueTitles(collected);
+  if (!titles.length) {
+    try {
+      titles = uniqueTitles(await fetchNaverWeek(todayWeekParam(), "update"));
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : "update-order-fallback-failed");
+    }
+  }
+  const items = titles
+    .slice(0, 50)
+    .map((title, index) => rowFromTitle(title, index + 1, "네이버 주간"))
+    .filter((item): item is ChartRow => Boolean(item));
+  if (items.length) return result("naver-webtoon-weekly", "네이버웹툰 주간 인기", items);
+  return result(
+    "naver-webtoon-weekly",
+    "네이버웹툰 주간 인기",
+    [],
+    errors.at(-1) ?? "no rows",
+  );
 }
 
 interface KakaoCard {
