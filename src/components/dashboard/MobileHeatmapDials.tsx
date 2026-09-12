@@ -41,6 +41,10 @@ export function MobileHeatmapDials({
   const beforeAll = ages.filter((key) => ["kids", "10s", "20s", "30s"].includes(key));
   const afterAll = ages.filter((key) => !["kids", "10s", "20s", "30s"].includes(key));
 
+  /**
+   * Keep chronological order so the mobile dial centers on 10분 with
+   * 5분 on the left and 30분 on the right (MarketWorkspace mobile default).
+   */
   const timeOptions = TIMEFRAMES.map((item) => ({ id: item.id, label: item.label }));
   const genderOptions = [
     { id: "male" as const, label: GENDER_LABEL.male },

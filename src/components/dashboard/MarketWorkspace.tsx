@@ -136,15 +136,18 @@ export function MarketWorkspace({
 
   const [view, setView] = useState<ViewMode>(initialView);
   const [category, setCategory] = useState<CategoryId>(initialCategory);
-  /** Default matches heatmap dials and refresh cadence (5분 · 전체 · 전체). */
-  const [timeframe, setTimeframe] = useState<Timeframe>("5m");
+  /**
+   * Mobile-first default is 10분 so the dial shows 5분 | 10분 | 30분.
+   * Desktop flips to 5분 (aligned with refresh countdown).
+   */
+  const [timeframe, setTimeframe] = useState<Timeframe>("10m");
   const [genderInternal, setGenderInternal] = useState<"all" | GenderSegment>("all");
   const [ageInternal, setAgeInternal] = useState<"all" | AgeSegment>("all");
   const [regionInternal, setRegionInternal] = useState<"all" | RegionSegment>("all");
   const [methodOpen, setMethodOpen] = useState(false);
   const [userPickedView, setUserPickedView] = useState(false);
 
-  /** Desktop and mobile both keep the 5분 default (aligned with refresh countdown). */
+  /** Desktop toolbar defaults to 5분; mobile keeps the 10분 dial center. */
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
     if (mq.matches) setTimeframe("5m");
