@@ -70,7 +70,7 @@ export function MobileHeatmapDials({
 
   return (
     <div className="flex flex-col gap-1 md:hidden">
-      <div className="flex gap-1">
+      <div className="flex gap-0.5">
         {hideTimeframes ? null : (
           <MobileDialPicker
             ariaLabel="기간"
@@ -85,7 +85,7 @@ export function MobileHeatmapDials({
           options={genderOptions}
           value={gender}
           onChange={onGender}
-          grow={1.1}
+          grow={1.18}
         />
         <MobileDialPicker
           ariaLabel="연령"

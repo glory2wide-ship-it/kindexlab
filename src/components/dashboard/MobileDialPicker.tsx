@@ -13,7 +13,7 @@ function DialChevron({
 }) {
   return (
     <span
-      className={`pointer-events-none flex h-[40.32px] w-[18.72px] shrink-0 items-center justify-center transition-opacity ${
+      className={`pointer-events-none flex h-[40.32px] w-[11px] shrink-0 items-center justify-center transition-opacity ${
         visible ? "opacity-100" : "opacity-45"
       }`}
       style={{ color: "color-mix(in srgb, var(--accent) 62%, #000)" }}
@@ -21,10 +21,10 @@ function DialChevron({
     >
       <svg
         viewBox="0 0 24 24"
-        className="h-[30.24px] w-[30.24px]"
+        className="h-[22px] w-[22px]"
         fill="none"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
@@ -155,16 +155,21 @@ export function MobileDialPicker<T extends string>({
         className="relative min-w-0 flex-1 overflow-hidden rounded-md bg-board"
         style={{ height: 28 }}
       >
+        {/* Selection face behind labels so neighbor glyphs are never covered */}
+        <div
+          className="pointer-events-none absolute inset-y-0.5 left-1/2 z-0 w-[47.25%] -translate-x-1/2 rounded bg-accent/25"
+          aria-hidden
+        />
         <div
           ref={scrollerRef}
-          className="flex h-full snap-x snap-mandatory items-center gap-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="relative z-10 flex h-full snap-x snap-mandatory items-center gap-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           style={{
-            // Wider label lane (~15%): keep neighbors visible in side thirds.
-            scrollPaddingInline: "30%",
+            // Keep active centered while leaving room for full neighbor glyphs.
+            scrollPaddingInline: "28%",
             WebkitOverflowScrolling: "touch",
           }}
         >
-          <span className="w-[30%] shrink-0" aria-hidden />
+          <span className="w-[28%] shrink-0" aria-hidden />
           {options.map((opt) => {
             const active = opt.id === value;
             return (
@@ -188,13 +193,8 @@ export function MobileDialPicker<T extends string>({
               </button>
             );
           })}
-          <span className="w-[30%] shrink-0" aria-hidden />
+          <span className="w-[28%] shrink-0" aria-hidden />
         </div>
-        {/* Center selection face — fill only, no border; +50% width vs prior 31.5% */}
-        <div
-          className="pointer-events-none absolute inset-y-0.5 left-1/2 w-[47.25%] -translate-x-1/2 rounded bg-accent/25"
-          aria-hidden
-        />
       </div>
       <DialChevron direction="right" visible={canScrollRight} />
     </div>
