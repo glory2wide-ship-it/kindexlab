@@ -19,10 +19,10 @@ export const CATEGORIES: { id: CategoryId; label: string }[] = [
 
 /**
  * Candle buttons on the live-index / heatmap toolbar.
- * 3분 remains available; default heatmap window is 5분 (aligned with refresh).
+ * Default (and shortest UI) window is 5분 — aligned with refresh cadence.
+ * Legacy 1m / 3m stay in ALL_TIMEFRAMES for stored metrics only.
  */
 export const TIMEFRAMES: TimeframeOption[] = [
-  { id: "3m", label: "3분", group: "분봉" },
   { id: "5m", label: "5분", group: "분봉" },
   { id: "10m", label: "10분", group: "분봉" },
   { id: "30m", label: "30분", group: "분봉" },
@@ -32,9 +32,10 @@ export const TIMEFRAMES: TimeframeOption[] = [
   { id: "1mo", label: "월봉", group: "월봉" },
 ];
 
-/** Full metric windows including legacy 1m (data only — not shown in the toolbar). */
+/** Full metric windows including legacy 1m / 3m (data only — not shown in the toolbar). */
 export const ALL_TIMEFRAMES: TimeframeOption[] = [
   { id: "1m", label: "1분", group: "분봉" },
+  { id: "3m", label: "3분", group: "분봉" },
   ...TIMEFRAMES,
 ];
 

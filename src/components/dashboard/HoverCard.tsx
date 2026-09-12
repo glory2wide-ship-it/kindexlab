@@ -15,7 +15,7 @@ import {
 } from "@/lib/timeframes";
 import type { RankingEntity, Timeframe } from "@/lib/types";
 
-const PREVIEW_FRAMES: Timeframe[] = ["3m", "1d", "1w"];
+const PREVIEW_FRAMES: Timeframe[] = ["5m", "1d", "1w"];
 
 export function HoverCard({
   entity,

@@ -29,7 +29,7 @@ const TradingViewChart = dynamic(
 
 export function BuzzChart({
   entity,
-  initialTimeframe = "3m",
+  initialTimeframe = "5m",
 }: {
   entity: RankingEntity;
   initialTimeframe?: Timeframe;

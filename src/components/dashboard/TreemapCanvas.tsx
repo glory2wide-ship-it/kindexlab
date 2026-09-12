@@ -140,7 +140,7 @@ export function TreemapView({
           const tile = heatmapTileLabel(entity);
           const base = scoreForTimeframe(entity, timeframe);
           const change = Math.abs(changeForEntity(entity, timeframe));
-          // Fold timeframe heat into area so 3분→월봉 is not only a reorder/recolor.
+          // Fold timeframe heat into area so 5분→월봉 is not only a reorder/recolor.
           const score = Math.max(0.05, base * (1 + Math.min(0.55, change / 18)));
           return {
             id: entity.id,

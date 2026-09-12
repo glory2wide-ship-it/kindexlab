@@ -118,7 +118,7 @@ export default async function RankingDetailPage({
   const name = typeof query.name === "string" ? query.name : undefined;
   const entity = await loadEntity(slug, name);
   if (!entity) notFound();
-  const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
+  const initialTimeframe = parseTimeframeParam(query.tf) ?? "5m";
   const marketInstrument = resolveMarketChartInstrument(entity);
   const hydrateQuote = entityNeedsLiveMarketQuote(entity);
   const isMarketQuote = Boolean(
@@ -157,7 +157,7 @@ export default async function RankingDetailPage({
         <MarketPriceChart
           entity={entity}
           instrument={marketInstrument}
-          initialTimeframe={initialTimeframe === "3m" ? "1d" : initialTimeframe}
+          initialTimeframe={initialTimeframe === "5m" || initialTimeframe === "3m" ? "1d" : initialTimeframe}
         />
       ) : (
         <BuzzChart entity={entity} initialTimeframe={initialTimeframe} />

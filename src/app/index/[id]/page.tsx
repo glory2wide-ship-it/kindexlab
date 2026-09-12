@@ -72,7 +72,7 @@ export default async function IndexDetailPage({
   if (!detail) notFound();
   const { index, entity, related } = detail;
   const pollLead = related[0] ?? entity;
-  const initialTimeframe = parseTimeframeParam(query.tf) ?? "3m";
+  const initialTimeframe = parseTimeframeParam(query.tf) ?? "5m";
 
   return (
     <div className="space-y-8">

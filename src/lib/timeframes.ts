@@ -637,7 +637,7 @@ export function candlesWindowOhlc(candles: CandlePoint[]): {
 
 export function changeForEntity(entity: RankingEntity, timeframe: Timeframe): number {
   const live = entity.metrics?.[timeframe]?.changeRate;
-  // Trust a stored window rate even on slim tiles (e.g. toTileEntity keeps only "3m").
+  // Trust a stored window rate even on slim tiles (e.g. legacy "3m"-only rows).
   // Requiring metricsAreDistinct forced lightHorizonChange + refreshBucket jitter, so
   // landing ISR top-4 and category LIVE 3m tops drifted across 3-minute buckets.
   if (Number.isFinite(live) && !metricsLookLegacySynthetic(entity)) {
@@ -692,7 +692,7 @@ export function attachTimeframeMetrics(entity: RankingEntity): RankingEntity {
   const built = buildTimeframeMetrics(entity);
   const existing = entity.metrics;
   if (!existing) return { ...entity, metrics: built };
-  // Preserve any already-stored window (esp. slim "3m"-only tiles) so ranking
+  // Preserve any already-stored window (incl. legacy "3m"-only rows) so ranking
   // does not rewrite ingest rates with a new refreshBucket draw.
   const merged = { ...built };
   for (const option of ALL_TIMEFRAMES) {

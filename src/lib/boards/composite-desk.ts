@@ -151,7 +151,7 @@ function landingTopForChannel(pool: RankingEntity[], channel: PostChannel): Rank
   return tagChannel(ranked.slice(0, LANDING_PER_CHANNEL_TOP), channel);
 }
 
-/** Uses the same 3m change field as the ticker and channel heatmap. */
+/** Uses the same change field as the ticker and channel heatmap (5m default). */
 function deskTopItem(item: RankingEntity): RankingEntity {
   const enriched = attachTimeframeMetrics(item);
   return toTileEntity({ ...enriched, fluctuationRate: tickerChangeRate(enriched) });
@@ -203,7 +203,7 @@ async function buildUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMark
  */
 const cachedUnifiedMarket = unstable_cache(
   async () => buildUnifiedMarket(),
-  ["unified-market-v1"],
+  ["unified-market-v2-5m"],
   { revalidate: 300 },
 );
 

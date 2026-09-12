@@ -194,7 +194,7 @@ export async function getRankings(options?: { refresh?: boolean }): Promise<Rank
 
 export function toTrendEntity(entity: RankingEntity, timeframe: Timeframe = "1d"): TrendEntity {
   const metrics = entity.metrics ?? buildTimeframeMetrics(entity);
-  const snapshot = metrics[timeframe] ?? metrics["3m"] ?? metrics["5m"] ?? metrics["1m"];
+  const snapshot = metrics[timeframe] ?? metrics["5m"] ?? metrics["3m"] ?? metrics["1m"];
   return {
     id: entity.id,
     slug: entity.slug,
