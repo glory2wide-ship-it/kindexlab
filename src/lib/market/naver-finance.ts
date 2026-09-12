@@ -44,7 +44,7 @@ interface FundamentalsCacheEntry {
   fundamentals: StockFundamentals;
 }
 
-/** Align with heatmap client refresh (DEFAULT_TRENDS_REVALIDATE_SEC = 180). */
+/** Align with heatmap client refresh (DEFAULT_TRENDS_REVALIDATE_SEC = 300). */
 const QUOTE_TTL_MS = 180_000;
 const quoteCache = new Map<string, CacheEntry>();
 const fundamentalsCache = new Map<string, FundamentalsCacheEntry>();

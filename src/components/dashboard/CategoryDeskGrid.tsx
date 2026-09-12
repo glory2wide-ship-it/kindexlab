@@ -18,7 +18,7 @@ function rateClass(rate: number): string {
  * Channel desk cards under the unified heatmap.
  * Card chrome matches category `BoardDeskGrid` (badge label, +10% height).
  * Updates come from the landing `router.refresh()` — no second /api/unified-desks
- * poll that duplicated getRankings + board loads every 3 minutes.
+ * poll that duplicated getRankings + board loads every 5 minutes.
  */
 export function CategoryDeskGrid({
   desks: initialDesks,
@@ -66,7 +66,7 @@ export function CategoryDeskGrid({
             <ol className="mt-[6.6px] flex-1 space-y-0">
               {desk.top.length ? (
                 desk.top.map((item, index) => {
-                  const rate = changeForEntity(item, "3m");
+                  const rate = changeForEntity(item, "5m");
                   return (
                     <li key={item.id}>
                       <Link

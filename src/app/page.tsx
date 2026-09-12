@@ -14,13 +14,13 @@ import { SITE, SITE_INDEX_HEADLINE, SITE_LANDING_HEADLINE } from "@/lib/site";
 import { rankingUrl } from "@/lib/slugs";
 
 /**
- * Served from the ISR cache, rebuilt every 3 minutes.
+ * Served from the ISR cache, rebuilt every 5 minutes.
  *
  * Heatmap and desk grid stream in separate Suspense boundaries so the desk
  * cards can paint as soon as the (cached) unified market resolves, without
  * waiting on the heavier treemap client chunk. Briefings use a slim card index.
  */
-export const revalidate = 180;
+export const revalidate = 300;
 
 const TITLE = SITE_INDEX_HEADLINE;
 const DESCRIPTION = SITE_LANDING_HEADLINE;

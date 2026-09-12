@@ -5,7 +5,7 @@ import { getArchiveBriefings, groupBriefingsByDate } from "@/lib/api";
 import { briefingMatchesChannel, channelSectionHref } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 
-export const revalidate = 180;
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "정치 인사이트 매거진",

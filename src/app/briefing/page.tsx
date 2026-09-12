@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/briefing" },
 };
 
-export const revalidate = 180;
+export const revalidate = 300;
 
 export default async function BriefingHubPage() {
   const featuredChannels = POST_CHANNELS.filter(

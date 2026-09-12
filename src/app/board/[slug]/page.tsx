@@ -20,7 +20,7 @@ import { SetActiveChannel } from "@/components/providers/ActiveChannelProvider";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
 /** ISR — board rankings refresh on cron; never block the page on LLM. */
-export const revalidate = 180;
+export const revalidate = 300;
 export const dynamicParams = true;
 
 export function generateStaticParams() {

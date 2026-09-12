@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const payload = await fetchHeadlineRanking(channel);
   return Response.json(payload, {
     headers: {
-      "Cache-Control": "public, s-maxage=180, stale-while-revalidate=900",
+      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900",
     },
   });
 }

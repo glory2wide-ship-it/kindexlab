@@ -4,7 +4,7 @@ import { ChannelBoardPageBody } from "@/components/dashboard/ChannelBoardPageBod
 import { getPostChannel, isPostChannel, LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 
 /** ISR: matches the 3-minute live board refresh cadence. */
-export const revalidate = 180;
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,

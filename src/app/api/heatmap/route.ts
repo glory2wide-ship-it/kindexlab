@@ -14,7 +14,7 @@ import type { RankingEntity } from "@/lib/types";
 export const runtime = "nodejs";
 export const preferredRegion = "icn1";
 /** Allow CDN caching — matches desk ISR and client refresh cadence. */
-export const revalidate = 180;
+export const revalidate = 300;
 
 function parseChannel(raw: string | null): PostChannel | undefined {
   if (!raw) return undefined;
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
     },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=180, stale-while-revalidate=600",
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
       },
     },
   );

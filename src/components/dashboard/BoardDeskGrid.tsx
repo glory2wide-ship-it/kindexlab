@@ -68,7 +68,7 @@ export function BoardDeskGrid({
               <ol className="mt-[6.6px] flex-1 space-y-0">
                 {desk.top.length ? (
                   desk.top.map((item, index) => {
-                    const rate = changeForEntity(item, "3m");
+                    const rate = changeForEntity(item, "5m");
                     return (
                       <li key={item.id}>
                         <Link

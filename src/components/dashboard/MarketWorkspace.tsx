@@ -136,7 +136,7 @@ export function MarketWorkspace({
 
   const [view, setView] = useState<ViewMode>(initialView);
   const [category, setCategory] = useState<CategoryId>(initialCategory);
-  /** Mobile-first default matches heatmap dials (5분 · 전체 · 전체). Desktop flips to 3분. */
+  /** Default matches heatmap dials and refresh cadence (5분 · 전체 · 전체). */
   const [timeframe, setTimeframe] = useState<Timeframe>("5m");
   const [genderInternal, setGenderInternal] = useState<"all" | GenderSegment>("all");
   const [ageInternal, setAgeInternal] = useState<"all" | AgeSegment>("all");
@@ -144,10 +144,10 @@ export function MarketWorkspace({
   const [methodOpen, setMethodOpen] = useState(false);
   const [userPickedView, setUserPickedView] = useState(false);
 
-  /** Desktop toolbar keeps 3분 default; mobile stays on the 5분 initial state. */
+  /** Desktop and mobile both keep the 5분 default (aligned with refresh countdown). */
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
-    if (mq.matches) setTimeframe("3m");
+    if (mq.matches) setTimeframe("5m");
   }, []);
 
   /** Keep default view in sync on viewport changes; never flash list on desktop. */

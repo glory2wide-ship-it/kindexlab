@@ -12,7 +12,7 @@ import {
 import type { PostChannel } from "@/lib/posts/types";
 
 /** ISR — archive is persisted data; soft-nav should not wait on a dynamic render. */
-export const revalidate = 180;
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,

@@ -4,7 +4,7 @@ import { getPostChannel, LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import { SITE } from "@/lib/site";
 
 /** ISR: matches the 3-minute live board refresh cadence. */
-export const revalidate = 180;
+export const revalidate = 300;
 
 const meta = getPostChannel("politics");
 
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   alternates: { canonical: meta.href },
   openGraph: {
     title: `${meta.indexTitle} · ${SITE.name}`,
-    description: "정치 종합 브리핑과 투데이 인사이트, 3분봉 히트맵 지수.",
+    description: "정치 종합 브리핑과 투데이 인사이트, 5분봉 히트맵 지수.",
     url: `${SITE.url}/politics`,
   },
 };

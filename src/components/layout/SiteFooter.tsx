@@ -63,7 +63,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-line py-4 text-center font-sans text-[11px] leading-5 text-muted">
-        히트맵은 3분마다, 매거진은 매일 1회 갱신됩니다.
+        히트맵은 5분마다, 매거진은 매일 1회 갱신됩니다.
         <br />
         © {year} {SITE.companyShort} · {SITE.name} All rights reserved.
       </div>

@@ -194,7 +194,7 @@ async function supabaseGet(slug: string): Promise<CachedAnalysis | undefined> {
       `${config.url}/rest/v1/analysis_cache?slug=eq.${encodeURIComponent(slug)}&select=body&limit=1`,
       {
         headers: { apikey: config.key, Authorization: `Bearer ${config.key}` },
-        next: { revalidate: 180 },
+        next: { revalidate: 300 },
       },
     );
     if (!response.ok) return undefined;

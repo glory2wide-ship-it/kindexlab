@@ -112,7 +112,7 @@ function MarketQuoteHero({
       </div>
       <p className="mt-[1.125rem] text-[11px] text-muted md:mt-6">
         {quote.label}
-        {observedLabel ? ` · ${observedLabel} 기준` : ""} · 약 3분마다 갱신 · 킨덱스 지수는 표시하지 않습니다
+        {observedLabel ? ` · ${observedLabel} 기준` : ""} · 약 5분마다 갱신 · 킨덱스 지수는 표시하지 않습니다
       </p>
     </section>
   );

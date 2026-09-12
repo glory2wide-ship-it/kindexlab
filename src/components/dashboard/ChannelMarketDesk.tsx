@@ -241,7 +241,7 @@ export function ChannelMarketDesk({
       if (board) params.set("board", board);
       params.set("region", boardUsesRegionFilter(board) ? nextRegion : "all");
       try {
-        // Default fetch honors `/api/heatmap` Cache-Control (s-maxage=180).
+        // Default fetch honors `/api/heatmap` Cache-Control (s-maxage=300).
         const response = await fetch(`/api/heatmap?${params.toString()}`);
         if (!response.ok || requestId !== heatmapRequestRef.current) return;
         const payload = (await response.json()) as {

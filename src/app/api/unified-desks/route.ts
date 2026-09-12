@@ -4,7 +4,7 @@ import { trendsRevalidateSec } from "@/lib/refresh";
 
 export const runtime = "nodejs";
 export const preferredRegion = "icn1";
-export const revalidate = 180;
+export const revalidate = 300;
 
 /** Landing “LIVE 킨덱스 랭킹” client poll — mirrors loadUnifiedMarket desks. */
 export async function GET() {

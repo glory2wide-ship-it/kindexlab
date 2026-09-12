@@ -281,7 +281,7 @@ async function supabaseGet(slug: string): Promise<CachedBoard | undefined> {
       {
         headers: { apikey: config.key, Authorization: `Bearer ${config.key}` },
         // ISR pages call this during render — no-store would disable the CDN HTML cache.
-        next: { revalidate: 180 },
+        next: { revalidate: 300 },
       },
     );
     if (!response.ok) return undefined;

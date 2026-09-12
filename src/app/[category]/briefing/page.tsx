@@ -4,7 +4,7 @@ import { ChannelBriefingPage } from "@/components/briefing/ChannelBriefingPage";
 import { channelSectionHref, getPostChannel, isPostChannel } from "@/lib/posts/channels";
 
 /** ISR — persisted edition; avoid force-dynamic so soft-nav can reuse the cache. */
-export const revalidate = 180;
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,

@@ -17,9 +17,9 @@ import type { RankingEntity, RankingsPayload, Timeframe } from "@/lib/types";
 
 /**
  * Landing heatmap defaults — match MarketWorkspace desktop options:
- * 3분봉 · 성별 전체 · 연령 전체.
+ * 5분봉 · 성별 전체 · 연령 전체.
  */
-export const LANDING_HEATMAP_TIMEFRAME: Timeframe = "3m";
+export const LANDING_HEATMAP_TIMEFRAME: Timeframe = "5m";
 /** Top N per category under those defaults (5 channels × 4 = 20 tiles). */
 export const LANDING_PER_CHANNEL_TOP = 4;
 /** Tiles on the unified landing heatmap (desktop shows all; mobile caps at 15). */
@@ -144,7 +144,7 @@ async function channelHeatmapPool(
 
 /**
  * Rank one channel the same way MarketWorkspace does for
- * 3분봉 + 성별 전체 + 연령 전체 (no demographic skew), then keep 1위~4위.
+ * 5분봉 + 성별 전체 + 연령 전체 (no demographic skew), then keep 1위~4위.
  */
 function landingTopForChannel(pool: RankingEntity[], channel: PostChannel): RankingEntity[] {
   const ranked = rankItemsForTimeframe(pool, LANDING_HEATMAP_TIMEFRAME);
@@ -204,7 +204,7 @@ async function buildUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMark
 const cachedUnifiedMarket = unstable_cache(
   async () => buildUnifiedMarket(),
   ["unified-market-v1"],
-  { revalidate: 180 },
+  { revalidate: 300 },
 );
 
 /** Process-local memo — covers script/tests and same-isolate repeats without Next cache. */
@@ -224,7 +224,7 @@ function loadUnifiedMarketProcessMemo(): Promise<UnifiedMarket> {
  * The landing page's cross-category board.
  *
  * For each category, take LIVE (or board fallback) ranks 1–4 under landing
- * defaults (3분봉 · 성별 전체 · 연령 전체), then round-robin merge.
+ * defaults (5분봉 · 성별 전체 · 연령 전체), then round-robin merge.
  *
  * `cache()` dedupes heatmap + desk Suspense in one request; `unstable_cache`
  * spans requests inside Next; process memo covers non-Next callers.

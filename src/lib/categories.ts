@@ -19,7 +19,7 @@ export const CATEGORIES: { id: CategoryId; label: string }[] = [
 
 /**
  * Candle buttons on the live-index / heatmap toolbar.
- * 3분 is the minimum UI unit (1분 is data-only / legacy).
+ * 3분 remains available; default heatmap window is 5분 (aligned with refresh).
  */
 export const TIMEFRAMES: TimeframeOption[] = [
   { id: "3m", label: "3분", group: "분봉" },

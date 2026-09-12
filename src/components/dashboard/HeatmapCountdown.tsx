@@ -19,7 +19,7 @@ export function HeatmapCountdownFallback() {
     <div role="timer" className={SHELL_CLASS} style={SHELL_STYLE} aria-hidden>
       <span className={LABEL_CLASS}>KinDex Live</span>
       <span className={CLOCK_CLASS}>
-        <FlipBoardText text="03:00" />
+        <FlipBoardText text="05:00" />
       </span>
     </div>
   );

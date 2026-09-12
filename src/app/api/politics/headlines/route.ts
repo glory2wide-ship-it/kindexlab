@@ -7,7 +7,7 @@ export async function GET() {
   const payload = await fetchPoliticsHeadlineRanking();
   return Response.json(payload, {
     headers: {
-      "Cache-Control": "public, s-maxage=180, stale-while-revalidate=900",
+      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900",
     },
   });
 }
