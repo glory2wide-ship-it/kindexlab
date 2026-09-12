@@ -148,7 +148,7 @@ export function CategoryBoardRail({
     <>
       {heading}
       <ul
-        className="grid gap-1.5 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[6.6px]"
+        className="grid gap-1.5 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[7.59px]"
         style={{ ["--m-rail" as string]: gridTemplateColumns }}
       >
         {tabs}
