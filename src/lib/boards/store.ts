@@ -175,7 +175,7 @@ let boardLoadPromise: Promise<void> | null = null;
 
 export function boardTtlHours(): number {
   const parsed = Number.parseInt(process.env.BOARDS_TTL_HOURS ?? "", 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 12;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 24;
 }
 
 export function isBoardExpired(entry: CachedBoard, now = Date.now()): boolean {

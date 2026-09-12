@@ -3,18 +3,23 @@ import { isPublicEditorialContent, PUBLIC_CONTENT_SINCE_DATE } from "@/lib/conte
 import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import type { CachedAnalysis } from "@/lib/analysis/store";
 
-/** Regular refresh cadence for 오늘의 분석 (2 days). */
-export const ANALYSIS_CYCLE_HOURS = 48;
+/** Regular refresh cadence for 오늘의 분석 (default 3 days; was 2). */
+function envPositiveInt(name: string, fallback: number): number {
+  const parsed = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export const ANALYSIS_CYCLE_HOURS = envPositiveInt("ANALYSIS_CYCLE_HOURS", 72);
 export const ANALYSIS_CYCLE_MS = ANALYSIS_CYCLE_HOURS * 3600_000;
 
 /** Force a full rewrite even when incremental updates keep the column warm. */
 export const ANALYSIS_FULL_REWRITE_DAYS = 7;
 export const ANALYSIS_FULL_REWRITE_MS = ANALYSIS_FULL_REWRITE_DAYS * 24 * 3600_000;
 
-/** General boards: heatmap ranks 1–10 per submenu board. */
-export const ANALYSIS_RANK_LIMIT_GENERAL = 10;
-/** Subsidy / grant boards: heatmap ranks 1–15. */
-export const ANALYSIS_RANK_LIMIT_SUBSIDY = 15;
+/** General boards: heatmap ranks 1–N per submenu board (default 5; was 10). */
+export const ANALYSIS_RANK_LIMIT_GENERAL = envPositiveInt("ANALYSIS_RANK_LIMIT_GENERAL", 5);
+/** Subsidy / grant boards: heatmap ranks 1–N (default 8; was 15). */
+export const ANALYSIS_RANK_LIMIT_SUBSIDY = envPositiveInt("ANALYSIS_RANK_LIMIT_SUBSIDY", 8);
 
 /**
  * General columns: fewer than this many valid news/docs → incremental update;
@@ -46,7 +51,7 @@ export type AnalysisRefreshReason =
   | "missing_or_invalid"
   | "reentry"
   | "seven_day_full_rewrite"
-  | "two_day_cycle"
+  | "cycle_elapsed"
   | "within_cycle";
 
 export interface AnalysisRefreshDecision {
@@ -127,7 +132,7 @@ export function shouldRefreshAnalysis(
 
   const generated = Date.parse(existing.generatedAt);
   if (!Number.isFinite(generated) || now - generated >= ANALYSIS_CYCLE_MS) {
-    return { refresh: true, mode: "auto", reason: "two_day_cycle" };
+    return { refresh: true, mode: "auto", reason: "cycle_elapsed" };
   }
 
   return { refresh: false, mode: "incremental", reason: "within_cycle" };

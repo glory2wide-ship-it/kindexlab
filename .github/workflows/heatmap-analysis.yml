@@ -85,6 +85,13 @@ jobs:
           BRIEFING_LLM_PROVIDER: gemini
           LLM_PROVIDER: gemini
           GEMINI_USE_BATCH: "true"
+          # Overnight cost: skip expand/repair LLM; local pad only
+          ANALYSIS_SKIP_LENGTH_EXPAND: "1"
+          ANALYSIS_SKIP_REPAIR_LLM: "1"
+          # Optional override; defaults also lowered in generation-policy.ts
+          ANALYSIS_RANK_LIMIT_GENERAL: "5"
+          ANALYSIS_RANK_LIMIT_SUBSIDY: "8"
+          ANALYSIS_CYCLE_HOURS: "72"
           GEMINI_BATCH_CONCURRENCY: "4"
           ANALYSIS_OVERNIGHT_BATCH_SIZE: "20"
           # Mid-run git push OFF (0). Salvage = disk + single final always() push.

@@ -4,7 +4,7 @@ import { kstDateString } from "@/lib/briefing/dates";
 import { rankBoard } from "@/lib/boards/chain/rank";
 import { emptyBoardReport, writeBoardReport } from "@/lib/boards/chain/report";
 import { polishBoardReport } from "@/lib/boards/chain/polish";
-import { buildBoardPump } from "@/lib/boards/chain/pump";
+import { buildBoardPump, buildTemplatePump } from "@/lib/boards/chain/pump";
 import { collectBoardSources } from "@/lib/boards/collect-board-sources";
 import { BOARDS, boardPath, getBoard, isDeskBoard, isRailBoard } from "@/lib/boards/registry";
 import { EXHIBITION_BOARD_SLUG, PERFORMANCE_BOARD_SLUG } from "@/lib/boards/region-catalogs";
@@ -37,6 +37,16 @@ function budgetMs(): number {
 
 function pipelineEnabled(): boolean {
   return process.env.BOARDS_CHAIN_ENABLED !== "0";
+}
+
+function boardsSkipPolish(): boolean {
+  const raw = process.env.BOARDS_SKIP_POLISH?.trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes";
+}
+
+function boardsSkipPump(): boolean {
+  const raw = process.env.BOARDS_SKIP_PUMP?.trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes";
 }
 
 async function generate(board: BoardDefinition, editionDate: string): Promise<CachedBoard> {
@@ -82,6 +92,32 @@ async function generate(board: BoardDefinition, editionDate: string): Promise<Ca
     }
   }
 
+  // Cost save: no news/ticket grounding → reuse previous or seed shell (no Gemini).
+  const hasGrounding = docs.length > 0 || ticketSeeds.length > 0 || ticketChartLines.length > 0;
+  if (!hasGrounding) {
+    logger.step("board:skip-llm", { reason: "no-grounding", previous: Boolean(previous?.ranking?.length) });
+    const generatedAt = new Date();
+    if (previous?.ranking?.length) {
+      const entry: CachedBoard = {
+        ...previous,
+        editionDate,
+        generatedAt: generatedAt.toISOString(),
+        expiresAt: new Date(generatedAt.getTime() + boardTtlHours() * 3_600_000).toISOString(),
+        provenance: {
+          ...previous.provenance,
+          kind: previous.provenance.kind === "chain" ? "chain" : "template",
+          newsDocs: 0,
+          buildMs: logger.elapsed(),
+        },
+      };
+      await writeBoard(entry);
+      return entry;
+    }
+    const sample = buildSampleBoard(board, editionDate);
+    await writeBoard(sample);
+    return sample;
+  }
+
   const ranked = await rankBoard({
     board,
     docs,
@@ -103,26 +139,30 @@ async function generate(board: BoardDefinition, editionDate: string): Promise<Ca
   });
 
   // Prose columns ship only from Gemini. Ranking/demographics still update on miss.
+  // BOARDS_SKIP_POLISH=1 skips the editor LLM pass (keeps drafted report).
   const report = fromLlm
-    ? remaining() > 10_000
-      ? await polishBoardReport({
+    ? boardsSkipPolish() || remaining() <= 10_000
+      ? drafted
+      : await polishBoardReport({
           report: drafted,
           logger,
           timeoutMs: Math.min(45_000, remaining()),
         })
-      : drafted
     : emptyBoardReport(board);
 
   const articleUrl = `${SITE.url}${boardPath(board.slug)}`;
+  // BOARDS_SKIP_PUMP=1 uses the free template pump (no shorts LLM).
   const pump = fromLlm
-    ? await buildBoardPump({
-        board,
-        ranking: ranked.ranking,
-        demographics: ranked.demographics,
-        articleUrl,
-        logger,
-        timeoutMs: Math.min(30_000, Math.max(8_000, remaining())),
-      })
+    ? boardsSkipPump()
+      ? buildTemplatePump(board, ranked.ranking, ranked.demographics)
+      : await buildBoardPump({
+          board,
+          ranking: ranked.ranking,
+          demographics: ranked.demographics,
+          articleUrl,
+          logger,
+          timeoutMs: Math.min(30_000, Math.max(8_000, remaining())),
+        })
     : undefined;
 
   const generatedAt = new Date();
@@ -219,7 +259,7 @@ export async function refreshBoard(
   return generateOnce(board, editionDate);
 }
 
-/** Missing first, then closest to expiry — hourly cron rotates through the full set.
+/** Missing/expired only — cron no longer refreshes still-warm boards.
  * Economy/culture/travel boards are refreshed ahead of entertainment/politics so
  * those heatmaps stay dense without Naver Open API coverage.
  */
@@ -241,14 +281,16 @@ export async function pickStaleBoards(limit: number, slug?: string): Promise<Boa
     }),
   );
 
-  return scored
-    .filter((item) => isRailBoard(item.board))
+  // Cost save: only missing (0) or expired (1) boards — never burn Gemini on warm ones.
+  const due = scored
+    .filter((item) => isRailBoard(item.board) && item.priority < 2)
     .sort(
       (left, right) =>
         channelBoost(left.board.channel) - channelBoost(right.board.channel) ||
         left.priority - right.priority ||
         left.at - right.at,
     )
-    .slice(0, Math.max(1, limit))
+    .slice(0, Math.max(0, limit))
     .map((item) => item.board);
+  return due;
 }

@@ -125,9 +125,15 @@ async function generate(options: {
     editionDate,
     briefing: true,
     dataJournalist: true,
-    // Today's Analysis prioritizes fill-rate; allow one repair/expand pass.
-    skipLengthExpandLlm: false,
-    allowBriefingRepairLlm: true,
+    // Overnight cost: ANALYSIS_SKIP_LENGTH_EXPAND / ANALYSIS_SKIP_REPAIR_LLM
+    // skip expand+repair LLM (local pad only). On-demand keeps expand unless set.
+    skipLengthExpandLlm:
+      (process.env.ANALYSIS_SKIP_LENGTH_EXPAND ?? "").trim().toLowerCase() === "1" ||
+      (process.env.ANALYSIS_SKIP_LENGTH_EXPAND ?? "").trim().toLowerCase() === "true",
+    allowBriefingRepairLlm: !(
+      (process.env.ANALYSIS_SKIP_REPAIR_LLM ?? "").trim().toLowerCase() === "1" ||
+      (process.env.ANALYSIS_SKIP_REPAIR_LLM ?? "").trim().toLowerCase() === "true"
+    ),
     minCharsOverride: ANALYSIS_BRIEFING_MIN,
     maxCharsOverride: ANALYSIS_BRIEFING_MAX,
     rewriteMode: options.rewriteMode ?? "auto",

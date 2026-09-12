@@ -1,11 +1,14 @@
 name: Refresh ranking boards
 
-# Rebuilds a rotating batch of LLM/RSS boards and commits published.json so
-# production heatmaps (경제·문화·여행 desks without ingest coverage) can move.
+# Rebuilds expired LLM/RSS boards and commits published.json so production
+# heatmaps (경제·문화·여행 desks without ingest coverage) can move.
+# Cost controls: Gemini Batch (−50%), expired-only picks, skip polish/pump,
+# 6h cadence, 24h TTL.
 
 on:
   schedule:
-    - cron: "20 * * * *"
+    # Every 6 hours — was hourly; expired-only + longer TTL covers the set.
+    - cron: "20 */6 * * *"
   workflow_dispatch:
     inputs:
       limit:
@@ -42,10 +45,18 @@ jobs:
           SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
           BOARDS_CHAIN_ENABLED: "1"
           TRENDS_DATA_SOURCE: live
+          # −50% vs Live for board LLM calls
+          GEMINI_USE_BATCH: "true"
+          # Prefer freshness window over thrashing warm boards
+          BOARDS_TTL_HOURS: "24"
+          # Skip optional editor / shorts LLM steps (template pump kept)
+          BOARDS_SKIP_POLISH: "1"
+          BOARDS_SKIP_PUMP: "1"
         run: |
           LIMIT="${{ github.event.inputs.limit || '4' }}"
           npx tsx scripts/refresh-stale-boards.ts --limit="$LIMIT"
       - name: Commit and push published boards
+        if: success()
         run: |
           chmod +x scripts/ci-commit-push.sh
           scripts/ci-commit-push.sh "chore: refresh published ranking boards" src/data/boards/published.json
