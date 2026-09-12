@@ -62,7 +62,7 @@ export function HeaderRefreshCountdown({
       style={{ fontWeight: 700 }}
     >
       <span className="text-[12.007px] font-bold leading-none tracking-tight whitespace-nowrap text-white">
-        KinDex Live
+        KinDex LIVE
       </span>
       <span className="refresh-countdown text-[14.675px] font-bold tabular-nums leading-none text-white">
         {pending ? "…" : <FlipBoardText text={formatRefreshClock(remainingSec)} />}
