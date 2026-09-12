@@ -8,13 +8,13 @@ export const SITE_INDEX_HEADLINE = "킨덱스! / KinDex";
 
 /** Head copy on the landing page hero, above the unified heatmap. */
 export const SITE_LANDING_HEADLINE =
-  "엔터·정치·경제·문화·여행까지, 실시간 화제성과 대중의 관심 이슈 흐름을 하나의 통합 지수로 확인!";
+  "엔터·정치·경제·문화·여행까지, 실시간 화제이슈를 지수로 확인!";
 
 /** Landing H1 / subcopy (mobile + desktop). */
 export const SITE_INDEX_HEADLINE_DESKTOP =
   "세상 모든 이슈를 한눈에, 트렌드 이슈의 심장!";
 export const SITE_LANDING_HEADLINE_DESKTOP =
-  "엔터·정치·경제·문화·여행까지, 실시간 화제성과 대중의 관심 이슈 흐름을 하나의 통합 지수로 확인!";
+  "엔터·정치·경제·문화·여행까지, 실시간 화제이슈를 지수로 확인!";
 
 export const SITE = {
   name: "KinDex",
