@@ -18,7 +18,9 @@ const nextConfig: NextConfig = {
     // Keep recently visited RSC payloads on the client so GNB/subnav hops
     // reuse the last paint instead of refetching every click.
     staleTimes: {
-      dynamic: 180,
+      // Align with landing ISR / trends revalidate (5 min) so client
+      // soft-nav does not refetch sooner than the CDN HTML.
+      dynamic: 300,
       static: 600,
     },
   },

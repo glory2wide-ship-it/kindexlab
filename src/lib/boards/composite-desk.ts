@@ -8,12 +8,24 @@ import {
   toTileEntity,
 } from "@/lib/boards/heatmap-server";
 import { countLivePreferRows, preferLiveChannelComposite } from "@/lib/boards/limits";
-import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
+import {
+  readLandingUnifiedCache,
+  writeLandingUnifiedCache,
+} from "@/lib/boards/landing-unified-cache";
+import {
+  attachKospiStockQuotes,
+  enrichEntityWithCachedKospiQuote,
+  entityNeedsLiveMarketQuote,
+} from "@/lib/market/kospi-quotes";
 import { itemsForChannel, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
+import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import { attachTimeframeMetrics, rankItemsForTimeframe } from "@/lib/timeframes";
 import { tickerChangeRate } from "@/lib/ticker/rank";
 import type { RankingEntity, RankingsPayload, Timeframe } from "@/lib/types";
+
+/** Don't block landing ISR on Naver quote latency — peek cache, race, warm. */
+const KOSPI_QUOTE_BUDGET_MS = 150;
 
 /**
  * Landing heatmap defaults — match MarketWorkspace desktop options:
@@ -157,6 +169,34 @@ function deskTopItem(item: RankingEntity): RankingEntity {
   return toTileEntity({ ...enriched, fluctuationRate: tickerChangeRate(enriched) });
 }
 
+/**
+ * Apply in-process Naver peeks, then race a live attach against a short budget.
+ * On timeout/miss, return peeked entities and warm the cache in the background.
+ */
+async function attachKospiQuotesSoft(
+  targets: RankingEntity[],
+  budgetMs = KOSPI_QUOTE_BUDGET_MS,
+): Promise<RankingEntity[]> {
+  if (!targets.some(entityNeedsLiveMarketQuote)) return targets;
+
+  const peeked = targets.map(enrichEntityWithCachedKospiQuote);
+
+  try {
+    const live = await Promise.race([
+      attachKospiStockQuotes(targets),
+      new Promise<null>((resolve) => {
+        setTimeout(() => resolve(null), budgetMs);
+      }),
+    ]);
+    if (live) return live;
+  } catch {
+    // Fall through to peeked + background warm.
+  }
+
+  void attachKospiStockQuotes(targets).catch(() => undefined);
+  return peeked;
+}
+
 async function buildUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMarket> {
   const resolved = await resolveLiveMarket(market);
 
@@ -182,7 +222,7 @@ async function buildUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMark
   );
 
   const quoteTargets = [...itemsRaw, ...deskTopsRaw.flat()];
-  const quoted = await attachKospiStockQuotes(quoteTargets);
+  const quoted = await attachKospiQuotesSoft(quoteTargets);
   const byId = new Map(quoted.map((item) => [item.id, item]));
 
   const items = itemsRaw.map((item) => byId.get(item.id) ?? item);
@@ -194,22 +234,24 @@ async function buildUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMark
     top: (deskTopsRaw[index] ?? []).map((item) => byId.get(item.id) ?? item),
   }));
 
-  return { items, desks };
+  const marketPayload = { items, desks };
+  writeLandingUnifiedCache(marketPayload);
+  return marketPayload;
 }
 
 /**
  * Cross-request Next data cache for the default landing path.
- * ISR is 180s; keep the data cache on the same cadence so cold isolates reuse work.
+ * Keep in lockstep with page ISR / CDN s-maxage (DEFAULT_TRENDS_REVALIDATE_SEC).
  */
 const cachedUnifiedMarket = unstable_cache(
   async () => buildUnifiedMarket(),
-  ["unified-market-v2-5m"],
-  { revalidate: 300 },
+  ["unified-market-v3-5m-soft-quotes"],
+  { revalidate: DEFAULT_TRENDS_REVALIDATE_SEC },
 );
 
 /** Process-local memo — covers script/tests and same-isolate repeats without Next cache. */
 let processUnifiedMemo: { at: number; value: Promise<UnifiedMarket> } | undefined;
-const PROCESS_UNIFIED_TTL_MS = 180_000;
+const PROCESS_UNIFIED_TTL_MS = DEFAULT_TRENDS_REVALIDATE_SEC * 1000;
 
 function loadUnifiedMarketProcessMemo(): Promise<UnifiedMarket> {
   if (processUnifiedMemo && Date.now() - processUnifiedMemo.at < PROCESS_UNIFIED_TTL_MS) {
@@ -228,11 +270,16 @@ function loadUnifiedMarketProcessMemo(): Promise<UnifiedMarket> {
  *
  * `cache()` dedupes heatmap + desk Suspense in one request; `unstable_cache`
  * spans requests inside Next; process memo covers non-Next callers.
+ * Slim disk cache short-circuits cold isolates before snapshot re-derive.
  */
 export const loadUnifiedMarket = cache(async function loadUnifiedMarket(
   market?: RankingsPayload,
 ): Promise<UnifiedMarket> {
   if (market) return buildUnifiedMarket(market);
+
+  const slim = readLandingUnifiedCache();
+  if (slim) return slim;
+
   try {
     return await cachedUnifiedMarket();
   } catch {

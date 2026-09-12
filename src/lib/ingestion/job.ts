@@ -262,5 +262,17 @@ export async function runIngestJob(options?: { persist?: boolean }): Promise<Ing
 
   const { persistSnapshot } = await import("@/lib/ingestion/persist");
   const persisted = await persistSnapshot(memorySnapshot);
+
+  // Refresh the slim landing board so cold isolates skip re-deriving from snapshot.json.
+  try {
+    const { loadUnifiedMarket } = await import("@/lib/boards/composite-desk");
+    await loadUnifiedMarket();
+  } catch (error) {
+    console.warn(
+      "[ingest] landing unified cache refresh skipped:",
+      error instanceof Error ? error.message : error,
+    );
+  }
+
   return { ...report, persisted: persisted.wrote };
 }

@@ -19,13 +19,13 @@ import { HeaderRefreshCountdown } from "@/components/layout/HeaderRefreshCountdo
 import { MobileBottomSheet } from "@/components/layout/MobileBottomSheet";
 
 /**
- * Heatmap loads as its own chunk (SSR off) so list-first mobile paint is not
- * blocked by the treemap/layout module. RankingTable stays static — dynamic
- * import was the main delay when switching 히트맵 → 리스트.
+ * Heatmap stays in its own chunk, but SSR is on so the landing first paint
+ * includes real tiles instead of a skeleton while the client chunk loads.
+ * RankingTable stays static — dynamic import was the delay on 히트맵 → 리스트.
  */
 const TreemapView = dynamic(
   () => import("@/components/dashboard/TreemapCanvas").then((mod) => mod.TreemapView),
-  { ssr: false, loading: () => <TreemapSkeleton /> },
+  { ssr: true, loading: () => <TreemapSkeleton /> },
 );
 const HeatmapCountdown = dynamic(
   () => import("@/components/dashboard/HeatmapCountdown").then((mod) => mod.HeatmapCountdown),
@@ -76,6 +76,7 @@ export function MarketWorkspace({
   refreshIntervalSec = DEFAULT_TRENDS_REVALIDATE_SEC,
   onRefresh,
   channel,
+  initialTimeframe,
 }: {
   items: RankingEntity[];
   initialCategory?: CategoryId;
@@ -107,6 +108,11 @@ export function MarketWorkspace({
   refreshing?: boolean;
   refreshIntervalSec?: number;
   onRefresh?: () => void;
+  /**
+   * Override the default timeframe (mobile 10m / desktop 5m).
+   * Landing passes 5m so SSR tiles match the unified market build.
+   */
+  initialTimeframe?: Timeframe;
 }) {
   useEffect(() => {
     // Warm treemap after first paint so LCP bandwidth is not contested,
@@ -139,19 +145,22 @@ export function MarketWorkspace({
   /**
    * Mobile-first default is 10분 so the dial shows 5분 | 10분 | 30분.
    * Desktop flips to 5분 (aligned with refresh countdown).
+   * Landing passes initialTimeframe="5m" so SSR tiles match the unified build.
    */
-  const [timeframe, setTimeframe] = useState<Timeframe>("10m");
+  const [timeframe, setTimeframe] = useState<Timeframe>(initialTimeframe ?? "10m");
   const [genderInternal, setGenderInternal] = useState<"all" | GenderSegment>("all");
   const [ageInternal, setAgeInternal] = useState<"all" | AgeSegment>("all");
   const [regionInternal, setRegionInternal] = useState<"all" | RegionSegment>("all");
   const [methodOpen, setMethodOpen] = useState(false);
   const [userPickedView, setUserPickedView] = useState(false);
 
-  /** Desktop toolbar defaults to 5분; mobile keeps the 10분 dial center. */
+  /** Desktop toolbar defaults to 5분; mobile keeps the 10분 dial center.
+   * Skip when the caller locked a timeframe (landing SSR = 5m). */
   useEffect(() => {
+    if (initialTimeframe) return;
     const mq = window.matchMedia("(min-width: 768px)");
     if (mq.matches) setTimeframe("5m");
-  }, []);
+  }, [initialTimeframe]);
 
   /** Keep default view in sync on viewport changes; never flash list on desktop. */
   useEffect(() => {

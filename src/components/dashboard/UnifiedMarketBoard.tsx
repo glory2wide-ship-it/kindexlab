@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MarketWorkspace } from "@/components/dashboard/MarketWorkspace";
 import { TickerTape } from "@/components/ticker/TickerTape";
+import { LANDING_HEATMAP_TIMEFRAME } from "@/lib/boards/composite-desk";
 import { LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { MarketStatus, RankingEntity } from "@/lib/types";
@@ -41,6 +42,7 @@ export function UnifiedMarketBoard({
         <MarketWorkspace
           items={items}
           initialView="treemap"
+          initialTimeframe={LANDING_HEATMAP_TIMEFRAME}
           hideCategoryTabs
           showChannelTags
           title={LIVE_INDEX_LABEL}
