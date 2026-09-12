@@ -39,7 +39,7 @@ jobs:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           KOPIS_API_KEY: ${{ secrets.KOPIS_API_KEY }}
           KOBIS_API_KEY: ${{ secrets.KOBIS_API_KEY }}
-          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+          # Serper disabled (cost). Re-enable with SERPER_ENABLED=1 + SERPER_API_KEY.
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

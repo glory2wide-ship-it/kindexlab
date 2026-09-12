@@ -1,6 +1,7 @@
 import { fetchJson } from "@/lib/ingestion/http";
 import { activeMarket } from "@/lib/market/config";
 import { classifyPublisher } from "@/lib/news/publishers";
+import { isSerperEnabled } from "@/lib/news/serper-enabled";
 import type { ContextSource } from "@/lib/context/types";
 
 interface SerperOrganic {
@@ -53,7 +54,7 @@ export async function fetchSerperWeb(
   limit = 5,
   options?: { allowUgc?: boolean; preferOfficial?: boolean },
 ): Promise<ContextSource[]> {
-  if (!process.env.SERPER_API_KEY) return [];
+  if (!isSerperEnabled()) return [];
 
   const market = activeMarket();
   const allowUgc = Boolean(options?.allowUgc);
@@ -62,7 +63,7 @@ export async function fetchSerperWeb(
     const data = await fetchJson<{ organic?: SerperOrganic[] }>("https://google.serper.dev/search", {
       method: "POST",
       headers: {
-        "X-API-KEY": process.env.SERPER_API_KEY,
+        "X-API-KEY": process.env.SERPER_API_KEY ?? "",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -110,14 +111,14 @@ export async function fetchSerperWeb(
  * Tier 2b — YouTube videos via Serper videos endpoint.
  */
 export async function fetchSerperVideos(keyword: string, limit = 3): Promise<ContextSource[]> {
-  if (!process.env.SERPER_API_KEY) return [];
+  if (!isSerperEnabled()) return [];
 
   const market = activeMarket();
   try {
     const data = await fetchJson<{ videos?: SerperVideo[] }>("https://google.serper.dev/videos", {
       method: "POST",
       headers: {
-        "X-API-KEY": process.env.SERPER_API_KEY,
+        "X-API-KEY": process.env.SERPER_API_KEY ?? "",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

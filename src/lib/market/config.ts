@@ -27,7 +27,8 @@ const MARKETS: Record<CountryCode, MarketConfig> = {
     currency: "KRW",
     googleNews: { hl: "ko", gl: "KR", ceid: "KR:ko" },
     amazonHost: "www.amazon.com",
-    newsProviders: ["google-news", "naver-news", "serper"],
+    // Serper is opt-in (SERPER_ENABLED=1); keep KR on free/local providers by default.
+    newsProviders: ["google-news", "naver-news"],
     affiliateProviders: ["coupang", "toss"],
   },
   US: {
@@ -37,7 +38,7 @@ const MARKETS: Record<CountryCode, MarketConfig> = {
     currency: "USD",
     googleNews: { hl: "en-US", gl: "US", ceid: "US:en" },
     amazonHost: "www.amazon.com",
-    newsProviders: ["google-news", "serper"],
+    newsProviders: ["google-news"],
     affiliateProviders: ["amazon"],
   },
   GB: {
@@ -47,7 +48,7 @@ const MARKETS: Record<CountryCode, MarketConfig> = {
     currency: "GBP",
     googleNews: { hl: "en-GB", gl: "GB", ceid: "GB:en" },
     amazonHost: "www.amazon.co.uk",
-    newsProviders: ["google-news", "serper"],
+    newsProviders: ["google-news"],
     affiliateProviders: ["amazon"],
   },
   DE: {
@@ -57,7 +58,7 @@ const MARKETS: Record<CountryCode, MarketConfig> = {
     currency: "EUR",
     googleNews: { hl: "de", gl: "DE", ceid: "DE:de" },
     amazonHost: "www.amazon.de",
-    newsProviders: ["google-news", "serper"],
+    newsProviders: ["google-news"],
     affiliateProviders: ["amazon"],
   },
   JP: {
@@ -67,7 +68,7 @@ const MARKETS: Record<CountryCode, MarketConfig> = {
     currency: "JPY",
     googleNews: { hl: "ja", gl: "JP", ceid: "JP:ja" },
     amazonHost: "www.amazon.co.jp",
-    newsProviders: ["google-news", "serper"],
+    newsProviders: ["google-news"],
     affiliateProviders: ["amazon"],
   },
 };

@@ -1,4 +1,5 @@
 import { fetchJson } from "@/lib/ingestion/http";
+import { isSerperEnabled } from "@/lib/news/serper-enabled";
 import type { NewsProvider, RawNewsDoc } from "@/lib/news/providers/types";
 
 interface SerperNewsItem {
@@ -38,11 +39,12 @@ function relativeToIso(raw?: string): string | undefined {
   return new Date(Date.now() - amount * step).toISOString();
 }
 
-/** Global news search. Requires SERPER_API_KEY. */
+/** Global news search. Opt-in via SERPER_ENABLED=1 + SERPER_API_KEY. */
 export const serperProvider: NewsProvider = {
   id: "serper",
-  isConfigured: () => Boolean(process.env.SERPER_API_KEY),
+  isConfigured: () => isSerperEnabled(),
   async search(keyword, { market, limit }) {
+    if (!isSerperEnabled()) return [];
     const data = await fetchJson<{ news?: SerperNewsItem[] }>(
       "https://google.serper.dev/news",
       {
