@@ -11,6 +11,18 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
   "itunes",
   // KOBIS OpenAPI sample keys get revoked; HTML fallback + naver/maxmovie cover movies.
   "kobis-daily",
+  // Flaky third-party scrapes — covered by Melon/Genie/Bugs, Steam HTML, etc.
+  "youtube-music",
+  "google-trends",
+  "youtube-trending",
+  "steam-most-played",
+  "steam-charts",
+  "yes24-ticket-rank",
+  // Google News RSS often times out under concurrent heatmap Batch load.
+  "news-pol-influencer",
+  "news-pol-ratings",
+  "news-policy",
+  "news-subsidy",
   // Synthetic rows when a source family hits its wall-clock budget.
   // politics news often contends with heatmap Serper/Naver during overnight Batch;
   // youtube-politics-seeds still covers the politics surface when this times out.
