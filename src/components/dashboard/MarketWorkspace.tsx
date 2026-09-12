@@ -538,7 +538,7 @@ export function MarketWorkspace({
                   <button
                     key={option.id}
                     type="button"
-                    onClick={() => setTimeframe(option.id)}
+                    onClick={() => pickTimeframe(option.id)}
                     className={`min-h-10 rounded-md px-3 py-1.5 font-sans text-xs font-semibold ${
                       timeframe === option.id
                         ? "bg-ink text-board"
