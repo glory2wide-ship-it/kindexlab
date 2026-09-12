@@ -16,9 +16,11 @@ import type { GeneratedPost, PostChannel } from "@/lib/posts/types";
 function PostCard({ post, href }: { post: GeneratedPost; href: string }) {
   return (
     <Link href={href} className="block rounded-2xl border border-line bg-panel p-5 hover:border-accent">
-      <p className="font-mono text-[11px] text-muted">{post.editionDate}</p>
-      <h2 className="mt-2 text-lg font-semibold tracking-tight">{post.title}</h2>
-      <p className="mt-2 text-sm leading-6 text-muted">{post.excerpt}</p>
+      <p className="font-mono text-[11px] font-medium text-soft">{post.editionDate}</p>
+      <h2 className="mt-2 text-lg font-semibold leading-snug tracking-tight max-md:leading-[1.375]">
+        {post.title}
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-muted max-md:leading-[1.65]">{post.excerpt}</p>
     </Link>
   );
 }

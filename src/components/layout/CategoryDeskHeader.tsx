@@ -22,7 +22,7 @@ export function CategoryDeskHeader({ channel }: { channel: PostChannel }) {
       <h1 className="whitespace-nowrap text-[clamp(16.38px,4.788vw,22.68px)] font-semibold leading-[0.8] tracking-tighter md:whitespace-normal md:text-3xl md:leading-snug md:tracking-tight">
         {title}
       </h1>
-      <p className="max-w-3xl text-[11.97px] leading-[18.24px] text-muted md:text-[16.8px] md:leading-[28.8px]">
+      <p className="max-w-3xl text-[11.97px] leading-[18.24px] text-soft md:text-[16.8px] md:leading-[28.8px]">
         {description}
       </p>
     </header>

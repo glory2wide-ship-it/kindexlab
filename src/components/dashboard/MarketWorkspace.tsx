@@ -263,7 +263,7 @@ export function MarketWorkspace({
               className={`inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none md:px-3 md:text-[13.2px] ${
                 selected
                   ? "bg-[#dc2626] text-white"
-                  : "text-muted hover:text-ink"
+                  : "text-soft hover:text-ink"
               }`}
             >
               {label}
@@ -307,7 +307,7 @@ export function MarketWorkspace({
                 type="button"
                 onClick={() => setFilterOpen(true)}
                 aria-label="추가 필터"
-                className="inline-flex shrink-0 items-center justify-center rounded-md border border-line bg-board px-1.5 text-[10px] font-medium text-muted"
+                className="inline-flex shrink-0 items-center justify-center rounded-md border border-line bg-board px-1.5 text-[10px] font-medium text-soft"
                 style={{ height: 28 }}
               >
                 설정
@@ -346,7 +346,7 @@ export function MarketWorkspace({
                   type="button"
                   onClick={() => setCategory(item.id)}
                   className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium ${
-                    category === item.id ? "bg-accent text-black" : "text-muted hover:text-ink"
+                    category === item.id ? "bg-accent text-black" : "text-soft hover:text-ink"
                   }`}
                 >
                   {item.label}
@@ -371,7 +371,7 @@ export function MarketWorkspace({
                       className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[12px] font-medium tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[13.2px] lg:tracking-normal ${
                         timeframe === option.id
                           ? "bg-ink text-board md:bg-accent md:text-black"
-                          : "text-muted hover:bg-panel hover:text-ink"
+                          : "text-soft hover:bg-panel hover:text-ink"
                       }`}
                     >
                       {option.label}
@@ -455,7 +455,7 @@ export function MarketWorkspace({
             <button
               type="button"
               onClick={() => setMethodOpen(true)}
-              className="inline-flex h-[30px] shrink-0 items-center rounded-md border border-line px-2.5 text-[12px] text-muted hover:text-ink md:px-3 md:text-[13.2px]"
+              className="inline-flex h-[30px] shrink-0 items-center rounded-md border border-line px-2.5 text-[12px] text-soft hover:text-ink md:px-3 md:text-[13.2px]"
               style={{ boxSizing: "border-box" }}
             >
               랭킹 산출 방식
@@ -486,7 +486,7 @@ export function MarketWorkspace({
         <div className="flex flex-col gap-5">
           {hideCategoryTabs ? null : (
             <section>
-              <h2 className="pb-2 text-[11px] font-semibold tracking-wide text-muted">분류</h2>
+              <h2 className="pb-2 text-[11px] font-semibold tracking-wide text-soft">분류</h2>
               <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
                 {categories.map((item) => (
                   <button
@@ -494,7 +494,7 @@ export function MarketWorkspace({
                     type="button"
                     onClick={() => setCategory(item.id)}
                     className={`min-h-10 shrink-0 rounded-md px-3 py-1.5 text-xs font-medium ${
-                      category === item.id ? "bg-accent text-black" : "text-muted hover:text-ink"
+                      category === item.id ? "bg-accent text-black" : "text-soft hover:text-ink"
                     }`}
                   >
                     {item.label}
@@ -506,7 +506,7 @@ export function MarketWorkspace({
 
           {hideTimeframes ? null : (
             <section>
-              <h2 className="pb-2 text-[11px] font-semibold tracking-wide text-muted">기간</h2>
+              <h2 className="pb-2 text-[11px] font-semibold tracking-wide text-soft">기간</h2>
               <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
                 {TIMEFRAMES.map((option) => (
                   <button
@@ -516,7 +516,7 @@ export function MarketWorkspace({
                     className={`min-h-10 rounded-md px-3 py-1.5 font-sans text-xs font-medium ${
                       timeframe === option.id
                         ? "bg-ink text-board"
-                        : "text-muted hover:bg-panel hover:text-ink"
+                        : "text-soft hover:bg-panel hover:text-ink"
                     }`}
                   >
                     {option.label}
@@ -527,7 +527,7 @@ export function MarketWorkspace({
           )}
 
           <section>
-            <h2 className="pb-2 text-[11px] font-semibold tracking-wide text-muted">인구통계</h2>
+            <h2 className="pb-2 text-[11px] font-semibold tracking-wide text-soft">인구통계</h2>
             <DemographicTabs
               gender={gender}
               age={age}
@@ -557,7 +557,7 @@ export function MarketWorkspace({
                 setFilterOpen(false);
                 setMethodOpen(true);
               }}
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line text-sm text-muted hover:text-ink"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line text-sm text-soft hover:text-ink"
             >
               랭킹 산출 방식
             </button>

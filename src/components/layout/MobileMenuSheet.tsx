@@ -59,7 +59,7 @@ export function MobileMenuSheet({
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="카테고리">
-          <p className="px-2 pb-2 text-[11px] font-semibold tracking-wide text-muted">카테고리</p>
+          <p className="px-2 pb-2 text-[11px] font-semibold tracking-wide text-soft">카테고리</p>
           <ul className="flex flex-col gap-1">
             {POST_CHANNELS.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);

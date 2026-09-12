@@ -6,7 +6,8 @@ const BASE: CSSProperties = {
   lineHeight: 1.05,
   letterSpacing: "0.18em",
   textTransform: "uppercase",
-  color: "var(--accent)",
+  color: "color-mix(in srgb, var(--accent) 55%, var(--ink))",
+  fontWeight: 600,
 };
 
 const VARIANTS: Record<DeskEyebrowVariant, CSSProperties> = {

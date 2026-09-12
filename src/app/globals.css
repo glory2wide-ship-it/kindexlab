@@ -9,6 +9,7 @@
   --panel: #fffdf8;
   --line: #e2dacb;
   --muted: #667085;
+  --soft: #3f4b5f;
   --ink: #141821;
   --up: #16a34a;
   --down: #dc2626;
@@ -25,6 +26,7 @@
   --panel: #10131a;
   --line: #232833;
   --muted: #8b93a7;
+  --soft: #c5ccd9;
   --ink: #e8eaf1;
   --up: #22c55e;
   --down: #ef4444;
@@ -40,6 +42,7 @@
   --color-panel: var(--panel);
   --color-line: var(--line);
   --color-muted: var(--muted);
+  --color-soft: var(--soft);
   --color-ink: var(--ink);
   --color-up: var(--up);
   --color-down: var(--down);

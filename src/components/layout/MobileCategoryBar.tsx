@@ -20,7 +20,7 @@ export function MobileCategoryBar({
   className?: string;
 }) {
   const chipClass =
-    "inline-flex min-w-0 flex-1 items-center justify-center rounded-md border px-0.5 text-center font-medium leading-none whitespace-nowrap";
+    "inline-flex min-w-0 flex-1 items-center justify-center rounded-md border px-0.5 text-center font-semibold leading-none whitespace-nowrap";
   const allActive = !activeId;
 
   return (
