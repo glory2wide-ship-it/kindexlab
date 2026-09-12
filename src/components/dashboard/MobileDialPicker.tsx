@@ -47,11 +47,14 @@ export function MobileDialPicker<T extends string>({
   value,
   onChange,
   ariaLabel,
+  /** Relative flex grow vs sibling dials (1 = equal share). */
+  grow = 1,
 }: {
   options: DialOption<T>[];
   value: T;
   onChange: (id: T) => void;
   ariaLabel: string;
+  grow?: number;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -141,7 +144,11 @@ export function MobileDialPicker<T extends string>({
   }, [onChange, options, scrollToValue, updateEdges, value]);
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-0" aria-label={ariaLabel}>
+    <div
+      className="flex min-w-0 items-center gap-0"
+      style={{ flex: `${grow} 1 0%` }}
+      aria-label={ariaLabel}
+    >
       <DialChevron direction="left" visible={canScrollLeft} />
       <div
         className="relative min-w-0 flex-1 overflow-hidden rounded-md bg-board"

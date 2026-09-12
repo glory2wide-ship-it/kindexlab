@@ -75,6 +75,7 @@ export function MobileHeatmapDials({
             options={timeOptions}
             value={timeframe}
             onChange={onTimeframe}
+            grow={1.08}
           />
         )}
         <MobileDialPicker
@@ -83,7 +84,13 @@ export function MobileHeatmapDials({
           value={gender}
           onChange={onGender}
         />
-        <MobileDialPicker ariaLabel="연령" options={ageOptions} value={age} onChange={onAge} />
+        <MobileDialPicker
+          ariaLabel="연령"
+          options={ageOptions}
+          value={age}
+          onChange={onAge}
+          grow={1.08}
+        />
       </div>
       {showRegion && onRegion ? (
         <MobileDialPicker
