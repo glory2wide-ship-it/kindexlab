@@ -18,11 +18,13 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
   "steam-most-played",
   "steam-charts",
   "yes24-ticket-rank",
-  // Google News RSS often times out under concurrent heatmap Batch load.
-  "news-pol-influencer",
-  "news-pol-ratings",
-  "news-policy",
-  "news-subsidy",
+  // Nielsen Korea HTML and Interpark ranking pages time out often under load.
+  "nielsen-terrestrial",
+  "nielsen-cable",
+  "interpark-musical",
+  "interpark-drama",
+  "interpark-classic",
+  "interpark-exhibit",
   // Synthetic rows when a source family hits its wall-clock budget.
   // politics news often contends with heatmap Serper/Naver during overnight Batch;
   // youtube-politics-seeds still covers the politics surface when this times out.
@@ -33,6 +35,20 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
   "family:tickets",
   "family:games",
 ]);
+
+/**
+ * Google News RSS topic feeds (except the critical `news-ent` entertainment
+ * wire) flake under concurrent heatmap Batch. Treat them as optional so a
+ * healthy Melon/Naver/YouTube snapshot is not rejected for transient 504s.
+ */
+export function isOptionalIngestSource(id: string): boolean {
+  if (OPTIONAL_INGEST_SOURCES.has(id)) return true;
+  if (id === "news-ent") return false;
+  if (id.startsWith("news-")) return true;
+  if (id.startsWith("nielsen-")) return true;
+  if (id.startsWith("interpark-")) return true;
+  return false;
+}
 
 export type TrendsHealthIssue = {
   code:
@@ -117,7 +133,7 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
     .map((row) => ({
       id: row.id,
       error: row.error,
-      optional: OPTIONAL_INGEST_SOURCES.has(row.id),
+      optional: isOptionalIngestSource(row.id),
     }));
   const requiredFailed = failedSources.filter((row) => !row.optional);
   const updatedAt = snapshot?.updatedAt;
@@ -158,17 +174,6 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
     });
   }
 
-  if (requiredFailed.length > maxRequiredFailures) {
-    issues.push({
-      code: "too_many_failures",
-      level: "error",
-      message: `${requiredFailed.length} required sources failed (max ${maxRequiredFailures}): ${requiredFailed
-        .slice(0, 12)
-        .map((row) => row.id)
-        .join(", ")}`,
-    });
-  }
-
   const presentIds = new Set((snapshot?.sources ?? []).map((row) => row.id));
   const criticalFailed = CRITICAL_SOURCE_IDS.filter((id) => {
     if (!presentIds.has(id)) return false;
@@ -187,6 +192,22 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
       code: "critical_source_failed",
       level: "error",
       message: `Critical source(s) failed: ${ids.join(", ")}`,
+    });
+  }
+
+  if (requiredFailed.length > maxRequiredFailures) {
+    // When the board still has enough rows and core charts are up, treat a
+    // burst of scrape timeouts as a warning — common while heatmap Batch and
+    // ingest share outbound quota.
+    const boardHealthy =
+      itemCount >= minItems && criticalFailed.length === 0 && (!youtubePresent || youtubeOk);
+    issues.push({
+      code: "too_many_failures",
+      level: boardHealthy ? "warn" : "error",
+      message: `${requiredFailed.length} required sources failed (max ${maxRequiredFailures}): ${requiredFailed
+        .slice(0, 12)
+        .map((row) => row.id)
+        .join(", ")}`,
     });
   }
 
