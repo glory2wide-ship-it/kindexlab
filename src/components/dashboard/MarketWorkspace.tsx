@@ -269,7 +269,7 @@ export function MarketWorkspace({
               role="tab"
               aria-selected={selected}
               onClick={() => pickView(id)}
-              className={`inline-flex h-full items-center rounded px-2.5 text-[11px] font-medium leading-none md:px-3 md:text-[13.2px] ${
+              className={`inline-flex h-full items-center rounded px-2.5 text-[11.88px] font-medium leading-none md:px-3 md:text-[14.256px] ${
                 selected
                   ? "bg-[#dc2626] text-white"
                   : "font-semibold text-soft hover:text-ink"
@@ -379,7 +379,7 @@ export function MarketWorkspace({
                       key={option.id}
                       type="button"
                       onClick={() => setTimeframe(option.id)}
-                      className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[12px] font-semibold tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[13.2px] lg:tracking-normal ${
+                      className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[12.96px] font-semibold tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[14.256px] lg:tracking-normal ${
                         timeframe === option.id
                           ? "bg-ink text-board md:bg-accent md:text-black"
                           : "text-soft hover:bg-panel hover:text-ink"
@@ -459,8 +459,8 @@ export function MarketWorkspace({
         )}
       </div>
 
-      {/* Row1: 산출방식 + caption · Row2: color legend */}
-      <div className="flex flex-col gap-2 border-t border-line bg-panel px-4 py-2 font-sans text-[12px] text-muted">
+      {/* Caption + color legend share one row on desktop; legend sits with the caption. */}
+      <div className="flex flex-col gap-2 border-t border-line bg-panel px-4 py-2 font-sans text-[12px] text-muted md:flex-row md:items-center md:justify-between md:gap-3">
         <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden">
           {view === "treemap" && sortedItems.length > 0 ? (
             <button
@@ -472,7 +472,7 @@ export function MarketWorkspace({
               랭킹 산출 방식
             </button>
           ) : null}
-          <span className="min-w-0 truncate whitespace-nowrap">
+          <span className="min-w-0 truncate whitespace-nowrap md:text-[13.2px]">
             <span className="md:hidden">
               상승 초록 · 하락 빨강 · 보합 차콜 · {sortedItems.length}종목
             </span>
@@ -483,11 +483,11 @@ export function MarketWorkspace({
           </span>
         </div>
         {view === "treemap" && sortedItems.length > 0 ? (
-          <div className="flex justify-start md:justify-end">
+          <div className="flex shrink-0 justify-start md:justify-end">
             <HeatmapLegend className="items-start md:items-end" />
           </div>
         ) : (
-          <span className="hidden md:inline">KinDex Hierarchical Heatmap</span>
+          <span className="hidden shrink-0 md:inline">KinDex Hierarchical Heatmap</span>
         )}
       </div>
 

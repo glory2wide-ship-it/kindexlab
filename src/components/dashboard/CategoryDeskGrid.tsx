@@ -72,16 +72,16 @@ export function CategoryDeskGrid({
                       <Link
                         href={entityHref(item)}
                         prefetch={false}
-                        className="flex items-baseline gap-1.5 rounded-md px-0.5 py-[2.2px] text-[13px] leading-[1.375rem] hover:bg-board/60 sm:gap-2 sm:px-1 sm:text-sm sm:leading-[1.375rem]"
+                        className="flex items-baseline gap-1.5 rounded-md px-0.5 py-[2.2px] text-[14.95px] leading-[1.30625rem] hover:bg-board/60 sm:gap-2 sm:px-1 sm:text-[16.1px] sm:leading-[1.30625rem]"
                       >
-                        <span className="font-sans text-[10px] font-semibold tabular-nums text-muted sm:text-[11px]">
+                        <span className="font-sans text-[11.5px] font-semibold tabular-nums text-muted sm:text-[12.65px]">
                           {index + 1}
                         </span>
                         <span className="min-w-0 flex-1 truncate font-medium" title={item.name}>
                           {stripRowQualifier(item.name)}
                         </span>
                         <span
-                          className={`shrink-0 font-sans text-[10px] font-semibold tabular-nums sm:text-[11px] ${rateClass(rate)}`}
+                          className={`shrink-0 font-sans text-[11.5px] font-semibold tabular-nums sm:text-[12.65px] ${rateClass(rate)}`}
                         >
                           {formatRate(rate)}
                         </span>

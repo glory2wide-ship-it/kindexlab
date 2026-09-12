@@ -25,6 +25,7 @@ import {
 } from "@/lib/boards/limits";
 import { isMarketQuoteBoardSlug } from "@/lib/market/kospi-quotes";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
+import { getPostChannel } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 import type { MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
 
@@ -402,7 +403,7 @@ export function ChannelMarketDesk({
           />
         ) : null}
         {showHeatmap && boardDesks.length ? (
-          <BoardDeskGrid desks={boardDesks} selectedId={selectedSlug || undefined} />
+          <BoardDeskGrid desks={boardDesks} selectedId={selectedSlug || undefined} heading={`LIVE ${getPostChannel(channel).label} 랭킹`} />
         ) : null}
       </div>
     </>

@@ -126,7 +126,7 @@ export function CategoryBoardRail({
           : "mb-3 hidden md:block"
       }
     >
-      <h2 className="text-base font-semibold">랭킹·지수 보드</h2>
+      <h2 className="text-[17.28px] font-semibold">랭킹·지수 보드</h2>
       {onSelect ? (
         <p className="mt-0.5 text-[13.79px] text-muted">
           보드를 고르면 아래 히트맵이 그 주제로 바뀝니다. 종목을 누르면 분석·여론조사 상세가 열립니다.

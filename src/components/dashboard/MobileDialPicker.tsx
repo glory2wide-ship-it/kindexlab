@@ -13,14 +13,14 @@ function DialChevron({
 }) {
   return (
     <span
-      className={`pointer-events-none flex h-[28px] w-[13px] shrink-0 items-center justify-center text-accent transition-opacity ${
+      className={`pointer-events-none flex h-[33.6px] w-[15.6px] shrink-0 items-center justify-center text-accent transition-opacity ${
         visible ? "opacity-100" : "opacity-35"
       }`}
       aria-hidden
     >
       <svg
         viewBox="0 0 24 24"
-        className="h-[21px] w-[21px]"
+        className="h-[25.2px] w-[25.2px]"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.6"
