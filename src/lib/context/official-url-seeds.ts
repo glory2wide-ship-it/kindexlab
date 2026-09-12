@@ -312,7 +312,7 @@ export function officialUrlSeeds(input: {
     const subject =
       parseBracketLabel(keyword)?.subject?.trim() ||
       keyword.replace(/^\[[^\]]+\]\s*/, "");
-    return [
+    const seeds: ContextSource[] = [
       {
         title: `${keyword} 최근 뉴스 검색`,
         url: `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(keyword)}`,
@@ -328,7 +328,8 @@ export function officialUrlSeeds(input: {
         tier: "web",
       },
       youtubeSearchSource(keyword),
-    ].slice(0, 3);
+    ];
+    return seeds.slice(0, 3);
   }
 
   return [];
