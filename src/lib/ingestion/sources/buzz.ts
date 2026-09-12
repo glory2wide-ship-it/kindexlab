@@ -4,6 +4,7 @@ import { isLikelyTrotArtist } from "@/lib/boards/trot";
 import { fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
 import { namesOverlap, normalizeName } from "@/lib/ingestion/names";
 import { parseNumber, parseRssItems } from "@/lib/ingestion/parse";
+import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
 import type { ChartRow, SourceResult } from "@/lib/ingestion/types";
 import type { EntityType } from "@/lib/types";
 
@@ -59,9 +60,61 @@ function extractNames(title: string): string[] {
   return [...new Set([...quoted, ...catalogHits])].filter(Boolean);
 }
 
+function ingestBuzzTitles(feed: (typeof FEEDS)[number], titles: { title: string }[]): ChartRow[] {
+  const counts = new Map<string, ChartRow>();
+  for (const item of titles) {
+    const names = extractNames(item.title).filter((name) => {
+      const known = matchCatalog(name);
+      if (known) return true;
+      if (/\s/.test(name) && name.length > 8) return false;
+      return name.length >= 2 && name.length <= 14;
+    });
+    const fallback = cleanHeadline(item.title);
+    const keys = names.length
+      ? names
+      : fallback.length >= 6 && fallback.length <= 40
+        ? [fallback]
+        : [];
+    if (!keys.length) continue;
+    for (const name of keys) {
+      const current = counts.get(name);
+      counts.set(name, {
+        rank: 0,
+        title: name,
+        metric: (current?.metric ?? 0) + 1,
+        tags: [feed.tag],
+        subtitle: item.title,
+      });
+    }
+  }
+  return [...counts.values()]
+    .sort((a, b) => (b.metric ?? 0) - (a.metric ?? 0))
+    .slice(0, 40)
+    .map((item, index) => ({ ...item, rank: index + 1 }));
+}
+
+async function fetchBuzzFallbackTitles(feed: (typeof FEEDS)[number]): Promise<{ title: string }[]> {
+  const query = feed.tag.replace(/뉴스$/, "") || feed.label;
+  try {
+    const retrieval = await retrieveNewsForKeyword(query, {
+      limit: 20,
+      lookbackHours: 72,
+      trustedOnly: false,
+      allowMarketTape: true,
+      skipAliasFilter: true,
+      preferNaver: true,
+    });
+    return retrieval.docs.map((doc) => ({ title: doc.title }));
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchGoogleNewsFeeds(): Promise<SourceResult[]> {
   return Promise.all(
     FEEDS.map(async (feed) => {
+      let rssError: string | undefined;
+      let titles: { title: string }[] = [];
       try {
         const xml = await fetchText(feed.url, {
           headers: {
@@ -69,41 +122,21 @@ export async function fetchGoogleNewsFeeds(): Promise<SourceResult[]> {
             Referer: "https://news.google.com/",
           },
         });
-        const counts = new Map<string, ChartRow>();
-        for (const item of parseRssItems(xml)) {
-          const names = extractNames(item.title).filter((name) => {
-            const known = matchCatalog(name);
-            if (known) return true;
-            if (/\s/.test(name) && name.length > 8) return false;
-            return name.length >= 2 && name.length <= 14;
-          });
-          // Always keep at least the cleaned headline when catalog extraction is thin.
-          const fallback = cleanHeadline(item.title);
-          const keys = names.length
-            ? names
-            : fallback.length >= 6 && fallback.length <= 40
-              ? [fallback]
-              : [];
-          if (!keys.length) continue;
-          for (const name of keys) {
-            const current = counts.get(name);
-            counts.set(name, {
-              rank: 0,
-              title: name,
-              metric: (current?.metric ?? 0) + 1,
-              tags: [feed.tag],
-              subtitle: item.title,
-            });
-          }
-        }
-        const items = [...counts.values()]
-          .sort((a, b) => (b.metric ?? 0) - (a.metric ?? 0))
-          .slice(0, 40)
-          .map((item, index) => ({ ...item, rank: index + 1 }));
-        return result(feed.id, feed.label, items);
+        titles = parseRssItems(xml).map((item) => ({ title: item.title }));
       } catch (error) {
-        return result(feed.id, feed.label, [], error instanceof Error ? error.message : "failed");
+        rssError = error instanceof Error ? error.message : "rss failed";
       }
+
+      let items = ingestBuzzTitles(feed, titles);
+      if (!items.length) {
+        const fallback = await fetchBuzzFallbackTitles(feed);
+        items = ingestBuzzTitles(feed, fallback);
+        if (items.length) {
+          return result(feed.id, `${feed.label} (fallback)`, items);
+        }
+        return result(feed.id, feed.label, [], rssError ?? "no rows");
+      }
+      return result(feed.id, feed.label, items);
     }),
   );
 }

@@ -163,20 +163,46 @@ export async function fetchAppleMusicKr(): Promise<SourceResult> {
 }
 
 export async function fetchItunesKr(): Promise<SourceResult> {
-  try {
-    const data = await fetchJson<{
-      feed?: { entry?: { "im:name": { label: string }; "im:artist": { label: string } }[] };
-    }>("https://itunes.apple.com/kr/rss/topsongs/limit=50/json");
-    const items = (data.feed?.entry ?? []).map((row, index) => ({
-      rank: index + 1,
-      title: row["im:name"]?.label,
-      subtitle: row["im:artist"]?.label,
-      tags: ["iTunes KR"],
-    }));
-    return result("itunes", "iTunes 한국 Top Songs", items);
-  } catch (error) {
-    return result("itunes", "iTunes 한국 Top Songs", [], error instanceof Error ? error.message : "failed");
+  // Apple deprecated the KR topsongs RSS body (empty feed with no entry).
+  // Prefer Apple Marketing Tools, then legacy iTunes RSS, then US chart as last resort.
+  const urls = [
+    "https://rss.applemarketingtools.com/api/v2/kr/music/most-played/50/songs.json",
+    "https://rss.applemarketingtools.com/api/v2/kr/music/most-played/25/songs.json",
+    "https://itunes.apple.com/kr/rss/topsongs/limit=50/json",
+    "https://itunes.apple.com/us/rss/topsongs/limit=50/json",
+  ];
+  const errors: string[] = [];
+  for (const url of urls) {
+    try {
+      if (url.includes("applemarketingtools.com")) {
+        const data = await fetchJson<{ feed?: { results?: { name: string; artistName: string }[] } }>(url);
+        const items = (data.feed?.results ?? []).map((row, index) => ({
+          rank: index + 1,
+          title: row.name,
+          subtitle: row.artistName,
+          tags: ["iTunes KR", "Apple Marketing"],
+        }));
+        if (items.length) return result("itunes", "iTunes 한국 Top Songs", items);
+        errors.push("marketing empty");
+        continue;
+      }
+      const data = await fetchJson<{
+        feed?: { entry?: { "im:name": { label: string }; "im:artist": { label: string } }[] };
+      }>(url);
+      const region = url.includes("/us/") ? "iTunes US fallback" : "iTunes KR";
+      const items = (data.feed?.entry ?? []).map((row, index) => ({
+        rank: index + 1,
+        title: row["im:name"]?.label,
+        subtitle: row["im:artist"]?.label,
+        tags: [region],
+      }));
+      if (items.length) return result("itunes", "iTunes 한국 Top Songs", items);
+      errors.push(`${url.includes("/us/") ? "us" : "kr"} empty`);
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : "failed");
+    }
   }
+  return result("itunes", "iTunes 한국 Top Songs", [], errors.at(-1) ?? "failed");
 }
 
 export async function fetchCircleDigital(): Promise<SourceResult> {

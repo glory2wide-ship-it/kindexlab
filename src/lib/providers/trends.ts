@@ -27,15 +27,13 @@ import { decodeRouteSlug, slugsMatch } from "@/lib/slugs";
  * Data-source switch:
  *   TRENDS_DATA_SOURCE=live  → crawler snapshot + on-demand refresh
  *   TRENDS_DATA_SOURCE=mock  → local rankings fixture
- *   unset on Vercel          → live (production default)
- *   unset locally            → mock
+ *   unset                    → live (prefer the crawler snapshot)
  */
 export type TrendsSource = TrendsPayload["source"];
 
 export function getTrendsSource(): TrendsSource {
   if (process.env.TRENDS_DATA_SOURCE === "mock") return "mock";
-  if (process.env.TRENDS_DATA_SOURCE === "live") return "live";
-  return process.env.VERCEL ? "live" : "mock";
+  return "live";
 }
 
 function loadMockRankings(): RankingsPayload {

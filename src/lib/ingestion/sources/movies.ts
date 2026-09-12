@@ -33,63 +33,144 @@ function kobisApiKey(): string | undefined {
   return key || undefined;
 }
 
-export async function fetchKobisDailyBoxOffice(): Promise<SourceResult> {
-  const key = kobisApiKey();
-  if (!key) {
-    return result("kobis-daily", "KOBIS 일별 박스오피스", [], "no KOBIS_API_KEY");
-  }
+function kobisHtmlDate(daysBack = 1): string {
+  const raw = kobisTargetDt(daysBack);
+  return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+}
 
+/** Public KOBIS HTML board — used when the OpenAPI sample key is revoked. */
+async function fetchKobisDailyFromHtml(): Promise<ChartRow[]> {
   const errors: string[] = [];
   for (const daysBack of [1, 2, 3]) {
-    const targetDt = kobisTargetDt(daysBack);
+    const day = kobisHtmlDate(daysBack);
     try {
-      const data = await fetchJson<{
-        boxOfficeResult?: {
-          dailyBoxOfficeList?: {
-            rank?: string;
-            movieNm?: string;
-            audiCnt?: string;
-            audiAcc?: string;
-            salesAmt?: string;
-            rankInten?: string;
-          }[];
-        };
-        faultInfo?: { message?: string };
-      }>(
-        `https://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json?key=${encodeURIComponent(key)}&targetDt=${targetDt}&itemPerPage=10`,
+      const html = await fetchText(
+        "https://www.kobis.or.kr/kobis/business/stat/boxs/findDailyBoxOfficeList.do",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            Referer: "https://www.kobis.or.kr/kobis/business/stat/boxs/findDailyBoxOfficeList.do",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: new URLSearchParams({
+            loadEnd: "0",
+            searchType: "",
+            sSearchFrom: day,
+            sSearchTo: day,
+            sMultiMovieYn: "",
+            sRepNationCd: "",
+            sWideAreaCd: "",
+          }).toString(),
+        },
       );
-      if (data.faultInfo?.message) {
-        errors.push(data.faultInfo.message);
-        continue;
-      }
-      const items = (data.boxOfficeResult?.dailyBoxOfficeList ?? []).flatMap((row, index) => {
-        const title = row.movieNm?.trim();
-        if (!title) return [];
-        const rank = parseNumber(row.rank) ?? index + 1;
-        const audience = parseNumber(row.audiCnt);
-        const previousDelta = parseNumber(row.rankInten);
-        const item: ChartRow = {
+      const items: ChartRow[] = [];
+      const tbody = html.match(/<tbody id="tbody_0">([\s\S]*?)<\/tbody>/i)?.[1] ?? html;
+      for (const row of tbody.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+        const block = row[1] ?? "";
+        const rank = parseNumber(block.match(/<td[^>]*title="(\d+)"/i)?.[1]);
+        const title =
+          block.match(/mstView\('movie','\d+'\);[^>]*title="([^"]+)"/i)?.[1]?.trim() ||
+          block.match(/mstView\('movie','\d+'\);[^>]*>([^<]+)</i)?.[1]?.trim();
+        if (!title || !rank) continue;
+        const cells = [...block.matchAll(/<td[^>]*class="tar"[^>]*>([\s\S]*?)<\/td>/gi)].map((m) =>
+          stripTags(m[1] ?? "")
+            .replace(/\([^)]*\)/g, "")
+            .replace(/[^\d]/g, ""),
+        );
+        // Column order: sales, share, salesChange, salesAcc, audience, audienceChange, audienceAcc, ...
+        const audience = parseNumber(cells[4]) ?? parseNumber(cells[6]);
+        items.push({
           rank,
-          previousRank:
-            previousDelta != null && Number.isFinite(previousDelta)
-              ? rank + previousDelta
-              : undefined,
           title,
-          metric: audience ?? Math.max(1, 40 - index),
+          metric: audience ?? Math.max(1, 40 - rank),
           volume: audience,
           measurement: audience
             ? { value: audience, unit: "명", label: "당일 관객", source: "KOBIS" }
             : undefined,
-          tags: ["KOBIS", "박스오피스"],
-        };
-        return [item];
-      });
-      if (items.length) return result("kobis-daily", "KOBIS 일별 박스오피스", items);
-      errors.push(`${targetDt}: empty`);
+          tags: ["KOBIS", "박스오피스", "HTML"],
+        });
+      }
+      if (items.length) return items.slice(0, 15);
+      errors.push(`${day}: empty html`);
     } catch (error) {
-      errors.push(error instanceof Error ? error.message : "failed");
+      errors.push(error instanceof Error ? error.message : "html failed");
     }
   }
+  if (errors.length) {
+    /* fall through */
+  }
+  return [];
+}
+
+export async function fetchKobisDailyBoxOffice(): Promise<SourceResult> {
+  const key = kobisApiKey();
+  const errors: string[] = [];
+
+  if (key) {
+    for (const daysBack of [1, 2, 3]) {
+      const targetDt = kobisTargetDt(daysBack);
+      try {
+        const data = await fetchJson<{
+          boxOfficeResult?: {
+            dailyBoxOfficeList?: {
+              rank?: string;
+              movieNm?: string;
+              audiCnt?: string;
+              audiAcc?: string;
+              salesAmt?: string;
+              rankInten?: string;
+            }[];
+          };
+          faultInfo?: { message?: string };
+        }>(
+          `https://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json?key=${encodeURIComponent(key)}&targetDt=${targetDt}&itemPerPage=10`,
+        );
+        if (data.faultInfo?.message) {
+          errors.push(data.faultInfo.message);
+          continue;
+        }
+        const items = (data.boxOfficeResult?.dailyBoxOfficeList ?? []).flatMap((row, index) => {
+          const title = row.movieNm?.trim();
+          if (!title) return [];
+          const rank = parseNumber(row.rank) ?? index + 1;
+          const audience = parseNumber(row.audiCnt);
+          const previousDelta = parseNumber(row.rankInten);
+          const item: ChartRow = {
+            rank,
+            previousRank:
+              previousDelta != null && Number.isFinite(previousDelta)
+                ? rank + previousDelta
+                : undefined,
+            title,
+            metric: audience ?? Math.max(1, 40 - index),
+            volume: audience,
+            measurement: audience
+              ? { value: audience, unit: "명", label: "당일 관객", source: "KOBIS" }
+              : undefined,
+            tags: ["KOBIS", "박스오피스"],
+          };
+          return [item];
+        });
+        if (items.length) return result("kobis-daily", "KOBIS 일별 박스오피스", items);
+        errors.push(`${targetDt}: empty`);
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : "failed");
+      }
+    }
+  } else {
+    errors.push("no KOBIS_API_KEY");
+  }
+
+  try {
+    const htmlItems = await fetchKobisDailyFromHtml();
+    if (htmlItems.length) {
+      return result("kobis-daily", "KOBIS 일별 박스오피스", htmlItems);
+    }
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : "html fallback failed");
+  }
+
   return result("kobis-daily", "KOBIS 일별 박스오피스", [], errors.at(-1) ?? "empty");
 }
 

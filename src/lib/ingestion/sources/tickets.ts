@@ -354,10 +354,12 @@ type KopisBoxRow = {
   area?: string;
 };
 
-async function fetchKopisBoxOffice(): Promise<SourceResult> {
+async function fetchKopisBoxOffice(): Promise<SourceResult | null> {
   const key = (process.env.KOPIS_API_KEY ?? process.env.KOPIS_SERVICE_KEY ?? "").trim();
   if (!key) {
-    return result("kopis-boxoffice", "KOPIS 예매상황판", [], "KOPIS_API_KEY 없음");
+    // Optional source — Interpark/Yes24 already cover performance rankings.
+    // Skip rather than report a hard failure when the secret is unset.
+    return null;
   }
   const date = kstDateString().replace(/-/g, "");
   try {
@@ -398,7 +400,17 @@ export async function fetchTicketSources(): Promise<SourceResult[]> {
     fetchTicketlinkRank(),
     fetchKopisBoxOffice(),
   ]);
-  return [...interpark, yes24, ticketlink, kopis];
+  const sources = [...interpark, yes24, ticketlink];
+  if (kopis) sources.push(kopis);
+  // Drop bot-blocked Ticketlink rows when other ticket charts already filled.
+  if (
+    !ticketlink.ok &&
+    /empty|captcha|blocked|unavailable/i.test(ticketlink.error ?? "") &&
+    sources.some((item) => item.id !== "ticketlink-rank" && item.ok && /interpark|yes24/i.test(item.id))
+  ) {
+    return sources.filter((item) => item.id !== "ticketlink-rank");
+  }
+  return sources;
 }
 
 const PERFORMANCE_SOURCE_IDS = new Set([

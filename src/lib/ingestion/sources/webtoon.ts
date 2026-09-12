@@ -93,9 +93,9 @@ function rowFromTitle(title: NaverTitle, rank: number, tag: string): ChartRow | 
   };
 }
 
-async function fetchNaverWeek(week: string): Promise<NaverTitle[]> {
+async function fetchNaverWeek(week: string, order: "view" | "user" | "update" = "view"): Promise<NaverTitle[]> {
   const data = await fetchJson<NaverWeekdayPayload>(
-    `https://comic.naver.com/api/webtoon/titlelist/weekday?week=${week}&order=view`,
+    `https://comic.naver.com/api/webtoon/titlelist/weekday?week=${week}&order=${order}`,
     { headers: NAVER_HEADERS },
   );
   return titlesFromPayload(data);
@@ -115,21 +115,28 @@ function uniqueTitles(titles: NaverTitle[]): NaverTitle[] {
 
 export async function fetchNaverWebtoonDaily(): Promise<SourceResult> {
   const week = todayWeekParam();
-  try {
-    const titles = uniqueTitles(await fetchNaverWeek(week));
-    const items = titles
-      .slice(0, 40)
-      .map((title, index) => rowFromTitle(title, index + 1, "네이버 일간"))
-      .filter((item): item is ChartRow => Boolean(item));
-    return result("naver-webtoon-daily", "네이버웹툰 일간 인기", items);
-  } catch (error) {
-    return result(
-      "naver-webtoon-daily",
-      "네이버웹툰 일간 인기",
-      [],
-      error instanceof Error ? error.message : "failed",
-    );
+  const weekFallback = NAVER_WEEKS[(NAVER_WEEKS.indexOf(week) + 6) % 7] ?? "mon";
+  const attempts: { week: string; order: "view" | "user" | "update" }[] = [
+    { week, order: "view" },
+    { week, order: "user" },
+    { week: weekFallback, order: "view" },
+    { week: "dailyPlus", order: "view" },
+  ];
+  const errors: string[] = [];
+  for (const attempt of attempts) {
+    try {
+      const titles = uniqueTitles(await fetchNaverWeek(attempt.week, attempt.order));
+      const items = titles
+        .slice(0, 40)
+        .map((title, index) => rowFromTitle(title, index + 1, "네이버 일간"))
+        .filter((item): item is ChartRow => Boolean(item));
+      if (items.length) return result("naver-webtoon-daily", "네이버웹툰 일간 인기", items);
+      errors.push(`${attempt.week}/${attempt.order}: empty`);
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : "failed");
+    }
   }
+  return result("naver-webtoon-daily", "네이버웹툰 일간 인기", [], errors.at(-1) ?? "failed");
 }
 
 export async function fetchNaverWebtoonWeekly(): Promise<SourceResult> {

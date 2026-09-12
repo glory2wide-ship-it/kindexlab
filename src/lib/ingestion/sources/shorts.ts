@@ -119,9 +119,63 @@ async function innertubeKey(): Promise<string | undefined> {
   }
 }
 
+async function fetchYoutubeDataApiPopular(): Promise<ChartRow[]> {
+  const apiKey = process.env.YOUTUBE_API_KEY?.trim();
+  if (!apiKey) return [];
+  try {
+    const data = await fetchJson<{
+      items?: {
+        id?: string;
+        snippet?: { title?: string; channelTitle?: string; thumbnails?: { high?: { url?: string }; medium?: { url?: string } } };
+        statistics?: { viewCount?: string };
+      }[];
+    }>(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode=KR&maxResults=30&key=${encodeURIComponent(apiKey)}`,
+    );
+    const items: ChartRow[] = [];
+    for (const [index, row] of (data.items ?? []).entries()) {
+      const title = row.snippet?.title?.trim();
+      const videoId = typeof row.id === "string" ? row.id : "";
+      if (!title || !videoId || /19금|성인/.test(title)) continue;
+      const views = Number(row.statistics?.viewCount ?? 0);
+      items.push({
+        rank: index + 1,
+        title,
+        subtitle: row.snippet?.channelTitle || "YouTube",
+        metric: views > 0 ? Math.log10(views + 1) : undefined,
+        volume: views > 0 ? views : undefined,
+        measurement:
+          views > 0 ? { value: views, unit: "회", label: "조회수", source: "유튜브" } : undefined,
+        imageUrl:
+          row.snippet?.thumbnails?.high?.url ??
+          row.snippet?.thumbnails?.medium?.url ??
+          `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        tags: ["유튜브", "인기", "Data API", views > 0 ? "조회수" : "트렌딩"],
+      });
+    }
+    return items;
+  } catch {
+    return [];
+  }
+}
+
 async function fetchYoutubeTrending(): Promise<SourceResult> {
   try {
+    const fromApi = await fetchYoutubeDataApiPopular();
+    if (fromApi.length) {
+      return result("youtube-trending", "유튜브 인기", fromApi.slice(0, 30));
+    }
+
     const key = await innertubeKey();
+    let clientVersion = "2.20260911.01.00";
+    try {
+      const html = await fetchText("https://www.youtube.com/feed/trending?gl=KR&hl=ko", {
+        headers: { Referer: "https://www.youtube.com/" },
+      });
+      clientVersion = html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/)?.[1] ?? clientVersion;
+    } catch {
+      /* keep default */
+    }
     const url = key
       ? `https://www.youtube.com/youtubei/v1/browse?key=${key}&prettyPrint=false`
       : "https://www.youtube.com/youtubei/v1/browse?prettyPrint=false";
@@ -131,12 +185,14 @@ async function fetchYoutubeTrending(): Promise<SourceResult> {
         "Content-Type": "application/json",
         Origin: "https://www.youtube.com",
         Referer: "https://www.youtube.com/feed/trending?gl=KR&hl=ko",
+        "X-Youtube-Client-Name": "1",
+        "X-Youtube-Client-Version": clientVersion,
       },
       body: JSON.stringify({
         context: {
           client: {
             clientName: "WEB",
-            clientVersion: "2.20240815.01.00",
+            clientVersion,
             hl: "ko",
             gl: "KR",
           },

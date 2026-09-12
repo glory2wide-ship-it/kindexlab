@@ -63,14 +63,24 @@ async function fetchAppleGames(kind: "free" | "grossing"): Promise<SourceResult>
   const path = kind === "free" ? "topfreeapplications" : "topgrossingapplications";
   const id = kind === "free" ? "apple-ios-games-free" : "apple-ios-games-grossing";
   const label = kind === "free" ? "앱스토어 무료 게임" : "앱스토어 매출 게임";
-  try {
-    const data = await fetchJson<AppleFeed>(
-      `https://itunes.apple.com/kr/rss/${path}/limit=30/genre=6014/json`,
-    );
-    return result(id, label, parseAppleFeed(data, kind === "free" ? "앱스토어 무료" : "앱스토어 매출"));
-  } catch (error) {
-    return result(id, label, [], error instanceof Error ? error.message : "apple error");
+  const tag = kind === "free" ? "앱스토어 무료" : "앱스토어 매출";
+  const urls = [
+    `https://itunes.apple.com/kr/rss/${path}/limit=30/genre=6014/json`,
+    `https://itunes.apple.com/kr/rss/${path}/limit=50/genre=6014/json`,
+    `https://itunes.apple.com/us/rss/${path}/limit=30/genre=6014/json`,
+  ];
+  const errors: string[] = [];
+  for (const url of urls) {
+    try {
+      const data = await fetchJson<AppleFeed>(url);
+      const items = parseAppleFeed(data, tag);
+      if (items.length) return result(id, label, items);
+      errors.push("empty");
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : "apple error");
+    }
   }
+  return result(id, label, [], errors.at(-1) ?? "apple error");
 }
 
 interface SteamSpyGame {
