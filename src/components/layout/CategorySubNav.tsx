@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useRouter, useSelectedLayoutSegment } from "next/navigation";
+import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import {
   CHANNEL_SECTIONS,
   channelSectionHref,
@@ -107,7 +108,6 @@ export function CategorySubNav({
   ) : null;
 
   if (embedded) {
-    // Mobile: keep a little left inset and ~1px on the right so edge pills stay on-screen.
     return (
       <div className="flex w-full min-w-0 items-center justify-start gap-0.5 pr-px">
         {nav}
@@ -116,10 +116,16 @@ export function CategorySubNav({
     );
   }
 
-  // Desktop: left-aligned so 실 lines up with header 전체's 전 (same column after brand).
+  // Desktop: English desk label on the left; section tabs + search centered.
   return (
-    <div className="category-sub-nav-bar flex w-full min-w-0 items-center justify-start py-2">
-      <div className="flex min-w-0 items-center justify-start gap-[6.4px]">
+    <div className="category-sub-nav-bar relative flex w-full flex-wrap items-center justify-center gap-3 py-2">
+      <DeskEyebrow
+        variant="subnav"
+        className="category-sub-nav-eyebrow absolute left-0 top-1/2 hidden -translate-y-1/2 shrink-0 md:block"
+      >
+        {meta?.eyebrow ?? "ALL DESKS"}
+      </DeskEyebrow>
+      <div className="flex min-w-0 shrink-0 items-center justify-center gap-[6.4px]">
         {nav}
         {search}
       </div>
