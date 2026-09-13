@@ -275,8 +275,8 @@ export const BOARDS: BoardDefinition[] = [
     id: "eco-franchise",
     slug: "startup-franchise-index",
     channel: "economy",
-    title: "창업*소상공",
-    shortTitle: "창업*소상공",
+    title: "창업/소상공",
+    shortTitle: "창업/소상공",
     criteria: "프랜차이즈·소상공인 창업 아이템 검색량과 창업 뉴스",
     affiliateCategory: "커피머신 · 에어프라이어",
     queries: [
@@ -287,7 +287,7 @@ export const BOARDS: BoardDefinition[] = [
       "스터디카페 창업",
       "예비창업패키지",
     ],
-    focusKeyword: "창업*소상공",
+    focusKeyword: "창업/소상공",
     supportKeyword: "소상공인 창업",
     seeds: [
       "편의점",

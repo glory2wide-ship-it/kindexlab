@@ -8,7 +8,7 @@ const MOBILE_BOARD_TAB_LABEL: Record<string, string> = {
   // Economy
   "government-subsidy-search": "정부지원금",
   "housing-subscription-hotspot": "부동산",
-  "startup-franchise-index": "창업*소상공",
+  "startup-franchise-index": "창업/소상공",
   // Culture
   "exhibition-popup-ranking": "전시 팝업",
   // Politics
@@ -23,8 +23,9 @@ const MOBILE_BY_SHORT_TITLE: Record<string, string> = {
   "정부지원금": "정부지원금",
   "여행 정부지원금": "정부지원금",
   "지역별 부동산": "부동산",
-  "창업·프랜차이즈": "창업*소상공",
-  "창업*소상공": "창업*소상공",
+  "창업·프랜차이즈": "창업/소상공",
+  "창업*소상공": "창업/소상공",
+  "창업/소상공": "창업/소상공",
   "전시·팝업스토어": "전시 팝업",
 };
 

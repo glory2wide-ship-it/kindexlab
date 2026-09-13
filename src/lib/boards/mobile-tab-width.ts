@@ -20,7 +20,7 @@ export const MOBILE_BOARD_TAB_WIDTH: Record<string, number> = {
   "exhibition-popup-ranking": 0.9, // 전시 팝업
   "bestseller-surge-index": 1.54, // 도서·베스트셀러
   // Economy — startup chip +10% vs default 1.1; all economy weights ×1.1 via caller scale
-  "startup-franchise-index": 1.21, // 창업*소상공
+  "startup-franchise-index": 1.21, // 창업/소상공
 };
 
 /** Economy rail chips are 10% wider on mobile (column weights ×1.1). */
@@ -36,9 +36,16 @@ export const ECONOMY_MOBILE_NARROW_TAB_SLUGS: ReadonlySet<string> = new Set([
 /** Economy mobile channel chips that should render 15% wider columns. */
 export const ECONOMY_MOBILE_WIDE_TAB_SLUGS: ReadonlySet<string> = new Set([
   "overseas-stock-index", // 해외 주식
+]);
+
+/**
+ * Economy mobile chips that need another +15% on top of the wide scale
+ * so long labels keep a little padding inside the box.
+ */
+export const ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS: ReadonlySet<string> = new Set([
   "commodities-fx-index", // 원자재·환율
   "inflation-sentiment-index", // 소비자 물가
-  "startup-franchise-index", // 창업*소상공
+  "startup-franchise-index", // 창업/소상공
 ]);
 
 export function mobileBoardTabWidth(slug: string, channel?: string): number {
@@ -46,6 +53,7 @@ export function mobileBoardTabWidth(slug: string, channel?: string): number {
   if (channel !== "economy") return base;
   base *= ECONOMY_MOBILE_TAB_WIDTH_SCALE;
   if (ECONOMY_MOBILE_WIDE_TAB_SLUGS.has(slug)) base *= 1.15;
+  if (ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS.has(slug)) base *= 1.15 * 1.15;
   return base;
 }
 
