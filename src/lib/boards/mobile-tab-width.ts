@@ -26,7 +26,19 @@ export const MOBILE_BOARD_TAB_WIDTH: Record<string, number> = {
 /** Economy rail chips are 10% wider on mobile (column weights ×1.1). */
 export const ECONOMY_MOBILE_TAB_WIDTH_SCALE = 1.1;
 
+/** Economy mobile channel chips that should render 10% narrower boxes. */
+export const ECONOMY_MOBILE_NARROW_TAB_SLUGS: ReadonlySet<string> = new Set([
+  "composite", // 종합
+  "overseas-stock-index", // 해외 주식
+  "rates-finance-products", // 금융
+  "kospi-fomo-index", // 주식
+]);
+
 export function mobileBoardTabWidth(slug: string, channel?: string): number {
   const base = MOBILE_BOARD_TAB_WIDTH[slug] ?? 1.1;
   return channel === "economy" ? base * ECONOMY_MOBILE_TAB_WIDTH_SCALE : base;
+}
+
+export function isEconomyMobileNarrowTab(slug: string, channel?: string): boolean {
+  return channel === "economy" && ECONOMY_MOBILE_NARROW_TAB_SLUGS.has(slug);
 }

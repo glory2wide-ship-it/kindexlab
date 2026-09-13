@@ -7,7 +7,10 @@ import {
   menuBoardsForChannel,
 } from "@/lib/boards/registry";
 import { MOBILE_COMPOSITE_TAB_LABEL, mobileBoardTabLabel } from "@/lib/boards/mobile-tab-label";
-import { mobileBoardTabWidth } from "@/lib/boards/mobile-tab-width";
+import {
+  isEconomyMobileNarrowTab,
+  mobileBoardTabWidth,
+} from "@/lib/boards/mobile-tab-width";
 import type { BoardDefinition } from "@/lib/boards/types";
 import type { PostChannel } from "@/lib/posts/types";
 
@@ -48,6 +51,11 @@ export function CategoryBoardRail({
     ? "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-3 md:py-1.5 md:text-[16.09px] md:leading-none"
     : "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-2 md:py-1.5 md:text-[16.09px] md:leading-none";
 
+  const tabClassFor = (slug: string) =>
+    isEconomyMobileNarrowTab(slug, channel)
+      ? `${tabShell} max-md:!w-[90%] max-md:mx-auto`
+      : tabShell;
+
   const orderedKeys = [
     ...boards.slice(0, insertAt).map((board) => board.slug),
     "composite",
@@ -68,7 +76,7 @@ export function CategoryBoardRail({
       <button
         type="button"
         onClick={() => onSelect("")}
-        className={`${tabShell} ${compositeClass}`}
+        className={`${tabClassFor("composite")} ${compositeClass}`}
       >
         <span className="md:hidden">{MOBILE_COMPOSITE_TAB_LABEL}</span>
         <span className="hidden md:inline">종합</span>
@@ -78,7 +86,7 @@ export function CategoryBoardRail({
     <li key="composite" className="min-w-0">
       <Link
         href={`/${channel}`}
-        className={`${tabShell} border-line font-semibold text-soft hover:text-ink`}
+        className={`${tabClassFor("composite")} border-line font-semibold text-soft hover:text-ink`}
       >
         <span className="md:hidden">{MOBILE_COMPOSITE_TAB_LABEL}</span>
         <span className="hidden md:inline">종합</span>
@@ -95,7 +103,7 @@ export function CategoryBoardRail({
           <button
             type="button"
             onClick={() => onSelect(board.slug)}
-            className={`${tabShell} ${
+            className={`${tabClassFor(board.slug)} ${
               active
                 ? "border-accent bg-accent text-black"
                 : "border-line font-semibold text-soft hover:text-ink"
@@ -111,7 +119,7 @@ export function CategoryBoardRail({
       <li key={board.slug} className="min-w-0">
         <Link
           href={boardPath(board.slug)}
-          className={`${tabShell} border-line font-semibold text-soft hover:text-ink`}
+          className={`${tabClassFor(board.slug)} border-line font-semibold text-soft hover:text-ink`}
         >
           <span className="md:hidden">{mobileLabel}</span>
           <span className="hidden md:inline">{board.shortTitle}</span>
