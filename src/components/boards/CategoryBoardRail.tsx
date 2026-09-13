@@ -49,14 +49,15 @@ export function CategoryBoardRail({
     : "border-line font-semibold text-soft hover:text-ink";
 
   // Channel tab labels +10%: 12.1→13.31 mobile, 15.4→16.94 desktop.
-  // Economy mobile: content-sized chips (w-auto + shrink-0). Stretched grid cells with
-  // w-full + nowrap were painting glyphs into the padding so 해/식 sat on the border.
-  const tabShell = isEconomy
-    ? "inline-flex w-auto shrink-0 box-border items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:shrink md:px-3 md:py-1.5 md:text-[16.09px] md:leading-none"
-    : "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-2 md:py-1.5 md:text-[16.09px] md:leading-none";
+  // Economy keeps the shared 2-row mobile grid; long labels rely on column weights
+  // + chip padding (not flex-wrap, which spilled into a 3rd row).
+  const tabShell =
+    "inline-flex w-full box-border items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-2 md:py-1.5 md:text-[16.09px] md:leading-none";
 
   const tabClassFor = (slug: string) => {
-    let cls = tabShell;
+    let cls = isEconomy
+      ? `${tabShell} md:px-3`
+      : tabShell;
     if (isEconomyMobileNarrowTab(slug, channel)) {
       cls = `${cls} max-md:!w-[90%] max-md:mx-auto`;
     }
@@ -69,8 +70,7 @@ export function CategoryBoardRail({
     return cls;
   };
 
-  /** Economy chips must not shrink below content width or padding collapses. */
-  const itemClass = isEconomy ? "w-auto shrink-0" : "min-w-0";
+  const itemClass = "min-w-0";
 
   const orderedKeys = [
     ...boards.slice(0, insertAt).map((board) => board.slug),
@@ -175,12 +175,8 @@ export function CategoryBoardRail({
     <>
       {heading}
       <ul
-        className={
-          isEconomy
-            ? "flex flex-wrap gap-1.5 md:flex-nowrap md:items-center md:gap-[10.93px]"
-            : "grid gap-1.5 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[10.93px]"
-        }
-        style={isEconomy ? undefined : { ["--m-rail" as string]: gridTemplateColumns }}
+        className="grid gap-1.5 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[10.93px]"
+        style={{ ["--m-rail" as string]: gridTemplateColumns }}
       >
         {tabs}
       </ul>
