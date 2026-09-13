@@ -5,7 +5,7 @@ import { visibleAgeSegments } from "@/lib/boards/age-tabs";
 import { AGE_LABEL, GENDER_LABEL } from "@/lib/boards/demographics";
 import { REGION_LABEL, REGION_SEGMENTS } from "@/lib/boards/regions";
 import type { AgeSegment, GenderSegment, RegionSegment } from "@/lib/boards/types";
-import { TIMEFRAMES } from "@/lib/categories";
+import { MOBILE_TIMEFRAMES } from "@/lib/categories";
 import type { Timeframe } from "@/lib/types";
 
 /**
@@ -42,10 +42,10 @@ export function MobileHeatmapDials({
   const afterAll = ages.filter((key) => !["kids", "10s", "20s", "30s"].includes(key));
 
   /**
-   * Keep chronological TIMEFRAMES so the dial centers on 10분 with
-   * 5분 | 10분 | 30분 visible, and scrolling reveals 60분·일봉·주봉·월봉.
+   * Mobile-only windows (includes 3분). Dial stays chronological so scrolling
+   * reveals 3분·5분·10분·30분·60분·일봉·주봉·월봉.
    */
-  const timeOptions = TIMEFRAMES.map((item) => ({ id: item.id, label: item.label }));
+  const timeOptions = MOBILE_TIMEFRAMES.map((item) => ({ id: item.id, label: item.label }));
   const genderOptions = [
     { id: "male" as const, label: GENDER_LABEL.male },
     { id: "all" as const, label: "전체" },

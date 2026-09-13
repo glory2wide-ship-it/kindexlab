@@ -18,9 +18,9 @@ export const CATEGORIES: { id: CategoryId; label: string }[] = [
 ];
 
 /**
- * Candle buttons on the live-index / heatmap toolbar.
- * Default (and shortest UI) window is 5분 — aligned with refresh cadence.
- * Legacy 1m / 3m stay in ALL_TIMEFRAMES for stored metrics only.
+ * Candle buttons on the live-index / heatmap toolbar (desktop + tablet).
+ * Default (and shortest desktop UI) window is 5분 — aligned with refresh cadence.
+ * Legacy 1m stays in ALL_TIMEFRAMES for stored metrics only; 3m is mobile-only UI.
  */
 export const TIMEFRAMES: TimeframeOption[] = [
   { id: "5m", label: "5분", group: "분봉" },
@@ -32,11 +32,19 @@ export const TIMEFRAMES: TimeframeOption[] = [
   { id: "1mo", label: "월봉", group: "월봉" },
 ];
 
-/** Full metric windows including legacy 1m / 3m (data only — not shown in the toolbar). */
-export const ALL_TIMEFRAMES: TimeframeOption[] = [
-  { id: "1m", label: "1분", group: "분봉" },
+/**
+ * Mobile heatmap dial / filter sheet — same windows as desktop, plus 3분.
+ * Desktop toolbar keeps TIMEFRAMES (no 3분).
+ */
+export const MOBILE_TIMEFRAMES: TimeframeOption[] = [
   { id: "3m", label: "3분", group: "분봉" },
   ...TIMEFRAMES,
+];
+
+/** Full metric windows including legacy 1m (data) and mobile 3m. */
+export const ALL_TIMEFRAMES: TimeframeOption[] = [
+  { id: "1m", label: "1분", group: "분봉" },
+  ...MOBILE_TIMEFRAMES,
 ];
 
 export { POLITICS_CATEGORIES, POLITICS_TYPE_ORDER };

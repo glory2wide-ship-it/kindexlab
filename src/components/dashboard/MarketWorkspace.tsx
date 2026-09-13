@@ -39,7 +39,7 @@ const MethodologyModal = dynamic(
 import { applyDemographicSkew } from "@/lib/boards/entity-skew";
 import { uniqueHeatmapTiles } from "@/lib/boards/unique-tiles";
 import { filterKey, filterLabel } from "@/lib/boards/demographics";
-import { CATEGORIES, TIMEFRAMES } from "@/lib/categories";
+import { CATEGORIES, MOBILE_TIMEFRAMES, TIMEFRAMES } from "@/lib/categories";
 import type { AgeSegment, GenderSegment, RegionSegment } from "@/lib/boards/types";
 import { isHeadlineFeed, rankHeadlineFeed } from "@/lib/news/headline-rank";
 import { LIVE_INDEX_LABEL } from "@/lib/posts/channels";
@@ -527,7 +527,7 @@ export function MarketWorkspace({
             <section>
               <h2 className="pb-2 text-[11px] font-semibold tracking-wide text-soft">기간</h2>
               <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
-                {TIMEFRAMES.map((option) => (
+                {MOBILE_TIMEFRAMES.map((option) => (
                   <button
                     key={option.id}
                     type="button"
