@@ -3,6 +3,8 @@
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { CategorySubNav } from "@/components/layout/CategorySubNav";
+import { HeaderRightCluster } from "@/components/layout/HeaderRightCluster";
+import { SiteBrandMark } from "@/components/layout/SiteBrand";
 import { useActiveChannelOverride } from "@/components/providers/ActiveChannelProvider";
 import {
   isSiteSectionPath,
@@ -28,8 +30,8 @@ const SectionTabSearch = dynamic(
 );
 
 /**
- * Desktop sticky section rail + search (right of 소개).
- * Tabs on landing/channel screens; search on every desktop screen.
+ * Desktop sticky section rail + search.
+ * Mirrors SiteHeader columns so 실시간 랭킹's 실 lines up under 전체's 전.
  */
 export function GlobalDesktopCategorySectionBar() {
   const pathname = usePathname() || "/";
@@ -42,14 +44,26 @@ export function GlobalDesktopCategorySectionBar() {
       className="sticky top-14 z-30 border-b border-line bg-board/95 backdrop-blur-md max-md:hidden"
       data-sticky-desktop-category-sections
     >
-      <div className="mx-auto max-w-[72rem] px-4">
+      <div className="mx-auto flex max-w-[72rem] items-center gap-2 px-4 md:gap-3">
+        {/* Width twin of the header brand so section tabs start under 전체 */}
+        <div className="invisible shrink-0 select-none" aria-hidden>
+          <SiteBrandMark />
+        </div>
+
         {showSections ? (
-          <CategorySubNav channel={channel} searchInputId="section-tab-search-desktop" />
+          <div className="min-w-0 flex-1">
+            <CategorySubNav channel={channel} searchInputId="section-tab-search-desktop" />
+          </div>
         ) : (
-          <div className="flex items-center justify-end py-2">
+          <div className="flex min-w-0 flex-1 items-center justify-end py-2">
             <SectionTabSearch inputId="section-tab-search-desktop" />
           </div>
         )}
+
+        {/* Width twin of LIVE + theme */}
+        <div className="invisible shrink-0 select-none" aria-hidden>
+          <HeaderRightCluster />
+        </div>
       </div>
     </div>
   );

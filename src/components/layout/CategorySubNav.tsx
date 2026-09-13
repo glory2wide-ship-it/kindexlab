@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useRouter, useSelectedLayoutSegment } from "next/navigation";
-import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 import {
   CHANNEL_SECTIONS,
   channelSectionHref,
@@ -67,7 +66,11 @@ export function CategorySubNav({
 
   const nav = (
     <nav
-      className="category-sub-nav flex min-w-0 shrink-0 gap-[1.69px] overflow-x-auto text-sm md:gap-[3px]"
+      className={
+        embedded
+          ? "category-sub-nav flex min-w-0 flex-1 items-center gap-px overflow-x-hidden text-sm"
+          : "category-sub-nav flex min-w-0 shrink-0 items-center gap-[2.4px] overflow-x-auto text-sm"
+      }
       aria-label={meta ? `${meta.label} 서브 메뉴` : "전체 서브 메뉴"}
     >
       {CHANNEL_SECTIONS.map((item) => {
@@ -84,8 +87,12 @@ export function CategorySubNav({
             title={item.description}
             className={
               isActive
-                ? "shrink-0 rounded-full bg-accent px-3 py-1.5 text-[13.86px] font-medium text-black md:text-[14.63px]"
-                : "shrink-0 rounded-full px-3 py-1.5 text-[13.86px] font-semibold text-soft hover:bg-panel hover:text-ink md:text-[14.63px]"
+                ? embedded
+                  ? "shrink-0 rounded-full bg-accent px-[5px] py-1.5 text-[12.8px] font-medium text-black"
+                  : "shrink-0 rounded-full bg-accent px-3 py-1.5 text-[14.63px] font-medium text-black"
+                : embedded
+                  ? "shrink-0 rounded-full px-[5px] py-1.5 text-[12.8px] font-semibold text-soft hover:bg-panel hover:text-ink"
+                  : "shrink-0 rounded-full px-3 py-1.5 text-[14.63px] font-semibold text-soft hover:bg-panel hover:text-ink"
             }
           >
             {item.label}
@@ -100,23 +107,19 @@ export function CategorySubNav({
   ) : null;
 
   if (embedded) {
+    // Mobile: keep a little left inset and ~1px on the right so edge pills stay on-screen.
     return (
-      <div className="flex min-w-0 items-center justify-center gap-[4.5px]">
+      <div className="flex w-full min-w-0 items-center justify-start gap-0.5 pr-px">
         {nav}
         {search}
       </div>
     );
   }
 
+  // Desktop: left-aligned so 실 lines up with header 전체's 전 (same column after brand).
   return (
-    <div className="category-sub-nav-bar relative flex w-full flex-wrap items-center justify-center gap-3 py-2">
-      <DeskEyebrow
-        variant="subnav"
-        className="category-sub-nav-eyebrow absolute left-0 top-1/2 hidden -translate-y-1/2 shrink-0 md:block"
-      >
-        {meta?.eyebrow ?? "ALL DESKS"}
-      </DeskEyebrow>
-      <div className="flex min-w-0 shrink-0 items-center justify-center gap-2">
+    <div className="category-sub-nav-bar flex w-full min-w-0 items-center justify-start py-2">
+      <div className="flex min-w-0 items-center justify-start gap-[6.4px]">
         {nav}
         {search}
       </div>
