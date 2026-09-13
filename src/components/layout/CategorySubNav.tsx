@@ -67,7 +67,7 @@ export function CategorySubNav({
 
   const nav = (
     <nav
-      className="category-sub-nav flex min-w-0 shrink-0 gap-[3px] overflow-x-auto text-sm"
+      className="category-sub-nav flex min-w-0 shrink-0 gap-[2.25px] overflow-x-auto text-sm md:gap-[3px]"
       aria-label={meta ? `${meta.label} 서브 메뉴` : "전체 서브 메뉴"}
     >
       {CHANNEL_SECTIONS.map((item) => {
