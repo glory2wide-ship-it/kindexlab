@@ -159,11 +159,7 @@ export function CategoryBoardRail({
     <>
       {heading}
       <ul
-        className={
-          isEconomy
-            ? "grid gap-1.5 max-md:relative max-md:left-1/2 max-md:w-[110%] max-md:-translate-x-1/2 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[10.93px]"
-            : "grid gap-1.5 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[10.93px]"
-        }
+        className="grid gap-1.5 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[10.93px]"
         style={{ ["--m-rail" as string]: gridTemplateColumns }}
       >
         {tabs}
@@ -176,7 +172,13 @@ export function CategoryBoardRail({
   }
 
   return (
-    <section className="rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3 max-md:py-2.5">
+    <section
+      className={
+        isEconomy
+          ? "overflow-hidden rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3.5 max-md:py-2.5"
+          : "rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3 max-md:py-2.5"
+      }
+    >
       {body}
     </section>
   );
