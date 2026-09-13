@@ -8,7 +8,9 @@ import {
 } from "@/lib/boards/registry";
 import { MOBILE_COMPOSITE_TAB_LABEL, mobileBoardTabLabel } from "@/lib/boards/mobile-tab-label";
 import {
+  ECONOMY_MOBILE_PADDED_TAB_PX,
   isEconomyMobileNarrowTab,
+  isEconomyMobilePaddedTab,
   mobileBoardTabWidth,
 } from "@/lib/boards/mobile-tab-width";
 import type { BoardDefinition } from "@/lib/boards/types";
@@ -51,10 +53,17 @@ export function CategoryBoardRail({
     ? "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-3 md:py-1.5 md:text-[16.09px] md:leading-none"
     : "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-2 md:py-1.5 md:text-[16.09px] md:leading-none";
 
-  const tabClassFor = (slug: string) =>
-    isEconomyMobileNarrowTab(slug, channel)
-      ? `${tabShell} max-md:!w-[90%] max-md:mx-auto`
-      : tabShell;
+  const tabClassFor = (slug: string) => {
+    let cls = tabShell;
+    if (isEconomyMobileNarrowTab(slug, channel)) {
+      cls = `${cls} max-md:!w-[90%] max-md:mx-auto`;
+    }
+    // Long economy labels: widen column + bump inner px so glyphs clear the border.
+    if (isEconomyMobilePaddedTab(slug, channel)) {
+      cls = `${cls} ${ECONOMY_MOBILE_PADDED_TAB_PX}`;
+    }
+    return cls;
+  };
 
   const orderedKeys = [
     ...boards.slice(0, insertAt).map((board) => board.slug),

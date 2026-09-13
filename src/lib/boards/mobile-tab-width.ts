@@ -39,8 +39,8 @@ export const ECONOMY_MOBILE_WIDE_TAB_SLUGS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Economy mobile chips that need another +15% on top of the wide scale
- * so long labels keep a little padding inside the box.
+ * Economy mobile chips that need extra column width so long labels keep
+ * inset padding inside the box (base wide ×1.15, then +15%, then +20%).
  */
 export const ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS: ReadonlySet<string> = new Set([
   "commodities-fx-index", // 원자재·환율
@@ -48,15 +48,23 @@ export const ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS: ReadonlySet<string> = new Set(
   "startup-franchise-index", // 창업/소상공
 ]);
 
+/** Mobile horizontal padding for long economy labels (px-1.5 × 1.2 → 7.2px). */
+export const ECONOMY_MOBILE_PADDED_TAB_PX = "max-md:!px-[7.2px]";
+
 export function mobileBoardTabWidth(slug: string, channel?: string): number {
   let base = MOBILE_BOARD_TAB_WIDTH[slug] ?? 1.1;
   if (channel !== "economy") return base;
   base *= ECONOMY_MOBILE_TAB_WIDTH_SCALE;
   if (ECONOMY_MOBILE_WIDE_TAB_SLUGS.has(slug)) base *= 1.15;
-  if (ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS.has(slug)) base *= 1.15 * 1.15;
+  // Prior +15% wide, then another +20% so edge glyphs keep visible inset.
+  if (ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS.has(slug)) base *= 1.15 * 1.15 * 1.2;
   return base;
 }
 
 export function isEconomyMobileNarrowTab(slug: string, channel?: string): boolean {
   return channel === "economy" && ECONOMY_MOBILE_NARROW_TAB_SLUGS.has(slug);
+}
+
+export function isEconomyMobilePaddedTab(slug: string, channel?: string): boolean {
+  return channel === "economy" && ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS.has(slug);
 }
