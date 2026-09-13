@@ -62,10 +62,11 @@ export function CategoryBoardRail({
       cls = `${cls} max-md:!w-[90%] max-md:mx-auto`;
     }
     // Long economy labels / 주식: bump inner px so glyphs clear the chip border.
+    // Content-size on mobile (not w-full) so nowrap text cannot paint into the padding.
     if (isEconomyMobilePaddedTab(slug, channel)) {
-      cls = `${cls} ${ECONOMY_MOBILE_PADDED_TAB_PX}`;
+      cls = `${cls} max-md:!w-auto max-md:mx-auto ${ECONOMY_MOBILE_PADDED_TAB_PX}`;
     } else if (isEconomyMobileStockTab(slug, channel)) {
-      cls = `${cls} ${ECONOMY_MOBILE_STOCK_TAB_PX}`;
+      cls = `${cls} max-md:!w-auto max-md:mx-auto ${ECONOMY_MOBILE_STOCK_TAB_PX}`;
     }
     return cls;
   };
