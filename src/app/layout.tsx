@@ -19,9 +19,6 @@ const jetbrainsMono = JetBrains_Mono({
   adjustFontFallback: true,
 });
 
-/** Pin serverless execution to Seoul (icn1). Mirrors vercel.json `regions`. */
-export const preferredRegion = "icn1";
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: {

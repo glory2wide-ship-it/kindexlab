@@ -11,14 +11,12 @@ import { itemsForChannel, isPostChannel } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 import type { RankingEntity } from "@/lib/types";
 import {
-  DEFAULT_TRENDS_REVALIDATE_SEC,
   heatmapApiCacheControl,
 } from "@/lib/refresh";
 
 export const runtime = "nodejs";
-export const preferredRegion = "icn1";
-/** Allow CDN caching — matches desk ISR and client refresh cadence. */
-export const revalidate = DEFAULT_TRENDS_REVALIDATE_SEC;
+/** Allow CDN caching — matches desk ISR and client refresh cadence (DEFAULT_TRENDS_REVALIDATE_SEC). */
+export const revalidate = 300;
 
 function parseChannel(raw: string | null): PostChannel | undefined {
   if (!raw) return undefined;
