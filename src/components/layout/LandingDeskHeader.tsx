@@ -10,7 +10,7 @@ import {
  */
 export function LandingDeskHeader() {
   return (
-    <header className="space-y-1.5 font-gothic md:space-y-2">
+    <header className="space-y-1.5 font-gothic md:space-y-[6.8px]">
       <h1 className="whitespace-nowrap text-[clamp(16.38px,4.788vw,22.68px)] font-semibold leading-[0.8] tracking-tighter md:whitespace-normal md:text-3xl md:leading-snug md:tracking-tight">
         {SITE_INDEX_HEADLINE_DESKTOP}
       </h1>

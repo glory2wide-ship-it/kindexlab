@@ -40,6 +40,7 @@ export function HeaderSearch({
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 256 });
   const [mounted, setMounted] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -56,9 +57,10 @@ export function HeaderSearch({
     });
   }
 
+
   useEffect(() => {
     const q = query.trim();
-    if (!q) {
+    if (!q && !focused) {
       setSuggestions([]);
       setOpen(false);
       return;
@@ -72,7 +74,7 @@ export function HeaderSearch({
         });
         if (!res.ok) return;
         const data = (await res.json()) as { suggestions?: SearchSuggestion[] };
-        const next = (data.suggestions ?? []).slice(0, 5);
+        const next = (data.suggestions ?? []).slice(0, q ? 5 : 10);
         setSuggestions(next);
         setActive(0);
         setOpen(next.length > 0);
@@ -80,13 +82,13 @@ export function HeaderSearch({
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
       }
-    }, 40);
+    }, q ? 40 : 0);
 
     return () => {
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, focused]);
 
   useEffect(() => {
     if (!open) return;
@@ -104,6 +106,7 @@ export function HeaderSearch({
       const target = event.target as Node;
       if (rootRef.current?.contains(target) || listRef.current?.contains(target)) return;
       setOpen(false);
+      setFocused(false);
       setMobileExpanded(false);
     }
     document.addEventListener("mousedown", onPointer);
@@ -149,10 +152,10 @@ export function HeaderSearch({
             id={listId}
             role="listbox"
             style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }}
-            className="fixed z-[400] overflow-hidden rounded-xl border border-black/10 bg-[#e8eaed] py-1 shadow-[0_8px_24px_rgba(0,0,0,0.18)] dark:border-white/10 dark:bg-[#3c4043]"
+            className="fixed z-[400] overflow-hidden rounded-xl border border-black/10 bg-[#e8eaed] p-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.18)] dark:border-white/10 dark:bg-[#3c4043]"
           >
             {suggestions.map((item, index) => (
-              <li key={`${item.href}-${item.label}`} role="presentation">
+              <li key={`${item.href}-${item.label}`} role="presentation" className="mb-1 last:mb-0">
                 <button
                   id={`${listId}-${index}`}
                   type="button"
@@ -161,13 +164,18 @@ export function HeaderSearch({
                   onMouseEnter={() => setActive(index)}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => go(item.href)}
-                  className={`block w-full truncate px-3 py-2 text-left text-[13px] ${
+                  className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-[13px] ${
                     index === active
-                      ? "bg-white/80 text-[#202124] dark:bg-white/10 dark:text-white"
-                      : "text-[#5f6368] dark:text-[#bdc1c6]"
+                      ? "border-black/10 bg-white text-[#202124] dark:border-white/15 dark:bg-white/10 dark:text-white"
+                      : "border-transparent text-[#5f6368] hover:border-black/5 hover:bg-white/70 dark:text-[#bdc1c6] dark:hover:bg-white/5"
                   }`}
                 >
-                  {item.label}
+                  {item.rank != null ? (
+                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded bg-black/5 text-[11px] font-bold tabular-nums text-[#202124] dark:bg-white/10 dark:text-white">
+                      {item.rank}
+                    </span>
+                  ) : null}
+                  <span className="min-w-0 truncate">{item.label}</span>
                 </button>
               </li>
             ))}
@@ -204,14 +212,14 @@ export function HeaderSearch({
         onChange={(event) => setQuery(event.target.value)}
         onCompositionEnd={(event) => setQuery(event.currentTarget.value)}
         onFocus={() => {
-          if (suggestions.length) {
-            updateMenuPos();
-            setOpen(true);
-          }
+          setFocused(true);
+          updateMenuPos();
+          if (suggestions.length) setOpen(true);
         }}
         onBlur={() => {
           // Keep expanded while suggestions are open; otherwise collapse on mobile.
           window.setTimeout(() => {
+            setFocused(false);
             if (!open) setMobileExpanded(false);
           }, 150);
         }}

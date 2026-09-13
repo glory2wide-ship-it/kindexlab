@@ -1,4 +1,5 @@
 import { getRankings } from "@/lib/api";
+import { loadUnifiedMarket } from "@/lib/boards/composite-desk";
 import { stripRowQualifier } from "@/lib/boards/heatmap";
 import { BOARDS, boardPath } from "@/lib/boards/registry";
 import { rankingPath } from "@/lib/slugs";
@@ -6,9 +7,12 @@ import { rankingPath } from "@/lib/slugs";
 export interface SearchSuggestion {
   label: string;
   href: string;
+  /** Present for landing-heatmap focus suggestions (1–10). */
+  rank?: number;
 }
 
 const MAX_SUGGESTIONS = 5;
+const LANDING_FOCUS_SUGGESTIONS = 10;
 const CHOSEONG = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
 
 function compact(value: string): string {
@@ -46,12 +50,18 @@ function rankMatch(query: string, label: string): number {
   return 0;
 }
 
-function pushUnique(out: SearchSuggestion[], seen: Set<string>, raw: string, href: string) {
+function pushUnique(
+  out: SearchSuggestion[],
+  seen: Set<string>,
+  raw: string,
+  href: string,
+  rank?: number,
+) {
   const label = stripRowQualifier(raw).trim();
   const key = compact(label);
   if (!label || seen.has(key)) return;
   seen.add(key);
-  out.push({ label, href });
+  out.push(rank != null ? { label, href, rank } : { label, href });
 }
 
 function seedCorpus(): SearchSuggestion[] {
@@ -106,9 +116,26 @@ function matchItems(items: SearchSuggestion[], query: string): SearchSuggestion[
     .map((row) => row.item);
 }
 
+/** Landing heatmap tiles ranked 1–10 for empty search-box focus. */
+export async function landingHeatmapSuggestions(): Promise<SearchSuggestion[]> {
+  try {
+    const market = await loadUnifiedMarket();
+    const seen = new Set<string>();
+    const out: SearchSuggestion[] = [];
+    for (const item of market.items ?? []) {
+      if (!item?.name || !item?.slug) continue;
+      pushUnique(out, seen, item.name, rankingPath(item.slug), out.length + 1);
+      if (out.length >= LANDING_FOCUS_SUGGESTIONS) break;
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 export async function suggestSearchTerms(query: string): Promise<SearchSuggestion[]> {
   const q = query.trim();
-  if (!q) return [];
+  if (!q) return landingHeatmapSuggestions();
 
   refreshMarketCache();
 

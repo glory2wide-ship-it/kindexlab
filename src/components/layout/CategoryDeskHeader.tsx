@@ -18,7 +18,7 @@ export function CategoryDeskHeader({ channel }: { channel: PostChannel }) {
   }
 
   return (
-    <header className="space-y-1.5 font-gothic md:space-y-2">
+    <header className="space-y-1.5 font-gothic md:space-y-[6.8px]">
       <h1 className="whitespace-nowrap text-[clamp(18.018px,5.2668vw,24.948px)] font-semibold leading-[0.8] tracking-tighter md:whitespace-normal md:text-[2.0625rem] md:leading-snug md:tracking-tight">
         {title}
       </h1>

@@ -59,15 +59,16 @@ import { influencerSeedNames } from "@/lib/politics/youtube-seeds";
 import { attachTimeframeMetrics } from "@/lib/timeframes";
 import type { EntityType, RankingEntity } from "@/lib/types";
 import { sanitizeTicketEntityName } from "@/lib/ingestion/sources/tickets";
+import {
+  canonicalEntityNameKey,
+  preferEntityDisplayName,
+} from "@/lib/boards/name-aliases";
 
 export { entityTypeForBoardSlug } from "@/lib/boards/entity-type";
 
 function heatmapNameDedupeKey(name: string): string {
   const cleaned = sanitizeTicketEntityName(name);
-  return cleaned
-    .replace(/^\[[^\]]+\]\s*/, "")
-    .replace(/\s+/g, "")
-    .toLowerCase();
+  return canonicalEntityNameKey(cleaned);
 }
 
 /** Drop company/drama noise that Trends mis-tags as celebrity (e.g. 대우건설). */
@@ -536,13 +537,29 @@ export function buildHeatmapItems({
           : boardUsesRegionFilter(selected.slug)
             ? Math.max(boardLimit * 3, 48)
             : boardLimit;
+        const byKey = new Map<string, number>();
         const push = (entity: RankingEntity) => {
           if (isUnusableRankName(entity.name ?? "")) return;
           const key = heatmapNameDedupeKey(entity.name ?? "");
-          if (!key || seen.has(key) || seen.has(entity.id) || seen.has(entity.slug)) return;
+          if (!key || seen.has(entity.id) || seen.has(entity.slug)) return;
+          const existingAt = byKey.get(key);
+          if (existingAt != null) {
+            const current = merged[existingAt]!;
+            const preferred = preferEntityDisplayName(current.name, entity.name ?? "");
+            if (preferred !== current.name) {
+              merged[existingAt] = {
+                ...current,
+                name: preferred,
+                heatmapGroup: current.heatmapGroup || selected.shortTitle,
+              };
+            }
+            return;
+          }
+          if (seen.has(key)) return;
           seen.add(key);
           seen.add(entity.id);
           seen.add(entity.slug);
+          byKey.set(key, merged.length);
           merged.push({
             ...entity,
             heatmapGroup: entity.heatmapGroup || selected.shortTitle,
@@ -707,17 +724,29 @@ export function buildHeatmapItems({
     if (preferred.length) {
       const seen = new Set<string>();
       const merged: RankingEntity[] = [];
+      const byKey = new Map<string, number>();
       const push = (entity: RankingEntity) => {
-        const key = heatmapNameDedupeKey(entity.name ?? "");
-        if (!key || seen.has(key) || seen.has(entity.id) || seen.has(entity.slug)) return;
-        seen.add(key);
-        seen.add(entity.id);
-        seen.add(entity.slug);
-        const name =
+        const rawName =
           entity.type === "performance" || entity.type === "exhibition"
             ? sanitizeTicketEntityName(entity.name)
             : entity.name;
-        merged.push(name === entity.name ? entity : { ...entity, name });
+        const key = heatmapNameDedupeKey(rawName ?? "");
+        if (!key || seen.has(entity.id) || seen.has(entity.slug)) return;
+        const existingAt = byKey.get(key);
+        if (existingAt != null) {
+          const current = merged[existingAt]!;
+          const preferred = preferEntityDisplayName(current.name, rawName ?? "");
+          if (preferred !== current.name) {
+            merged[existingAt] = { ...current, name: preferred };
+          }
+          return;
+        }
+        if (seen.has(key)) return;
+        seen.add(key);
+        seen.add(entity.id);
+        seen.add(entity.slug);
+        byKey.set(key, merged.length);
+        merged.push(rawName === entity.name ? entity : { ...entity, name: rawName });
       };
       for (const entity of preferred) {
         if (merged.length >= limit) break;

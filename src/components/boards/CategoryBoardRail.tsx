@@ -40,10 +40,10 @@ export function CategoryBoardRail({
     ? "border-accent bg-accent text-black"
     : "border-line font-semibold text-soft hover:text-ink";
 
-  // Desktop tab labels: 14px +10% → 15.4px (mobile unchanged).
+  // Channel tab labels +10%: 12.1→13.31 mobile, 15.4→16.94 desktop.
   // Desktop stays on one row: nowrap so every channel fits.
   const tabShell =
-    "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[12.1px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-2 md:py-1.5 md:text-[15.4px] md:leading-none";
+    "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-2 md:py-1.5 md:text-[16.94px] md:leading-none";
 
   const orderedKeys = [
     ...boards.slice(0, insertAt).map((board) => board.slug),
@@ -148,7 +148,7 @@ export function CategoryBoardRail({
     <>
       {heading}
       <ul
-        className="grid gap-1.5 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[7.59px]"
+        className="grid gap-1.5 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[9.11px]"
         style={{ ["--m-rail" as string]: gridTemplateColumns }}
       >
         {tabs}

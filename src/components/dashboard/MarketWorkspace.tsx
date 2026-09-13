@@ -284,7 +284,7 @@ export function MarketWorkspace({
               role="tab"
               aria-selected={selected}
               onClick={() => pickView(id)}
-              className={`inline-flex h-full items-center rounded px-2.5 text-[11.88px] font-medium leading-none md:px-3 md:text-[14.256px] ${
+              className={`inline-flex h-full items-center rounded px-2.5 text-[13.068px] font-medium leading-none md:px-3 md:text-[15.682px] ${
                 selected
                   ? "bg-[#dc2626] text-white"
                   : "font-semibold text-soft hover:text-ink"
@@ -394,7 +394,7 @@ export function MarketWorkspace({
                       key={option.id}
                       type="button"
                       onClick={() => pickTimeframe(option.id)}
-                      className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[12.96px] font-semibold tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[14.256px] lg:tracking-normal ${
+                      className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[14.256px] font-semibold tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[15.682px] lg:tracking-normal ${
                         timeframe === option.id
                           ? "bg-ink text-board md:bg-accent md:text-black"
                           : "text-soft hover:bg-panel hover:text-ink"
@@ -481,7 +481,7 @@ export function MarketWorkspace({
             <button
               type="button"
               onClick={() => setMethodOpen(true)}
-              className="inline-flex h-[30px] shrink-0 items-center rounded-md border border-line px-2.5 text-[12px] text-soft hover:text-ink md:px-3 md:text-[13.2px]"
+              className="inline-flex h-[30px] shrink-0 items-center rounded-md border border-line px-2.5 text-[13.2px] font-semibold text-ink hover:text-ink md:px-3 md:text-[14.52px] md:font-bold"
               style={{ boxSizing: "border-box" }}
             >
               랭킹 산출 방식
@@ -583,7 +583,7 @@ export function MarketWorkspace({
                 setFilterOpen(false);
                 setMethodOpen(true);
               }}
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line text-sm text-soft hover:text-ink"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line text-[15.4px] font-semibold text-ink hover:text-ink"
             >
               랭킹 산출 방식
             </button>
