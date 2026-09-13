@@ -9,8 +9,10 @@ import {
 import { MOBILE_COMPOSITE_TAB_LABEL, mobileBoardTabLabel } from "@/lib/boards/mobile-tab-label";
 import {
   ECONOMY_MOBILE_PADDED_TAB_PX,
+  ECONOMY_MOBILE_STOCK_TAB_PX,
   isEconomyMobileNarrowTab,
   isEconomyMobilePaddedTab,
+  isEconomyMobileStockTab,
   mobileBoardTabWidth,
 } from "@/lib/boards/mobile-tab-width";
 import type { BoardDefinition } from "@/lib/boards/types";
@@ -61,6 +63,9 @@ export function CategoryBoardRail({
     // Long economy labels: widen column + bump inner px so glyphs clear the border.
     if (isEconomyMobilePaddedTab(slug, channel)) {
       cls = `${cls} ${ECONOMY_MOBILE_PADDED_TAB_PX}`;
+    } else if (isEconomyMobileStockTab(slug, channel)) {
+      // 주식: +20% inset vs default px-1.5 so glyphs clear the chip border.
+      cls = `${cls} ${ECONOMY_MOBILE_STOCK_TAB_PX}`;
     }
     return cls;
   };

@@ -55,19 +55,28 @@ export const ECONOMY_MOBILE_PADDED_TAB_SLUGS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Mobile horizontal padding for long economy labels.
- * Was 7.2px; doubled to 14.4px so edge glyphs clear the chip border.
+ * Mobile horizontal padding for long economy labels (해외 주식 등).
+ * Was 14.4px; +20% → 17.28px so edge glyphs (해/식) clear the chip border.
  */
-export const ECONOMY_MOBILE_PADDED_TAB_PX = "max-md:!px-[14.4px]";
+export const ECONOMY_MOBILE_PADDED_TAB_PX = "max-md:!px-[17.28px]";
+
+/**
+ * Mobile horizontal padding for short stock chip (주식).
+ * Default rail px-1.5 (6px) +20% → 7.2px so glyphs clear the border line.
+ */
+export const ECONOMY_MOBILE_STOCK_TAB_SLUG = "kospi-fomo-index";
+export const ECONOMY_MOBILE_STOCK_TAB_PX = "max-md:!px-[7.2px]";
 
 export function mobileBoardTabWidth(slug: string, channel?: string): number {
   let base = MOBILE_BOARD_TAB_WIDTH[slug] ?? 1.1;
   if (channel !== "economy") return base;
   base *= ECONOMY_MOBILE_TAB_WIDTH_SCALE;
-  // 해외 주식: widen enough for doubled inner padding.
-  if (ECONOMY_MOBILE_WIDE_TAB_SLUGS.has(slug)) base *= 1.15 * 1.2;
-  // 원자재·환율 / 소비자 물가 / 창업/소상공: prior boosts + room for 2× padding.
-  if (ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS.has(slug)) base *= 1.15 * 1.15 * 1.2 * 1.2;
+  // 해외 주식: widen enough for +20% inner padding beyond prior double-pad room.
+  if (ECONOMY_MOBILE_WIDE_TAB_SLUGS.has(slug)) base *= 1.15 * 1.2 * 1.2;
+  // 원자재·환율 / 소비자 물가 / 창업/소상공: prior boosts + room for padding.
+  if (ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS.has(slug)) base *= 1.15 * 1.15 * 1.2 * 1.2 * 1.2;
+  // 주식: give the narrowed chip a bit more column so +20% pad does not clip.
+  if (slug === ECONOMY_MOBILE_STOCK_TAB_SLUG) base *= 1.2;
   return base;
 }
 
@@ -77,4 +86,8 @@ export function isEconomyMobileNarrowTab(slug: string, channel?: string): boolea
 
 export function isEconomyMobilePaddedTab(slug: string, channel?: string): boolean {
   return channel === "economy" && ECONOMY_MOBILE_PADDED_TAB_SLUGS.has(slug);
+}
+
+export function isEconomyMobileStockTab(slug: string, channel?: string): boolean {
+  return channel === "economy" && slug === ECONOMY_MOBILE_STOCK_TAB_SLUG;
 }
