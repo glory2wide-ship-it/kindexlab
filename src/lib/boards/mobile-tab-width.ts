@@ -30,7 +30,7 @@ export const ECONOMY_MOBILE_TAB_WIDTH_SCALE = 1.1;
 export const ECONOMY_MOBILE_NARROW_TAB_SLUGS: ReadonlySet<string> = new Set([
   "composite", // 종합
   "rates-finance-products", // 금융
-  "kospi-fomo-index", // 주식
+  // 주식: keep full cell width so +20% inset padding can clear the border.
 ]);
 
 /** Economy mobile channel chips that should render 15% wider columns. */
