@@ -52,7 +52,8 @@ export function RegionFilterTabs({
 }
 
 /**
- * Gender and age sit on one row: gender group, then age group to the right.
+ * Gender and age sit on one row by default: gender group, then age to the right.
+ * Pass `stackAgeOnMobile` to put age on the next row below md (entity detail).
  * Region tabs (when enabled) always render on the next row.
  * Pass `boardSlug` to hide cohorts that do not apply to that board.
  */
@@ -66,6 +67,7 @@ export function DemographicTabs({
   region = "all",
   onRegion,
   showRegion = false,
+  stackAgeOnMobile = false,
 }: {
   gender: "all" | GenderSegment;
   age: "all" | AgeSegment;
@@ -76,13 +78,21 @@ export function DemographicTabs({
   region?: "all" | RegionSegment;
   onRegion?: (value: "all" | RegionSegment) => void;
   showRegion?: boolean;
+  /** Entity detail: age tabs drop one row on mobile only. */
+  stackAgeOnMobile?: boolean;
 }) {
   const ages = ageSegments ?? visibleAgeSegments(boardSlug);
 
   return (
     <div className="flex flex-col gap-2">
       {/* Keep 성별 right after 분봉; tighter gaps so tablet widths need no scrollbar. */}
-      <div className="flex flex-row flex-nowrap items-center gap-x-1.5 lg:gap-x-3">
+      <div
+        className={
+          stackAgeOnMobile
+            ? "flex flex-col items-start gap-2 md:flex-row md:flex-nowrap md:items-center md:gap-x-1.5 lg:gap-x-3"
+            : "flex flex-row flex-nowrap items-center gap-x-1.5 lg:gap-x-3"
+        }
+      >
         <div className="flex shrink-0 items-center">
           <div className="flex shrink-0 rounded-lg bg-board p-0.5 lg:p-1">
             <button
