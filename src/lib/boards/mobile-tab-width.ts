@@ -56,24 +56,21 @@ export const ECONOMY_MOBILE_PADDED_TAB_SLUGS: ReadonlySet<string> = new Set([
 
 /**
  * Mobile horizontal padding for 해외 주식.
- * 21.6px (=17.28+25%) so 해/식 clear the chip border.
+ * Kept modest so equal-flex cells (~4–5 chips/row) never overflow neighbors.
  */
-export const ECONOMY_MOBILE_PADDED_TAB_PX = "economy-chip-pad-wide max-md:!px-[21.6px]";
+export const ECONOMY_MOBILE_PADDED_TAB_PX = "economy-chip-pad-wide";
 
 /**
  * Mobile horizontal padding for 원자재·환율 / 소비자 물가 / 창업/소상공.
- * Prior wide 21.6px +20% → 25.92px.
  */
-export const ECONOMY_MOBILE_EXTRA_PADDED_TAB_PX =
-  "economy-chip-pad-extra max-md:!px-[25.92px]";
+export const ECONOMY_MOBILE_EXTRA_PADDED_TAB_PX = "economy-chip-pad-extra";
 
 /**
  * Mobile horizontal padding for short stock chip (주식).
- * Prior 7.2px +20% → 8.64px.
- * Also tagged with a globals.css class so the inset survives Tailwind purge.
+ * Tagged with a globals.css class so the inset survives Tailwind purge.
  */
 export const ECONOMY_MOBILE_STOCK_TAB_SLUG = "kospi-fomo-index";
-export const ECONOMY_MOBILE_STOCK_TAB_PX = "economy-chip-pad-stock max-md:!px-[8.64px]";
+export const ECONOMY_MOBILE_STOCK_TAB_PX = "economy-chip-pad-stock";
 
 export function mobileBoardTabWidth(slug: string, channel?: string): number {
   let base = MOBILE_BOARD_TAB_WIDTH[slug] ?? 1.1;
