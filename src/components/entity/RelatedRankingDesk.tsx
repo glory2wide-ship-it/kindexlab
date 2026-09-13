@@ -47,7 +47,13 @@ export function RelatedRankingDesk({
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-line bg-panel px-4 py-3">
-        <DemographicTabs gender={gender} age={age} onGender={setGender} onAge={setAge} />
+        <DemographicTabs
+          gender={gender}
+          age={age}
+          onGender={setGender}
+          onAge={setAge}
+          stackAgeOnMobile
+        />
         {filtered ? (
           <p className="mt-2 text-[11px] leading-5 text-muted">
             {filterLabel(gender, age)} 관심 가중치로 같은 섹터 순위를 다시 매겼습니다.
