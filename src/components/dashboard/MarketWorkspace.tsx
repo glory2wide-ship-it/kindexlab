@@ -238,6 +238,7 @@ export function MarketWorkspace({
 
   const sortedItems = useMemo(() => {
     const desktopCap = Math.max(1, Math.min(maxItems, TREEMAP_MAX_ITEMS));
+    // Mobile paints top 15 of the *same* ordered pool as desktop (desktop cap 20).
     const cap = isMobileViewport
       ? Math.max(1, Math.min(desktopCap, MOBILE_TREEMAP_MAX_ITEMS))
       : desktopCap;

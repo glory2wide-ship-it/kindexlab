@@ -10,11 +10,15 @@ import { attachKospiStockQuotes } from "@/lib/market/kospi-quotes";
 import { itemsForChannel, isPostChannel } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 import type { RankingEntity } from "@/lib/types";
+import {
+  DEFAULT_TRENDS_REVALIDATE_SEC,
+  heatmapApiCacheControl,
+} from "@/lib/refresh";
 
 export const runtime = "nodejs";
 export const preferredRegion = "icn1";
 /** Allow CDN caching — matches desk ISR and client refresh cadence. */
-export const revalidate = 300;
+export const revalidate = DEFAULT_TRENDS_REVALIDATE_SEC;
 
 function parseChannel(raw: string | null): PostChannel | undefined {
   if (!raw) return undefined;
@@ -39,14 +43,17 @@ export async function GET(request: Request) {
 
   const boards = await loadChannelHeatmapPayloads(category);
   let liveItems: RankingEntity[] = [];
+  let updatedAt: string | undefined;
   try {
     const market = loadHeatmapLivePayload();
     if (market?.items?.length) {
       // Slim before compose — same as channelLiveMarket / landing pool.
       liveItems = itemsForChannel(market.items, category).map(toTileEntity);
+      updatedAt = market.updatedAt;
     } else {
       const rankings = await getRankings();
       liveItems = itemsForChannel(rankings.items, category).map(toTileEntity);
+      updatedAt = rankings.updatedAt;
     }
   } catch {
     liveItems = [];
@@ -73,6 +80,7 @@ export async function GET(request: Request) {
     )
   ).map(toTileEntity);
   const selected = board ? boards.find((item) => item.slug === board) : undefined;
+  const snapshotAt = updatedAt || new Date().toISOString();
 
   return NextResponse.json(
     {
@@ -84,12 +92,16 @@ export async function GET(request: Request) {
       board: selected?.slug ?? null,
       title: heatmapBoardTitle(boards, board),
       source: preferLive ? "live" : selected || boards.length ? "demographic_ranking" : "live",
+      /** Shared ingest clock — clients compare this for cross-device parity. */
+      updatedAt: snapshotAt,
       count: items.length,
       items,
     },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        // Browsers always revalidate (max-age=0); CDN holds one 5-min snapshot.
+        "Cache-Control": heatmapApiCacheControl(),
+        ETag: `"heatmap-${category}-${board ?? "all"}-${snapshotAt}"`,
       },
     },
   );

@@ -223,16 +223,27 @@ export function ChannelMarketDesk({
 
   const heatmapRequestRef = useRef(0);
   const fetchHeatmap = useCallback(
-    async (board: string, nextGender: HeatmapGender, nextAge: HeatmapAge, nextRegion: HeatmapRegion) => {
+    async (
+      board: string,
+      nextGender: HeatmapGender,
+      nextAge: HeatmapAge,
+      nextRegion: HeatmapRegion,
+      options?: { paint?: boolean },
+    ) => {
       const requestId = ++heatmapRequestRef.current;
       const demographicFilter = nextGender !== "all" || nextAge !== "all";
-      if (needsQuotedPaint(channel, board)) {
-        paintQuotedCache(board, nextGender, nextAge, nextRegion);
-      } else if (!demographicFilter) {
-        // Client boards strip demographics (payload size). Optimistic local paint
-        // can only replay the unsegmented ranking — skip it for gender/age tabs
-        // and wait for /api/heatmap's full demographic tables.
-        applyLocal(board, nextGender, nextAge, nextRegion);
+      const shouldPaint = options?.paint !== false;
+      // Soft revalidate (paint:false) converges to the shared CDN snapshot without
+      // clobbering SSR / optimistic tiles first.
+      if (shouldPaint) {
+        if (needsQuotedPaint(channel, board)) {
+          paintQuotedCache(board, nextGender, nextAge, nextRegion);
+        } else if (!demographicFilter) {
+          // Client boards strip demographics (payload size). Optimistic local paint
+          // can only replay the unsegmented ranking — skip it for gender/age tabs
+          // and wait for /api/heatmap's full demographic tables.
+          applyLocal(board, nextGender, nextAge, nextRegion);
+        }
       }
       const params = new URLSearchParams({
         category: channel,
@@ -242,8 +253,8 @@ export function ChannelMarketDesk({
       if (board) params.set("board", board);
       params.set("region", boardUsesRegionFilter(board) ? nextRegion : "all");
       try {
-        // Default fetch honors `/api/heatmap` Cache-Control (s-maxage=300).
-        const response = await fetch(`/api/heatmap?${params.toString()}`);
+        // no-cache: browser always revalidates; CDN still serves one 5-min snapshot.
+        const response = await fetch(`/api/heatmap?${params.toString()}`, { cache: "no-cache" });
         if (!response.ok || requestId !== heatmapRequestRef.current) return;
         const payload = (await response.json()) as {
           items?: RankingEntity[];
@@ -252,7 +263,7 @@ export function ChannelMarketDesk({
         };
         if (requestId !== heatmapRequestRef.current) return;
         if (board && (payload.board ?? "") !== board) {
-          if (!needsQuotedPaint(channel, board) && !demographicFilter) {
+          if (shouldPaint && !needsQuotedPaint(channel, board) && !demographicFilter) {
             applyLocal(board, nextGender, nextAge, nextRegion);
           }
           return;
@@ -275,7 +286,7 @@ export function ChannelMarketDesk({
             return;
           }
         }
-        if (!needsQuotedPaint(channel, board) && !demographicFilter) {
+        if (shouldPaint && !needsQuotedPaint(channel, board) && !demographicFilter) {
           applyLocal(board, nextGender, nextAge, nextRegion);
         }
       } catch {
@@ -285,33 +296,13 @@ export function ChannelMarketDesk({
     [applyLocal, paintQuotedCache, channel],
   );
 
-  const skipInitialHeatmapFetch = useRef(true);
   useEffect(() => {
     if (deskKind) return;
-    // SSR already painted the default board. Skip the extra /api/heatmap
-    // round-trip on first mount so a tile click is not competing with it.
-    if (skipInitialHeatmapFetch.current) {
-      skipInitialHeatmapFetch.current = false;
-      return;
-    }
-    const defaultFilters =
-      gender === "all" &&
-      age === "all" &&
-      (!boardUsesRegionFilter(selectedSlug) || region === "all");
-    // Tab switches with default filters are already painted by onSelectBoard
-    // (applyLocal / quoted cache). Skip the waterfall /api/heatmap hop unless
-    // a quoted board still needs its first server paint.
-    if (defaultFilters) {
-      if (quotedCacheRef.current.has(cacheKeyForBoard(selectedSlug))) {
-        paintQuotedCache(selectedSlug, gender, age, region);
-        return;
-      }
-      if (!needsQuotedPaint(channel, selectedSlug)) {
-        return;
-      }
-    }
-    void fetchHeatmap(selectedSlug, gender, age, region);
-  }, [selectedSlug, gender, age, region, fetchHeatmap, deskKind, paintQuotedCache, channel]);
+    // Always soft-revalidate against /api/heatmap so phone / desktop / other PCs
+    // converge on the same CDN snapshot. Optimistic paint (SSR / onSelectBoard)
+    // stays on screen until the shared response arrives (paint: false).
+    void fetchHeatmap(selectedSlug, gender, age, region, { paint: false });
+  }, [selectedSlug, gender, age, region, fetchHeatmap, deskKind]);
 
   useEffect(() => {
     if (deskKind !== "headlines") setHeadlineItems([]);

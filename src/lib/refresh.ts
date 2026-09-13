@@ -1,9 +1,22 @@
 /** Client poll + CDN max-age for live trends / heatmap boards (5 minutes). */
 export const DEFAULT_TRENDS_REVALIDATE_SEC = 300;
 
+/**
+ * How long a CDN may keep serving a stale heatmap after s-maxage.
+ * Kept short so phones / desktops / other PCs converge on one snapshot
+ * instead of drifting for up to 10 minutes on stale-while-revalidate.
+ */
+export const HEATMAP_STALE_WHILE_REVALIDATE_SEC = 60;
+
 export function trendsRevalidateSec(): number {
   const n = Number(process.env.TRENDS_LIVE_REVALIDATE ?? DEFAULT_TRENDS_REVALIDATE_SEC);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_TRENDS_REVALIDATE_SEC;
+}
+
+/** Cache-Control for `/api/heatmap` — browsers revalidate; CDN shares one 5-min snapshot. */
+export function heatmapApiCacheControl(): string {
+  const sMaxAge = trendsRevalidateSec();
+  return `public, max-age=0, s-maxage=${sMaxAge}, stale-while-revalidate=${HEATMAP_STALE_WHILE_REVALIDATE_SEC}`;
 }
 
 /** e.g. "Update 5 min" · "Update 2 min 12 sec" · "Update 45 sec" */
