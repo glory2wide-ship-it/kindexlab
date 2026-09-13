@@ -98,6 +98,20 @@ export function classifySmart(
     firstMatch(tagBlob, ENTERTAINMENT_STRONG) ??
     undefined;
 
+  // Title-level entertainment (e.g. "대세 아이돌") beats a politics tag leak
+  // like "대선" on the same row — otherwise idol topics land on 정치평론가.
+  const titleEntertainment = firstMatch(title, ENTERTAINMENT_STRONG);
+  const titlePolitics = firstMatch(title, POLITICS_STRONG);
+  if (titleEntertainment && !titlePolitics) {
+    return {
+      category: "entertainment",
+      type: "influencer",
+      matched: titleEntertainment,
+      strength: "strong",
+      source: "text",
+    };
+  }
+
   // A row naming both is nearly always political coverage that mentions a
   // celebrity, not the reverse, so politics takes the tie.
   if (politics) {

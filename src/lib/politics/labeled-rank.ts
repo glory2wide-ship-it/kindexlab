@@ -205,9 +205,34 @@ export function ensureSubsidyRanking(rows: BoardRankEntry[]): BoardRankEntry[] {
   return ensureSeededRanking(base, SUBSIDY_SEEDS, { padTo: Math.max(12, base.length) });
 }
 
+/** Entertainment / topic phrases that must never appear on 정치평론가. */
+const PUNDIT_ENTERTAINMENT_REJECT =
+  /아이돌|걸그룹|보이그룹|K-?POP|케이팝|뮤직|콘서트|드라마|예능|웹툰|웹소설|게임|영화|배우|가수|팬덤|틱톡|숏폼|유튜버|인플루언서/i;
+
+/**
+ * True for person-shaped pundit names (씨드·`이름 (역할)`·짧은 한글 인명).
+ * Rejects topic phrases like "대세 아이돌".
+ */
+export function isLikelyPoliticalPunditName(name: string): boolean {
+  const trimmed = name.trim();
+  if (!trimmed || trimmed.length < 2) return false;
+  if (PUNDIT_ENTERTAINMENT_REJECT.test(trimmed)) return false;
+  if (findSeed(trimmed, PUNDIT_SEEDS)) return true;
+  const tagged = parsePersonTag(trimmed);
+  if (tagged) {
+    if (PUNDIT_ENTERTAINMENT_REJECT.test(tagged.person)) return false;
+    return /^[가-힣]{2,6}$/.test(tagged.person.trim());
+  }
+  if (parseBracketLabel(trimmed)) return false;
+  // Bare Hangul person name (2–4 syllables). Multi-word topics are out.
+  if (/\s/.test(trimmed)) return false;
+  return /^[가-힣]{2,4}$/.test(trimmed);
+}
+
 export function ensurePunditRanking(rows: BoardRankEntry[]): BoardRankEntry[] {
   const remapped = rows
     .filter((row) => !matchPoliticsYoutubeSeed(row.name)?.influencer)
+    .filter((row) => isLikelyPoliticalPunditName(row.name))
     .map((row) => {
       const seed = findSeed(row.name, PUNDIT_SEEDS);
       if (seed) return { ...row, name: seed };
