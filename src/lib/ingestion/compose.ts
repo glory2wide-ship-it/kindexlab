@@ -6,7 +6,7 @@ import {
 } from "@/lib/ingestion/channels";
 import { classifySmart, type SmartClassification } from "@/lib/ingestion/classify";
 import { ingestLog } from "@/lib/ingestion/log";
-import { namesOverlap, normalizeName, slugify } from "@/lib/ingestion/names";
+import { isAllowedKrEnEntityName, namesOverlap, normalizeName, slugify } from "@/lib/ingestion/names";
 import {
   changeFromScores,
   pointsFromRate,
@@ -684,6 +684,7 @@ export async function composeLiveSnapshot(
     sources.filter((item) => item.id.startsWith("news-") || item.id === "google-trends").map((item) => item.items),
   ).filter((row) => {
     const title = cleanTitle(row.title);
+    if (!isAllowedKrEnEntityName(title)) return false;
     if (normalizeName(title).length < 2) return false;
     if (matchCatalog(title)) return true;
     if (title.length > 18) return false;
@@ -806,6 +807,7 @@ export async function composeLiveSnapshot(
   ]);
 
   const items = built
+    .filter((item) => isAllowedKrEnEntityName(item.name ?? ""))
     // Score alone leaves large tied blocks, and a stable sort freezes those in
     // source order however the underlying numbers move. Volume breaks the tie
     // on something measured — views, concurrents, viewers — so a tied group
@@ -829,6 +831,10 @@ export async function composeLiveSnapshot(
     });
 
   const scoreHistory = { ...(previous?.scoreHistory ?? {}) };
+  for (const key of Object.keys(scoreHistory)) {
+    // Drop stale foreign-script keys so they cannot resurrect after a filter fix.
+    if (!isAllowedKrEnEntityName(key)) delete scoreHistory[key];
+  }
   for (const item of items) {
     scoreHistory[item.slug] = [...(scoreHistory[item.slug] ?? []).slice(-6), item.buzzScore];
   }
@@ -871,6 +877,7 @@ export async function composeLiveSnapshot(
 export function snapshotToPayload(snapshot: Pick<IngestSnapshot, "updatedAt" | "status" | "indices" | "items">): RankingsPayload {
   const seenTicket = new Set<string>();
   const items = snapshot.items.flatMap((item) => {
+    if (!isAllowedKrEnEntityName(item.name ?? "")) return [];
     const isTicket =
       item.type === "performance" ||
       item.type === "exhibition" ||
@@ -878,7 +885,7 @@ export function snapshotToPayload(snapshot: Pick<IngestSnapshot, "updatedAt" | "
       item.slug?.startsWith("exhibition-popup-ranking");
     if (!isTicket) return [item];
     const name = sanitizeTicketEntityName(item.name);
-    if (!name || name.length < 2) return [];
+    if (!name || name.length < 2 || !isAllowedKrEnEntityName(name)) return [];
     const key = `${item.type}:${name.replace(/\s+/g, "").toLowerCase()}`;
     if (seenTicket.has(key)) return [];
     seenTicket.add(key);

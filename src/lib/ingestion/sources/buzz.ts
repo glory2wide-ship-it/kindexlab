@@ -2,7 +2,7 @@ import { catalogEntries, matchCatalog } from "@/lib/ingestion/catalog";
 import { isLikelyCelebrityName } from "@/lib/boards/celebrity";
 import { isLikelyTrotArtist } from "@/lib/boards/trot";
 import { fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
-import { namesOverlap, normalizeName } from "@/lib/ingestion/names";
+import { isAllowedKrEnEntityName, namesOverlap, normalizeName } from "@/lib/ingestion/names";
 import { parseNumber, parseRssItems } from "@/lib/ingestion/parse";
 import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
 import type { ChartRow, SourceResult } from "@/lib/ingestion/types";
@@ -153,15 +153,17 @@ export async function fetchGoogleTrendsKr(): Promise<SourceResult> {
       const xml = await fetchText(url, {
         headers: { Accept: "application/rss+xml,application/xml,text/xml,*/*" },
       });
-      const items = parseRssItems(xml).map((item, index) => {
-        const traffic = parseNumber(xml.match(new RegExp(`${item.title}[\\s\\S]{0,200}?([\\d,]+)\\+?`))?.[1]);
-        return {
-          rank: index + 1,
-          title: item.title,
-          metric: traffic,
-          tags: ["Google Trends KR"],
-        };
-      });
+      const items = parseRssItems(xml)
+        .map((item, index) => {
+          const traffic = parseNumber(xml.match(new RegExp(`${item.title}[\\s\\S]{0,200}?([\\d,]+)\\+?`))?.[1]);
+          return {
+            rank: index + 1,
+            title: item.title,
+            metric: traffic,
+            tags: ["Google Trends KR"],
+          };
+        })
+        .filter((item) => isAllowedKrEnEntityName(item.title));
       if (items.length) return result("google-trends", "Google Trends 한국", items.slice(0, 30));
       errors.push("empty");
     } catch (error) {

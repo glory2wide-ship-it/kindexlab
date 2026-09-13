@@ -12,7 +12,7 @@ import { getBoard, menuBoardsForChannel } from "@/lib/boards/registry";
 import { fetchYoutubeFallback } from "@/lib/context/fallback-youtube";
 import { officialUrlSeeds } from "@/lib/context/official-url-seeds";
 import { fetchText, nowIso } from "@/lib/ingestion/http";
-import { namesOverlap, normalizeName } from "@/lib/ingestion/names";
+import { isAllowedKrEnEntityName, namesOverlap, normalizeName } from "@/lib/ingestion/names";
 import { decodeHtml, parseRssItems, stripTags } from "@/lib/ingestion/parse";
 import type { ChartRow, SourceResult } from "@/lib/ingestion/types";
 import { activeMarket } from "@/lib/market/config";
@@ -206,6 +206,7 @@ function rankTitlesToRows(
   const counts = new Map<string, { name: string; metric: number; tags: string[] }>();
 
   const bump = (name: string, weight: number, via: string) => {
+    if (!isAllowedKrEnEntityName(name)) return;
     const key = normalizeName(name);
     if (!key || key.length < 2) return;
     const current = counts.get(key);

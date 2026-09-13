@@ -16,6 +16,7 @@ import {
   selectKidsCultureRegionRanking,
   shouldFilterKidsCultureSegment,
 } from "@/lib/boards/kids-culture";
+import { isAllowedKrEnEntityName } from "@/lib/ingestion/names";
 import type {
   AgeSegment,
   BoardDefinition,
@@ -385,6 +386,8 @@ export function applyDemographicWeights(
 export function isUnusableRankName(name: string): boolean {
   const trimmed = name.trim();
   if (trimmed.length < 2) return true;
+  // Heatmap / LIVE desks are KR+EN only — drop Thai/Arabic/etc. Trends noise.
+  if (!isAllowedKrEnEntityName(trimmed)) return true;
   if (/^영화\s*[A-J]$/i.test(trimmed)) return true;
   if (/^(항목|종목|작품|곡|밈|프로그램)\s*[\dA-Z]+$/i.test(trimmed)) return true;
   if (/^(한국 상업영화|할리우드 대작|애니메이션|독립영화|재개봉작)$/.test(trimmed)) return true;
