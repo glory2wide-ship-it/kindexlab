@@ -27,7 +27,7 @@ export function HeaderNav() {
 
   return (
     <nav
-      className="hidden min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto text-[15.4px] md:flex"
+      className="hidden min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto text-[16.94px] md:flex"
       aria-label="최상위 카테고리"
     >
       <Link
