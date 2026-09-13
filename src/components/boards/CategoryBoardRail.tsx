@@ -52,7 +52,7 @@ export function CategoryBoardRail({
   // Channel tab labels +10%: 12.1→13.31 mobile, 15.4→16.94 desktop.
   // Economy mobile: equal-width flex rows with shared gap so chips never overlap.
   const tabShell =
-    "inline-flex w-full max-w-full box-border items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:max-w-none md:shrink md:px-2 md:py-1.5 md:text-[16.09px] md:leading-none";
+    "inline-flex w-full max-w-full min-w-0 box-border items-center justify-center overflow-hidden rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:max-w-none md:shrink md:overflow-visible md:px-2 md:py-1.5 md:text-[16.09px] md:leading-none";
 
   const tabClassFor = (slug: string) => {
     let cls = isEconomy ? `${tabShell} md:px-3` : tabShell;
@@ -153,9 +153,9 @@ export function CategoryBoardRail({
   // never overflows its neighbor (weighted grid + w-auto caused overlap).
   const economyMobileMid = Math.ceil(tabs.length / 2);
   const economyMobileRows = isEconomy ? (
-    <div className="flex flex-col gap-1.5 md:hidden">
-      <ul className="flex w-full items-stretch gap-1.5">{tabs.slice(0, economyMobileMid)}</ul>
-      <ul className="flex w-full items-stretch gap-1.5">{tabs.slice(economyMobileMid)}</ul>
+    <div className="flex flex-col gap-2 md:hidden">
+      <ul className="flex w-full min-w-0 items-stretch gap-2">{tabs.slice(0, economyMobileMid)}</ul>
+      <ul className="flex w-full min-w-0 items-stretch gap-2">{tabs.slice(economyMobileMid)}</ul>
     </div>
   ) : null;
 
