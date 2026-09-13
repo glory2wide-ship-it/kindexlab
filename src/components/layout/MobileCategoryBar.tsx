@@ -5,8 +5,8 @@ import { CHANNEL_SHORT_LABEL, POST_CHANNELS } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 
 const CHIP_H = 31;
-/** 12.1px × 1.1 */
-const CHIP_TEXT = "13.31px";
+/** 12.1px × 1.1 × 1.1 */
+const CHIP_TEXT = "14.64px";
 
 /**
  * Centered category chips (전체 first). Search lives on the section-tab row.
