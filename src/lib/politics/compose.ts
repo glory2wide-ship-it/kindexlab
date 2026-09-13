@@ -1,8 +1,9 @@
 import { catalogByType, matchPoliticsCatalog, politicsProducts, POLITICS_CATALOG } from "@/lib/politics/catalog";
 import { carryForwardInfluencerEntities } from "@/lib/politics/fail-safe";
 import { politicsSlug, seedPoliticsRankings } from "@/lib/politics/seed";
-import { PARTY_SUBJECTS } from "@/lib/politics/support-series";
+import { PARTY_SUBJECTS, POLITICIAN_SUBJECTS } from "@/lib/politics/support-series";
 import { PUNDIT_SEEDS } from "@/lib/politics/labeled-rank";
+import { getBoard } from "@/lib/boards/registry";
 import { POLITICS_TYPE_LABEL, POLITICS_TYPE_ORDER, type PoliticsEntityType } from "@/lib/politics/types";
 import {
   influencerSeedNames,
@@ -211,9 +212,14 @@ function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRo
     }));
   const withCatalog = [...crawled, ...extras];
 
-  // Party board: always surface PARTY_SUBJECTS so thin news still paints a full live head.
+  // Party board: always surface PARTY_SUBJECTS + board seeds so thin news still paints a full live head.
   if (type === "party_support") {
-    for (const [index, name] of PARTY_SUBJECTS.entries()) {
+    const partyPads = [
+      ...PARTY_SUBJECTS,
+      ...(getBoard("party-support-chart")?.seeds ?? []),
+      ...catalogByType("party_support").map((entry) => entry.name),
+    ];
+    for (const [index, name] of [...new Set(partyPads)].entries()) {
       const exists = withCatalog.some(
         (row) => namesOverlap(row.title, name) || namesOverlap(name, row.title),
       );
@@ -228,34 +234,43 @@ function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRo
     }
   }
 
-  // Politician board: pad catalog names so thin RSS still fills screen-20 LIVE.
+  // Politician board: pad subjects + board seeds so thin RSS still fills screen-20 LIVE.
   if (type === "politician_support") {
-    for (const [index, entry] of catalogByType("politician_support").entries()) {
+    const politicianPads = [
+      ...POLITICIAN_SUBJECTS,
+      ...(getBoard("politician-support-chart")?.seeds ?? []),
+      ...catalogByType("politician_support").map((entry) => entry.name),
+    ];
+    for (const [index, name] of [...new Set(politicianPads)].entries()) {
       const exists = withCatalog.some(
-        (row) => namesOverlap(row.title, entry.name) || namesOverlap(entry.name, row.title),
+        (row) => namesOverlap(row.title, name) || namesOverlap(name, row.title),
       );
       if (exists) continue;
       withCatalog.push({
         rank: withCatalog.length + 1,
-        title: entry.name,
-        subtitle: entry.nameEn,
+        title: name,
+        subtitle: catalogByType("politician_support").find((entry) => entry.name === name)?.nameEn,
         metric: Math.max(6, 38 - index * 2),
         tags: ["politician_support", "live-chart", "politician-support-chart", "seed"],
       });
     }
   }
 
-  // Issue-keyword board: pad political_search catalog.
+  // Issue-keyword board: pad political_search catalog + board seeds.
   if (type === "political_search") {
-    for (const [index, entry] of catalogByType("political_search").entries()) {
+    const issuePads = [
+      ...catalogByType("political_search").map((entry) => entry.name),
+      ...(getBoard("policy-controversy-index")?.seeds ?? []),
+    ];
+    for (const [index, name] of [...new Set(issuePads)].entries()) {
       const exists = withCatalog.some(
-        (row) => namesOverlap(row.title, entry.name) || namesOverlap(entry.name, row.title),
+        (row) => namesOverlap(row.title, name) || namesOverlap(name, row.title),
       );
       if (exists) continue;
       withCatalog.push({
         rank: withCatalog.length + 1,
-        title: entry.name,
-        subtitle: entry.nameEn,
+        title: name,
+        subtitle: catalogByType("political_search").find((entry) => entry.name === name)?.nameEn,
         metric: Math.max(5, 34 - index * 2),
         tags: ["political_search", "live-chart", "policy-controversy-index", "seed"],
       });
@@ -326,7 +341,11 @@ function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRo
     });
   }
   const cap =
-    type === "political_influencer" || type === "party_support" || type === "political_pundit"
+    type === "political_influencer" ||
+    type === "party_support" ||
+    type === "political_pundit" ||
+    type === "politician_support" ||
+    type === "political_search"
       ? 20
       : PER_TYPE;
   return withCatalog.slice(0, Math.max(PER_TYPE, cap)).map((row, index) => ({
