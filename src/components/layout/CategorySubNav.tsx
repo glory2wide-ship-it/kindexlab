@@ -84,8 +84,8 @@ export function CategorySubNav({
             title={item.description}
             className={
               isActive
-                ? "shrink-0 rounded-full bg-accent px-3 py-1.5 text-[12.6px] font-medium text-black md:text-sm"
-                : "shrink-0 rounded-full px-3 py-1.5 text-[12.6px] font-semibold text-soft hover:bg-panel hover:text-ink md:text-sm"
+                ? "shrink-0 rounded-full bg-accent px-3 py-1.5 text-[13.86px] font-medium text-black md:text-[15.4px]"
+                : "shrink-0 rounded-full px-3 py-1.5 text-[13.86px] font-semibold text-soft hover:bg-panel hover:text-ink md:text-[15.4px]"
             }
           >
             {item.label}

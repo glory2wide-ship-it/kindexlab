@@ -1,3 +1,4 @@
+import { formatEntityIndexBlurb } from "@/lib/entity/index-blurb";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel } from "@/lib/format";
 import {
   formatNaverMeasurement,
@@ -183,7 +184,7 @@ export function EntityHero({
         </div>
       ) : null}
       <p className="mt-[0.9375rem] max-w-3xl text-sm leading-7 text-ink/85 max-md:leading-[0.984rem] md:mt-5">
-        {entity.summary}
+        {formatEntityIndexBlurb(entity)}
       </p>
     </section>
   );

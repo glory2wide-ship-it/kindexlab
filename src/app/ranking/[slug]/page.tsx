@@ -27,10 +27,12 @@ import { rankingPath, rankingUrl } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
 import type { EntityType, RankingEntity } from "@/lib/types";
 
-export const revalidate = 60;
 export const dynamicParams = true;
+/** Live tape resolution uses request-time data; keep on-demand rendering available. */
+export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
+  // Still listed for route discovery; live mode skips prerender.
   if (process.env.TRENDS_DATA_SOURCE === "live") return [];
   const slugs = await getAllSlugs();
   return slugs.map((slug) => ({ slug }));

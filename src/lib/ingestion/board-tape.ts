@@ -1,3 +1,4 @@
+import { formatEntityIndexBlurb } from "@/lib/entity/index-blurb";
 import { spawnSync } from "node:child_process";
 import {
   entityTypeForBoardChannel,
@@ -17,25 +18,28 @@ const BOARD_CHANNELS: PostChannel[] = ["economy", "culture", "travel"];
 function boardToEntities(entry: CachedBoard, channel: PostChannel): RankingEntity[] {
   const type = entityTypeForBoardChannel(entry.slug, channel);
   const heatmapGroup = heatmapGroupForBoardSlug(entry.slug) ?? entry.title;
-  return (entry.ranking ?? []).slice(0, 12).map((row, index) => ({
-    id: `${entry.slug}--${index + 1}`,
-    slug: `${entry.slug}--${(row.name ?? "item").replace(/\s+/g, "-").toLowerCase()}`,
-    name: row.name,
-    nameEn: "",
-    type,
-    rank: index + 1,
-    previousRank: index + 1,
-    buzzScore: Number(row.score ?? 50),
-    openScore: Number(row.score ?? 50),
-    fluctuationRate: Number(row.changeRate ?? 0),
-    volume: Math.max(100, Math.round((row.score ?? 50) * 120)),
-    sparkline: [],
-    history: [],
-    tags: [entry.slug, channel, "board-tape"],
-    summary: row.note?.slice(0, 96) ?? "",
-    sourceChannel: channel,
-    heatmapGroup,
-  }));
+  return (entry.ranking ?? []).slice(0, 12).map((row, index) => {
+    const entity: RankingEntity = {
+      id: `board:${entry.slug}:${index + 1}`,
+      slug: `${entry.slug}--${(row.name ?? "item").replace(/\s+/g, "-").toLowerCase()}`,
+      name: row.name,
+      nameEn: "",
+      type,
+      rank: index + 1,
+      previousRank: index + 1,
+      buzzScore: Number(row.score ?? 50),
+      openScore: Number(row.score ?? 50),
+      fluctuationRate: Number(row.changeRate ?? 0),
+      volume: Math.max(100, Math.round((row.score ?? 50) * 120)),
+      sparkline: [],
+      history: [],
+      tags: [entry.slug, channel, "board-tape"],
+      summary: "",
+      sourceChannel: channel,
+      heatmapGroup,
+    };
+    return { ...entity, summary: formatEntityIndexBlurb(entity) };
+  });
 }
 
 function isLiveChartRow(item: RankingEntity): boolean {

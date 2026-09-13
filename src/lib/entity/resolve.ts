@@ -45,7 +45,7 @@ export function synthesizeKeywordEntity(
     sparkline: spark,
     history: spark.map((value, step) => ({ t: String(step), v: value })),
     tags: [keyword],
-    summary: `${keyword} 시세 상세`,
+    summary: `${keyword} 순위 데이터를 찾는 중입니다.`,
     analysis: `${keyword} 키워드 분석`,
     products: [],
   });

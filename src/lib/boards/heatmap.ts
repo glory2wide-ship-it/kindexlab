@@ -1,3 +1,4 @@
+import { formatEntityIndexBlurb } from "@/lib/entity/index-blurb";
 import { rankingPath } from "@/lib/slugs";
 import { LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import { computeBoardIndex, toneRankEntry } from "@/lib/boards/board-index";
@@ -288,7 +289,7 @@ export function rankRowsToEntities(
         ? [platform, context, board.unitLabel, regionTag]
         : [context, board.shortTitle, board.unitLabel, regionTag]
     ).filter((tag, i, all): tag is string => Boolean(tag) && all.indexOf(tag) === i);
-    return attachTimeframeMetrics({
+    const entity = attachTimeframeMetrics({
       id: `board:${board.slug}:${slugify(displayName) || index}`,
       slug: boardRowSlug(board.slug, displayName || String(index)),
       name: displayName || "집계 중",
@@ -299,11 +300,12 @@ export function rankRowsToEntities(
       buzzScore: Number((score * 10).toFixed(2)),
       openScore: Number((score * 10).toFixed(2)),
       fluctuationRate: change,
-          volume: Math.max(1, Math.round(score * volumePerScoreForBoard(board.slug))),
+      volume: Math.max(1, Math.round(score * volumePerScoreForBoard(board.slug))),
       sparkline: spark,
       history: spark.map((v, step) => ({ t: String(step), v })),
       tags,
-      summary: row.note || board.title,
+      // Structured blurb mirrors rank/등락; long LLM notes stay in analysis.
+      summary: "",
       analysis: row.note || board.title,
       products: [],
       href,
@@ -312,6 +314,10 @@ export function rankRowsToEntities(
       platform,
       sourceChannel: board.channel,
     });
+    return {
+      ...entity,
+      summary: formatEntityIndexBlurb(entity),
+    };
   });
 }
 

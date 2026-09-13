@@ -16,7 +16,10 @@ import {
   volumeFromRank,
 } from "@/lib/ingestion/score";
 import { entityTypeForBoardChannel, heatmapGroupForBoardSlug } from "@/lib/boards/entity-type";
+import { getBoard } from "@/lib/boards/registry";
 import { isLikelyTrotArtist } from "@/lib/boards/trot";
+import { formatEntityIndexBlurb } from "@/lib/entity/index-blurb";
+import { topicParticle } from "@/lib/editorial/copy";
 import { classifyBuzzType, fetchNaverNewsBoost } from "@/lib/ingestion/sources/buzz";
 import { pickBestsellerRows } from "@/lib/ingestion/sources/books";
 import {
@@ -313,10 +316,12 @@ function toEntity(
     nativeHeatmapGroup = boardSlug ? heatmapGroupForBoardSlug(boardSlug) : undefined;
   }
 
-  const sourceLabel = tags[0] ?? "실시간";
+  const boardFromTag = tags.map((tag) => getBoard(tag)?.shortTitle).find(Boolean);
+  const readableSource = nativeHeatmapGroup || boardFromTag || "실시간";
   const nameEn =
     catalog?.nameEn ||
     (row.subtitle && row.subtitle.length <= 32 ? row.subtitle : title);
+  const particle = topicParticle(title);
   return {
     id: `live-${slug}`,
     slug,
@@ -332,8 +337,8 @@ function toEntity(
     volume,
     sparkline,
     history: historyPoints(sparkline),
-    tags: tags.length ? tags : [sourceLabel],
-    summary: `${title}은(는) ${sourceLabel} 기준으로 ${row.rank}위입니다. 등락 ${fluctuationRate.toFixed(2)}%, 거래량 대용치는 ${volume.toLocaleString("ko-KR")}입니다.`,
+    tags: tags.length ? tags : [readableSource],
+    summary: `${title}${particle} ${readableSource} 기준으로 ${row.rank}위입니다. 등락 ${fluctuationRate.toFixed(2)}%, 거래량 대용치는 ${volume.toLocaleString("ko-KR")}입니다.`,
     analysis: `${title} 수급은 공개 차트·시청률·웹툰 인기·숏폼 조회·게임 순위·뉴스 피드를 합산한 실시간 스냅샷입니다. 순위 변동은 직전 수집 대비 버즈 점수 변화이며, 상세 분석은 일일 브리핑에서 이어집니다.`,
     products: catalog?.products?.length ? catalog.products : defaultProducts(title, knownType),
     imageUrl: row.imageUrl,
@@ -812,8 +817,15 @@ export async function composeLiveSnapshot(
       const previousRank = prev?.rank ?? rank;
       const scoreDelta =
         prev && prev.buzzScore > 0 ? changeFromScores(item.buzzScore, prev.buzzScore) : 0;
-      const fluctuationRate = scoreDelta !== 0 ? scoreDelta : item.fluctuationRate;
-      return { ...item, rank, previousRank, fluctuationRate };
+      const rankDeltaRate =
+        previousRank !== rank
+          ? Number((((previousRank - rank) / Math.max(previousRank, 1)) * 12).toFixed(2))
+          : 0;
+      const fluctuationRate =
+        scoreDelta !== 0 ? scoreDelta : rankDeltaRate !== 0 ? rankDeltaRate : item.fluctuationRate;
+      const next = { ...item, rank, previousRank, fluctuationRate };
+      // Keep summary in sync with the desk-wide rank (board-local "1위" text goes stale here).
+      return { ...next, summary: formatEntityIndexBlurb(next) };
     });
 
   const scoreHistory = { ...(previous?.scoreHistory ?? {}) };
