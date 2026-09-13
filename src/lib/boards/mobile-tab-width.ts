@@ -40,7 +40,7 @@ export const ECONOMY_MOBILE_WIDE_TAB_SLUGS: ReadonlySet<string> = new Set([
 
 /**
  * Economy mobile chips that need extra column width so long labels keep
- * inset padding inside the box (base wide ×1.15, then +15%, then +20%).
+ * inset padding inside the box (base wide ×1.15, then +15%, then +20%, then ×2 pad room).
  */
 export const ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS: ReadonlySet<string> = new Set([
   "commodities-fx-index", // 원자재·환율
@@ -48,16 +48,26 @@ export const ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS: ReadonlySet<string> = new Set(
   "startup-franchise-index", // 창업/소상공
 ]);
 
-/** Mobile horizontal padding for long economy labels (px-1.5 × 1.2 → 7.2px). */
-export const ECONOMY_MOBILE_PADDED_TAB_PX = "max-md:!px-[7.2px]";
+/** Long economy labels that get boosted mobile inner padding (incl. 해외 주식). */
+export const ECONOMY_MOBILE_PADDED_TAB_SLUGS: ReadonlySet<string> = new Set([
+  ...ECONOMY_MOBILE_WIDE_TAB_SLUGS,
+  ...ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS,
+]);
+
+/**
+ * Mobile horizontal padding for long economy labels.
+ * Was 7.2px; doubled to 14.4px so edge glyphs clear the chip border.
+ */
+export const ECONOMY_MOBILE_PADDED_TAB_PX = "max-md:!px-[14.4px]";
 
 export function mobileBoardTabWidth(slug: string, channel?: string): number {
   let base = MOBILE_BOARD_TAB_WIDTH[slug] ?? 1.1;
   if (channel !== "economy") return base;
   base *= ECONOMY_MOBILE_TAB_WIDTH_SCALE;
-  if (ECONOMY_MOBILE_WIDE_TAB_SLUGS.has(slug)) base *= 1.15;
-  // Prior +15% wide, then another +20% so edge glyphs keep visible inset.
-  if (ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS.has(slug)) base *= 1.15 * 1.15 * 1.2;
+  // 해외 주식: widen enough for doubled inner padding.
+  if (ECONOMY_MOBILE_WIDE_TAB_SLUGS.has(slug)) base *= 1.15 * 1.2;
+  // 원자재·환율 / 소비자 물가 / 창업/소상공: prior boosts + room for 2× padding.
+  if (ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS.has(slug)) base *= 1.15 * 1.15 * 1.2 * 1.2;
   return base;
 }
 
@@ -66,5 +76,5 @@ export function isEconomyMobileNarrowTab(slug: string, channel?: string): boolea
 }
 
 export function isEconomyMobilePaddedTab(slug: string, channel?: string): boolean {
-  return channel === "economy" && ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS.has(slug);
+  return channel === "economy" && ECONOMY_MOBILE_PADDED_TAB_SLUGS.has(slug);
 }
