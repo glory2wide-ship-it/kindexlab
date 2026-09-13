@@ -8,8 +8,10 @@ import {
 } from "@/lib/boards/registry";
 import { MOBILE_COMPOSITE_TAB_LABEL, mobileBoardTabLabel } from "@/lib/boards/mobile-tab-label";
 import {
+  ECONOMY_MOBILE_EXTRA_PADDED_TAB_PX,
   ECONOMY_MOBILE_PADDED_TAB_PX,
   ECONOMY_MOBILE_STOCK_TAB_PX,
+  isEconomyMobileExtraWideTab,
   isEconomyMobileNarrowTab,
   isEconomyMobilePaddedTab,
   isEconomyMobileStockTab,
@@ -63,7 +65,9 @@ export function CategoryBoardRail({
     }
     // Long economy labels / 주식: bump inner px so glyphs clear the chip border.
     // Content-size on mobile (not w-full) so nowrap text cannot paint into the padding.
-    if (isEconomyMobilePaddedTab(slug, channel)) {
+    if (isEconomyMobileExtraWideTab(slug, channel)) {
+      cls = `${cls} max-md:!w-auto max-md:mx-auto ${ECONOMY_MOBILE_EXTRA_PADDED_TAB_PX}`;
+    } else if (isEconomyMobilePaddedTab(slug, channel)) {
       cls = `${cls} max-md:!w-auto max-md:mx-auto ${ECONOMY_MOBILE_PADDED_TAB_PX}`;
     } else if (isEconomyMobileStockTab(slug, channel)) {
       cls = `${cls} max-md:!w-auto max-md:mx-auto ${ECONOMY_MOBILE_STOCK_TAB_PX}`;

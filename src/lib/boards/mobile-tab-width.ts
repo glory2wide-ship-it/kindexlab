@@ -55,11 +55,17 @@ export const ECONOMY_MOBILE_PADDED_TAB_SLUGS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Mobile horizontal padding for long economy labels (해외 주식 등).
+ * Mobile horizontal padding for 해외 주식.
  * 21.6px (=17.28+25%) so 해/식 clear the chip border.
- * Column weights below must leave room inside the 2-row grid.
  */
 export const ECONOMY_MOBILE_PADDED_TAB_PX = "economy-chip-pad-wide max-md:!px-[21.6px]";
+
+/**
+ * Mobile horizontal padding for 원자재·환율 / 소비자 물가 / 창업/소상공.
+ * Prior wide 21.6px +20% → 25.92px.
+ */
+export const ECONOMY_MOBILE_EXTRA_PADDED_TAB_PX =
+  "economy-chip-pad-extra max-md:!px-[25.92px]";
 
 /**
  * Mobile horizontal padding for short stock chip (주식).
@@ -75,8 +81,10 @@ export function mobileBoardTabWidth(slug: string, channel?: string): number {
   base *= ECONOMY_MOBILE_TAB_WIDTH_SCALE;
   // 해외 주식: widen enough for +25% inner padding inside the 2-row grid cell.
   if (ECONOMY_MOBILE_WIDE_TAB_SLUGS.has(slug)) base *= 1.15 * 1.2 * 1.2 * 1.25 * 1.25;
-  // 원자재·환율 / 소비자 물가 / 창업/소상공: prior boosts + room for padding.
-  if (ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS.has(slug)) base *= 1.15 * 1.15 * 1.2 * 1.2 * 1.2 * 1.15;
+  // 원자재·환율 / 소비자 물가 / 창업/소상공: prior boosts + room for +20% pad.
+  if (ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS.has(slug)) {
+    base *= 1.15 * 1.15 * 1.2 * 1.2 * 1.2 * 1.15 * 1.2;
+  }
   // 주식: give the chip more column so +20% pad does not clip.
   if (slug === ECONOMY_MOBILE_STOCK_TAB_SLUG) base *= 1.25 * 1.2;
   return base;
@@ -84,6 +92,10 @@ export function mobileBoardTabWidth(slug: string, channel?: string): number {
 
 export function isEconomyMobileNarrowTab(slug: string, channel?: string): boolean {
   return channel === "economy" && ECONOMY_MOBILE_NARROW_TAB_SLUGS.has(slug);
+}
+
+export function isEconomyMobileExtraWideTab(slug: string, channel?: string): boolean {
+  return channel === "economy" && ECONOMY_MOBILE_EXTRA_WIDE_TAB_SLUGS.has(slug);
 }
 
 export function isEconomyMobilePaddedTab(slug: string, channel?: string): boolean {

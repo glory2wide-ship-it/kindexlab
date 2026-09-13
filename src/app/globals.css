@@ -482,6 +482,12 @@ nav[aria-label$="서브 메뉴"] {
     padding-right: 21.6px !important;
   }
 
+  /* 원자재·환율 / 소비자 물가 / 창업/소상공 — wide +20% */
+  .economy-chip-pad-extra {
+    padding-left: 25.92px !important;
+    padding-right: 25.92px !important;
+  }
+
   .economy-chip-pad-stock {
     padding-left: 8.64px !important;
     padding-right: 8.64px !important;
