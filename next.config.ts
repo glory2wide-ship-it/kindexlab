@@ -59,23 +59,29 @@ const nextConfig: NextConfig = {
       {
         /*
          * Document HTML is primarily controlled by route `revalidate` / ISR
-         * (`s-maxage` from Next). This reinforces CDN reuse for soft navigations
-         * and shared edge hits without forcing private/no-store.
+         * (`s-maxage` from Next). Keep SWR short so phones / desktops / other
+         * PCs do not sit on different HTML snapshots for a full day.
          */
         source: "/((?!_next/|api/).*)",
         headers: [
           {
             key: "Cache-Control",
-            value: "public, s-maxage=300, stale-while-revalidate=86400",
+            value: "public, s-maxage=300, stale-while-revalidate=60",
           },
         ],
       },
       {
+        /*
+         * Must match `heatmapApiCacheControl()` in src/lib/refresh.ts —
+         * browsers always revalidate (max-age=0); CDN shares one 5-min snapshot.
+         * A longer SWR here previously overrode the route header and let
+         * devices drift for up to 10 minutes.
+         */
         source: "/api/heatmap",
         headers: [
           {
             key: "Cache-Control",
-            value: "public, s-maxage=300, stale-while-revalidate=600",
+            value: "public, max-age=0, s-maxage=300, stale-while-revalidate=60",
           },
         ],
       },
@@ -84,7 +90,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "public, s-maxage=300, stale-while-revalidate=600",
+            value: "public, max-age=0, s-maxage=300, stale-while-revalidate=60",
           },
         ],
       },

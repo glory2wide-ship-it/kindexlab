@@ -25,6 +25,7 @@ import {
 } from "@/lib/boards/limits";
 import { isMarketQuoteBoardSlug } from "@/lib/market/kospi-quotes";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
+import { LANDING_HEATMAP_TIMEFRAME } from "@/lib/boards/landing-constants";
 import { getPostChannel } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 import type { MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
@@ -131,6 +132,10 @@ export function ChannelMarketDesk({
     boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
   );
   const liveItems = liveMarket.items;
+  const [snapshotAt, setSnapshotAt] = useState(liveMarket.updatedAt);
+  const snapshotAtRef = useRef(liveMarket.updatedAt);
+  snapshotAtRef.current = snapshotAt;
+
   const preferLiveComposite = (
     boardSlug: string,
     nextGender: HeatmapGender = "all",
@@ -260,6 +265,7 @@ export function ChannelMarketDesk({
           items?: RankingEntity[];
           title?: string;
           board?: string | null;
+          updatedAt?: string;
         };
         if (requestId !== heatmapRequestRef.current) return;
         if (board && (payload.board ?? "") !== board) {
@@ -275,6 +281,21 @@ export function ChannelMarketDesk({
               : payload.items;
           const nextItems = locked.length ? locked : payload.items;
           if (nextItems.length) {
+            // Prefer a newer shared snapshot; equal clocks still paint so soft
+            // revalidate can replace optimistic local / SSR tiles.
+            const incomingAt = payload.updatedAt ? Date.parse(payload.updatedAt) : NaN;
+            const currentAt = Date.parse(snapshotAtRef.current);
+            if (
+              Number.isFinite(incomingAt) &&
+              Number.isFinite(currentAt) &&
+              incomingAt < currentAt
+            ) {
+              return;
+            }
+            if (payload.updatedAt) {
+              snapshotAtRef.current = payload.updatedAt;
+              setSnapshotAt(payload.updatedAt);
+            }
             setItems(nextItems);
             if (
               nextGender === "all" &&
@@ -303,6 +324,43 @@ export function ChannelMarketDesk({
     // stays on screen until the shared response arrives (paint: false).
     void fetchHeatmap(selectedSlug, gender, age, region, { paint: false });
   }, [selectedSlug, gender, age, region, fetchHeatmap, deskKind]);
+
+  // After router.refresh() / ISR, adopt a newer server snapshot when filters are default.
+  useEffect(() => {
+    if (deskKind) return;
+    const nextAt = Date.parse(liveMarket.updatedAt);
+    const prevAt = Date.parse(snapshotAtRef.current);
+    if (!Number.isFinite(nextAt)) return;
+    if (Number.isFinite(prevAt) && nextAt <= prevAt) return;
+    if (gender !== "all" || age !== "all") return;
+    if (boardUsesRegionFilter(selectedSlug) && region !== "all") return;
+    const key = cacheKeyForBoard(selectedSlug);
+    const fromQuotes = initialQuotedByBoard?.[key];
+    const nextItems =
+      fromQuotes?.length
+        ? fromQuotes
+        : !selectedSlug && initialItems?.length
+          ? initialItems
+          : undefined;
+    if (!nextItems?.length) {
+      snapshotAtRef.current = liveMarket.updatedAt;
+      setSnapshotAt(liveMarket.updatedAt);
+      return;
+    }
+    snapshotAtRef.current = liveMarket.updatedAt;
+    setSnapshotAt(liveMarket.updatedAt);
+    setItems(nextItems);
+    quotedCacheRef.current.set(key, nextItems);
+  }, [
+    liveMarket.updatedAt,
+    initialItems,
+    initialQuotedByBoard,
+    selectedSlug,
+    gender,
+    age,
+    region,
+    deskKind,
+  ]);
 
   useEffect(() => {
     if (deskKind !== "headlines") setHeadlineItems([]);
@@ -406,6 +464,7 @@ export function ChannelMarketDesk({
             refreshIntervalSec={DEFAULT_TRENDS_REVALIDATE_SEC}
             refreshing={refreshing}
             onRefresh={onHeatmapRefresh}
+            initialTimeframe={LANDING_HEATMAP_TIMEFRAME}
             desktopHeader={boardRailInline}
           />
         ) : null}

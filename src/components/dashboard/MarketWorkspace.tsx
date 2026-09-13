@@ -109,8 +109,8 @@ export function MarketWorkspace({
   refreshIntervalSec?: number;
   onRefresh?: () => void;
   /**
-   * Override the default timeframe (mobile 10m / desktop 5m).
-   * Landing passes 5m so SSR tiles match the unified market build.
+   * Override the default timeframe (shared 5m across viewports).
+   * Landing / category desks pass 5m so SSR tiles match the ranked pool.
    */
   initialTimeframe?: Timeframe;
 }) {
@@ -143,11 +143,11 @@ export function MarketWorkspace({
   const [view, setView] = useState<ViewMode>(initialView);
   const [category, setCategory] = useState<CategoryId>(initialCategory);
   /**
-   * Mobile-first default is 10분 so the dial shows 5분 | 10분 | 30분.
-   * Desktop flips to 5분 (aligned with refresh countdown).
-   * Landing passes initialTimeframe="5m" so SSR tiles match the unified build.
+   * Default 5분 on every viewport so phone / desktop / other PCs rank the same
+   * heatmap pool. Users can still dial to 10분·30분 manually.
+   * Landing / category desks pass initialTimeframe="5m" for SSR parity.
    */
-  const [timeframe, setTimeframe] = useState<Timeframe>(initialTimeframe ?? "10m");
+  const [timeframe, setTimeframe] = useState<Timeframe>(initialTimeframe ?? "5m");
   const [genderInternal, setGenderInternal] = useState<"all" | GenderSegment>("all");
   const [ageInternal, setAgeInternal] = useState<"all" | AgeSegment>("all");
   const [regionInternal, setRegionInternal] = useState<"all" | RegionSegment>("all");
@@ -155,21 +155,10 @@ export function MarketWorkspace({
   const [userPickedView, setUserPickedView] = useState(false);
   const [userPickedTimeframe, setUserPickedTimeframe] = useState(false);
 
-  /**
-   * Desktop keeps 5분 (landing SSR / refresh countdown).
-   * Mobile always centers the dial on 10분 so neighbors read 5분 | 10분 | 30분,
-   * even when landing passes initialTimeframe="5m" for SSR tile parity.
-   */
+  /** Keep default TF in sync when the parent passes a new initialTimeframe. */
   useEffect(() => {
     if (userPickedTimeframe) return;
-    const mq = window.matchMedia("(min-width: 768px)");
-    const apply = () => {
-      if (mq.matches) setTimeframe(initialTimeframe ?? "5m");
-      else setTimeframe("10m");
-    };
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
+    setTimeframe(initialTimeframe ?? "5m");
   }, [initialTimeframe, userPickedTimeframe]);
 
   const pickTimeframe = (value: Timeframe) => {
@@ -308,7 +297,10 @@ export function MarketWorkspace({
           <div className="flex items-center gap-1.5">
             {viewToggle(true)}
             <div className="ml-auto shrink-0">
-              <HeaderRefreshCountdown intervalSec={refreshIntervalSec} />
+              <HeaderRefreshCountdown
+                intervalSec={refreshIntervalSec}
+                onExpire={onRefresh}
+              />
             </div>
           </div>
           <div className="-mx-1 flex items-start gap-1">
@@ -356,7 +348,7 @@ export function MarketWorkspace({
             <HeatmapCountdown
               intervalSec={refreshIntervalSec}
               refreshing={refreshing}
-              onExpire={isMobileViewport ? undefined : onRefresh}
+              onExpire={onRefresh}
             />
           </div>
         </div>

@@ -8,18 +8,24 @@ import { DEFAULT_TRENDS_REVALIDATE_SEC, formatRefreshClock } from "@/lib/refresh
 
 /**
  * Mobile heatmap countdown (md+ unused / inactive).
- * Shows MM:SS and triggers router.refresh() when the interval elapses.
+ * Shows MM:SS; prefers `onExpire` (same /api/heatmap path as desktop) and
+ * falls back to router.refresh() when no handler is passed.
  */
 export function HeaderRefreshCountdown({
   intervalSec = DEFAULT_TRENDS_REVALIDATE_SEC,
+  onExpire,
 }: {
   intervalSec?: number;
+  /** Prefer this over router.refresh so category desks share the CDN snapshot. */
+  onExpire?: () => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [remainingSec, setRemainingSec] = useState(intervalSec);
   const [active, setActive] = useState(false);
   const deadlineRef = useRef(0);
+  const onExpireRef = useRef(onExpire);
+  onExpireRef.current = onExpire;
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
@@ -44,6 +50,11 @@ export function HeaderRefreshCountdown({
         return;
       }
       deadlineRef.current = Date.now() + intervalMs;
+      const expire = onExpireRef.current;
+      if (expire) {
+        expire();
+        return;
+      }
       startTransition(() => router.refresh());
     }, 1000);
     return () => window.clearInterval(tick);

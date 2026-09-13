@@ -78,7 +78,8 @@ export async function GET(request: Request) {
     )
   ).map(toTileEntity);
   const selected = board ? boards.find((item) => item.slug === board) : undefined;
-  const snapshotAt = updatedAt || new Date().toISOString();
+  // Prefer ingest clock; never mint a per-request Date (that defeats shared ETags).
+  const snapshotAt = updatedAt || "0";
 
   return NextResponse.json(
     {
@@ -91,7 +92,7 @@ export async function GET(request: Request) {
       title: heatmapBoardTitle(boards, board),
       source: preferLive ? "live" : selected || boards.length ? "demographic_ranking" : "live",
       /** Shared ingest clock — clients compare this for cross-device parity. */
-      updatedAt: snapshotAt,
+      updatedAt: snapshotAt === "0" ? new Date(0).toISOString() : snapshotAt,
       count: items.length,
       items,
     },
@@ -99,7 +100,7 @@ export async function GET(request: Request) {
       headers: {
         // Browsers always revalidate (max-age=0); CDN holds one 5-min snapshot.
         "Cache-Control": heatmapApiCacheControl(),
-        ETag: `"heatmap-${category}-${board ?? "all"}-${snapshotAt}"`,
+        ETag: `"heatmap-${category}-${board ?? "all"}-${gender}-${age}-${region}-${snapshotAt}"`,
       },
     },
   );
