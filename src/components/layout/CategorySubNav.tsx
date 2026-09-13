@@ -89,10 +89,10 @@ export function CategorySubNav({
             className={
               isActive
                 ? embedded
-                  ? "shrink-0 rounded-full bg-accent px-[5px] py-1.5 text-[12.8px] font-medium text-black"
+                  ? "shrink-0 rounded-full bg-accent px-[5px] py-1.5 text-[14.08px] font-medium text-black"
                   : "shrink-0 rounded-full bg-accent px-3 py-1.5 text-[16.09px] font-medium text-black"
                 : embedded
-                  ? "shrink-0 rounded-full px-[5px] py-1.5 text-[12.8px] font-semibold text-soft hover:bg-panel hover:text-ink"
+                  ? "shrink-0 rounded-full px-[5px] py-1.5 text-[14.08px] font-semibold text-soft hover:bg-panel hover:text-ink"
                   : "shrink-0 rounded-full px-3 py-1.5 text-[16.09px] font-semibold text-soft hover:bg-panel hover:text-ink"
             }
           >
