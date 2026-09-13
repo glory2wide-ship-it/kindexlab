@@ -473,3 +473,17 @@ nav[aria-label$="서브 메뉴"] {
   text-wrap: balance;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Economy mobile channel chips — hard inset so glyphs clear the border line.
+   (Tailwind arbitrary px alone was easy to lose under grid squeeze / purge.) */
+@media (max-width: 767px) {
+  .economy-chip-pad-wide {
+    padding-left: 17.28px !important;
+    padding-right: 17.28px !important;
+  }
+
+  .economy-chip-pad-stock {
+    padding-left: 7.2px !important;
+    padding-right: 7.2px !important;
+  }
+}

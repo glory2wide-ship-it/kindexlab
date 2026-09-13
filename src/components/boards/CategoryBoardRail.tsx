@@ -49,10 +49,10 @@ export function CategoryBoardRail({
     : "border-line font-semibold text-soft hover:text-ink";
 
   // Channel tab labels +10%: 12.1→13.31 mobile, 15.4→16.94 desktop.
-  // Desktop stays on one row: nowrap so every channel fits.
-  // Economy chips +10% horizontal box width (desktop padding; mobile via rail scale).
+  // Economy mobile: content-sized chips (w-auto + shrink-0). Stretched grid cells with
+  // w-full + nowrap were painting glyphs into the padding so 해/식 sat on the border.
   const tabShell = isEconomy
-    ? "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-3 md:py-1.5 md:text-[16.09px] md:leading-none"
+    ? "inline-flex w-auto shrink-0 box-border items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:shrink md:px-3 md:py-1.5 md:text-[16.09px] md:leading-none"
     : "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-2 md:py-1.5 md:text-[16.09px] md:leading-none";
 
   const tabClassFor = (slug: string) => {
@@ -60,15 +60,17 @@ export function CategoryBoardRail({
     if (isEconomyMobileNarrowTab(slug, channel)) {
       cls = `${cls} max-md:!w-[90%] max-md:mx-auto`;
     }
-    // Long economy labels: widen column + bump inner px so glyphs clear the border.
+    // Long economy labels / 주식: bump inner px so glyphs clear the chip border.
     if (isEconomyMobilePaddedTab(slug, channel)) {
       cls = `${cls} ${ECONOMY_MOBILE_PADDED_TAB_PX}`;
     } else if (isEconomyMobileStockTab(slug, channel)) {
-      // 주식: +20% inset vs default px-1.5 so glyphs clear the chip border.
       cls = `${cls} ${ECONOMY_MOBILE_STOCK_TAB_PX}`;
     }
     return cls;
   };
+
+  /** Economy chips must not shrink below content width or padding collapses. */
+  const itemClass = isEconomy ? "w-auto shrink-0" : "min-w-0";
 
   const orderedKeys = [
     ...boards.slice(0, insertAt).map((board) => board.slug),
@@ -86,7 +88,7 @@ export function CategoryBoardRail({
   const gridTemplateColumns = colWeights.map((w) => `minmax(0, ${w}fr)`).join(" ");
 
   const compositeTab = onSelect ? (
-    <li key="composite" className="min-w-0">
+    <li key="composite" className={itemClass}>
       <button
         type="button"
         onClick={() => onSelect("")}
@@ -97,7 +99,7 @@ export function CategoryBoardRail({
       </button>
     </li>
   ) : (
-    <li key="composite" className="min-w-0">
+    <li key="composite" className={itemClass}>
       <Link
         href={`/${channel}`}
         className={`${tabClassFor("composite")} border-line font-semibold text-soft hover:text-ink`}
@@ -113,7 +115,7 @@ export function CategoryBoardRail({
     const mobileLabel = mobileBoardTabLabel(board.slug, board.shortTitle);
     if (onSelect) {
       return (
-        <li key={board.slug} className="min-w-0">
+        <li key={board.slug} className={itemClass}>
           <button
             type="button"
             onClick={() => onSelect(board.slug)}
@@ -130,7 +132,7 @@ export function CategoryBoardRail({
       );
     }
     return (
-      <li key={board.slug} className="min-w-0">
+      <li key={board.slug} className={itemClass}>
         <Link
           href={boardPath(board.slug)}
           className={`${tabClassFor(board.slug)} border-line font-semibold text-soft hover:text-ink`}
@@ -173,8 +175,12 @@ export function CategoryBoardRail({
     <>
       {heading}
       <ul
-        className="grid gap-1.5 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[10.93px]"
-        style={{ ["--m-rail" as string]: gridTemplateColumns }}
+        className={
+          isEconomy
+            ? "flex flex-wrap gap-1.5 md:flex-nowrap md:items-center md:gap-[10.93px]"
+            : "grid gap-1.5 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[10.93px]"
+        }
+        style={isEconomy ? undefined : { ["--m-rail" as string]: gridTemplateColumns }}
       >
         {tabs}
       </ul>
@@ -189,7 +195,7 @@ export function CategoryBoardRail({
     <section
       className={
         isEconomy
-          ? "overflow-hidden rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-4 max-md:py-2.5"
+          ? "rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-4 max-md:py-2.5"
           : "rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3 max-md:py-2.5"
       }
     >
