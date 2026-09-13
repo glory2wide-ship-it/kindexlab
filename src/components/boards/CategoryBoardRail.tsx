@@ -175,7 +175,7 @@ export function CategoryBoardRail({
     <section
       className={
         isEconomy
-          ? "overflow-hidden rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3.5 max-md:py-2.5"
+          ? "overflow-hidden rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-4 max-md:py-2.5"
           : "rounded-2xl border border-line bg-panel px-5 py-4 max-md:px-3 max-md:py-2.5"
       }
     >
