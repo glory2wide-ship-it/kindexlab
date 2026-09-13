@@ -41,14 +41,10 @@ export function ChannelBriefingLayout({
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
+      <header>
         <TitleTag className="text-2xl font-semibold tracking-tight md:text-3xl">
           {heading ?? `${meta.label} 투데이 브리핑`}
         </TitleTag>
-        <p className="max-w-2xl text-sm leading-[1.275rem] text-muted">
-          상단은 {channelMainLabel(channel)}이고, 아래는 {UPDATE_KEYWORD_LABEL}입니다. 지수(INDEX)는 키워드를 고르는
-          트리거이고, 본문은 그 키워드만으로 쓴 독립 칼럼입니다.
-        </p>
       </header>
 
       {main ? (
