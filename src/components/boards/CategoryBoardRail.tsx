@@ -35,6 +35,7 @@ export function CategoryBoardRail({
   if (!boards.length) return null;
   const composite = !selectedSlug;
   const insertAt = compositeTabIndex(channel);
+  const isEconomy = channel === "economy";
 
   const compositeClass = composite
     ? "border-accent bg-accent text-black"
@@ -42,8 +43,10 @@ export function CategoryBoardRail({
 
   // Channel tab labels +10%: 12.1→13.31 mobile, 15.4→16.94 desktop.
   // Desktop stays on one row: nowrap so every channel fits.
-  const tabShell =
-    "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-2 md:py-1.5 md:text-[16.09px] md:leading-none";
+  // Economy chips +10% horizontal box width (desktop padding; mobile via rail scale).
+  const tabShell = isEconomy
+    ? "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-3 md:py-1.5 md:text-[16.09px] md:leading-none"
+    : "inline-flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-center text-[13.31px] font-semibold leading-none whitespace-nowrap md:inline-flex md:w-auto md:shrink md:px-2 md:py-1.5 md:text-[16.09px] md:leading-none";
 
   const orderedKeys = [
     ...boards.slice(0, insertAt).map((board) => board.slug),
@@ -54,8 +57,8 @@ export function CategoryBoardRail({
   // Weight each column by the wider of the two stacked chips (row1 / row2).
   const colWeights = Array.from({ length: mobileCols }, (_, col) =>
     Math.max(
-      mobileBoardTabWidth(orderedKeys[col] ?? ""),
-      mobileBoardTabWidth(orderedKeys[col + mobileCols] ?? ""),
+      mobileBoardTabWidth(orderedKeys[col] ?? "", channel),
+      mobileBoardTabWidth(orderedKeys[col + mobileCols] ?? "", channel),
     ),
   );
   const gridTemplateColumns = colWeights.map((w) => `minmax(0, ${w}fr)`).join(" ");
@@ -148,7 +151,11 @@ export function CategoryBoardRail({
     <>
       {heading}
       <ul
-        className="grid gap-1.5 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[10.93px]"
+        className={
+          isEconomy
+            ? "grid gap-1.5 max-md:relative max-md:left-1/2 max-md:w-[110%] max-md:-translate-x-1/2 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[10.93px]"
+            : "grid gap-1.5 max-md:[grid-template-columns:var(--m-rail)] md:flex md:flex-nowrap md:items-center md:gap-[10.93px]"
+        }
         style={{ ["--m-rail" as string]: gridTemplateColumns }}
       >
         {tabs}

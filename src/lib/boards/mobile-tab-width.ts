@@ -19,10 +19,14 @@ export const MOBILE_BOARD_TAB_WIDTH: Record<string, number> = {
   "performance-ticket-ranking": 0.9, // 공연
   "exhibition-popup-ranking": 0.9, // 전시 팝업
   "bestseller-surge-index": 1.54, // 도서·베스트셀러
-  // Economy — startup chip +10% vs default 1.1
+  // Economy — startup chip +10% vs default 1.1; all economy weights ×1.1 via caller scale
   "startup-franchise-index": 1.21, // 창업*소상공
 };
 
-export function mobileBoardTabWidth(slug: string): number {
-  return MOBILE_BOARD_TAB_WIDTH[slug] ?? 1.1;
+/** Economy rail chips are 10% wider on mobile (column weights ×1.1). */
+export const ECONOMY_MOBILE_TAB_WIDTH_SCALE = 1.1;
+
+export function mobileBoardTabWidth(slug: string, channel?: string): number {
+  const base = MOBILE_BOARD_TAB_WIDTH[slug] ?? 1.1;
+  return channel === "economy" ? base * ECONOMY_MOBILE_TAB_WIDTH_SCALE : base;
 }
