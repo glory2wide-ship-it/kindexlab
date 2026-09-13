@@ -17,6 +17,17 @@ import type { RankingEntity } from "@/lib/types";
 
 const PER_TYPE = 20;
 
+/** Closed politics desks → board slug for live-chart stamping / overlays. */
+const POLITICS_TYPE_BOARD: Partial<Record<PoliticsEntityType, string>> = {
+  party_support: "party-support-chart",
+  politician_support: "politician-support-chart",
+  political_pundit: "political-pundit-ranking",
+  political_influencer: "political-influencer-power",
+  political_search: "policy-controversy-index",
+  local_policy: "governor-approval-index",
+  subsidy: "government-support-fund",
+};
+
 function history(values: number[]): RankingEntity["history"] {
   const labels = ["D-6", "D-5", "D-4", "D-3", "D-2", "D-1", "오늘"];
   return values.map((v, i) => ({ t: labels[i] ?? `${i}`, v }));
@@ -71,7 +82,15 @@ function toEntity(
     : changeFromScores(score, previousScore);
   const sparkline = sparklineFromHistory(historyScores, score);
   const volume = row.volume ?? volumeFromRank(row.rank, type === "subsidy" ? 120_000 : 82_000);
-  const tags = [...new Set([...(catalog?.tags ?? []), ...(row.tags ?? []), POLITICS_TYPE_LABEL[type]])].slice(0, 5);
+  const boardSlug = POLITICS_TYPE_BOARD[type];
+  const tags = [
+    ...new Set([
+      ...(boardSlug ? [boardSlug, "live-chart"] : []),
+      ...(catalog?.tags ?? []),
+      ...(row.tags ?? []),
+      POLITICS_TYPE_LABEL[type],
+    ]),
+  ].slice(0, 5);
   const label = POLITICS_TYPE_LABEL[type];
   return {
     id: `pol-${slug}`,
@@ -173,7 +192,7 @@ function rowsForType(sources: SourceResult[], type: PoliticsEntityType): ChartRo
           title: seed.name,
           subtitle: seed.nameEn,
           metric: Math.max(20, 70 - index * 4),
-          tags: ["political_influencer", "시사", "유튜브"],
+          tags: ["political_influencer", "live-chart", "political-influencer-power", "시사", "유튜브"],
         }))
       : [];
   return mergeRows([tagged, mentioned, headlines, trends, youtube, dualSeeds]).slice(0, PER_TYPE);
@@ -209,6 +228,40 @@ function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRo
     }
   }
 
+  // Politician board: pad catalog names so thin RSS still fills screen-20 LIVE.
+  if (type === "politician_support") {
+    for (const [index, entry] of catalogByType("politician_support").entries()) {
+      const exists = withCatalog.some(
+        (row) => namesOverlap(row.title, entry.name) || namesOverlap(entry.name, row.title),
+      );
+      if (exists) continue;
+      withCatalog.push({
+        rank: withCatalog.length + 1,
+        title: entry.name,
+        subtitle: entry.nameEn,
+        metric: Math.max(6, 38 - index * 2),
+        tags: ["politician_support", "live-chart", "politician-support-chart", "seed"],
+      });
+    }
+  }
+
+  // Issue-keyword board: pad political_search catalog.
+  if (type === "political_search") {
+    for (const [index, entry] of catalogByType("political_search").entries()) {
+      const exists = withCatalog.some(
+        (row) => namesOverlap(row.title, entry.name) || namesOverlap(entry.name, row.title),
+      );
+      if (exists) continue;
+      withCatalog.push({
+        rank: withCatalog.length + 1,
+        title: entry.name,
+        subtitle: entry.nameEn,
+        metric: Math.max(5, 34 - index * 2),
+        tags: ["political_search", "live-chart", "policy-controversy-index", "seed"],
+      });
+    }
+  }
+
   // Pundit board: pad person seeds (never YouTube channel names).
   if (type === "political_pundit") {
     for (const [index, seed] of PUNDIT_SEEDS.entries()) {
@@ -240,7 +293,17 @@ function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRo
       const exists = withCatalog.some((row) => namesOverlap(row.title, name) || namesOverlap(name, row.title));
       if (exists) {
         const row = withCatalog.find((item) => namesOverlap(item.title, name) || namesOverlap(name, item.title));
-        if (row) row.title = name;
+        if (row) {
+          row.title = name;
+          row.tags = [
+            ...new Set([
+              ...(row.tags ?? []),
+              "political_influencer",
+              "live-chart",
+              "political-influencer-power",
+            ]),
+          ];
+        }
         continue;
       }
       withCatalog.push({
@@ -248,7 +311,7 @@ function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRo
         title: name,
         subtitle: matchPoliticsYoutubeSeed(name)?.nameEn,
         metric: name.includes("뉴스공장") ? 88 : 48,
-        tags: ["political_influencer", "seed", "유튜브"],
+        tags: ["political_influencer", "live-chart", "political-influencer-power", "seed", "유튜브"],
       });
     }
     withCatalog.sort((left, right) => {

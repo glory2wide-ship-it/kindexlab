@@ -229,11 +229,23 @@ function rankTitlesToRows(
     }
   }
 
+  // Closed name boards: seed-match only (never invent free topics that dilute LIVE %).
+  const SEED_ONLY_BOARDS = new Set([
+    "star-reputation-index",
+    "party-support-chart",
+    "politician-support-chart",
+    "political-pundit-ranking",
+    "political-influencer-power",
+    "policy-controversy-index",
+    "trot-kayo-fandom-power",
+    "entertain-youtuber-ranking",
+  ]);
+
   // Only invent free-form topics when seed coverage is thin.
-  // Native chart boards + star board: seed-match only (never invent free topics).
+  // Native chart boards + closed name boards: seed-match only.
   if (
     seedHits < 6 &&
-    spec.boardSlug !== "star-reputation-index" &&
+    !SEED_ONLY_BOARDS.has(spec.boardSlug) &&
     !isNativeChartBoard(spec.boardSlug)
   ) {
     for (const row of titles) {
@@ -251,8 +263,12 @@ function rankTitlesToRows(
   const FORCE_SEED_BOARDS = new Set([
     "trot-kayo-fandom-power",
     "party-support-chart",
+    "politician-support-chart",
     "political-pundit-ranking",
+    "political-influencer-power",
+    "policy-controversy-index",
     "star-reputation-index",
+    "entertain-youtuber-ranking",
   ]);
   if (FORCE_SEED_BOARDS.has(spec.boardSlug) || (dense && counts.size < HEATMAP_SCREEN_LIVE_CAP)) {
     for (const [index, seed] of spec.seeds.entries()) {

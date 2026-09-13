@@ -294,8 +294,24 @@ export function ChannelMarketDesk({
       skipInitialHeatmapFetch.current = false;
       return;
     }
+    const defaultFilters =
+      gender === "all" &&
+      age === "all" &&
+      (!boardUsesRegionFilter(selectedSlug) || region === "all");
+    // Tab switches with default filters are already painted by onSelectBoard
+    // (applyLocal / quoted cache). Skip the waterfall /api/heatmap hop unless
+    // a quoted board still needs its first server paint.
+    if (defaultFilters) {
+      if (quotedCacheRef.current.has(cacheKeyForBoard(selectedSlug))) {
+        paintQuotedCache(selectedSlug, gender, age, region);
+        return;
+      }
+      if (!needsQuotedPaint(channel, selectedSlug)) {
+        return;
+      }
+    }
     void fetchHeatmap(selectedSlug, gender, age, region);
-  }, [selectedSlug, gender, age, region, fetchHeatmap, deskKind]);
+  }, [selectedSlug, gender, age, region, fetchHeatmap, deskKind, paintQuotedCache, channel]);
 
   useEffect(() => {
     if (deskKind !== "headlines") setHeadlineItems([]);

@@ -204,19 +204,33 @@ async function fetchFeed(feed: (typeof FEEDS)[number]): Promise<SourceResult> {
     }
 
     let items = ingestPoliticsTitles(feed, titles);
-    // P0-4: Naver / Serper (via retrieveNewsForKeyword) when RSS is empty or failed.
-    if (items.length === 0) {
+    // Catalog matches (not raw headlines) — thin RSS still needs Naver/Serper.
+    const catalogHits = items.filter((item) => (item.metric ?? 0) > 0).length;
+    const thinRss = items.length === 0 || catalogHits < 8;
+    // P0-4: Naver / Serper when RSS is empty, failed, or too thin to fill LIVE heads.
+    if (thinRss) {
       const fallback = await fetchPoliticsFallbackTitles(feed);
-      items = ingestPoliticsTitles(feed, fallback);
-      if (items.length) {
-        return result(feed.id, `${feed.label} (fallback)`, items);
+      if (fallback.length) {
+        const merged = ingestPoliticsTitles(feed, [
+          ...titles.map((row) => ({ title: row.title, via: row.via })),
+          ...fallback,
+        ]);
+        if (merged.length) {
+          return result(
+            feed.id,
+            items.length === 0 ? `${feed.label} (fallback)` : `${feed.label} (rss+fallback)`,
+            merged,
+          );
+        }
       }
-      return result(
-        feed.id,
-        feed.label,
-        [],
-        rssError ?? "no rows after RSS + Naver/Serper fallback",
-      );
+      if (items.length === 0) {
+        return result(
+          feed.id,
+          feed.label,
+          [],
+          rssError ?? "no rows after RSS + Naver/Serper fallback",
+        );
+      }
     }
     return result(feed.id, feed.label, items);
   } catch (error) {
