@@ -95,7 +95,9 @@ jobs:
         if: success()
         run: |
           chmod +x scripts/ci-commit-push.sh
-          scripts/ci-commit-push.sh "chore: publish KST daily briefings" src/data/briefings/extra.json
+          scripts/ci-commit-push.sh "chore: publish KST daily briefings" \
+            src/data/briefings/extra.json \
+            src/data/ops/daily
 
       - name: Email briefing generation report
         if: always() && steps.generate.outcome != 'skipped'

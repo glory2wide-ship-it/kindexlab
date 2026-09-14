@@ -12,4 +12,8 @@ if [ ! -f "$CACHE_PATH" ]; then
 fi
 
 chmod +x scripts/ci-commit-push.sh
-scripts/ci-commit-push.sh "$MESSAGE" "$CACHE_PATH"
+PATHS=("$CACHE_PATH")
+if [ -d src/data/ops/daily ]; then
+  PATHS+=(src/data/ops/daily)
+fi
+scripts/ci-commit-push.sh "$MESSAGE" "${PATHS[@]}"
