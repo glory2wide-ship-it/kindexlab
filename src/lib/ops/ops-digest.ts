@@ -60,6 +60,45 @@ export interface OpsCategorySummary {
   estimatedKrw: number;
 }
 
+/** Product article families shown on /admin cost tables. */
+export type OpsArticleType = "today-briefing" | "today-insight" | "today-analysis";
+
+export interface OpsArticleTypeSummary {
+  type: OpsArticleType;
+  typeLabel: string;
+  ok: number;
+  fail: number;
+  skip: number;
+  estimatedKrw: number;
+}
+
+export const OPS_ARTICLE_TYPE_LABEL: Record<OpsArticleType, string> = {
+  "today-briefing": "투데이 브리핑",
+  "today-insight": "투데이 인사이트",
+  "today-analysis": "오늘의 분석",
+};
+
+const OPS_ARTICLE_TYPE_ORDER: OpsArticleType[] = [
+  "today-briefing",
+  "today-insight",
+  "today-analysis",
+];
+
+export function articleTypeForItem(item: Pick<OpsDigestItem, "pipeline" | "kind" | "meta">): OpsArticleType | null {
+  const pipeline = item.pipeline || "";
+  if (pipeline.includes("heatmap")) return "today-analysis";
+
+  const kind = (item.kind || "").trim();
+  const meta = item.meta || "";
+  if (kind === "main" || /(^| · )main( · |$)/.test(meta)) return "today-briefing";
+  if (kind === "deep-dive" || meta.includes("deep-dive")) return "today-insight";
+  if (pipeline.includes("briefing")) {
+    // Briefing pipeline without a clear kind — treat as insight (majority deep-dives).
+    return "today-insight";
+  }
+  return null;
+}
+
 const OPS_DAILY_DIR = path.join(process.cwd(), "src", "data", "ops", "daily");
 const ARTIFACTS_DIR = path.join(process.cwd(), "artifacts", "generation-reports");
 
@@ -307,6 +346,30 @@ function rollupCategories(items: OpsDigestItem[]): OpsCategorySummary[] {
   });
 }
 
+function rollupArticleTypes(items: OpsDigestItem[]): OpsArticleTypeSummary[] {
+  const map = new Map<OpsArticleType, OpsArticleTypeSummary>();
+  for (const type of OPS_ARTICLE_TYPE_ORDER) {
+    map.set(type, {
+      type,
+      typeLabel: OPS_ARTICLE_TYPE_LABEL[type],
+      ok: 0,
+      fail: 0,
+      skip: 0,
+      estimatedKrw: 0,
+    });
+  }
+  for (const item of items) {
+    const type = articleTypeForItem(item);
+    if (!type) continue;
+    const current = map.get(type)!;
+    if (item.status === "ok") current.ok += 1;
+    else if (item.status === "fail") current.fail += 1;
+    else current.skip += 1;
+    current.estimatedKrw = Math.round((current.estimatedKrw + item.estimatedKrw) * 100) / 100;
+  }
+  return OPS_ARTICLE_TYPE_ORDER.map((type) => map.get(type)!);
+}
+
 export function summarizeDay(digests: OpsDigest[]) {
   const generation = digests.filter((row) => row.kind !== "board-refresh");
   const boards = digests.filter((row) => row.kind === "board-refresh");
@@ -348,6 +411,7 @@ export function summarizeDay(digests: OpsDigest[]) {
     boardsRefreshed: sum(boards, (row) => row.boardsRefreshed ?? row.ok),
     byItem,
     byCategory: rollupCategories(byItem),
+    byArticleType: rollupArticleTypes(byItem),
     digests,
   };
 }
