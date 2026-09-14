@@ -9,6 +9,8 @@ import type { Metadata } from "next";
  */
 const DEFAULT_GOOGLE_SITE_VERIFICATION =
   "je2eU2uOaCTdnOgcRvGMP-X40LYBbT1yit6_QaiFsa0";
+const DEFAULT_NAVER_SITE_VERIFICATION =
+  "7ebb310098d482149736de711ea6ec40f2b71b74";
 
 export function siteVerificationMetadata(): Metadata["verification"] | undefined {
   const google = (
@@ -19,7 +21,7 @@ export function siteVerificationMetadata(): Metadata["verification"] | undefined
   const naver = (
     process.env.NAVER_SITE_VERIFICATION ??
     process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION ??
-    ""
+    DEFAULT_NAVER_SITE_VERIFICATION
   ).trim();
 
   if (!google && !naver) return undefined;

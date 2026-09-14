@@ -7,7 +7,7 @@
 - `https://www.kindexlab.com/robots.txt`
 - `https://www.kindexlab.com/sitemap.xml`
 - 정책 페이지: `/terms`, `/disclaimer`, `/contact`, `/privacy`
-- 소유권 메타: Google 확인 토큰은 `src/lib/seo-verification.ts`에 반영됨. 네이버는 `NAVER_SITE_VERIFICATION` env 또는 동일 파일 기본값
+- 소유권 메타: Google·네이버 확인 토큰은 `src/lib/seo-verification.ts`에 반영됨 (env로 덮어쓰기 가능)
 
 로컬·프로덕션 헬스:
 
@@ -27,10 +27,9 @@ npm run seo:check
 ## 2. 네이버 서치어드바이저
 
 1. [서치어드바이저](https://searchadvisor.naver.com/) → 웹마스터 도구 → 사이트 추가: `https://www.kindexlab.com`
-2. HTML 메타 태그의 `content` 값을 복사
-3. Vercel → `NAVER_SITE_VERIFICATION=<content값>` → 재배포
-4. `sitemap.xml` 제출, `robots.txt` 수집 확인
-5. 주요 URL 수집 요청
+2. HTML 메타 태그 확인 (네이버 토큰은 코드에 반영됨 → 배포 후 **확인**)
+3. `sitemap.xml` 제출, `robots.txt` 수집 확인
+4. 주요 URL 수집 요청
 
 ## 3. AdSense 전에 같이 볼 것
 
