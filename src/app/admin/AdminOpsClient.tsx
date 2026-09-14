@@ -90,7 +90,17 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
           </button>
         </div>
         <p className="mt-2 text-sm text-muted">
-          KST {daily.editionDate} · 측정 {new Date(data.generatedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}
+          KST {daily.editionDate} · 측정{" "}
+          {new Date(data.generatedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}
+        </p>
+        <p className="mt-1 text-sm text-muted">
+          웹 URL:{" "}
+          <a
+            className="text-ink underline decoration-line underline-offset-2 hover:text-accent"
+            href="https://www.kindexlab.com/admin"
+          >
+            https://www.kindexlab.com/admin
+          </a>
         </p>
         {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
       </header>
