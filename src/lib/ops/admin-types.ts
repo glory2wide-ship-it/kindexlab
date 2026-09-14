@@ -47,8 +47,11 @@ export type AdminDashboardPayload = {
     byItem: AdminOpsItemRow[];
   };
   traffic: {
+    day?: string;
     dailyVisitors: number;
     activeVisitors: number;
+    activeWindowMinutes: number;
+    storage?: string;
     note?: string | null;
     topBriefings: Array<{ slug: string; title: string; path: string; count: number }>;
     topRankings: Array<{ slug: string; title: string; path: string; count: number }>;
