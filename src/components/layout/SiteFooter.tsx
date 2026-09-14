@@ -51,18 +51,16 @@ export function SiteFooter() {
             <p className="mt-2 text-muted sm:leading-6">
               {SITE.companyShort}
               <br />
-              {SITE.name} ({SITE.nameKo})
+              {SITE.name} ({SITE.nameKo}){" "}
+              <Link href="/admin" className="text-muted hover:text-ink">
+                Admin
+              </Link>
               <br />
               {SITE.domain}
               <br />
               <a href={`mailto:${SITE.contactEmail}`} className="break-all hover:text-ink">
                 {SITE.contactEmail}
               </a>
-            </p>
-            <p className="mt-3">
-              <Link href="/admin" className="text-muted hover:text-ink">
-                Admin
-              </Link>
             </p>
           </div>
         </div>
