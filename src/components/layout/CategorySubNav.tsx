@@ -33,9 +33,9 @@ const SectionTabSearch = dynamic(
   },
 );
 
-/** Match MobileCategoryBar chip boxes. */
+/** Match MobileCategoryBar chip boxes. Mobile type is prior 14.08px −5%. */
 const CHIP_H = 31;
-const CHIP_TEXT_MOBILE = "14.08px";
+const CHIP_TEXT_MOBILE = "13.38px";
 const CHIP_TEXT_DESKTOP = "16.09px";
 
 function sectionFromPathname(pathname: string, channel: PostChannel): ChannelSectionId {
@@ -71,13 +71,13 @@ export function CategorySubNav({
     : resolveSiteSection(pathname);
 
   const chipBase =
-    "box-border inline-flex shrink-0 items-center justify-center rounded-md border bg-clip-padding text-center leading-none tracking-normal whitespace-nowrap";
+    "box-border inline-flex items-center justify-center rounded-md border bg-clip-padding text-center leading-none tracking-normal whitespace-nowrap";
 
   const nav = (
     <nav
       className={
         embedded
-          ? "category-sub-nav flex min-w-0 flex-1 items-stretch gap-2 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          ? "category-sub-nav flex min-w-0 flex-1 items-stretch gap-1.5 overflow-x-hidden"
           : "category-sub-nav flex min-w-0 shrink-0 items-stretch gap-2 overflow-x-auto"
       }
       aria-label={meta ? `${meta.label} 서브 메뉴` : "전체 서브 메뉴"}
@@ -95,7 +95,7 @@ export function CategorySubNav({
             }}
             title={item.description}
             className={`${chipBase} ${
-              embedded ? "px-3" : "px-2.5 md:px-3"
+              embedded ? "min-w-0 flex-1 px-1.5" : "shrink-0 px-2.5 md:px-3"
             } ${
               isActive
                 ? "border-accent bg-accent font-semibold text-black"
@@ -104,9 +104,6 @@ export function CategorySubNav({
             style={{
               height: CHIP_H,
               fontSize: embedded ? CHIP_TEXT_MOBILE : CHIP_TEXT_DESKTOP,
-              // Comfortable tap width; label length sets natural chip size.
-              minWidth: embedded ? 64 : undefined,
-              letterSpacing: embedded ? "0.02em" : undefined,
             }}
           >
             {item.label}
@@ -122,7 +119,7 @@ export function CategorySubNav({
 
   if (embedded) {
     return (
-      <div className="flex w-full min-w-0 items-center justify-start gap-2 pr-px">
+      <div className="flex w-full min-w-0 items-center justify-start gap-1.5 overflow-x-hidden pr-px">
         {nav}
         {search}
       </div>
