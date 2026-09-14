@@ -91,6 +91,14 @@ export function entityIndexScopeLabel(entity: RankingEntity): string {
 
 /** Short index blurb — always mirrors current `rank` / `fluctuationRate`. */
 export function formatEntityIndexBlurb(entity: RankingEntity): string {
+  // Keyword placeholders must never claim a fabricated board "1위".
+  if (
+    entity.rank <= 0 ||
+    entity.id.startsWith("keyword:") ||
+    entity.tags.includes("rank-pending")
+  ) {
+    return entity.summary?.trim() || `${entity.name} 순위 데이터를 확인하는 중입니다.`;
+  }
   const scope = entityIndexScopeLabel(entity);
   const particle = topicJosa(entity.name);
   let rate = Number.isFinite(entity.fluctuationRate) ? entity.fluctuationRate : 0;

@@ -569,6 +569,43 @@ export function isCultureEventVenueOnly(name: string, slug?: string): boolean {
   );
 }
 
+/**
+ * Collapse national touring-show clones on the 공연 전체 heatmap.
+ * "[부산] 뮤지컬 위키드 부산" and "[서울] 뮤지컬 위키드" share one franchise key
+ * so regional catalog padding cannot flood the national board with the same title.
+ * Regional tabs still pad from per-시/도 catalogs (now diversified).
+ */
+export function cultureFranchiseKey(name: string): string {
+  const subject = subjectOf(name);
+  let compact = normalizeName(subject);
+  compact = compact.replace(
+    /(성남|수원|인천|부산|대구|광주|대전|울산|세종|춘천|청주|천안|전주|여수|경주|창원|제주|원주|강릉|고양|용인|부천|안산|파주|광명|의정부|김포|하남|시흥|평택|동탄|일산|송도|해운대|센텀|수성|서귀포|김해|진주|포항|구미|익산|군산|목포|순천|속초|아산|공주|제천|충주|화성|안양|남양주|화성동탄)+$/u,
+    "",
+  );
+  const franchises: Array<[RegExp, string]> = [
+    [/^(뮤지컬)?위키드/, "뮤지컬위키드"],
+    [/^(뮤지컬)?데스노트/, "뮤지컬데스노트"],
+    [/^(뮤지컬)?시카고/, "뮤지컬시카고"],
+    [/^(뮤지컬)?영웅/, "뮤지컬영웅"],
+    [/^(뮤지컬)?알라딘/, "뮤지컬알라딘"],
+    [/^(뮤지컬)?캣츠/, "뮤지컬캣츠"],
+    [/^(뮤지컬)?맘마미아/, "뮤지컬맘마미아"],
+    [/^(뮤지컬)?팬텀/, "뮤지컬팬텀"],
+    [/^(뮤지컬)?지킬/, "뮤지컬지킬앤하이드"],
+    [/^(뮤지컬)?레미제라블/, "뮤지컬레미제라블"],
+    [/^(뮤지컬)?라이온킹/, "뮤지컬라이온킹"],
+  ];
+  for (const [pattern, key] of franchises) {
+    if (pattern.test(compact)) return key;
+  }
+  return normalizeName(name);
+}
+
+function uniquenessKeyForBoard(name: string, slug?: string): string {
+  if (slug === PERFORMANCE_BOARD_SLUG) return cultureFranchiseKey(name);
+  return normalizeName(name);
+}
+
 export function ensureFoodRestaurantRanking(
   rows: BoardRankEntry[],
   seeds: readonly string[] = [],
@@ -579,14 +616,14 @@ export function ensureFoodRestaurantRanking(
   const unique: BoardRankEntry[] = [];
   const seen = new Set<string>();
   for (const row of tagged) {
-    const key = normalizeName(row.name);
+    const key = uniquenessKeyForBoard(row.name, slug);
     if (!key || seen.has(key)) continue;
     seen.add(key);
     unique.push(row);
   }
   for (const seed of seeds) {
     if (!usable(seed)) continue;
-    const key = normalizeName(seed);
+    const key = uniquenessKeyForBoard(seed, slug);
     if (!key || seen.has(key)) continue;
     seen.add(key);
     unique.push(

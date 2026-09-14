@@ -63,7 +63,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "국립창극단 심청",
   ],
   gyeonggi: [
-    "뮤지컬 위키드 성남",
+    "성남 뮤지컬 레베카",
     "뮤지컬 데스노트 수원",
     "경기필하모닉 정기연주회",
     "수원화성문화제 야외공연",
@@ -86,7 +86,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
   ],
   incheon: [
     "인천시립교향악단 정기연주회",
-    "뮤지컬 위키드 인천",
+    "송도 뮤지컬 비스티",
     "송도 뮤지컬 데스노트",
     "인천펜타포트 록페스티벌",
     "부평 뮤지컬 시카고",
@@ -107,7 +107,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "월미 야외 뮤지컬",
   ],
   busan: [
-    "뮤지컬 위키드 부산",
+    "부산 뮤지컬 명성황후",
     "부산국제록페스티벌",
     "뮤지컬 데스노트 부산",
     "부산시향 정기연주회",
@@ -129,7 +129,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "부산원아시아페스티벌 공연",
   ],
   daegu: [
-    "뮤지컬 위키드 대구",
+    "대구 뮤지컬 스웨그에이지",
     "대구국제오페라축제",
     "뮤지컬 데스노트 대구",
     "대구시향 정기연주회",
@@ -151,7 +151,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "연극 페스티벌 대구 초청작",
   ],
   gwangju: [
-    "뮤지컬 위키드 광주",
+    "광주 뮤지컬 시라노",
     "광주비엔날레 개막 공연",
     "뮤지컬 데스노트 광주",
     "광주시향 정기연주회",
@@ -173,7 +173,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "뮤지컬 지킬앤하이드 광주",
   ],
   daejeon: [
-    "뮤지컬 위키드 대전",
+    "대전 뮤지컬 프랑켄슈타인",
     "대전시향 정기연주회",
     "뮤지컬 데스노트 대전",
     "뮤지컬 시카고 대전",
@@ -195,7 +195,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "클래식 갈라 대전",
   ],
   ulsan: [
-    "뮤지컬 위키드 울산",
+    "울산 뮤지컬 렌트",
     "울산시향 정기연주회",
     "뮤지컬 데스노트 울산",
     "뮤지컬 시카고 울산",
@@ -217,7 +217,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "클래식 갈라 울산",
   ],
   sejong: [
-    "뮤지컬 위키드 세종",
+    "세종 뮤지컬 킹키부츠",
     "세종시향 정기연주회",
     "뮤지컬 데스노트 세종",
     "뮤지컬 시카고 세종",
@@ -239,7 +239,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "클래식 갈라 세종",
   ],
   gangwon: [
-    "뮤지컬 위키드 춘천",
+    "춘천 뮤지컬 그날들",
     "강릉시향 정기연주회",
     "뮤지컬 데스노트 원주",
     "춘천마임축제 초청작",
@@ -261,7 +261,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "동해 클래식 갈라",
   ],
   chungbuk: [
-    "뮤지컬 위키드 청주",
+    "청주 뮤지컬 빨래",
     "청주시향 정기연주회",
     "뮤지컬 데스노트 충주",
     "뮤지컬 시카고 청주",
@@ -283,7 +283,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "제천 국제음악영화제 공연",
   ],
   chungnam: [
-    "뮤지컬 위키드 천안",
+    "천안 뮤지컬 번지점프를하다",
     "천안시향 정기연주회",
     "뮤지컬 데스노트 아산",
     "뮤지컬 시카고 천안",
@@ -305,7 +305,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "태안 야외 콘서트",
   ],
   jeonbuk: [
-    "뮤지컬 위키드 전주",
+    "전주 뮤지컬 모래시계",
     "전주시향 정기연주회",
     "뮤지컬 데스노트 군산",
     "전주세계소리축제",
@@ -327,7 +327,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "소리문화의전당 창작극",
   ],
   jeonnam: [
-    "뮤지컬 위키드 여수",
+    "여수 뮤지컬 블루레인",
     "여수시향 정기연주회",
     "뮤지컬 데스노트 순천",
     "여수세계박람회 기념 공연",
@@ -349,7 +349,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "보성 녹차 뮤직 페스티벌",
   ],
   gyeongbuk: [
-    "뮤지컬 위키드 경주",
+    "경주 뮤지컬 명성황후",
     "포항시향 정기연주회",
     "뮤지컬 데스노트 구미",
     "경주 신라문화제 공연",
@@ -371,7 +371,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "영덕 야외 콘서트",
   ],
   gyeongnam: [
-    "뮤지컬 위키드 창원",
+    "창원 뮤지컬 드라큘라",
     "창원시향 정기연주회",
     "뮤지컬 데스노트 김해",
     "통영국제음악제",
@@ -393,7 +393,7 @@ export const REGION_PERFORMANCE_CATALOG: RegionCatalog = {
     "남해 독일마을 음악회",
   ],
   jeju: [
-    "뮤지컬 위키드 제주",
+    "제주 뮤지컬 넥스트투노멀",
     "제주시향 정기연주회",
     "뮤지컬 데스노트 서귀포",
     "제주국제관악제",
