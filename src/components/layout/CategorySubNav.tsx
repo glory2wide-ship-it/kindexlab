@@ -105,7 +105,7 @@ export function CategorySubNav({
               embedded ? mobileWidthClass : "shrink-0 px-2.5 md:px-3"
             } ${
               isActive
-                ? "border-accent bg-accent font-normal text-black"
+                ? "border-[#dc2626] bg-[#dc2626] font-bold text-white"
                 : "border-line bg-board font-normal text-ink hover:border-accent hover:text-accent"
             }`}
             style={{
