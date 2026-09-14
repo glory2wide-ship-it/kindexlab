@@ -119,12 +119,15 @@ export function parseTvGenreQuery(raw: string | null | undefined): HeatmapTvGenr
  * Infer a TV genre for a programme / OTT title.
  * Returns undefined when the name does not clearly match a genre bucket
  * (so "전체" still shows it, but genre tabs can skip it or pad from seeds).
+ *
+ * Classification prefers the programme **name**. Tags like `방송뉴스` /
+ * `아이돌뉴스` are category labels, not programme genres — do not let them
+ * reclassify dramas or idol clips as 뉴스·시사.
  */
 export function inferTvGenre(
   name: string,
   meta?: { tags?: string[]; subtitle?: string; nameEn?: string },
 ): TvGenreSegment | undefined {
-  const blob = `${name} ${(meta?.tags ?? []).join(" ")} ${meta?.subtitle ?? ""} ${meta?.nameEn ?? ""}`;
   const key = compactKey(name);
   if (!key) return undefined;
 
@@ -134,15 +137,19 @@ export function inferTvGenre(
     if (known.length >= 4 && key.includes(known)) return genre;
   }
 
-  if (OTT_RE.test(blob)) return "ott";
-  if (NEWS_RE.test(blob)) return "news";
-  if (SPORTS_RE.test(blob)) return "sports";
-  if (VARIETY_RE.test(blob)) return "variety";
-  if (DRAMA_RE.test(blob)) return "drama";
+  const nameBlob = `${name} ${meta?.nameEn ?? ""} ${meta?.subtitle ?? ""}`;
+  if (OTT_RE.test(nameBlob)) return "ott";
+  if (NEWS_RE.test(nameBlob)) return "news";
+  if (SPORTS_RE.test(nameBlob)) return "sports";
+  if (VARIETY_RE.test(nameBlob)) return "variety";
+  if (DRAMA_RE.test(nameBlob)) return "drama";
 
-  // Channel cues from subtitle / tags
-  if (/YTN|연합뉴스/i.test(blob)) return "news";
-  if (/넷플릭스|티빙|웨이브|디즈니|쿠팡/i.test(blob)) return "ott";
+  if (/YTN|연합뉴스/i.test(nameBlob)) return "news";
+  if (/넷플릭스|티빙|웨이브|디즈니|쿠팡/i.test(nameBlob)) return "ott";
+
+  // Tags: only platform / OTT cues — never bare "*뉴스" category stamps.
+  const tags = (meta?.tags ?? []).join(" ");
+  if (OTT_RE.test(tags) || /넷플릭스|티빙|웨이브|디즈니|쿠팡/i.test(tags)) return "ott";
 
   return undefined;
 }
