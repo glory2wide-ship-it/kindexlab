@@ -387,7 +387,7 @@ export function MarketWorkspace({
                       key={option.id}
                       type="button"
                       onClick={() => pickTimeframe(option.id)}
-                      className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[14.256px] font-semibold tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[15.682px] lg:tracking-normal ${
+                      className={`shrink-0 rounded-md px-1.5 py-1 font-sans text-[13.543px] font-semibold tracking-tight lg:px-2.5 lg:py-1.5 lg:text-[14.898px] lg:tracking-normal ${
                         timeframe === option.id
                           ? "bg-ink text-board md:bg-accent md:text-black"
                           : "text-soft hover:bg-panel hover:text-ink"

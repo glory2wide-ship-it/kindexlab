@@ -33,10 +33,10 @@ const SectionTabSearch = dynamic(
   },
 );
 
-/** Match MobileCategoryBar chip boxes. Mobile type is prior 14.08px −5%. */
+/** Match MobileCategoryBar chip boxes. Mobile type is prior 14.08px −5%. Desktop −7% from 16.09px. */
 const CHIP_H = 31;
 const CHIP_TEXT_MOBILE = "13.38px";
-const CHIP_TEXT_DESKTOP = "16.09px";
+const CHIP_TEXT_DESKTOP = "14.96px";
 
 function sectionFromPathname(pathname: string, channel: PostChannel): ChannelSectionId {
   const base = `/${channel}`;
@@ -105,8 +105,8 @@ export function CategorySubNav({
               embedded ? mobileWidthClass : "shrink-0 px-2.5 md:px-3"
             } ${
               isActive
-                ? "border-accent bg-accent font-semibold text-black"
-                : "border-line bg-panel font-bold text-ink hover:border-accent hover:text-accent"
+                ? "border-accent bg-accent font-normal text-black"
+                : "border-line bg-board font-normal text-ink hover:border-accent hover:text-accent"
             }`}
             style={{
               height: CHIP_H,
