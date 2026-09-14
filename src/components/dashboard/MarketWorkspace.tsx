@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { startTransition, useEffect, useMemo, useState, type ReactNode } from "react";
-import { DemographicTabs, RegionFilterTabs } from "@/components/boards/DemographicTabs";
+import { DemographicTabs, GenreFilterTabs, RegionFilterTabs } from "@/components/boards/DemographicTabs";
 import { HeatmapCountdownFallback } from "@/components/dashboard/HeatmapCountdown";
 import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundary";
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
@@ -42,6 +42,7 @@ import { isHeadlineFeed, rankHeadlineFeed } from "@/lib/news/headline-rank";
 import { LIVE_INDEX_LABEL } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 import { entityMatchesRegion } from "@/lib/boards/regions";
+import { entityMatchesTvGenre, type HeatmapTvGenre } from "@/lib/boards/tv-genre";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import { rankItemsForTimeframe } from "@/lib/timeframes";
 import type { CategoryId, RankingEntity, Timeframe, ViewMode } from "@/lib/types";
@@ -66,6 +67,9 @@ export function MarketWorkspace({
   hideTimeframes = false,
   boardSlug,
   showRegion = false,
+  showGenre = false,
+  genre: genreProp,
+  onGenre,
   showChannelTags = false,
   maxItems = TREEMAP_MAX_ITEMS,
   remainingSec: _remainingSec = DEFAULT_TRENDS_REVALIDATE_SEC,
@@ -95,6 +99,9 @@ export function MarketWorkspace({
   hideTimeframes?: boolean;
   boardSlug?: string;
   showRegion?: boolean;
+  showGenre?: boolean;
+  genre?: HeatmapTvGenre;
+  onGenre?: (value: HeatmapTvGenre) => void;
   /** Landing unified map: short desk tags beside tile ranks. */
   showChannelTags?: boolean;
   /** When set, methodology modal uses that desk's copy. */
@@ -152,6 +159,7 @@ export function MarketWorkspace({
   const [genderInternal, setGenderInternal] = useState<"all" | GenderSegment>("all");
   const [ageInternal, setAgeInternal] = useState<"all" | AgeSegment>("all");
   const [regionInternal, setRegionInternal] = useState<"all" | RegionSegment>("all");
+  const [genreInternal, setGenreInternal] = useState<HeatmapTvGenre>("all");
   const [methodOpen, setMethodOpen] = useState(false);
   const [userPickedView, setUserPickedView] = useState(false);
   const [userPickedTimeframe, setUserPickedTimeframe] = useState(false);
@@ -182,6 +190,8 @@ export function MarketWorkspace({
   const gender = genderProp ?? genderInternal;
   const age = ageProp ?? ageInternal;
   const region = regionProp ?? regionInternal;
+  const genre = genreProp ?? genreInternal;
+  const setGenre = onGenre ?? setGenreInternal;
   const setGender = onGender ?? setGenderInternal;
   const setAge = onAge ?? setAgeInternal;
   const setRegion = onRegion ?? setRegionInternal;
@@ -214,17 +224,24 @@ export function MarketWorkspace({
         showRegion && region !== "all"
           ? ordered.filter((item) => entityMatchesRegion(item, region))
           : ordered;
-      const unique = uniqueHeatmapTiles(regionLocked);
+      const genreLocked =
+        showGenre && genre !== "all" && genre !== "ott"
+          ? regionLocked.filter((item) => entityMatchesTvGenre(item, genre))
+          : regionLocked;
+      const unique = uniqueHeatmapTiles(genreLocked);
       if (unique.length) return unique;
     } catch {
       /* keep tiles from the region-locked payload so a bad combo never mixes 시/도 */
     }
-    const fallback =
+    let fallback =
       showRegion && region !== "all"
         ? filtered.filter((item) => entityMatchesRegion(item, region))
         : filtered;
+    if (showGenre && genre !== "all" && genre !== "ott") {
+      fallback = fallback.filter((item) => entityMatchesTvGenre(item, genre));
+    }
     return uniqueHeatmapTiles(fallback);
-  }, [filtered, timeframe, gender, age, region, showRegion, skipDemographicSkew]);
+  }, [filtered, timeframe, gender, age, region, showRegion, genre, showGenre, skipDemographicSkew]);
 
   const sortedItems = useMemo(() => {
     const desktopCap = Math.max(1, Math.min(maxItems, TREEMAP_MAX_ITEMS));
@@ -243,7 +260,8 @@ export function MarketWorkspace({
     return rankedPool.slice(0, listCap).map((item, index) => ({ ...item, rank: index + 1 }));
   }, [rankedPool, isMobileViewport]);
   const demoKey = filterKey(gender, age, region);
-  const demoActive = gender !== "all" || age !== "all" || region !== "all";
+  const demoActive =
+    gender !== "all" || age !== "all" || region !== "all" || (showGenre && genre !== "all");
   /** Region has its own mobile dial; sheet is only for category tabs. */
   const needsExtraFilterSheet = !hideCategoryTabs;
 
@@ -321,6 +339,9 @@ export function MarketWorkspace({
                 region={region}
                 onRegion={setRegion}
                 showRegion={showRegion}
+                genre={genre}
+                onGenre={setGenre}
+                showGenre={showGenre}
                 boardSlug={boardSlug}
                 hideTimeframes={hideTimeframes}
               />
@@ -417,6 +438,9 @@ export function MarketWorkspace({
             </div>
             {showRegion ? (
               <RegionFilterTabs region={region} onRegion={setRegion} />
+            ) : null}
+            {showGenre ? (
+              <GenreFilterTabs genre={genre} onGenre={setGenre} />
             ) : null}
           </div>
           {demoActive ? (
@@ -578,6 +602,9 @@ export function MarketWorkspace({
               region={region}
               onRegion={setRegion}
               showRegion={showRegion}
+              genre={genre}
+              onGenre={setGenre}
+              showGenre={showGenre}
             />
             {demoActive ? (
               <p className="mt-2 text-[11px] leading-5 text-muted">

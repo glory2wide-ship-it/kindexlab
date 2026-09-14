@@ -22,9 +22,10 @@ import {
 } from "@/lib/boards/live-priority";
 import { PERFORMANCE_BOARD_SLUG } from "@/lib/boards/region-catalogs";
 import { cultureFranchiseKey } from "@/lib/boards/regions";
-import { menuBoardsForChannel, isHeadlineNewsBoard } from "@/lib/boards/registry";
+import { getBoard, menuBoardsForChannel, isHeadlineNewsBoard } from "@/lib/boards/registry";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
 import { normalizeCachedBoard } from "@/lib/boards/store";
+import { OTT_BUZZ_BOARD_SLUG } from "@/lib/boards/tv-genre";
 import type { BoardDefinition, BoardRankEntry, CachedBoard } from "@/lib/boards/types";
 import { COMPOSITE_INDEX_ID } from "@/lib/ingestion/composite";
 import { snapshotToPayload } from "@/lib/ingestion/compose";
@@ -271,6 +272,11 @@ async function loadChannelHeatmapPayloadsUncached(
   const defs = menuBoardsForChannel(channel).filter(
     (board) => !board.deskKind && !isHeadlineNewsBoard(board.slug),
   );
+  // TV 시청률 → OTT 화제성 tab needs culture's rail-hidden OTT board ranking.
+  if (channel === "entertainment") {
+    const ott = getBoard(OTT_BUZZ_BOARD_SLUG);
+    if (ott && !defs.some((d) => d.slug === ott.slug)) defs.push(ott);
+  }
   const snapshot = readPersistedSnapshot();
   const payloads: HeatmapBoardPayload[] = [];
   // Seed boards in parallel — sequential await was a major homepage cost.

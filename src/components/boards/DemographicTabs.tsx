@@ -7,6 +7,11 @@ import {
 } from "@/lib/boards/demographics";
 import { visibleAgeSegments } from "@/lib/boards/age-tabs";
 import { REGION_LABEL, REGION_SEGMENTS } from "@/lib/boards/regions";
+import {
+  TV_GENRE_LABEL,
+  TV_GENRE_SEGMENTS,
+  type HeatmapTvGenre,
+} from "@/lib/boards/tv-genre";
 import type { AgeSegment, GenderSegment, RegionSegment } from "@/lib/boards/types";
 
 /** Compact on md/tablet so 분봉+성별+연령 fit one row; roomier from lg up. Desktop type −5%. */
@@ -51,10 +56,43 @@ export function RegionFilterTabs({
   );
 }
 
+/** TV 시청률 genre row — 전체 / 드라마 / 예능 / 뉴스·시사 / 스포츠 / OTT 화제성. */
+export function GenreFilterTabs({
+  genre = "all",
+  onGenre,
+}: {
+  genre?: HeatmapTvGenre;
+  onGenre: (value: HeatmapTvGenre) => void;
+}) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-2" role="tablist" aria-label="방송 장르">
+      <div className="flex flex-wrap gap-1 rounded-lg bg-board p-1">
+        <button
+          type="button"
+          onClick={() => onGenre("all")}
+          className={`${TAB_BASE} ${genre === "all" ? AGE_ON : AGE_OFF}`}
+        >
+          전체
+        </button>
+        {TV_GENRE_SEGMENTS.map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onGenre(key)}
+            className={`${TAB_BASE} ${genre === key ? AGE_ON : AGE_OFF}`}
+          >
+            {TV_GENRE_LABEL[key]}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Gender and age sit on one row by default: gender group, then age to the right.
  * Pass `stackAgeOnMobile` to put age on the next row below md (entity detail).
- * Region tabs (when enabled) always render on the next row.
+ * Region / genre tabs (when enabled) always render on the next row.
  * Pass `boardSlug` to hide cohorts that do not apply to that board.
  */
 export function DemographicTabs({
@@ -67,6 +105,9 @@ export function DemographicTabs({
   region = "all",
   onRegion,
   showRegion = false,
+  genre = "all",
+  onGenre,
+  showGenre = false,
   stackAgeOnMobile = false,
 }: {
   gender: "all" | GenderSegment;
@@ -78,6 +119,9 @@ export function DemographicTabs({
   region?: "all" | RegionSegment;
   onRegion?: (value: "all" | RegionSegment) => void;
   showRegion?: boolean;
+  genre?: HeatmapTvGenre;
+  onGenre?: (value: HeatmapTvGenre) => void;
+  showGenre?: boolean;
   /** Entity detail: age tabs drop one row on mobile only. */
   stackAgeOnMobile?: boolean;
 }) {
@@ -85,7 +129,6 @@ export function DemographicTabs({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Keep 성별 right after 분봉; tighter gaps so tablet widths need no scrollbar. */}
       <div
         className={
           stackAgeOnMobile
@@ -139,6 +182,7 @@ export function DemographicTabs({
       </div>
 
       {showRegion && onRegion ? <RegionFilterTabs region={region} onRegion={onRegion} /> : null}
+      {showGenre && onGenre ? <GenreFilterTabs genre={genre} onGenre={onGenre} /> : null}
     </div>
   );
 }

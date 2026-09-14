@@ -4,6 +4,7 @@ import { MobileDialPicker } from "@/components/dashboard/MobileDialPicker";
 import { visibleAgeSegments } from "@/lib/boards/age-tabs";
 import { AGE_LABEL, GENDER_LABEL } from "@/lib/boards/demographics";
 import { REGION_LABEL, REGION_SEGMENTS } from "@/lib/boards/regions";
+import { TV_GENRE_LABEL, TV_GENRE_SEGMENTS, type HeatmapTvGenre } from "@/lib/boards/tv-genre";
 import type { AgeSegment, GenderSegment, RegionSegment } from "@/lib/boards/types";
 import { MOBILE_TIMEFRAMES } from "@/lib/categories";
 import type { Timeframe } from "@/lib/types";
@@ -22,6 +23,9 @@ export function MobileHeatmapDials({
   region = "all",
   onRegion,
   showRegion = false,
+  genre = "all",
+  onGenre,
+  showGenre = false,
   boardSlug,
   hideTimeframes = false,
 }: {
@@ -34,6 +38,9 @@ export function MobileHeatmapDials({
   region?: "all" | RegionSegment;
   onRegion?: (value: "all" | RegionSegment) => void;
   showRegion?: boolean;
+  genre?: HeatmapTvGenre;
+  onGenre?: (value: HeatmapTvGenre) => void;
+  showGenre?: boolean;
   boardSlug?: string;
   hideTimeframes?: boolean;
 }) {
@@ -99,6 +106,17 @@ export function MobileHeatmapDials({
           options={regionOptions}
           value={region}
           onChange={onRegion}
+        />
+      ) : null}
+      {showGenre && onGenre ? (
+        <MobileDialPicker
+          ariaLabel="방송 장르"
+          options={[
+            { id: "all" as const, label: "전체" },
+            ...TV_GENRE_SEGMENTS.map((key) => ({ id: key, label: TV_GENRE_LABEL[key] })),
+          ]}
+          value={genre}
+          onChange={onGenre}
         />
       ) : null}
     </div>

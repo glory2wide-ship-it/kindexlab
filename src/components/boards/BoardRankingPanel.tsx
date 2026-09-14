@@ -10,6 +10,13 @@ import { canonicalizeGameEsportsName, platformForGame, formatPlatformTag } from 
 import { getBoard } from "@/lib/boards/registry";
 import { isCultureGrantBoard } from "@/lib/boards/culture-grants";
 import { boardUsesRegionFilter } from "@/lib/boards/regions";
+import {
+  boardUsesTvGenreFilter,
+  filterRowsByTvGenre,
+  padTvGenreRanking,
+  TV_GENRE_LABEL,
+  type HeatmapTvGenre,
+} from "@/lib/boards/tv-genre";
 import { boardRowSlug } from "@/lib/boards/heatmap";
 import { parseBracketLabel } from "@/lib/politics/labeled-rank";
 import { computeBoardIndex } from "@/lib/boards/board-index";
@@ -123,18 +130,22 @@ export function BoardRankingPanel({
   gender,
   age,
   region = "all",
+  genre = "all",
   onGender,
   onAge,
   onRegion,
+  onGenre,
 }: {
   board: CachedBoard;
   unitLabel: string;
   gender: "all" | GenderSegment;
   age: "all" | AgeSegment;
   region?: "all" | RegionSegment;
+  genre?: HeatmapTvGenre;
   onGender: (value: "all" | GenderSegment) => void;
   onAge: (value: "all" | AgeSegment) => void;
   onRegion?: (value: "all" | RegionSegment) => void;
+  onGenre?: (value: HeatmapTvGenre) => void;
 }) {
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   useEffect(() => {
@@ -146,20 +157,29 @@ export function BoardRankingPanel({
   }, []);
   const listCap = isMobileViewport ? MOBILE_LIST_MAX_ITEMS : LIST_MAX_ITEMS;
   const showRegion = boardUsesRegionFilter(board.slug);
+  const showGenre = boardUsesTvGenreFilter(board.slug);
   const rows = useMemo(() => {
     try {
       const def = getBoard(board.slug);
-      return selectRanking(board.demographics, board.ranking ?? [], gender, age, {
+      const selected = selectRanking(board.demographics, board.ranking ?? [], gender, age, {
         limit: listCap,
         dropNames: dropNamesForFilter(def, gender, age),
         region: showRegion ? region : "all",
-      }).slice(0, listCap);
+      });
+      if (showGenre && genre !== "all") {
+        return padTvGenreRanking(filterRowsByTvGenre(selected, genre), genre, listCap);
+      }
+      return selected.slice(0, listCap);
     } catch {
-      return (board.ranking ?? []).slice(0, listCap);
+      const fallback = board.ranking ?? [];
+      if (showGenre && genre !== "all") {
+        return padTvGenreRanking(filterRowsByTvGenre(fallback, genre), genre, listCap);
+      }
+      return fallback.slice(0, listCap);
     }
-  }, [board.demographics, board.ranking, board.slug, gender, age, region, showRegion, listCap]);
+  }, [board.demographics, board.ranking, board.slug, gender, age, region, showRegion, genre, showGenre, listCap]);
   const max = rows.length ? Math.max(...rows.map((row) => (Number.isFinite(row.score) ? row.score : 0))) : 0;
-  const filtered = gender !== "all" || age !== "all" || (showRegion && region !== "all");
+  const filtered = gender !== "all" || age !== "all" || (showRegion && region !== "all") || (showGenre && genre !== "all");
   const listKey = filterKey(gender, age, showRegion ? region : "all");
   const boardIndex = computeBoardIndex(rows, board.slug);
   const indexValue = boardIndex.value;
@@ -200,12 +220,18 @@ export function BoardRankingPanel({
             region={region}
             onRegion={onRegion}
             showRegion={showRegion}
+            genre={genre}
+            onGenre={onGenre}
+            showGenre={showGenre}
           />
 
           {filtered ? (
             <p className="text-[11px] leading-5 text-muted">
-              {filterLabel(gender, age, showRegion ? region : "all")} 기준으로 재정렬했습니다. 성별·연령
-              {showRegion ? "·지역" : ""}을 함께 고르면 해당 세그먼트 가중치로 상위 순위를 다시 산출합니다.
+              {filterLabel(gender, age, showRegion ? region : "all")}
+              {showGenre && genre !== "all" ? ` · ${TV_GENRE_LABEL[genre]}` : ""} 기준으로 재정렬했습니다.
+              성별·연령
+              {showRegion ? "·지역" : ""}
+              {showGenre ? "·장르" : ""}을 함께 고르면 해당 세그먼트 가중치로 상위 순위를 다시 산출합니다.
               세그먼트 수치는 검색 트렌드 특성을 반영한 추정치입니다.
             </p>
           ) : null}
@@ -247,10 +273,12 @@ export function BoardDesk({
   const [gender, setGender] = useState<"all" | GenderSegment>("all");
   const [age, setAge] = useState<"all" | AgeSegment>("all");
   const [region, setRegion] = useState<"all" | RegionSegment>("all");
+  const [genre, setGenre] = useState<HeatmapTvGenre>("all");
 
   useEffect(() => {
     setAge((current) => clampAgeForBoard(board.slug, current));
     if (!boardUsesRegionFilter(board.slug)) setRegion("all");
+    if (!boardUsesTvGenreFilter(board.slug)) setGenre("all");
   }, [board.slug]);
 
   return (
@@ -261,9 +289,11 @@ export function BoardDesk({
         gender={gender}
         age={age}
         region={region}
+        genre={genre}
         onGender={setGender}
         onAge={setAge}
         onRegion={setRegion}
+        onGenre={setGenre}
       />
       <BoardReportBody board={board} />
     </div>

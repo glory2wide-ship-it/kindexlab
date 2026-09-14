@@ -37,6 +37,14 @@ import { ensureCelebrityRanking, isLikelyCelebrityName } from "@/lib/boards/cele
 import { passesKpopTrotBoardFilter } from "@/lib/boards/trot";
 import { isLikelyTvProgramName } from "@/lib/boards/tv-program";
 import {
+  boardUsesTvGenreFilter,
+  entityMatchesTvGenre,
+  filterRowsByTvGenre,
+  OTT_BUZZ_BOARD_SLUG,
+  padTvGenreRanking,
+  type HeatmapTvGenre,
+} from "@/lib/boards/tv-genre";
+import {
   ensureCultureGrantRanking,
   isCultureGrantBoard,
 } from "@/lib/boards/culture-grants";
@@ -472,6 +480,7 @@ export function buildHeatmapItems({
   gender,
   age,
   region = "all",
+  genre = "all",
   preferLive = false,
 }: {
   boards: HeatmapBoardPayload[];
@@ -480,6 +489,7 @@ export function buildHeatmapItems({
   gender: HeatmapGender;
   age: HeatmapAge;
   region?: HeatmapRegion;
+  genre?: HeatmapTvGenre;
   preferLive?: boolean;
 }): RankingEntity[] {
   const selected = board ? boards.find((item) => item.slug === board) : undefined;
@@ -491,15 +501,25 @@ export function buildHeatmapItems({
       { channel: selected.channel, slug: selected.slug },
       region,
     );
+    const genreActive = boardUsesTvGenreFilter(selected.slug) && genre !== "all";
+    const useOttBoard = genreActive && genre === "ott";
+    const rankingSource = useOttBoard
+      ? boards.find((item) => item.slug === OTT_BUZZ_BOARD_SLUG) ?? selected
+      : selected;
+    const baseRows = selectHeatmapRows(rankingSource, gender, age, boardLimit, region);
+    // OTT board is already the buzz ranking — keep all rows; pad if thin.
+    const genreRows = useOttBoard
+      ? padTvGenreRanking(baseRows, "ott", boardLimit)
+      : genreActive
+        ? padTvGenreRanking(filterRowsByTvGenre(baseRows, genre), genre, boardLimit)
+        : baseRows;
     const boardEntities = withoutHeadlineHeatmapItems(
-      rankRowsToEntities(
-        selectHeatmapRows(selected, gender, age, boardLimit, region),
-        selected,
-      ).slice(0, boardLimit),
+      rankRowsToEntities(genreRows, rankingSource).slice(0, boardLimit),
     );
 
     const liveClean = withoutHeadlineHeatmapItems(liveItems ?? []);
-    if (preferLive && liveClean.length) {
+    // OTT tab uses culture's ott-buzz board — do not merge Nielsen live TV rows.
+    if (preferLive && liveClean.length && !useOttBoard) {
       const typeSet = new Set(liveEntityTypesForBoard(selected.slug));
       const boardLive = liveClean.filter((item) => {
         if (isUnusableRankName(item.name ?? "")) return false;
@@ -539,7 +559,11 @@ export function buildHeatmapItems({
           return passesKpopTrotBoardFilter(selected.slug, item.name);
         }
         return false;
-      });
+      }).filter((item) =>
+        !boardUsesTvGenreFilter(selected.slug) ||
+        genre === "all" ||
+        entityMatchesTvGenre(item, genre),
+      );
       if (boardLive.length) {
         const regionScoped = region !== "all" && boardUsesRegionFilter(selected.slug);
         const regionLive = regionScoped

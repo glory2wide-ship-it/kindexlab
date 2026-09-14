@@ -17,6 +17,11 @@ import { clampAgeForBoard } from "@/lib/boards/age-tabs";
 import { boardPath, getBoard } from "@/lib/boards/registry";
 import { boardUsesRegionFilter, entityMatchesRegion } from "@/lib/boards/regions";
 import {
+  boardUsesTvGenreFilter,
+  entityMatchesTvGenre,
+  type HeatmapTvGenre,
+} from "@/lib/boards/tv-genre";
+import {
   channelUsesBoardHeatmap,
   countLivePreferRows,
   preferLiveChannelComposite,
@@ -131,6 +136,7 @@ export function ChannelMarketDesk({
   const [region, setRegion] = useState<HeatmapRegion>(() =>
     boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
   );
+  const [genre, setGenre] = useState<HeatmapTvGenre>("all");
   const liveItems = liveMarket.items;
   const [snapshotAt, setSnapshotAt] = useState(liveMarket.updatedAt);
   const snapshotAtRef = useRef(liveMarket.updatedAt);
@@ -162,6 +168,7 @@ export function ChannelMarketDesk({
       gender: "all",
       age: "all",
       region: boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
+      genre: "all",
       preferLive: preferLiveComposite(initialBoardSlug),
     });
   });
@@ -170,7 +177,13 @@ export function ChannelMarketDesk({
   const [refreshing, setRefreshing] = useState(false);
 
   const applyLocal = useCallback(
-    (board: string, nextGender: HeatmapGender, nextAge: HeatmapAge, nextRegion: HeatmapRegion) => {
+    (
+      board: string,
+      nextGender: HeatmapGender,
+      nextAge: HeatmapAge,
+      nextRegion: HeatmapRegion,
+      nextGenre: HeatmapTvGenre = "all",
+    ) => {
       const next = buildHeatmapItems({
         boards,
         liveItems,
@@ -178,6 +191,7 @@ export function ChannelMarketDesk({
         gender: nextGender,
         age: nextAge,
         region: boardUsesRegionFilter(board) ? nextRegion : "all",
+        genre: boardUsesTvGenreFilter(board) ? nextGenre : "all",
         preferLive: preferLiveComposite(board, nextGender, nextAge),
       });
       setItems(next);
@@ -188,12 +202,19 @@ export function ChannelMarketDesk({
 
   /** Paint quoted SSR/API cache immediately — never KinDex-only for quote boards. */
   const paintQuotedCache = useCallback(
-    (board: string, nextGender: HeatmapGender, nextAge: HeatmapAge, nextRegion: HeatmapRegion) => {
+    (
+      board: string,
+      nextGender: HeatmapGender,
+      nextAge: HeatmapAge,
+      nextRegion: HeatmapRegion,
+      nextGenre: HeatmapTvGenre = "all",
+    ) => {
       const key = cacheKeyForBoard(board);
       const defaultFilters =
         nextGender === "all" &&
         nextAge === "all" &&
-        (!boardUsesRegionFilter(board) || nextRegion === "all");
+        (!boardUsesRegionFilter(board) || nextRegion === "all") &&
+        (!boardUsesTvGenreFilter(board) || nextGenre === "all");
       const cached = defaultFilters ? quotedCacheRef.current.get(key) : undefined;
       if (cached?.length) {
         setItems(cached);
@@ -213,14 +234,16 @@ export function ChannelMarketDesk({
       setSelectedSlug(slug);
       setAge(nextAge);
       if (!boardUsesRegionFilter(slug)) setRegion("all");
+      const nextGenre = boardUsesTvGenreFilter(slug) ? genre : "all";
+      if (!boardUsesTvGenreFilter(slug)) setGenre("all");
       if (needsQuotedPaint(channel, slug)) {
-        paintQuotedCache(slug, gender, nextAge, nextRegion);
-      } else if (gender === "all" && nextAge === "all") {
-        applyLocal(slug, gender, nextAge, nextRegion);
+        paintQuotedCache(slug, gender, nextAge, nextRegion, nextGenre);
+      } else if (gender === "all" && nextAge === "all" && nextGenre === "all") {
+        applyLocal(slug, gender, nextAge, nextRegion, nextGenre);
       }
       onBoardChange?.(slug);
     },
-    [age, region, gender, channel, paintQuotedCache, applyLocal, onBoardChange],
+    [age, region, genre, gender, channel, paintQuotedCache, applyLocal, onBoardChange],
   );
 
   const selectedDef = selectedSlug ? getBoard(selectedSlug) : undefined;
@@ -233,6 +256,7 @@ export function ChannelMarketDesk({
       nextGender: HeatmapGender,
       nextAge: HeatmapAge,
       nextRegion: HeatmapRegion,
+      nextGenre: HeatmapTvGenre = "all",
       options?: { paint?: boolean },
     ) => {
       const requestId = ++heatmapRequestRef.current;
@@ -242,12 +266,12 @@ export function ChannelMarketDesk({
       // clobbering SSR / optimistic tiles first.
       if (shouldPaint) {
         if (needsQuotedPaint(channel, board)) {
-          paintQuotedCache(board, nextGender, nextAge, nextRegion);
+          paintQuotedCache(board, nextGender, nextAge, nextRegion, nextGenre);
         } else if (!demographicFilter) {
           // Client boards strip demographics (payload size). Optimistic local paint
           // can only replay the unsegmented ranking — skip it for gender/age tabs
           // and wait for /api/heatmap's full demographic tables.
-          applyLocal(board, nextGender, nextAge, nextRegion);
+          applyLocal(board, nextGender, nextAge, nextRegion, nextGenre);
         }
       }
       const params = new URLSearchParams({
@@ -257,6 +281,7 @@ export function ChannelMarketDesk({
       });
       if (board) params.set("board", board);
       params.set("region", boardUsesRegionFilter(board) ? nextRegion : "all");
+      params.set("genre", boardUsesTvGenreFilter(board) ? nextGenre : "all");
       try {
         // no-cache: browser always revalidates; CDN still serves one 5-min snapshot.
         const response = await fetch(`/api/heatmap?${params.toString()}`, { cache: "no-cache" });
@@ -270,15 +295,18 @@ export function ChannelMarketDesk({
         if (requestId !== heatmapRequestRef.current) return;
         if (board && (payload.board ?? "") !== board) {
           if (shouldPaint && !needsQuotedPaint(channel, board) && !demographicFilter) {
-            applyLocal(board, nextGender, nextAge, nextRegion);
+            applyLocal(board, nextGender, nextAge, nextRegion, nextGenre);
           }
           return;
         }
         if (Array.isArray(payload.items) && payload.items.length) {
-          const locked =
-            boardUsesRegionFilter(board) && nextRegion !== "all"
-              ? payload.items.filter((item) => entityMatchesRegion(item, nextRegion))
-              : payload.items;
+          let locked = payload.items;
+          if (boardUsesRegionFilter(board) && nextRegion !== "all") {
+            locked = locked.filter((item) => entityMatchesRegion(item, nextRegion));
+          }
+          if (boardUsesTvGenreFilter(board) && nextGenre !== "all" && nextGenre !== "ott") {
+            locked = locked.filter((item) => entityMatchesTvGenre(item, nextGenre));
+          }
           const nextItems = locked.length ? locked : payload.items;
           if (nextItems.length) {
             // Prefer a newer shared snapshot; equal clocks still paint so soft
@@ -300,7 +328,8 @@ export function ChannelMarketDesk({
             if (
               nextGender === "all" &&
               nextAge === "all" &&
-              (!boardUsesRegionFilter(board) || nextRegion === "all")
+              (!boardUsesRegionFilter(board) || nextRegion === "all") &&
+              (!boardUsesTvGenreFilter(board) || nextGenre === "all")
             ) {
               quotedCacheRef.current.set(cacheKeyForBoard(board), nextItems);
             }
@@ -308,7 +337,7 @@ export function ChannelMarketDesk({
           }
         }
         if (shouldPaint && !needsQuotedPaint(channel, board) && !demographicFilter) {
-          applyLocal(board, nextGender, nextAge, nextRegion);
+          applyLocal(board, nextGender, nextAge, nextRegion, nextGenre);
         }
       } catch {
         /* quoted cache or previous tiles already painted */
@@ -322,8 +351,8 @@ export function ChannelMarketDesk({
     // Always soft-revalidate against /api/heatmap so phone / desktop / other PCs
     // converge on the same CDN snapshot. Optimistic paint (SSR / onSelectBoard)
     // stays on screen until the shared response arrives (paint: false).
-    void fetchHeatmap(selectedSlug, gender, age, region, { paint: false });
-  }, [selectedSlug, gender, age, region, fetchHeatmap, deskKind]);
+    void fetchHeatmap(selectedSlug, gender, age, region, genre, { paint: false });
+  }, [selectedSlug, gender, age, region, genre, fetchHeatmap, deskKind]);
 
   // After router.refresh() / ISR, adopt a newer server snapshot when filters are default.
   useEffect(() => {
@@ -334,6 +363,7 @@ export function ChannelMarketDesk({
     if (Number.isFinite(prevAt) && nextAt <= prevAt) return;
     if (gender !== "all" || age !== "all") return;
     if (boardUsesRegionFilter(selectedSlug) && region !== "all") return;
+    if (boardUsesTvGenreFilter(selectedSlug) && genre !== "all") return;
     const key = cacheKeyForBoard(selectedSlug);
     const fromQuotes = initialQuotedByBoard?.[key];
     const nextItems =
@@ -359,6 +389,7 @@ export function ChannelMarketDesk({
     gender,
     age,
     region,
+    genre,
     deskKind,
   ]);
 
@@ -368,15 +399,15 @@ export function ChannelMarketDesk({
 
   const fetchHeatmapRef = useRef(fetchHeatmap);
   fetchHeatmapRef.current = fetchHeatmap;
-  const refreshTargetRef = useRef({ selectedSlug, gender, age, region, deskKind });
-  refreshTargetRef.current = { selectedSlug, gender, age, region, deskKind };
+  const refreshTargetRef = useRef({ selectedSlug, gender, age, region, genre, deskKind });
+  refreshTargetRef.current = { selectedSlug, gender, age, region, genre, deskKind };
 
   const onHeatmapRefresh = useCallback(() => {
     const target = refreshTargetRef.current;
     if (target.deskKind) return;
     setRefreshing(true);
     void fetchHeatmapRef
-      .current(target.selectedSlug, target.gender, target.age, target.region)
+      .current(target.selectedSlug, target.gender, target.age, target.region, target.genre)
       .finally(() => setRefreshing(false));
   }, []);
 
@@ -390,6 +421,7 @@ export function ChannelMarketDesk({
         gender === "all" &&
         age === "all" &&
         (!boardUsesRegionFilter(selectedSlug) || region === "all") &&
+        (!boardUsesTvGenreFilter(selectedSlug) || genre === "all") &&
         items.length
           ? items
           : cached?.length
@@ -410,9 +442,10 @@ export function ChannelMarketDesk({
         hideOnMobile: channel === "politics" && board.slug === "policy-controversy-index",
       };
     });
-  }, [boards, liveItems, selectedSlug, items, gender, age, region, channel, flashNonce]);
+  }, [boards, liveItems, selectedSlug, items, gender, age, region, genre, channel, flashNonce]);
 
   const showRegion = boardUsesRegionFilter(selectedSlug);
+  const showGenre = boardUsesTvGenreFilter(selectedSlug);
   const showHeatmap = deskKind !== "headlines";
   const tickerItems = deskKind === "headlines" ? headlineItems : showHeatmap ? items : [];
   /** Mobile keeps the bordered panel; desktop heatmap embeds the rail in its header. */
@@ -454,10 +487,13 @@ export function ChannelMarketDesk({
             gender={gender}
             age={age}
             region={region}
+            genre={genre}
             onGender={setGender}
             onAge={setAge}
             onRegion={setRegion}
+            onGenre={setGenre}
             showRegion={showRegion}
+            showGenre={showGenre}
             boardSlug={selectedSlug || undefined}
             channel={channel}
             maxItems={heatmapMaxItems(channel, selectedSlug, region)}

@@ -3,6 +3,7 @@ import { getRankings } from "@/lib/api";
 import { clampAgeForBoard } from "@/lib/boards/age-tabs";
 import { isAgeSegment, isGenderSegment } from "@/lib/boards/demographics";
 import { parseRegionQuery } from "@/lib/boards/regions";
+import { parseTvGenreQuery } from "@/lib/boards/tv-genre";
 import { buildHeatmapItems, heatmapBoardTitle } from "@/lib/boards/heatmap";
 import { loadChannelHeatmapPayloads, loadHeatmapLivePayload, toTileEntity } from "@/lib/boards/heatmap-server";
 import { countLivePreferRows, preferLiveChannelComposite } from "@/lib/boards/limits";
@@ -33,11 +34,13 @@ export async function GET(request: Request) {
   const genderRaw = params.get("gender") ?? "all";
   const ageRaw = params.get("age") ?? "all";
   const regionRaw = params.get("region") ?? "all";
+  const genreRaw = params.get("genre") ?? "all";
   const board = params.get("board")?.trim() || undefined;
   const parsedAge = ageRaw === "all" || isAgeSegment(ageRaw) ? ageRaw : "all";
   const age = clampAgeForBoard(board, parsedAge === "all" ? "all" : parsedAge);
   const gender = genderRaw === "all" || isGenderSegment(genderRaw) ? genderRaw : "all";
   const region = parseRegionQuery(regionRaw);
+  const genre = parseTvGenreQuery(genreRaw);
 
   const boards = await loadChannelHeatmapPayloads(category);
   let liveItems: RankingEntity[] = [];
@@ -72,6 +75,7 @@ export async function GET(request: Request) {
         gender,
         age,
         region,
+        genre,
         preferLive,
       }),
       board,
@@ -100,7 +104,7 @@ export async function GET(request: Request) {
       headers: {
         // Browsers always revalidate (max-age=0); CDN holds one 5-min snapshot.
         "Cache-Control": heatmapApiCacheControl(),
-        ETag: `"heatmap-${category}-${board ?? "all"}-${gender}-${age}-${region}-${snapshotAt}"`,
+        ETag: `"heatmap-${category}-${board ?? "all"}-${gender}-${age}-${region}-${genre}-${snapshotAt}"`,
       },
     },
   );
