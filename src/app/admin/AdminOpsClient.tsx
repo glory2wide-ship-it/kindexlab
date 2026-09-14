@@ -2,10 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ADMIN_REFRESH_SCHEDULE,
-  type AdminDashboardPayload,
-} from "@/lib/ops/admin-dashboard";
+import { ADMIN_REFRESH_SCHEDULE } from "@/lib/ops/admin-schedule";
+import type { AdminDashboardPayload } from "@/lib/ops/admin-types";
 
 function levelClass(level: string): string {
   if (level === "ok") return "text-emerald-700 bg-emerald-50 border-emerald-200";

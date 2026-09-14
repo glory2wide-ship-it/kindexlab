@@ -1,24 +1,10 @@
 import { formatKrw } from "@/lib/ops/gemini-usage";
 import { evaluateLiveFillStatus, evaluateWebHealth } from "@/lib/ops/admin-health";
+import { ADMIN_REFRESH_SCHEDULE } from "@/lib/ops/admin-schedule";
 import { loadOpsDigestsForDate, summarizeDay } from "@/lib/ops/ops-digest";
 import { getTrafficSnapshot } from "@/lib/analytics/traffic";
 
-/** Client refresh cadence shown on /admin and enforced by AdminOpsClient timers. */
-export const ADMIN_REFRESH_SCHEDULE = {
-  daily: {
-    hourKst: 11,
-    minuteKst: 10,
-    label: "매일 오전 11:10 (KST)",
-  },
-  liveFill: {
-    everyMs: 30 * 60 * 1000,
-    label: "30분마다",
-  },
-  webHealth: {
-    everyMs: 3 * 60 * 60 * 1000,
-    label: "3시간마다",
-  },
-} as const;
+export { ADMIN_REFRESH_SCHEDULE } from "@/lib/ops/admin-schedule";
 
 function latestDigestAt(digests: { generatedAt: string }[]): string | null {
   if (!digests.length) return null;
