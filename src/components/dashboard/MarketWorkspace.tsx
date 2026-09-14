@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { startTransition, useEffect, useMemo, useState, type ReactNode } from "react";
 import { DemographicTabs, RegionFilterTabs } from "@/components/boards/DemographicTabs";
 import { HeatmapCountdownFallback } from "@/components/dashboard/HeatmapCountdown";
 import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundary";
@@ -116,7 +116,8 @@ export function MarketWorkspace({
    * Mount list pane after idle (or on first click). Hidden mount avoids the old
    * desktop list flash while making the first 히트맵→리스트 click cheap.
    */
-  const [listMounted, setListMounted] = useState(initialView === "list");
+  // Always keep the list pane mounted so 히트맵↔리스트 is a CSS toggle only.
+  const [listMounted, setListMounted] = useState(true);
 
   useEffect(() => {
     if (listMounted) return;
@@ -124,12 +125,13 @@ export function MarketWorkspace({
     const warm = () => {
       if (!cancelled) setListMounted(true);
     };
+    // Premount ASAP — idle timeout used to leave the first click cold (~1.5s).
     let idleId: number | undefined;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      idleId = window.requestIdleCallback(warm, { timeout: 1500 });
+      idleId = window.requestIdleCallback(warm, { timeout: 120 });
     } else {
-      timeoutId = setTimeout(warm, 600);
+      timeoutId = setTimeout(warm, 0);
     }
     return () => {
       cancelled = true;
@@ -248,7 +250,8 @@ export function MarketWorkspace({
   const pickView = (id: ViewMode) => {
     setUserPickedView(true);
     if (id === "list") setListMounted(true);
-    setView(id);
+    // Non-urgent: keep the tab press snappy while the heavy pane paints.
+    startTransition(() => setView(id));
   };
 
   const viewToggle = (compact: boolean) => {
@@ -427,7 +430,6 @@ export function MarketWorkspace({
       </div>
 
       <div
-        key={`${demoKey}-${timeframe}`}
         className={`relative flex h-full min-h-0 flex-1 flex-col items-stretch ${flashNonce > 0 ? "market-live-flash" : ""}`}
       >
         {sortedItems.length === 0 ? (
@@ -446,9 +448,9 @@ export function MarketWorkspace({
         ) : (
           <>
             {/*
-              Keep both panes mounted. Toggling used to unmount TreemapView,
-              which re-ran squarify + ResizeObserver and felt like a laggy switch.
-              `hidden` preserves React state; bounds stay non-zero in the view.
+              Keep both panes mounted. Never remount TreemapView on filter/TF
+              changes — layoutKey already reseeds squarify without tearing down
+              ResizeObserver. Toggle with CSS only.
             */}
             <div className={view === "treemap" ? "contents" : "hidden"} aria-hidden={view !== "treemap"}>
               <HeatmapErrorBoundary
@@ -460,7 +462,6 @@ export function MarketWorkspace({
                 }
               >
                 <TreemapView
-                  key={`${demoKey}-${timeframe}`}
                   items={sortedItems}
                   category={category}
                   timeframe={timeframe}
@@ -472,7 +473,12 @@ export function MarketWorkspace({
             </div>
             {listMounted ? (
               <div className={view === "list" ? "contents" : "hidden"} aria-hidden={view !== "list"}>
-                <RankingTable items={listItems} timeframe={timeframe} lockOrder />
+                <RankingTable
+                  items={listItems}
+                  timeframe={timeframe}
+                  lockOrder
+                  deferHeavy={view !== "list"}
+                />
               </div>
             ) : null}
           </>

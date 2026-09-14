@@ -1,0 +1,21 @@
+{
+  "kind": "heatmap-analysis",
+  "editionDate": "2026-09-14",
+  "pipeline": "heatmap-analysis",
+  "generatedAt": "2026-09-13T22:10:34.000Z",
+  "ok": 170,
+  "fail": 1,
+  "skip": 16,
+  "total": 187,
+  "estimatedKrw": 12164.15,
+  "liveKrw": 0,
+  "batchKrw": 12164.15,
+  "tokens": 4560583,
+  "calls": 171,
+  "model": "gemini-3.6-flash",
+  "notes": [
+    "Backfilled from Heatmap today's analysis CI run 34779728223.",
+    "Job summary generated=170 skipped=16 failed=1; token ledger from 171 premium-article lines.",
+    "Gemini Batch · promptTokens=2804503 · completionTokens=1756080 · USD≈$8.6887 · FX 1,400."
+  ]
+}

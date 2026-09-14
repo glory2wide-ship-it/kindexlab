@@ -65,16 +65,26 @@ export async function evaluateWebHealth(): Promise<WebHealthStatus> {
   const landingPath = path.join(process.cwd(), "src", "data", "ingestion", "landing-unified.json");
   try {
     const raw = await readFile(landingPath, "utf8");
-    const parsed = JSON.parse(raw) as { updatedAt?: string; savedAt?: string; items?: unknown[] };
+    const parsed = JSON.parse(raw) as {
+      updatedAt?: string;
+      savedAt?: string;
+      items?: unknown[];
+      market?: { items?: unknown[]; desks?: unknown[] };
+    };
+    // Slim cache shape is `{ savedAt, market: { items, desks } }` — fall back to
+    // a legacy top-level `items` array if present.
+    const itemCount = parsed.market?.items?.length ?? parsed.items?.length ?? 0;
+    const deskCount = parsed.market?.desks?.length ?? 0;
     const stamp = parsed.updatedAt ?? parsed.savedAt;
     const ageMs = stamp ? Date.now() - new Date(stamp).getTime() : null;
     const stale = ageMs != null && ageMs > SIX_HOURS_MS * 2;
+    const empty = itemCount === 0;
     checks.push({
       id: "landing-unified",
       label: "랜딩 통합 캐시",
-      level: !stamp ? "warn" : stale ? "warn" : "ok",
+      level: !stamp ? "warn" : empty ? "warn" : stale ? "warn" : "ok",
       detail: stamp
-        ? `updatedAt=${stamp} · age=${ageMs != null ? `${(ageMs / 60_000).toFixed(0)}분` : "—"} · items=${parsed.items?.length ?? 0}`
+        ? `savedAt=${stamp} · age=${ageMs != null ? `${(ageMs / 60_000).toFixed(0)}분` : "—"} · items=${itemCount}${deskCount ? ` · desks=${deskCount}` : ""}`
         : "landing-unified.json missing timestamp",
     });
   } catch {

@@ -23,16 +23,20 @@ export function RankingTable({
   selectedSlug,
   onSelect,
   lockOrder = false,
+  /** Skip sparklines + route prefetch while the list pane is hidden. */
+  deferHeavy = false,
 }: {
   items: RankingEntity[];
   timeframe: Timeframe;
   selectedSlug?: string | null;
   onSelect?: (slug: string) => void;
   lockOrder?: boolean;
+  deferHeavy?: boolean;
 }) {
   const router = useRouter();
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [heavyReady, setHeavyReady] = useState(!deferHeavy);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -42,16 +46,25 @@ export function RankingTable({
     return () => mq.removeEventListener("change", sync);
   }, []);
 
+  useEffect(() => {
+    if (!deferHeavy) {
+      setHeavyReady(true);
+      return;
+    }
+    setHeavyReady(false);
+  }, [deferHeavy]);
+
   const listCap = isMobileViewport ? MOBILE_LIST_MAX_ITEMS : LIST_MAX_ITEMS;
   const cappedItems = useMemo(() => items.slice(0, listCap), [items, listCap]);
 
   useEffect(() => {
+    if (!heavyReady) return;
     return scheduleEntityPrefetch(router.prefetch, cappedItems);
-  }, [cappedItems, router]);
+  }, [cappedItems, heavyReady, router]);
   const [dir, setDir] = useState<"asc" | "desc">("asc");
   const rows = useMemo(() => {
     const mapped = cappedItems.map((item) => {
-      const series = getTimeframeSeries(item, timeframe);
+      const series = heavyReady ? getTimeframeSeries(item, timeframe) : [];
       return {
         item,
         series,
@@ -85,7 +98,7 @@ export function RankingTable({
       }
       return ((table[sortKey] as number) - (other[sortKey] as number)) * sign;
     });
-  }, [cappedItems, dir, lockOrder, sortKey, timeframe]);
+  }, [cappedItems, dir, heavyReady, lockOrder, sortKey, timeframe]);
 
   function toggle(key: SortKey) {
     if (sortKey === key) setDir((value) => (value === "asc" ? "desc" : "asc"));
@@ -185,7 +198,11 @@ export function RankingTable({
                   {metricLabel(item.type)} {formatCompact(volume)}
                 </td>
                 <td className="px-4 py-3">
-                  <Sparkline data={series.map((point) => point.v)} positive={change >= 0} />
+                  {heavyReady && series.length ? (
+                    <Sparkline data={series.map((point) => point.v)} positive={change >= 0} />
+                  ) : (
+                    <span className="inline-block h-6 w-16" aria-hidden />
+                  )}
                 </td>
               </tr>
             ))}
@@ -227,11 +244,15 @@ export function RankingTable({
               </div>
               <div className="text-right leading-[1.0625rem]">
                 <ChangeCell rate={change} />
-                <Sparkline
-                  data={series.map((point) => point.v)}
-                  positive={change >= 0}
-                  className="ml-auto mt-1 h-6 w-16"
-                />
+                {heavyReady && series.length ? (
+                  <Sparkline
+                    data={series.map((point) => point.v)}
+                    positive={change >= 0}
+                    className="ml-auto mt-1 h-6 w-16"
+                  />
+                ) : (
+                  <span className="ml-auto mt-1 block h-6 w-16" aria-hidden />
+                )}
               </div>
             </Link>
           </li>

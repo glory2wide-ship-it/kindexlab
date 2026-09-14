@@ -11,6 +11,7 @@ import { slimBriefingForCard, slimBriefingsForCards } from "@/lib/briefing/card-
 import { COMMODITIES_FX_BOARD_SLUG } from "@/lib/market/market-index-codes";
 import {
   attachKospiStockQuotes,
+  entityNeedsLiveMarketQuote,
   isMarketQuoteBoardSlug,
 } from "@/lib/market/kospi-quotes";
 import {
@@ -71,7 +72,11 @@ async function loadQuotedItemsByBoard(
   const unique = [
     ...new Map(rawEntries.flatMap(([, rows]) => rows).map((row) => [row.id, row])).values(),
   ];
-  const quoted = unique.length ? await attachKospiStockQuotes(unique) : [];
+  // Non-economy desks have no Kospi/FX rows — skip the quote round-trip so
+  // `/{channel}` SSR is not blocked on Naver finance latency.
+  const needsQuotes =
+    quoteBoards.length > 0 || unique.some((row) => entityNeedsLiveMarketQuote(row));
+  const quoted = needsQuotes && unique.length ? await attachKospiStockQuotes(unique) : unique;
   const byId = new Map(quoted.map((row) => [row.id, row]));
 
   const map: Record<string, RankingEntity[]> = {};
