@@ -7,16 +7,16 @@
   "fail": 0,
   "skip": 0,
   "total": 41,
-  "estimatedKrw": 2380.38,
+  "estimatedKrw": 803,
   "liveKrw": 0,
-  "batchKrw": 2380.38,
-  "tokens": 964748,
+  "batchKrw": 803,
+  "tokens": 413395,
   "calls": 41,
   "model": "gemini-3.6-flash",
   "notes": [
-    "Backfilled from Daily briefings CI run 34776366509 (KST 2026-09-14 edition).",
-    "Gemini Batch · promptTokens=639177 · completionTokens=325571 · USD≈$1.7003 · FX 1,400.",
-    "Items backfilled from src/data/briefings/extra.json (editionDate=2026-09-14); cost allocated evenly across ok rows."
+    "From Daily briefings generation report (GitHub issue #18).",
+    "Gemini Batch · tokens=413395 · calls=41 · batch_krw=₩803 · FX 1,400.",
+    "Admin items allocated evenly across ok rows to match report total (not CI log token-line backfill)."
   ],
   "items": [
     {
@@ -24,7 +24,7 @@
       "category": "travel",
       "categoryLabel": "여행/맛집",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "travel · deep-dive"
@@ -34,7 +34,7 @@
       "category": "travel",
       "categoryLabel": "여행/맛집",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "travel · deep-dive"
@@ -44,7 +44,7 @@
       "category": "travel",
       "categoryLabel": "여행/맛집",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "travel · deep-dive"
@@ -54,7 +54,7 @@
       "category": "travel",
       "categoryLabel": "여행/맛집",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "travel · deep-dive"
@@ -64,7 +64,7 @@
       "category": "travel",
       "categoryLabel": "여행/맛집",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "travel · deep-dive"
@@ -74,7 +74,7 @@
       "category": "travel",
       "categoryLabel": "여행/맛집",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "main",
       "meta": "travel · main"
@@ -84,7 +84,7 @@
       "category": "politics",
       "categoryLabel": "정치",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "politics · deep-dive"
@@ -94,7 +94,7 @@
       "category": "politics",
       "categoryLabel": "정치",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "politics · deep-dive"
@@ -104,7 +104,7 @@
       "category": "politics",
       "categoryLabel": "정치",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "politics · deep-dive"
@@ -114,7 +114,7 @@
       "category": "politics",
       "categoryLabel": "정치",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "politics · deep-dive"
@@ -124,7 +124,7 @@
       "category": "politics",
       "categoryLabel": "정치",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "politics · deep-dive"
@@ -134,7 +134,7 @@
       "category": "politics",
       "categoryLabel": "정치",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "politics · deep-dive"
@@ -144,7 +144,7 @@
       "category": "politics",
       "categoryLabel": "정치",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "politics · deep-dive"
@@ -154,7 +154,7 @@
       "category": "politics",
       "categoryLabel": "정치",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "main",
       "meta": "politics · main"
@@ -164,7 +164,7 @@
       "category": "entertainment",
       "categoryLabel": "엔터",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "entertainment · deep-dive"
@@ -174,7 +174,7 @@
       "category": "entertainment",
       "categoryLabel": "엔터",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "entertainment · deep-dive"
@@ -184,7 +184,7 @@
       "category": "entertainment",
       "categoryLabel": "엔터",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "entertainment · deep-dive"
@@ -194,7 +194,7 @@
       "category": "entertainment",
       "categoryLabel": "엔터",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "entertainment · deep-dive"
@@ -204,7 +204,7 @@
       "category": "entertainment",
       "categoryLabel": "엔터",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "entertainment · deep-dive"
@@ -214,7 +214,7 @@
       "category": "entertainment",
       "categoryLabel": "엔터",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "entertainment · deep-dive"
@@ -224,7 +224,7 @@
       "category": "entertainment",
       "categoryLabel": "엔터",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "entertainment · deep-dive"
@@ -234,7 +234,7 @@
       "category": "entertainment",
       "categoryLabel": "엔터",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "entertainment · deep-dive"
@@ -244,7 +244,7 @@
       "category": "entertainment",
       "categoryLabel": "엔터",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "main",
       "meta": "entertainment · main"
@@ -254,7 +254,7 @@
       "category": "entertainment",
       "categoryLabel": "엔터",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "entertainment · deep-dive"
@@ -264,7 +264,7 @@
       "category": "economy",
       "categoryLabel": "경제",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "economy · deep-dive"
@@ -274,7 +274,7 @@
       "category": "economy",
       "categoryLabel": "경제",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "economy · deep-dive"
@@ -284,7 +284,7 @@
       "category": "economy",
       "categoryLabel": "경제",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "economy · deep-dive"
@@ -294,7 +294,7 @@
       "category": "economy",
       "categoryLabel": "경제",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "economy · deep-dive"
@@ -304,7 +304,7 @@
       "category": "economy",
       "categoryLabel": "경제",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "economy · deep-dive"
@@ -314,7 +314,7 @@
       "category": "economy",
       "categoryLabel": "경제",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "economy · deep-dive"
@@ -324,7 +324,7 @@
       "category": "economy",
       "categoryLabel": "경제",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "economy · deep-dive"
@@ -334,7 +334,7 @@
       "category": "economy",
       "categoryLabel": "경제",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "main",
       "meta": "economy · main"
@@ -344,7 +344,7 @@
       "category": "economy",
       "categoryLabel": "경제",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "economy · deep-dive"
@@ -354,7 +354,7 @@
       "category": "culture",
       "categoryLabel": "문화/생활",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "culture · deep-dive"
@@ -364,7 +364,7 @@
       "category": "culture",
       "categoryLabel": "문화/생활",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "culture · deep-dive"
@@ -374,7 +374,7 @@
       "category": "culture",
       "categoryLabel": "문화/생활",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "culture · deep-dive"
@@ -384,7 +384,7 @@
       "category": "culture",
       "categoryLabel": "문화/생활",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "culture · deep-dive"
@@ -394,7 +394,7 @@
       "category": "culture",
       "categoryLabel": "문화/생활",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "main",
       "meta": "culture · main"
@@ -404,7 +404,7 @@
       "category": "culture",
       "categoryLabel": "문화/생활",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "culture · deep-dive"
@@ -414,7 +414,7 @@
       "category": "culture",
       "categoryLabel": "문화/생활",
       "status": "ok",
-      "estimatedKrw": 58.06,
+      "estimatedKrw": 19.59,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "culture · deep-dive"
@@ -424,7 +424,7 @@
       "category": "culture",
       "categoryLabel": "문화/생활",
       "status": "ok",
-      "estimatedKrw": 57.98,
+      "estimatedKrw": 19.4,
       "pipeline": "briefings",
       "kind": "deep-dive",
       "meta": "culture · deep-dive"
