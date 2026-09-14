@@ -143,7 +143,9 @@ export function itemsFromGenerationReport(
 ): OpsDigestItem[] {
   if (kind === "board-refresh") return [];
   const rows = report.sections.flatMap((section) => section.rows);
-  const totalKrw = report.cost?.estimatedKrw ?? 0;
+  // Overnight generation is Gemini Batch (−50%). Prefer batchKrw so item rows
+  // never inherit Live list prices when both buckets are present.
+  const totalKrw = report.cost?.batchKrw || report.cost?.estimatedKrw || 0;
   const costs = allocateItemCosts(rows, totalKrw);
   return rows.map((row, index) => {
     const parsed = parseItemCategory(row.meta);
@@ -328,13 +330,19 @@ export function summarizeDay(digests: OpsDigest[]) {
     return b.estimatedKrw - a.estimatedKrw || a.name.localeCompare(b.name, "ko");
   });
 
+  const batchOrEstimated = (row: OpsDigest) =>
+    row.batchKrw > 0 ? row.batchKrw : row.estimatedKrw;
+
   return {
     editionDate: digests[0]?.editionDate ?? kstToday(),
     generationOk: sum(generation, (row) => row.ok),
     generationFail: sum(generation, (row) => row.fail),
     generationSkip: sum(generation, (row) => row.skip),
-    generationKrw: sum(generation, (row) => row.estimatedKrw),
-    boardRefreshKrw: sum(boards, (row) => row.estimatedKrw),
+    /** Admin 글생성 API 비용 — Gemini Batch (−50%) 기준. */
+    generationKrw: sum(generation, batchOrEstimated),
+    generationBatchKrw: sum(generation, (row) => row.batchKrw),
+    generationLiveKrw: sum(generation, (row) => row.liveKrw),
+    boardRefreshKrw: sum(boards, batchOrEstimated),
     boardRefreshOk: sum(boards, (row) => row.ok),
     boardRefreshFail: sum(boards, (row) => row.fail),
     boardsRefreshed: sum(boards, (row) => row.boardsRefreshed ?? row.ok),

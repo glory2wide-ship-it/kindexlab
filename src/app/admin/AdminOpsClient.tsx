@@ -359,7 +359,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
 
       <Section
         title="일일 생성 · 비용"
-        subtitle={`브리핑·히트맵 분석 성공/실패와 Gemini API 추정 비용. 보드 갱신 비용은 별도. · 자동 갱신 ${schedule.daily.label}`}
+        subtitle={`브리핑·히트맵 분석 성공/실패와 Gemini API 추정 비용(Batch 요금 기준, Live 대비 −50%). 보드 갱신 비용은 별도. · 자동 갱신 ${schedule.daily.label}`}
         meta={`기준일 ${formatKstDate(daily.dateLabel)} (${daily.dateLabel}) · 마지막 업데이트 ${formatKst(sectionUpdatedAt.daily)}`}
       >
         {!daily.hasData ? (
@@ -378,7 +378,10 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                   <span className="mx-1 text-base font-normal text-muted">/</span>
                   {daily.generationSkip}
                 </dd>
-                <dd className="mt-3 text-sm text-muted">생성 API {daily.generationKrwLabel}</dd>
+                <dd className="mt-3 text-sm text-muted">
+                  생성 API {daily.generationKrwLabel}
+                  <span className="text-muted"> · Batch 요금</span>
+                </dd>
               </dl>
               <dl className="rounded-xl border border-line bg-panel px-4 py-4">
                 <dt className="text-xs text-muted">보드 갱신</dt>
@@ -388,6 +391,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                 </dd>
                 <dd className="mt-3 text-sm text-muted">
                   갱신 API {daily.boardRefreshKrwLabel}
+                  <span className="text-muted"> · Batch 요금</span>
                   {daily.boardRefreshFail > 0 ? ` · 실패 ${daily.boardRefreshFail}` : ""}
                 </dd>
               </dl>
@@ -395,7 +399,9 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
 
             <div>
               <h3 className="text-sm font-semibold text-ink">카테고리별</h3>
-              <p className="mt-1 text-xs text-muted">채널별 성공 / 실패 / 글생성 API 비용</p>
+              <p className="mt-1 text-xs text-muted">
+                채널별 성공 / 실패 / 글생성 API 비용 (Batch 요금 기준)
+              </p>
               {daily.byCategory.length === 0 ? (
                 <p className="mt-2 text-sm text-muted">글 단위 내역이 아직 없습니다.</p>
               ) : (
@@ -422,6 +428,21 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                           </td>
                         </tr>
                       ))}
+                      <tr className="border-t border-line bg-board/60 font-semibold">
+                        <td className="px-3 py-2.5 text-ink">합계</td>
+                        <td className="px-3 py-2.5 tabular-nums text-emerald-700">
+                          {daily.byCategory.reduce((acc, row) => acc + row.ok, 0)}
+                        </td>
+                        <td className="px-3 py-2.5 tabular-nums text-red-700">
+                          {daily.byCategory.reduce((acc, row) => acc + row.fail, 0)}
+                        </td>
+                        <td className="px-3 py-2.5 tabular-nums text-muted">
+                          {daily.byCategory.reduce((acc, row) => acc + row.skip, 0)}
+                        </td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-ink">
+                          {daily.generationKrwLabel}
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -430,7 +451,9 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
 
             <div>
               <h3 className="text-sm font-semibold text-ink">글별</h3>
-              <p className="mt-1 text-xs text-muted">개별 글·키워드 성공 / 실패 / 글생성 API 비용</p>
+              <p className="mt-1 text-xs text-muted">
+                개별 글·키워드 성공 / 실패 / 글생성 API 비용 (Batch 요금 기준)
+              </p>
               {daily.byItem.length === 0 ? (
                 <p className="mt-2 text-sm text-muted">글 단위 내역이 아직 없습니다.</p>
               ) : (
