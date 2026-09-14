@@ -21,14 +21,9 @@ export function SiteFooter() {
         </div>
         {/* Mobile: 정책 | 운영사. md+: join the 3-col footer row. */}
         <div className="grid grid-cols-2 gap-3 md:contents">
-          <div className="min-w-0 text-[11px] leading-4 sm:text-sm sm:leading-normal">
+          <div className="min-w-0 text-[11px] leading-[0.9rem] sm:text-sm sm:leading-[1.35]">
             <p className="font-medium text-sm leading-none">정책</p>
-            <ul className="mt-2 space-y-1 text-muted sm:space-y-1.5">
-              <li>
-                <Link href="/privacy" className="hover:text-ink">
-                  개인정보처리방침
-                </Link>
-              </li>
+            <ul className="mt-2 space-y-[0.225rem] text-muted sm:space-y-[0.3375rem]">
               <li>
                 <Link href="/terms" className="hover:text-ink">
                   이용약관
@@ -44,11 +39,16 @@ export function SiteFooter() {
                   문의하기
                 </Link>
               </li>
+              <li>
+                <Link href="/privacy" className="hover:text-ink">
+                  개인정보처리방침
+                </Link>
+              </li>
             </ul>
           </div>
-          <div className="min-w-0 text-[11px] leading-4 sm:text-sm sm:leading-normal">
+          <div className="min-w-0 text-[11px] leading-[0.9rem] sm:text-sm sm:leading-[1.35]">
             <p className="font-medium text-sm leading-none">운영사</p>
-            <ul className="mt-2 space-y-1 text-muted sm:space-y-1.5">
+            <ul className="mt-2 space-y-[0.225rem] text-muted sm:space-y-[0.3375rem]">
               <li>{SITE.companyShort}</li>
               <li>
                 <span className="inline-flex flex-nowrap items-center gap-1.5 sm:gap-2">
