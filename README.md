@@ -54,7 +54,7 @@ git merge github/main
 | `/contact` | 문의하기 |
 | `/api/rankings` | 랭킹 JSON |
 | `/api/cron/briefings` | 일일 브리핑 생성 잡(CRON_SECRET) |
-| `/admin` | 소유자 전용 운영 현황 — 웹 URL: [https://www.kindexlab.com/admin](https://www.kindexlab.com/admin) (`ADMIN_DASHBOARD_SECRET` 또는 `CRON_SECRET`, 북마크: `?secret=`로 쿠키 설정) |
+| `/admin` | 소유자 전용 운영 현황 — [https://www.kindexlab.com/admin](https://www.kindexlab.com/admin) (비밀번호: `ADMIN_DASHBOARD_SECRET` 또는 `CRON_SECRET`) |
 | `/search?q=` | 칼럼·지수 항목 통합 검색 |
 
 지수(INDEX) 필터: 종합, K-POP 아이돌, 셀럽, 방송, 인플루언서, 실시간 음원 차트, 실시간 시청률 순위, 실시간 웹툰, 숏폼/SNS, 모바일·PC·콘솔 게임. 박스 크기는 거래량, 색상은 선택 타임프레임의 등락률입니다. 카테고리 딥링크는 `/?category=kpop#heatmap` 형식입니다.

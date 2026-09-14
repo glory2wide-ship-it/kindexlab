@@ -37,6 +37,10 @@ yarn-error.log*
 # overnight generation email artifacts
 /artifacts/
 
+# local admin traffic digests (Supabase is the durable store in production)
+/src/data/ops/traffic/*.json
+!/src/data/ops/traffic/.gitkeep
+
 # vercel
 .vercel
 

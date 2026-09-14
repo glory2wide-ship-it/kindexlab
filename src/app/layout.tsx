@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { ActiveChannelProvider } from "@/components/providers/ActiveChannelProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { TrafficBeacon } from "@/components/analytics/TrafficBeacon";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
@@ -155,6 +156,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
         <ThemeProvider>
           <ActiveChannelProvider>
+            <TrafficBeacon />
             <SiteHeader />
             <GlobalStickyMobileCategoryBar />
             <GlobalDesktopCategorySectionBar />
