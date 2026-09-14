@@ -14,6 +14,7 @@
         "start": "next start",
         "lint": "eslint",
         "landing:check": "node scripts/check-landing-desk.mjs",
+        "seo:check": "node scripts/check-seo-ready.mjs",
         "briefing:check": "node scripts/check-briefing-routing.mjs",
         "briefing:generate": "tsx scripts/generate-briefings.ts",
         "briefing:generate:local": "tsx --env-file=.env.local scripts/generate-briefings.ts",

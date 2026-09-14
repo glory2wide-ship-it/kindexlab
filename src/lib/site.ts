@@ -1,7 +1,9 @@
 function publicSiteUrl(): string {
   const raw = (process.env.NEXT_PUBLIC_SITE_URL ?? "").trim().replace(/\/+$/, "");
   if (/^https?:\/\//i.test(raw)) return raw;
-  return "https://kindexlab.com";
+  // Vercel serves www; apex 308s to www. Canonical / sitemap / robots must
+  // use the non-redirecting host so Search Console indexing stays clean.
+  return "https://www.kindexlab.com";
 }
 
 export const SITE_INDEX_HEADLINE = "킨덱스! / KinDex";

@@ -9,6 +9,7 @@ import { ActiveChannelProvider } from "@/components/providers/ActiveChannelProvi
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { TrafficBeacon } from "@/components/analytics/TrafficBeacon";
 import { SITE } from "@/lib/site";
+import { siteVerificationMetadata } from "@/lib/seo-verification";
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -19,6 +20,8 @@ const jetbrainsMono = JetBrains_Mono({
   preload: false,
   adjustFontFallback: true,
 });
+
+const siteVerification = siteVerificationMetadata();
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -69,6 +72,7 @@ export const metadata: Metadata = {
     canonical: "/",
     types: { "application/rss+xml": `${SITE.url}/feed.xml` },
   },
+  ...(siteVerification ? { verification: siteVerification } : {}),
   other: {
     "application-name": SITE.name,
   },

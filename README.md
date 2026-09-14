@@ -14,7 +14,9 @@ npm ci
 npm run dev
 ```
 
-기본 개발 서버는 `http://localhost:3000`입니다. Cursor Cloud Agent에서는 `npm run dev:cloud`로 `http://127.0.0.1:43123`에 띄웁니다. `ensure-local-env.sh`는 `.env.local`을 만들고 기본 소스를 live(크롤러 스냅샷)로 둡니다. 픽스처만 보려면 `TRENDS_DATA_SOURCE=mock`과 `TRENDS_ALLOW_MOCK=1`을 명시하세요. 라이브 수집·칼럼 생성·브리핑 LLM은 `.env.example`의 키를 `.env.local`에 넣으면 됩니다. 배포 기본값은 `https://kindexlab.com`입니다.
+기본 개발 서버는 `http://localhost:3000`입니다. Cursor Cloud Agent에서는 `npm run dev:cloud`로 `http://127.0.0.1:43123`에 띄웁니다. `ensure-local-env.sh`는 `.env.local`을 만들고 기본 소스를 live(크롤러 스냅샷)로 둡니다. 픽스처만 보려면 `TRENDS_DATA_SOURCE=mock`과 `TRENDS_ALLOW_MOCK=1`을 명시하세요. 라이브 수집·칼럼 생성·브리핑 LLM은 `.env.example`의 키를 `.env.local`에 넣으면 됩니다. 배포 캐노니컬은 `https://www.kindexlab.com`입니다 (apex는 www로 리다이렉트).
+
+검색엔진 등록·소유권 확인(GSC / 네이버 서치어드바이저) 절차는 [docs/seo-search-registration.md](docs/seo-search-registration.md)를 보세요. 페이지·robots·sitemap 헬스는 `npm run seo:check`입니다.
 
 GitHub 원본과 동기화하려면:
 
