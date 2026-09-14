@@ -17,6 +17,7 @@ import {
   type UnifiedMarket,
 } from "@/lib/boards/landing-constants";
 import { countLivePreferRows, preferLiveChannelComposite } from "@/lib/boards/limits";
+import { cultureFranchiseKey } from "@/lib/boards/regions";
 import {
   readLandingUnifiedCache,
   writeLandingUnifiedCache,
@@ -49,25 +50,20 @@ export const UNIFIED_HEATMAP_TILES = POST_CHANNELS.length * LANDING_PER_CHANNEL_
 
 /**
  * Round-robin merge across desks so every category stays visible near the top.
+ * Do NOT cross-dedupe by display name — the same title can legitimately appear
+ * on two desks, and name collisions were dropping a category's 3rd/4th tile.
+ * Only skip an exact id already merged.
  */
 function interleave(pools: RankingEntity[][], limit: number): RankingEntity[] {
   const merged: RankingEntity[] = [];
-  const seen = new Set<string>();
-  const used = (item: RankingEntity) => {
-    const keys = [item.id, item.slug, (item.name ?? "").replace(/\s+/g, "").toLowerCase()].filter(
-      Boolean,
-    );
-    if (keys.some((key) => seen.has(key))) return true;
-    for (const key of keys) seen.add(key);
-    return false;
-  };
+  const seenIds = new Set<string>();
   const cursors = new Array(pools.length).fill(0);
   while (merged.length < limit) {
     let advanced = false;
     for (let i = 0; i < pools.length && merged.length < limit; i += 1) {
       const pool = pools[i];
-      let cursor = cursors[i];
-      while (pool && cursor < pool.length && used(pool[cursor]!)) {
+      let cursor = cursors[i] ?? 0;
+      while (pool && cursor < pool.length && seenIds.has(pool[cursor]!.id)) {
         cursor += 1;
         advanced = true;
       }
@@ -75,7 +71,9 @@ function interleave(pools: RankingEntity[][], limit: number): RankingEntity[] {
         cursors[i] = cursor;
         continue;
       }
-      merged.push(pool[cursor]!);
+      const next = pool[cursor]!;
+      merged.push(next);
+      seenIds.add(next.id);
       cursors[i] = cursor + 1;
       advanced = true;
     }
@@ -113,8 +111,8 @@ async function resolveLiveMarket(market?: RankingsPayload): Promise<RankingsPayl
  * Same pool a category desk uses for 종합 + 성별 전체 + 연령 전체:
  * live crawl first when coverage is thick enough, otherwise board/seed composite.
  *
- * When preferLive wins, skip board I/O entirely — landing only needs top-4 live
- * rows per channel, and loading ~38 published boards was pure cold-start cost.
+ * Always load boards (even when preferLive wins) so live-thin pads match the
+ * category 종합 desk — skipping boards previously made landing top-4 diverge.
  */
 async function channelHeatmapPool(
   channel: PostChannel,
@@ -131,12 +129,10 @@ async function channelHeatmapPool(
   );
 
   let boards: HeatmapBoardPayload[] = [];
-  if (!preferLive) {
-    try {
-      boards = await loadChannelHeatmapPayloads(channel);
-    } catch {
-      boards = [];
-    }
+  try {
+    boards = await loadChannelHeatmapPayloads(channel);
+  } catch {
+    boards = [];
   }
 
   return buildHeatmapItems({
@@ -151,10 +147,24 @@ async function channelHeatmapPool(
 /**
  * Rank one channel the same way MarketWorkspace does for
  * 5분봉 + 성별 전체 + 연령 전체 (no demographic skew), then keep 1위~4위.
+ * Collapse touring-show clones (위키드 성남/부산…) so one franchise cannot
+ * consume multiple of the four landing slots.
  */
 function landingTopForChannel(pool: RankingEntity[], channel: PostChannel): RankingEntity[] {
   const ranked = rankItemsForTimeframe(pool, LANDING_HEATMAP_TIMEFRAME);
-  return tagChannel(ranked.slice(0, LANDING_PER_CHANNEL_TOP), channel);
+  const picked: RankingEntity[] = [];
+  const seen = new Set<string>();
+  for (const item of ranked) {
+    const key =
+      channel === "culture" || channel === "entertainment"
+        ? cultureFranchiseKey(item.name)
+        : (item.name ?? "").replace(/\s+/g, "").toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    picked.push(item);
+    if (picked.length >= LANDING_PER_CHANNEL_TOP) break;
+  }
+  return tagChannel(picked, channel);
 }
 
 /** Uses the same change field as the ticker and channel heatmap (5m default). */
@@ -239,7 +249,7 @@ async function buildUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMark
  */
 const cachedUnifiedMarket = unstable_cache(
   async () => buildUnifiedMarket(),
-  ["unified-market-v3-5m-soft-quotes"],
+  ["unified-market-v4-5m-per-channel-top4"],
   { revalidate: DEFAULT_TRENDS_REVALIDATE_SEC },
 );
 
