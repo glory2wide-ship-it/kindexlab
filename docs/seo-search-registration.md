@@ -7,7 +7,7 @@
 - `https://www.kindexlab.com/robots.txt`
 - `https://www.kindexlab.com/sitemap.xml`
 - 정책 페이지: `/terms`, `/disclaimer`, `/contact`, `/privacy`
-- 소유권 메타: `GOOGLE_SITE_VERIFICATION`, `NAVER_SITE_VERIFICATION` (Vercel env → `layout` metadata)
+- 소유권 메타: Google 확인 토큰은 `src/lib/seo-verification.ts`에 반영됨. 네이버는 `NAVER_SITE_VERIFICATION` env 또는 동일 파일 기본값
 
 로컬·프로덕션 헬스:
 
@@ -19,11 +19,10 @@ npm run seo:check
 
 1. [Search Console](https://search.google.com/search-console) → 속성 추가
 2. **URL 접두어** 권장: `https://www.kindexlab.com`
-3. 소유권 확인 — HTML 태그 방식의 `content` 값만 복사
-4. Vercel → `GOOGLE_SITE_VERIFICATION=<content값>` (Production + Preview) → 재배포
-5. 배포 후 `npm run seo:check`로 홈 HTML에 `google-site-verification` 존재 확인
-6. **Sitemaps**에 `https://www.kindexlab.com/sitemap.xml` 제출
-7. URL 검사로 주요 URL 색인 요청: `/`, `/entertainment`, `/politics`, `/economy`, `/culture`, `/travel`
+3. 소유권 확인 — HTML 태그 방식 (Google 토큰은 코드에 반영됨 → 배포 후 **확인** 클릭)
+4. 배포 후 `npm run seo:check`로 홈 HTML에 `google-site-verification` 존재 확인
+5. **Sitemaps**에 `https://www.kindexlab.com/sitemap.xml` 제출
+6. URL 검사로 주요 URL 색인 요청: `/`, `/entertainment`, `/politics`, `/economy`, `/culture`, `/travel`
 
 ## 2. 네이버 서치어드바이저
 
