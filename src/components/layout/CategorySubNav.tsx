@@ -71,14 +71,14 @@ export function CategorySubNav({
     : resolveSiteSection(pathname);
 
   const chipBase =
-    "inline-flex min-w-0 items-center justify-center rounded-md border text-center leading-none whitespace-nowrap";
+    "box-border inline-flex min-w-0 items-center justify-center rounded-md border text-center leading-none whitespace-nowrap";
 
   const nav = (
     <nav
       className={
         embedded
-          ? "category-sub-nav flex min-w-0 flex-1 items-stretch gap-1 overflow-x-hidden"
-          : "category-sub-nav flex min-w-0 shrink-0 items-stretch gap-1 overflow-x-auto"
+          ? "category-sub-nav flex min-w-0 flex-1 items-stretch gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          : "category-sub-nav flex min-w-0 shrink-0 items-stretch gap-1.5 overflow-x-auto"
       }
       aria-label={meta ? `${meta.label} 서브 메뉴` : "전체 서브 메뉴"}
     >
@@ -95,7 +95,7 @@ export function CategorySubNav({
             }}
             title={item.description}
             className={`${chipBase} ${
-              embedded ? "flex-1 px-0.5" : "shrink-0 px-2.5 md:px-3"
+              embedded ? "min-w-0 flex-1 px-1" : "shrink-0 px-2.5 md:px-3"
             } ${
               isActive
                 ? "border-accent bg-accent font-semibold text-black"
@@ -119,7 +119,7 @@ export function CategorySubNav({
 
   if (embedded) {
     return (
-      <div className="flex w-full min-w-0 items-center justify-start gap-1 pr-px">
+      <div className="flex w-full min-w-0 items-center justify-start gap-1.5 pr-px">
         {nav}
         {search}
       </div>
