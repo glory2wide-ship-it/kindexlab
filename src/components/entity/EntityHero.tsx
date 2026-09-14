@@ -4,6 +4,10 @@ import {
   formatNaverMeasurement,
   isNaverStockMeasurement,
 } from "@/lib/market/naver-finance-format";
+import {
+  entertainmentFactsAreStale,
+  resolveEntertainmentFacts,
+} from "@/lib/boards/entertainment-facts";
 import type { RankingEntity } from "@/lib/types";
 
 /** Ratings and star scores read wrong when abbreviated; counts read wrong when not. */
@@ -131,6 +135,11 @@ export function EntityHero({
     return <MarketQuoteHero entity={entity} quote={stockQuote} kicker={kicker} />;
   }
 
+  const entertainment = resolveEntertainmentFacts(entity);
+  const entertainmentStale = entertainment
+    ? entertainmentFactsAreStale(entertainment.checkedAt)
+    : false;
+
   return (
     <section className="rounded-2xl border border-line bg-panel p-[18px] md:p-8">
       <p className="text-xs text-muted">
@@ -183,7 +192,48 @@ export function EntityHero({
           </p>
         </div>
       ) : null}
-      <p className="mt-[0.9375rem] max-w-3xl text-sm leading-7 text-ink/85 max-md:leading-[0.984rem] md:mt-5">
+      
+      {entertainment ? (
+        <div className="mt-3 space-y-3 border-t border-line pt-3 md:mt-4 md:pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold tracking-wide text-soft">종목 프로필</p>
+            <p className="text-[10px] text-muted">
+              정보 점검 {entertainment.checkedAt.slice(0, 10)}
+              {entertainmentStale ? " · 갱신 필요" : " · 주 1회 점검"}
+            </p>
+          </div>
+          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 md:gap-4">
+            {entertainment.rows.map((row) => (
+              <div key={row.label}>
+                <dt className="text-muted">{row.label}</dt>
+                <dd className="mt-0.5 font-medium leading-snug text-ink md:mt-1">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {entertainment.chips
+            ?.filter((chip) => chip.items.length > 0)
+            .map((chip) => (
+              <div key={chip.label}>
+                <p className="text-[11px] font-semibold tracking-wide text-soft">{chip.label}</p>
+                <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                  {chip.items.map((item) => (
+                    <li
+                      key={item}
+                      className="rounded-md border border-line bg-board px-2 py-1 text-xs font-medium text-ink"
+                    >
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          {entertainment.synopsis ? (
+            <p className="text-sm leading-6 text-ink/90">{entertainment.synopsis}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+<p className="mt-[0.9375rem] max-w-3xl text-sm leading-7 text-ink/85 max-md:leading-[0.984rem] md:mt-5">
         {formatEntityIndexBlurb(entity)}
       </p>
     </section>

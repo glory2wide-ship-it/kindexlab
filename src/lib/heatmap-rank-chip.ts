@@ -20,6 +20,7 @@ import {
   inferTvChannelChip,
   stripChipBrackets,
 } from "@/lib/heatmap-rank-meta";
+import { inferWebtoonPlatformChip } from "@/lib/boards/entertainment-facts";
 import {
   boardUsesTvGenreFilter,
   tvGenreChipLabel,
@@ -83,6 +84,14 @@ function isTvRatingsEntity(entity: Pick<RankingEntity, "type" | "slug" | "heatma
   const slug = boardSlugOf(entity);
   const group = entity.heatmapGroup ?? "";
   return slug === "realtime-tv-ratings" || group === "TV 시청률";
+}
+
+
+function isWebtoonEntity(entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">): boolean {
+  if (entity.type === "webtoon") return true;
+  const slug = boardSlugOf(entity);
+  const group = entity.heatmapGroup ?? "";
+  return slug.startsWith("realtime-webtoon-rank") || /웹툰/.test(group);
 }
 
 function isMusicChartEntity(entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">): boolean {
@@ -182,6 +191,11 @@ export function heatmapRankPrefixChip(
   if (isTvRatingsEntity(entity)) {
     const channel = inferTvChannelChip(entity);
     if (channel) return stripChipBrackets(channel);
+  }
+
+  if (isWebtoonEntity(entity)) {
+    const platform = inferWebtoonPlatformChip(entity);
+    if (platform) return stripChipBrackets(platform);
   }
 
   if (isMusicChartEntity(entity)) {
