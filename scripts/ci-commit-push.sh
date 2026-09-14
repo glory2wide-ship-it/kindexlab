@@ -3,6 +3,9 @@
 # For generated artifacts (snapshot.json, published.json, …) we never merge:
 # take the latest remote tip, overwrite the target paths with our staged content,
 # commit, and push. That avoids JSON rebase conflicts when multiple bots write main.
+#
+# Paths may be files or directories. Directory paths stage every tracked/untracked
+# file under them (via `git add -f`).
 set -euo pipefail
 
 MESSAGE="${1:?commit message required}"
@@ -25,14 +28,24 @@ if git diff --cached --quiet; then
 fi
 
 STAGE_DIR="$(mktemp -d)"
+LIST_FILE="${STAGE_DIR}/.staged-files"
 cleanup() { rm -rf "$STAGE_DIR"; }
 trap cleanup EXIT
 
-for path in "${PATHS[@]}"; do
-  mkdir -p "$STAGE_DIR/$(dirname "$path")"
-  # Prefer the index (what we just staged) so dirty working-tree noise is ignored.
-  git show ":${path}" >"${STAGE_DIR}/${path}"
-done
+git diff --cached --name-only -z -- "${PATHS[@]}" >"${LIST_FILE}.raw" || true
+# Fallback: list every cached path when pathspec filtering yields nothing
+# (some git versions are picky about directory pathspecs after add).
+if [ ! -s "${LIST_FILE}.raw" ]; then
+  git diff --cached --name-only -z >"${LIST_FILE}.raw"
+fi
+
+: >"$LIST_FILE"
+while IFS= read -r -d '' file; do
+  [ -z "$file" ] && continue
+  mkdir -p "$STAGE_DIR/$(dirname "$file")"
+  git show ":${file}" >"${STAGE_DIR}/${file}"
+  printf '%s\0' "$file" >>"$LIST_FILE"
+done <"${LIST_FILE}.raw"
 
 # Drop unrelated dirty files (AGENTS.md, caches) before we start resetting.
 git reset --hard HEAD
@@ -46,10 +59,11 @@ for attempt in 1 2 3 4 5 6 7 8 9 10; do
   git reset --hard "origin/${BRANCH}"
   git clean -fd
 
-  for path in "${PATHS[@]}"; do
-    mkdir -p "$(dirname "$path")"
-    cp "${STAGE_DIR}/${path}" "${path}"
-  done
+  while IFS= read -r -d '' file; do
+    [ -z "$file" ] && continue
+    mkdir -p "$(dirname "$file")"
+    cp "${STAGE_DIR}/${file}" "${file}"
+  done <"$LIST_FILE"
 
   git add -f -- "${PATHS[@]}"
   if git diff --cached --quiet; then

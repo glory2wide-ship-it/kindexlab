@@ -286,6 +286,12 @@ async function sendViaResend(options: {
  * Writes HTML/JSON/text artifacts. Email is sent by CI (`scripts/ci-email-report.sh`)
  * using RESEND_API_KEY or Gmail SMTP secrets — keep generation decoupled from mail.
  */
+function opsDigestKindForPipeline(pipeline: string): "briefings" | "heatmap-analysis" | "board-refresh" {
+  if (pipeline.includes("heatmap")) return "heatmap-analysis";
+  if (pipeline.includes("board")) return "board-refresh";
+  return "briefings";
+}
+
 export async function deliverGenerationReport(
   report: GenerationReport,
   fileStem: string,
@@ -295,6 +301,15 @@ export async function deliverGenerationReport(
     cost: report.cost ?? snapshotGeminiUsage(),
   };
   const artifacts = await writeGenerationReportArtifacts(withCost, fileStem);
+  try {
+    const { digestFromGenerationReport, persistOpsDigest } = await import("@/lib/ops/ops-digest");
+    const digestPath = await persistOpsDigest(
+      digestFromGenerationReport(withCost, opsDigestKindForPipeline(withCost.pipeline)),
+    );
+    console.log(`[ops] digest ${digestPath}`);
+  } catch (error) {
+    console.warn("[ops] digest persist failed", error);
+  }
   const to = (process.env.REPORT_EMAIL_TO ?? DEFAULT_REPORT_EMAIL_TO).trim();
 
   // Optional local/CI Node send when explicitly requested.
