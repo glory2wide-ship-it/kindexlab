@@ -33,6 +33,11 @@ const SectionTabSearch = dynamic(
   },
 );
 
+/** Match MobileCategoryBar chip boxes. */
+const CHIP_H = 31;
+const CHIP_TEXT_MOBILE = "14.08px";
+const CHIP_TEXT_DESKTOP = "16.09px";
+
 function sectionFromPathname(pathname: string, channel: PostChannel): ChannelSectionId {
   const base = `/${channel}`;
   if (pathname === base || pathname === `${base}/`) return "board";
@@ -49,7 +54,7 @@ export function CategorySubNav({
 }: {
   /** When omitted, links target the landing (전체) site sections. */
   channel?: PostChannel;
-  /** When true, render only the pill row (mobile sticky stack). */
+  /** When true, render only the chip row (mobile sticky stack). */
   embedded?: boolean;
   searchInputId?: string;
   showSearch?: boolean;
@@ -65,12 +70,15 @@ export function CategorySubNav({
       : resolveChannelSection(segment)
     : resolveSiteSection(pathname);
 
+  const chipBase =
+    "inline-flex min-w-0 items-center justify-center rounded-md border text-center leading-none whitespace-nowrap";
+
   const nav = (
     <nav
       className={
         embedded
-          ? "category-sub-nav flex min-w-0 flex-1 items-center gap-px overflow-x-hidden text-sm"
-          : "category-sub-nav flex min-w-0 shrink-0 items-center gap-[2.4px] overflow-x-auto text-sm"
+          ? "category-sub-nav flex min-w-0 flex-1 items-stretch gap-1 overflow-x-hidden"
+          : "category-sub-nav flex min-w-0 shrink-0 items-stretch gap-1 overflow-x-auto"
       }
       aria-label={meta ? `${meta.label} 서브 메뉴` : "전체 서브 메뉴"}
     >
@@ -86,15 +94,17 @@ export function CategorySubNav({
               if (!isActive) router.prefetch(href);
             }}
             title={item.description}
-            className={
+            className={`${chipBase} ${
+              embedded ? "flex-1 px-0.5" : "shrink-0 px-2.5 md:px-3"
+            } ${
               isActive
-                ? embedded
-                  ? "shrink-0 rounded-full bg-accent px-[5px] py-1.5 text-[14.08px] font-medium text-black"
-                  : "shrink-0 rounded-full bg-accent px-3 py-1.5 text-[16.09px] font-medium text-black"
-                : embedded
-                  ? "shrink-0 rounded-full px-[5px] py-1.5 text-[14.08px] font-semibold text-soft hover:bg-panel hover:text-ink"
-                  : "shrink-0 rounded-full px-3 py-1.5 text-[16.09px] font-semibold text-soft hover:bg-panel hover:text-ink"
-            }
+                ? "border-accent bg-accent font-semibold text-black"
+                : "border-line bg-panel font-bold text-ink hover:border-accent hover:text-accent"
+            }`}
+            style={{
+              height: CHIP_H,
+              fontSize: embedded ? CHIP_TEXT_MOBILE : CHIP_TEXT_DESKTOP,
+            }}
           >
             {item.label}
           </Link>
@@ -109,14 +119,14 @@ export function CategorySubNav({
 
   if (embedded) {
     return (
-      <div className="flex w-full min-w-0 items-center justify-start gap-0.5 pr-px">
+      <div className="flex w-full min-w-0 items-center justify-start gap-1 pr-px">
         {nav}
         {search}
       </div>
     );
   }
 
-  // Desktop: English desk label on the left; section tabs + search centered.
+  // Desktop: English desk label on the left; section chips + search centered.
   return (
     <div className="category-sub-nav-bar relative flex w-full flex-wrap items-center justify-center gap-3 py-2">
       <DeskEyebrow
@@ -125,7 +135,7 @@ export function CategorySubNav({
       >
         {meta?.eyebrow ?? "ALL DESKS"}
       </DeskEyebrow>
-      <div className="flex min-w-0 shrink-0 items-center justify-center gap-[6.4px]">
+      <div className="flex min-w-0 shrink-0 items-center justify-center gap-1.5">
         {nav}
         {search}
       </div>
