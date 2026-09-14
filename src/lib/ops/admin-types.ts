@@ -43,6 +43,9 @@ export type AdminDashboardPayload = {
     hasData: boolean;
     dateLabel: string;
     updatedAt: string;
+    /** Present when digests split live/batch; admin UI prefers Batch. */
+    generationBatchKrw?: number;
+    generationLiveKrw?: number;
     byCategory: AdminOpsCategoryRow[];
     byItem: AdminOpsItemRow[];
   };
