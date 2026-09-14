@@ -22,7 +22,7 @@ export function SiteFooter() {
         {/* Mobile: 정책 | 운영사. md+: join the 3-col footer row. */}
         <div className="grid grid-cols-2 gap-3 md:contents">
           <div className="min-w-0 text-[11px] leading-4 sm:text-sm sm:leading-normal">
-            <p className="font-medium text-sm">정책</p>
+            <p className="font-medium text-sm leading-none">정책</p>
             <ul className="mt-2 space-y-1 text-muted sm:space-y-1.5">
               <li>
                 <Link href="/privacy" className="hover:text-ink">
@@ -47,28 +47,29 @@ export function SiteFooter() {
             </ul>
           </div>
           <div className="min-w-0 text-[11px] leading-4 sm:text-sm sm:leading-normal">
-            <p className="font-medium text-sm">운영사</p>
-            <p className="mt-2 text-muted sm:leading-6">
-              {SITE.companyShort}
-              <br />
-              <span className="inline-flex flex-nowrap items-center gap-1.5 sm:gap-2">
-                <span className="whitespace-nowrap">
-                  {SITE.name} ({SITE.nameKo})
+            <p className="font-medium text-sm leading-none">운영사</p>
+            <ul className="mt-2 space-y-1 text-muted sm:space-y-1.5">
+              <li>{SITE.companyShort}</li>
+              <li>
+                <span className="inline-flex flex-nowrap items-center gap-1.5 sm:gap-2">
+                  <span className="whitespace-nowrap">
+                    {SITE.name} ({SITE.nameKo})
+                  </span>
+                  <Link
+                    href="/admin"
+                    className="inline-flex shrink-0 items-center rounded-md border border-line bg-board px-2 py-0.5 text-[11px] font-medium leading-none text-ink hover:bg-panel sm:px-2.5 sm:py-1 sm:text-[13.8px]"
+                  >
+                    {SITE.name} Admin
+                  </Link>
                 </span>
-                <Link
-                  href="/admin"
-                  className="inline-flex shrink-0 items-center rounded-md border border-line bg-board px-2 py-0.5 text-[11px] font-medium leading-none text-ink hover:bg-panel sm:px-2.5 sm:py-1 sm:text-[13.8px]"
-                >
-                  {SITE.name} Admin
-                </Link>
-              </span>
-              <br />
-              {SITE.domain}
-              <br />
-              <a href={`mailto:${SITE.contactEmail}`} className="break-all hover:text-ink">
-                {SITE.contactEmail}
-              </a>
-            </p>
+              </li>
+              <li>{SITE.domain}</li>
+              <li>
+                <a href={`mailto:${SITE.contactEmail}`} className="break-all hover:text-ink">
+                  {SITE.contactEmail}
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
