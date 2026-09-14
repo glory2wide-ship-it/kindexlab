@@ -753,12 +753,14 @@ const SLUG_DOMAIN: Array<{ test: (slug: string) => boolean; domain: Entertainmen
 ];
 
 function domainOf(entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">): EntertainmentFacts["domain"] | undefined {
-  const fromType = TYPE_DOMAIN[entity.type];
-  if (fromType) return fromType;
+  // Prefer board slug so mis-tagged celebrity placeholders on non-ent boards
+  // do not steal the weekly entertainment pack.
   const slug = entity.slug ?? "";
   for (const row of SLUG_DOMAIN) {
     if (row.test(slug)) return row.domain;
   }
+  const fromType = TYPE_DOMAIN[entity.type];
+  if (fromType) return fromType;
   const group = entity.heatmapGroup ?? "";
   if (/K\s*POP|케이팝|아이돌/i.test(group)) return "kpop";
   if (/음원/.test(group)) return "music";

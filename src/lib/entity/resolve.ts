@@ -1,4 +1,5 @@
 import { rankRowsToEntities, toHeatmapPayload, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
+import { entityTypeForBoardSlug } from "@/lib/boards/entity-type";
 import { getBoard } from "@/lib/boards/registry";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
 import { hash, normalizeName } from "@/lib/ingestion/names";
@@ -143,16 +144,22 @@ export async function resolveBoardOrKeywordEntity(
   const decoded = decodeRouteSlug(slug);
   const name = fallbackName?.trim();
   if (name) {
+    const boardSlug = decoded.includes("--") ? decoded.split("--")[0] ?? "" : "";
     const type: EntityType = decoded.startsWith("headline")
       ? "headline_news"
-      : decoded.includes("--")
-        ? typeFromBoardChannel(getBoard(decoded.split("--")[0] ?? "")?.channel ?? "entertainment")
+      : boardSlug
+        ? entityTypeForBoardSlug(boardSlug) ??
+          typeFromBoardChannel(getBoard(boardSlug)?.channel ?? "entertainment")
         : "celebrity";
     return synthesizeKeywordEntity(decoded, name, type);
   }
   if (decoded.includes("--")) {
+    const boardSlug = decoded.split("--")[0] ?? "";
     const guess = decoded.slice(decoded.indexOf("--") + 2).replace(/-/g, " ").trim();
-    if (guess.length >= 2) return synthesizeKeywordEntity(decoded, guess);
+    const type =
+      entityTypeForBoardSlug(boardSlug) ??
+      typeFromBoardChannel(getBoard(boardSlug)?.channel ?? "entertainment");
+    if (guess.length >= 2) return synthesizeKeywordEntity(decoded, guess, type);
   }
   return undefined;
 }
