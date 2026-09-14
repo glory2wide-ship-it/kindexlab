@@ -8,7 +8,7 @@ import { HeatmapErrorBoundary } from "@/components/dashboard/HeatmapErrorBoundar
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
 import { MobileHeatmapDials } from "@/components/dashboard/MobileHeatmapDials";
 import { RankingTable } from "@/components/dashboard/RankingTable";
-import { TreemapSkeleton } from "@/components/dashboard/TreemapSkeleton";
+import { TreemapView } from "@/components/dashboard/TreemapCanvas";
 import {
   TREEMAP_MAX_ITEMS,
   MOBILE_TREEMAP_MAX_ITEMS,
@@ -19,14 +19,11 @@ import { HeaderRefreshCountdown } from "@/components/layout/HeaderRefreshCountdo
 import { MobileBottomSheet } from "@/components/layout/MobileBottomSheet";
 
 /**
- * Heatmap stays in its own chunk, but SSR is on so the landing first paint
- * includes real tiles instead of a skeleton while the client chunk loads.
- * RankingTable stays static — dynamic import was the delay on 히트맵 → 리스트.
+ * TreemapView is a static import so landing SSR paints real tiles (dynamic +
+ * loading skeleton was still flashing "히트맵을 불러오는 중" in the HTML).
+ * RankingTable is also static — keep both mounted and toggle with CSS so
+ * 히트맵 ↔ 리스트 does not tear down squarify layout / ResizeObserver.
  */
-const TreemapView = dynamic(
-  () => import("@/components/dashboard/TreemapCanvas").then((mod) => mod.TreemapView),
-  { ssr: true, loading: () => <TreemapSkeleton /> },
-);
 const HeatmapCountdown = dynamic(
   () => import("@/components/dashboard/HeatmapCountdown").then((mod) => mod.HeatmapCountdown),
   { ssr: false, loading: () => <HeatmapCountdownFallback /> },
@@ -114,22 +111,25 @@ export function MarketWorkspace({
    */
   initialTimeframe?: Timeframe;
 }) {
+  const [view, setView] = useState<ViewMode>(initialView);
+  /**
+   * Mount list pane after idle (or on first click). Hidden mount avoids the old
+   * desktop list flash while making the first 히트맵→리스트 click cheap.
+   */
+  const [listMounted, setListMounted] = useState(initialView === "list");
+
   useEffect(() => {
-    // Warm treemap after first paint so LCP bandwidth is not contested,
-    // and warm the list module so 히트맵 → 리스트 stays snappy without
-    // keeping RankingTable mounted (that caused a desktop list flash).
+    if (listMounted) return;
     let cancelled = false;
     const warm = () => {
-      if (cancelled) return;
-      void import("@/components/dashboard/TreemapCanvas");
-      void import("@/components/dashboard/RankingTable");
+      if (!cancelled) setListMounted(true);
     };
     let idleId: number | undefined;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      idleId = window.requestIdleCallback(warm, { timeout: 1200 });
+      idleId = window.requestIdleCallback(warm, { timeout: 1500 });
     } else {
-      timeoutId = setTimeout(warm, 400);
+      timeoutId = setTimeout(warm, 600);
     }
     return () => {
       cancelled = true;
@@ -138,9 +138,8 @@ export function MarketWorkspace({
       }
       if (timeoutId != null) clearTimeout(timeoutId);
     };
-  }, []);
+  }, [listMounted]);
 
-  const [view, setView] = useState<ViewMode>(initialView);
   const [category, setCategory] = useState<CategoryId>(initialCategory);
   /**
    * Default 5분 on every viewport so phone / desktop / other PCs rank the same
@@ -248,6 +247,7 @@ export function MarketWorkspace({
 
   const pickView = (id: ViewMode) => {
     setUserPickedView(true);
+    if (id === "list") setListMounted(true);
     setView(id);
   };
 
@@ -443,27 +443,39 @@ export function MarketWorkspace({
                 : "하단 랭킹·지수 보드에서 성별·연령별 순위를 볼 수 있습니다. 시세 종목은 다음 집계 주기에 채워집니다."}
             </p>
           </div>
-        ) : view === "treemap" ? (
-          <HeatmapErrorBoundary
-            resetKey={`${demoKey}-${timeframe}`}
-            fallback={
-              <p className="px-5 py-12 text-center text-sm text-muted">
-                히트맵을 그리지 못했습니다. 리스트 탭에서 순위를 확인하세요.
-              </p>
-            }
-          >
-            <TreemapView
-              key={`${demoKey}-${timeframe}-${sortedItems.length}`}
-              items={sortedItems}
-              category={category}
-              timeframe={timeframe}
-              layoutKey={demoKey}
-              showChannelTags={showChannelTags}
-              showSourceCaptions={Boolean(channel) && !boardSlug}
-            />
-          </HeatmapErrorBoundary>
         ) : (
-          <RankingTable items={listItems} timeframe={timeframe} lockOrder />
+          <>
+            {/*
+              Keep both panes mounted. Toggling used to unmount TreemapView,
+              which re-ran squarify + ResizeObserver and felt like a laggy switch.
+              `hidden` preserves React state; bounds stay non-zero in the view.
+            */}
+            <div className={view === "treemap" ? "contents" : "hidden"} aria-hidden={view !== "treemap"}>
+              <HeatmapErrorBoundary
+                resetKey={`${demoKey}-${timeframe}`}
+                fallback={
+                  <p className="px-5 py-12 text-center text-sm text-muted">
+                    히트맵을 그리지 못했습니다. 리스트 탭에서 순위를 확인하세요.
+                  </p>
+                }
+              >
+                <TreemapView
+                  key={`${demoKey}-${timeframe}`}
+                  items={sortedItems}
+                  category={category}
+                  timeframe={timeframe}
+                  layoutKey={demoKey}
+                  showChannelTags={showChannelTags}
+                  showSourceCaptions={Boolean(channel) && !boardSlug}
+                />
+              </HeatmapErrorBoundary>
+            </div>
+            {listMounted ? (
+              <div className={view === "list" ? "contents" : "hidden"} aria-hidden={view !== "list"}>
+                <RankingTable items={listItems} timeframe={timeframe} lockOrder />
+              </div>
+            ) : null}
+          </>
         )}
       </div>
 

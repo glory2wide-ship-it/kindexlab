@@ -122,9 +122,14 @@ export function TreemapView({
       if (!rect) return;
       const nextWidth = Math.floor(rect.width);
       const nextHeight = Math.floor(rect.height);
-      if (nextWidth > 0 && nextHeight > 0) {
-        setBounds({ width: nextWidth, height: nextHeight });
-      }
+      // Ignore 0×0 while the pane is `hidden` during 히트맵↔리스트 toggles so
+      // we keep the last good layout and skip a redundant squarify pass.
+      if (nextWidth <= 0 || nextHeight <= 0) return;
+      setBounds((prev) =>
+        prev.width === nextWidth && prev.height === nextHeight
+          ? prev
+          : { width: nextWidth, height: nextHeight },
+      );
     });
     observer.observe(element);
     return () => observer.disconnect();
