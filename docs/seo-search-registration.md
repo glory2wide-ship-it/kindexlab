@@ -39,4 +39,4 @@ npm run seo:check
 
 ## 코드 쪽 메모
 
-검증 토큰은 git에 넣지 않습니다. `src/lib/seo-verification.ts`가 env를 읽어 Next `metadata.verification`으로 출력합니다.
+Google·네이버 확인 토큰 기본값은 `src/lib/seo-verification.ts`에 있으며, Next `metadata.verification`으로 홈 `<head>`에 출력됩니다. Vercel env로 덮어쓸 수 있습니다.
