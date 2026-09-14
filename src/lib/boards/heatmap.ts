@@ -42,6 +42,8 @@ import {
   filterRowsByTvGenre,
   OTT_BUZZ_BOARD_SLUG,
   padTvGenreRanking,
+  sanitizeOttProgramRows,
+  tvGenreHeatmapLimit,
   type HeatmapTvGenre,
 } from "@/lib/boards/tv-genre";
 import {
@@ -497,17 +499,20 @@ export function buildHeatmapItems({
     return [];
   }
   if (selected) {
-    const boardLimit = rankLimitForBoard(
+    const baseLimit = rankLimitForBoard(
       { channel: selected.channel, slug: selected.slug },
       region,
     );
+    const boardLimit = tvGenreHeatmapLimit(genre, baseLimit);
     const genreActive = boardUsesTvGenreFilter(selected.slug) && genre !== "all";
     const useOttBoard = genreActive && genre === "ott";
     const rankingSource = useOttBoard
       ? boards.find((item) => item.slug === OTT_BUZZ_BOARD_SLUG) ?? selected
       : selected;
-    const baseRows = selectHeatmapRows(rankingSource, gender, age, boardLimit, region);
-    // OTT board is already the buzz ranking — keep all rows; pad if thin.
+    const rawRows = selectHeatmapRows(rankingSource, gender, age, boardLimit, region);
+    const baseRows = useOttBoard ? sanitizeOttProgramRows(rawRows) : rawRows;
+    // OTT: programme titles only (no station/platform labels); pad if thin.
+    // Drama: pad/filter through TV_DRAMA_HEATMAP_LIMIT (20) for LIVE ranking.
     const genreRows = useOttBoard
       ? padTvGenreRanking(baseRows, "ott", boardLimit)
       : genreActive

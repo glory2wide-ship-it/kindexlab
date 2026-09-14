@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense, cache } from "react";
 import { BuzzChart } from "@/components/entity/BuzzChart";
 import { EntityHeroLive } from "@/components/entity/EntityHeroLive";
+import { TvProgramInfoCard } from "@/components/entity/TvProgramInfoCard";
 import { MarketPriceChart } from "@/components/entity/MarketPriceChart";
 import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
@@ -155,6 +156,7 @@ export default async function RankingDetailPage({
         {entity.name}
       </p>
       <EntityHeroLive entity={entity} hydrateQuote={hydrateQuote} />
+      <TvProgramInfoCard entity={entity} />
       {marketInstrument ? (
         <MarketPriceChart
           entity={entity}

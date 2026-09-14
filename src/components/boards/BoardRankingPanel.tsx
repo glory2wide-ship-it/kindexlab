@@ -14,6 +14,7 @@ import {
   boardUsesTvGenreFilter,
   filterRowsByTvGenre,
   padTvGenreRanking,
+  TV_DRAMA_HEATMAP_LIMIT,
   TV_GENRE_LABEL,
   type HeatmapTvGenre,
 } from "@/lib/boards/tv-genre";
@@ -158,26 +159,28 @@ export function BoardRankingPanel({
   const listCap = isMobileViewport ? MOBILE_LIST_MAX_ITEMS : LIST_MAX_ITEMS;
   const showRegion = boardUsesRegionFilter(board.slug);
   const showGenre = boardUsesTvGenreFilter(board.slug);
+  const genreCap =
+    showGenre && genre === "drama" ? TV_DRAMA_HEATMAP_LIMIT : listCap;
   const rows = useMemo(() => {
     try {
       const def = getBoard(board.slug);
       const selected = selectRanking(board.demographics, board.ranking ?? [], gender, age, {
-        limit: listCap,
+        limit: genreCap,
         dropNames: dropNamesForFilter(def, gender, age),
         region: showRegion ? region : "all",
       });
       if (showGenre && genre !== "all") {
-        return padTvGenreRanking(filterRowsByTvGenre(selected, genre), genre, listCap);
+        return padTvGenreRanking(filterRowsByTvGenre(selected, genre), genre, genreCap);
       }
-      return selected.slice(0, listCap);
+      return selected.slice(0, genreCap);
     } catch {
       const fallback = board.ranking ?? [];
       if (showGenre && genre !== "all") {
-        return padTvGenreRanking(filterRowsByTvGenre(fallback, genre), genre, listCap);
+        return padTvGenreRanking(filterRowsByTvGenre(fallback, genre), genre, genreCap);
       }
-      return fallback.slice(0, listCap);
+      return fallback.slice(0, genreCap);
     }
-  }, [board.demographics, board.ranking, board.slug, gender, age, region, showRegion, genre, showGenre, listCap]);
+  }, [board.demographics, board.ranking, board.slug, gender, age, region, showRegion, genre, showGenre, genreCap]);
   const max = rows.length ? Math.max(...rows.map((row) => (Number.isFinite(row.score) ? row.score : 0))) : 0;
   const filtered = gender !== "all" || age !== "all" || (showRegion && region !== "all") || (showGenre && genre !== "all");
   const listKey = filterKey(gender, age, showRegion ? region : "all");

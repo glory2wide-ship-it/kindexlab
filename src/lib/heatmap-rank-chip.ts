@@ -20,6 +20,11 @@ import {
   inferTvChannelChip,
   stripChipBrackets,
 } from "@/lib/heatmap-rank-meta";
+import {
+  boardUsesTvGenreFilter,
+  tvGenreChipLabel,
+  type HeatmapTvGenre,
+} from "@/lib/boards/tv-genre";
 import { namesOverlap } from "@/lib/ingestion/names";
 import { heatmapSourceCaption } from "@/lib/news/headline-title";
 import { parseBracketLabel } from "@/lib/politics/labeled-rank";
@@ -205,4 +210,39 @@ export function heatmapRankPrefixChip(
   }
 
   return undefined;
+}
+
+
+/**
+ * TV 시청률 tiles: [채널, 하위메뉴] chips before the rank badge.
+ * Other boards keep a single prefix chip for backward compatibility.
+ */
+export function heatmapRankPrefixChips(
+  entity: Pick<
+    RankingEntity,
+    | "name"
+    | "nameEn"
+    | "type"
+    | "slug"
+    | "heatmapGroup"
+    | "platform"
+    | "sourceChannel"
+    | "tags"
+    | "region"
+  >,
+  options?: { allowMenuCaption?: boolean; activeGenre?: HeatmapTvGenre },
+): string[] {
+  if (isTvRatingsEntity(entity) || boardUsesTvGenreFilter(boardSlugOf(entity))) {
+    const chips: string[] = [];
+    const channel = inferTvChannelChip(entity);
+    if (channel) chips.push(stripChipBrackets(channel));
+    const genreLabel = tvGenreChipLabel(options?.activeGenre, entity.name, {
+      tags: entity.tags,
+      nameEn: entity.nameEn,
+    });
+    if (genreLabel && !chips.includes(genreLabel)) chips.push(genreLabel);
+    return chips;
+  }
+  const single = heatmapRankPrefixChip(entity, options);
+  return single ? [single] : [];
 }

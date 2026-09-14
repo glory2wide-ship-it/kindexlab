@@ -1,32 +1,29 @@
 /**
- * TV 시청률 board genre sub-tabs (전체 / 드라마 / 예능 / 뉴스·시사 / 스포츠 / OTT 화제성).
+ * TV 시청률 board genre sub-tabs (전체 / 드라마 / 예능 / OTT 화제성).
  * Mirrors the region-filter UX, but classifies by programme genre rather than 시/도.
  */
 
 import type { BoardRankEntry } from "@/lib/boards/types";
+import { isLikelyTvProgramName } from "@/lib/boards/tv-program";
 
 export const TV_RATINGS_BOARD_SLUG = "realtime-tv-ratings";
 export const OTT_BUZZ_BOARD_SLUG = "ott-buzz-ranking";
 
-export type TvGenreSegment = "drama" | "variety" | "news" | "sports" | "ott";
+/** Visible genre tabs — news/sports removed from the TV 시청률 submenu. */
+export type TvGenreSegment = "drama" | "variety" | "ott";
 
 export type HeatmapTvGenre = "all" | TvGenreSegment;
 
-export const TV_GENRE_SEGMENTS: TvGenreSegment[] = [
-  "drama",
-  "variety",
-  "news",
-  "sports",
-  "ott",
-];
+export const TV_GENRE_SEGMENTS: TvGenreSegment[] = ["drama", "variety", "ott"];
 
 export const TV_GENRE_LABEL: Record<TvGenreSegment, string> = {
   drama: "드라마",
   variety: "예능",
-  news: "뉴스·시사",
-  sports: "스포츠",
   ott: "OTT 화제성",
 };
+
+/** Drama LIVE heatmap always paints through rank 20. */
+export const TV_DRAMA_HEATMAP_LIMIT = 20;
 
 /** Known titles → genre (compact key = whitespace-stripped lowercase). */
 const KNOWN_TV_GENRE: Record<string, TvGenreSegment> = {
@@ -41,6 +38,13 @@ const KNOWN_TV_GENRE: Record<string, TvGenreSegment> = {
   욕망의덫: "drama",
   환승연애: "drama",
   솔로지옥: "drama",
+  무빙: "drama",
+  더글로리: "drama",
+  이상한변호사우영우: "drama",
+  빈센조: "drama",
+  사랑의불시착: "drama",
+  호텔델루나: "drama",
+  이태원클라쓰: "drama",
   // Variety
   나혼자산다: "variety",
   미운우리새끼: "variety",
@@ -65,31 +69,35 @@ const KNOWN_TV_GENRE: Record<string, TvGenreSegment> = {
   아는형님: "variety",
   미스터트롯: "variety",
   미스트롯: "variety",
-  골때리는그녀들: "sports",
-  // News / current affairs
-  kbs뉴스9: "news",
-  mbc뉴스데스크: "news",
-  sbs8뉴스: "news",
-  뉴스a: "news",
-  jtbc뉴스룸: "news",
-  tv조선뉴스: "news",
-  그것이알고싶다: "news",
-  뉴스데스크: "news",
-  뉴스룸: "news",
-  뉴스9: "news",
-  "8뉴스": "news",
+  골때리는그녀들: "variety",
+  // OTT originals
+  오징어게임: "ott",
+  "d.p.": "ott",
+  dp: "ott",
+  사냥개들: "ott",
+  마스크걸: "ott",
+  킬러부대: "ott",
+  경성크리처: "ott",
+  중증외상센터: "ott",
+  미스터플랑크톤: "ott",
+  트렁크: "ott",
+  굿보이: "ott",
 };
 
 const DRAMA_RE =
   /(드라마|특별편|종영|첫방|월화|수목|금토|일일연속극|미니시리즈|로맨스|사극)/i;
 const VARIETY_RE =
-  /(예능|퀴즈|토크|서바이벌|오디션|관찰|리얼리티|나는\s*솔로|나\s*혼자|런닝맨|유\s*퀴즈|미운\s*우리|전국노래|불후|1박\s*2일|라디오스타|아는\s*형님)/i;
+  /(예능|퀴즈|토크|서바이벌|오디션|관찰|리얼리티|나는\s*솔로|나\s*혼자|런닝맨|유\s*퀴즈|미운\s*우리|전국노래|불후|1박\s*2일|라디오스타|아는\s*형님|골때리)/i;
 const NEWS_RE =
   /(뉴스|뉴스룸|뉴스데스크|뉴스\s*\d|보도|시사|그것이\s*알고|탐사|데스크)/i;
 const SPORTS_RE =
-  /(스포츠|중계|경기|야구|축구|배구|농구|골프|올림픽|월드컵|KBO|MLB|NBA|프리미어리그|골때리)/i;
+  /(스포츠|중계|경기|야구|축구|배구|농구|골프|올림픽|월드컵|KBO|MLB|NBA|프리미어리그)/i;
 const OTT_RE =
   /(넷플릭스|netflix|티빙|tving|디즈니|disney|웨이브|wavve|쿠팡플레이|coupang|왓챠|watcha|라프텔|ott)/i;
+
+/** Broadcaster / OTT platform labels — never valid OTT programme tile names. */
+const BROADCASTER_OR_PLATFORM_RE =
+  /^(KBS|KBS[12]|MBC|SBS|JTBC|tvN|TVN|TV조선|TV\s*조선|채널A|MBN|ENA|OCN|Mnet|EBS|YTN|넷플릭스|Netflix|티빙|Tving|웨이브|Wavve|디즈니\+?|Disney\+?|쿠팡플레이|Coupang|왓챠|Watcha|라프텔)(\s*(뉴스|드라마|예능|신작|오리지널|오리지날|시리즈|채널|방송)?)?$/i;
 
 function compactKey(name: string): string {
   return name
@@ -111,18 +119,33 @@ export const boardUsesGenreFilter = boardUsesTvGenreFilter;
 export function parseTvGenreQuery(raw: string | null | undefined): HeatmapTvGenre {
   const value = (raw ?? "all").trim().toLowerCase();
   if (value === "all" || !value) return "all";
+  // Retired tabs map to 전체 so stale ?genre=news|sports links keep working.
+  if (value === "news" || value === "sports") return "all";
   if ((TV_GENRE_SEGMENTS as string[]).includes(value)) return value as TvGenreSegment;
   return "all";
 }
 
+export function tvGenreHeatmapLimit(genre: HeatmapTvGenre, fallback: number): number {
+  // Drama LIVE heatmap paints ranks 1–20.
+  if (genre === "drama") return TV_DRAMA_HEATMAP_LIMIT;
+  return fallback;
+}
+
+export function tvGenreChipLabel(
+  genre: HeatmapTvGenre | undefined,
+  name?: string,
+  meta?: { tags?: string[]; subtitle?: string; nameEn?: string },
+): string | undefined {
+  if (genre && genre !== "all") return TV_GENRE_LABEL[genre];
+  if (!name) return undefined;
+  const inferred = inferTvGenre(name, meta);
+  return inferred ? TV_GENRE_LABEL[inferred] : undefined;
+}
+
 /**
  * Infer a TV genre for a programme / OTT title.
- * Returns undefined when the name does not clearly match a genre bucket
- * (so "전체" still shows it, but genre tabs can skip it or pad from seeds).
- *
- * Classification prefers the programme **name**. Tags like `방송뉴스` /
- * `아이돌뉴스` are category labels, not programme genres — do not let them
- * reclassify dramas or idol clips as 뉴스·시사.
+ * Returns undefined when the name does not clearly match a visible genre bucket
+ * (뉴스·스포츠 titles stay on "전체" only).
  */
 export function inferTvGenre(
   name: string,
@@ -132,22 +155,20 @@ export function inferTvGenre(
   if (!key) return undefined;
 
   if (KNOWN_TV_GENRE[key]) return KNOWN_TV_GENRE[key];
-  // Longer known keys as substring (e.g. "KBS 뉴스9 주말")
   for (const [known, genre] of Object.entries(KNOWN_TV_GENRE)) {
     if (known.length >= 4 && key.includes(known)) return genre;
   }
 
   const nameBlob = `${name} ${meta?.nameEn ?? ""} ${meta?.subtitle ?? ""}`;
+  // News / sports stay off the visible genre tabs.
+  if (NEWS_RE.test(nameBlob) || /YTN|연합뉴스/i.test(nameBlob)) return undefined;
+  if (SPORTS_RE.test(nameBlob)) return undefined;
+
   if (OTT_RE.test(nameBlob)) return "ott";
-  if (NEWS_RE.test(nameBlob)) return "news";
-  if (SPORTS_RE.test(nameBlob)) return "sports";
   if (VARIETY_RE.test(nameBlob)) return "variety";
   if (DRAMA_RE.test(nameBlob)) return "drama";
-
-  if (/YTN|연합뉴스/i.test(nameBlob)) return "news";
   if (/넷플릭스|티빙|웨이브|디즈니|쿠팡/i.test(nameBlob)) return "ott";
 
-  // Tags: only platform / OTT cues — never bare "*뉴스" category stamps.
   const tags = (meta?.tags ?? []).join(" ");
   if (OTT_RE.test(tags) || /넷플릭스|티빙|웨이브|디즈니|쿠팡/i.test(tags)) return "ott";
 
@@ -170,11 +191,51 @@ export function filterRowsByTvGenre<T extends { name: string; tags?: string[]; n
   if (!rows?.length) return [];
   if (genre === "all") return [...rows];
   return rows.filter((row) =>
-    entityMatchesTvGenre(
-      { name: row.name, tags: row.tags, subtitle: row.note },
-      genre,
-    ),
+    entityMatchesTvGenre({ name: row.name, tags: row.tags, subtitle: row.note }, genre),
   );
+}
+
+/** True when the label is a station/platform, not a programme title. */
+export function isBroadcasterOrPlatformName(name: string): boolean {
+  const cleaned = name
+    .replace(/^\[[^\]]+\]\s*/, "")
+    .replace(/\s*\([^)]*\)\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return true;
+  if (BROADCASTER_OR_PLATFORM_RE.test(cleaned)) return true;
+  // Platform + generic qualifier without a distinct title ("넷플릭스 신작").
+  if (
+    /^(넷플릭스|티빙|웨이브|디즈니\+?|쿠팡플레이|왓챠|라프텔)(\s|$)/i.test(cleaned) &&
+    /(신작|오리지널|오리지날|시리즈|예능|드라마|화제작|인기)$/i.test(cleaned)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** Crawl / seed meta titles that are not programme names. */
+export function isOttMetaTitle(name: string): boolean {
+  const raw = name.trim();
+  if (!raw) return true;
+  if (/^\[(웹|뉴스|유튜브|공식|블로그)/i.test(raw)) return true;
+  if (/OTT\s*화제작|인기\s*시리즈|디즈니플러스\s*신작|넷플릭스\s*인기/i.test(raw)) return true;
+  if (/주가|시총|영업익|실적|상장/i.test(raw)) return true;
+  // Truncated crawl leftovers ("[유튜브").
+  if (/^\[/.test(raw) && !/\]/.test(raw)) return true;
+  return false;
+}
+
+/** Keep OTT tiles on programme titles only. */
+export function sanitizeOttProgramRows<T extends { name: string }>(rows: readonly T[]): T[] {
+  return rows.filter((row) => {
+    const name = row.name ?? "";
+    if (!name.trim()) return false;
+    if (isOttMetaTitle(name)) return false;
+    if (isBroadcasterOrPlatformName(name)) return false;
+    if (!isLikelyTvProgramName(name)) return false;
+    return true;
+  });
 }
 
 /** Seed titles used to pad a thin genre tab (never cross-fill other genres). */
@@ -200,6 +261,11 @@ export const TV_GENRE_SEED_TITLES: Record<TvGenreSegment, string[]> = {
     "견우와 선녀",
     "견원지간",
     "착한 사나이",
+    "내일",
+    "나의 해방일지",
+    "비밀의 숲",
+    "나의 아저씨",
+    "도깨비",
   ],
   variety: [
     "나 혼자 산다",
@@ -222,50 +288,7 @@ export const TV_GENRE_SEED_TITLES: Record<TvGenreSegment, string[]> = {
     "오은영 리포트",
     "냉장고를 부탁해",
     "비긴어게인",
-  ],
-  news: [
-    "KBS 뉴스9",
-    "MBC 뉴스데스크",
-    "SBS 8뉴스",
-    "JTBC 뉴스룸",
-    "뉴스A",
-    "TV조선 뉴스",
-    "그것이 알고싶다",
-    "KBS 뉴스7",
-    "MBC 뉴스투데이",
-    "SBS 나이트라인",
-    "YTN 뉴스",
-    "채널A 뉴스",
-    "MBN 뉴스와이드",
-    "시사기획 창",
-    "PD수첩",
-    "탐사보도 스트레이트",
-    "뉴스특보",
-    "밤 뉴스",
-    "아침뉴스",
-    "주말뉴스",
-  ],
-  sports: [
     "골때리는 그녀들",
-    "KBO 중계",
-    "스포츠뉴스",
-    "SBS 스포츠뉴스",
-    "MBC 스포츠뉴스",
-    "KBS 스포츠9",
-    "야구중계",
-    "축구중계",
-    "프리미어리그 중계",
-    "NBA 중계",
-    "배구중계",
-    "골프 중계",
-    "이강인",
-    "손흥민",
-    "김하성",
-    "프로야구 하이라이트",
-    "월드컵 예선",
-    "올림픽 중계",
-    "스포츠매거진",
-    "화요일은 야구다",
   ],
   ott: [
     "폭싹 속았수다",
@@ -283,11 +306,11 @@ export const TV_GENRE_SEED_TITLES: Record<TvGenreSegment, string[]> = {
     "미스터 플랑크톤",
     "트렁크",
     "굿보이",
-    "넷플릭스 신작",
-    "티빙 오리지널",
-    "디즈니+ 시리즈",
-    "쿠팡플레이 예능",
-    "웨이브 드라마",
+    "오징어 게임 시즌2",
+    "살인자ㅇ난감",
+    "이두나!",
+    "정신병동에도 아침이 와요",
+    "소용없어 거짓말",
   ],
 };
 

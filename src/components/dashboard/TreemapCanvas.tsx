@@ -13,7 +13,8 @@ import { TYPE_LABEL, formatRate } from "@/lib/format";
 import { heatFill, heatText } from "@/lib/heatmap";
 import { formatHeatmapRank } from "@/lib/boards/limits";
 import { heatmapTileLabel } from "@/lib/heatmap-display-name";
-import { heatmapRankPrefixChip } from "@/lib/heatmap-rank-chip";
+import { heatmapRankPrefixChips } from "@/lib/heatmap-rank-chip";
+import type { HeatmapTvGenre } from "@/lib/boards/tv-genre";
 import { CHANNEL_SHORT_LABEL } from "@/lib/posts/channels";
 import { summarizeHeadlineTitle } from "@/lib/news/headline-title";
 import { layoutHeatmapLeaves } from "@/lib/treemapLayout";
@@ -77,6 +78,7 @@ export function TreemapView({
   showChannelTags = false,
   showSourceCaptions = false,
   maxItems,
+  activeGenre = "all",
 }: {
   items: RankingEntity[];
   category: CategoryId;
@@ -91,6 +93,8 @@ export function TreemapView({
   showSourceCaptions?: boolean;
   /** Override default 20/15 caps (landing passes the full curated per-channel set). */
   maxItems?: number;
+  /** TV 시청률 submenu (드라마/예능/OTT) — painted as a rank badge chip. */
+  activeGenre?: HeatmapTvGenre;
 }) {
   const safeItems = Array.isArray(items) ? items : [];
   const router = useRouter();
@@ -247,14 +251,16 @@ export function TreemapView({
               : undefined;
           const showChannelTag = Boolean(channelTag) && w >= 56 && h >= 22;
           /** Landing unified map: category tag only — skip genre/platform chips. */
-          const prefixChip = showChannelTags
-            ? undefined
-            : heatmapRankPrefixChip(entity, {
+          const prefixChips = showChannelTags
+            ? []
+            : heatmapRankPrefixChips(entity, {
                 allowMenuCaption: showSourceCaptions,
+                activeGenre,
               });
           const sourceChipSize = Math.max(8, rankSize - 1.5);
-          /** Platform / region / agency / submenu chip immediately before the rank. */
-          const showPrefixChip = Boolean(prefixChip) && w >= 52 && h >= 22;
+          /** Channel + genre / platform / region chips immediately before the rank. */
+          const showPrefixChips = prefixChips.length > 0 && w >= 52 && h >= 22;
+          const prefixChipLabel = prefixChips.join(" ");
           const displayTitle = isHeadline
             ? summarizeHeadlineTitle(entity.name)
             : (label?.name ?? tile.title);
@@ -277,7 +283,7 @@ export function TreemapView({
           const headerRateSize = rankSize;
           const showTileRate = false;
           const href = entityHref(entity);
-          const chipCount = (showChannelTag ? 1 : 0) + (showPrefixChip ? 1 : 0);
+          const chipCount = (showChannelTag ? 1 : 0) + (showPrefixChips ? prefixChips.length : 0);
           const rankHeaderWidth = Math.min(
             chipCount > 0 || showHeaderRate ? 220 : 120,
             Math.max(56, w - 4),
@@ -292,7 +298,7 @@ export function TreemapView({
               href={href}
               prefetch={false}
               className="cursor-pointer"
-              aria-label={`${channelTag ? `${channelTag} ` : ""}${prefixChip && showPrefixChip ? `${prefixChip} ` : ""}${group} ${rankBadge} ${tile.title}${priceLabel ? ` ${priceLabel}` : ""}${showHeaderRate ? ` ${rate}` : ""}`}
+              aria-label={`${channelTag ? `${channelTag} ` : ""}${showPrefixChips ? `${prefixChipLabel} ` : ""}${group} ${rankBadge} ${tile.title}${priceLabel ? ` ${priceLabel}` : ""}${showHeaderRate ? ` ${rate}` : ""}`}
               data-heatmap-rank={rank}
               onPointerDown={() => {
                 router.prefetch(href);
@@ -348,15 +354,18 @@ export function TreemapView({
                           {channelTag}
                         </span>
                       ) : null}
-                      {showPrefixChip && prefixChip ? (
-                        <span
-                          className="max-w-[44%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
-                          style={{ fontSize: sourceChipSize, borderColor: "currentColor" }}
-                          title={prefixChip}
-                        >
-                          {prefixChip}
-                        </span>
-                      ) : null}
+                      {showPrefixChips
+                        ? prefixChips.map((chip) => (
+                            <span
+                              key={chip}
+                              className="max-w-[36%] truncate rounded-[3px] border px-1 py-px font-sans font-normal leading-none opacity-85"
+                              style={{ fontSize: sourceChipSize, borderColor: "currentColor" }}
+                              title={chip}
+                            >
+                              {chip}
+                            </span>
+                          ))
+                        : null}
                       <span
                         className="shrink-0 font-sans font-normal tabular-nums leading-none"
                         style={{ fontSize: rankSize }}

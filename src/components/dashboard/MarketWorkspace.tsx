@@ -244,16 +244,23 @@ export function MarketWorkspace({
   }, [filtered, timeframe, gender, age, region, showRegion, genre, showGenre, skipDemographicSkew]);
 
   const sortedItems = useMemo(() => {
-    const desktopCap = Math.max(1, Math.min(maxItems, TREEMAP_MAX_ITEMS));
+    // Drama LIVE tab always paints through rank 20 (desktop + mobile).
+    const dramaLiveCap = showGenre && genre === "drama" ? 20 : undefined;
+    const desktopCap = Math.max(
+      1,
+      Math.min(maxItems, dramaLiveCap ?? TREEMAP_MAX_ITEMS),
+    );
     // Landing curated set (showChannelTags): keep every per-channel top-4 tile on
     // mobile too — the 15-cap was dropping whole categories after global re-rank.
     const cap = showChannelTags
       ? Math.max(desktopCap, rankedPool.length)
-      : isMobileViewport
-        ? Math.max(1, Math.min(desktopCap, MOBILE_TREEMAP_MAX_ITEMS))
-        : desktopCap;
+      : dramaLiveCap
+        ? desktopCap
+        : isMobileViewport
+          ? Math.max(1, Math.min(desktopCap, MOBILE_TREEMAP_MAX_ITEMS))
+          : desktopCap;
     return rankedPool.slice(0, cap).map((item, index) => ({ ...item, rank: index + 1 }));
-  }, [rankedPool, maxItems, isMobileViewport, showChannelTags]);
+  }, [rankedPool, maxItems, isMobileViewport, showChannelTags, genre, showGenre]);
 
   const listItems = useMemo(() => {
     const listCap = isMobileViewport ? MOBILE_LIST_MAX_ITEMS : LIST_MAX_ITEMS;
@@ -495,7 +502,14 @@ export function MarketWorkspace({
                   layoutKey={demoKey}
                   showChannelTags={showChannelTags}
                   showSourceCaptions={Boolean(channel) && !boardSlug}
-                  maxItems={showChannelTags ? sortedItems.length : undefined}
+                  maxItems={
+                    showChannelTags
+                      ? sortedItems.length
+                      : showGenre && genre === "drama"
+                        ? 20
+                        : undefined
+                  }
+                  activeGenre={showGenre ? genre : "all"}
                 />
               </HeatmapErrorBoundary>
             </div>

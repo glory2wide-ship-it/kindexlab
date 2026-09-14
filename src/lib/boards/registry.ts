@@ -886,7 +886,7 @@ export const BOARDS: BoardDefinition[] = [
     queries: ["넷플릭스 인기 시리즈", "디즈니플러스 신작", "OTT 드라마 반응"],
     focusKeyword: "OTT 화제작",
     supportKeyword: "화제성 랭킹",
-    seeds: ["넷플릭스 신작", "티빙 오리지널", "디즈니+ 시리즈", "쿠팡플레이", "웨이브"],
+    seeds: ["폭싹 속았수다", "오징어 게임", "더 글로리", "무빙", "솔로지옥"],
     unitLabel: "작품",
   },
   {
