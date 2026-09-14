@@ -35,6 +35,7 @@ import type { PostChannel } from "@/lib/posts/types";
 import { canonicalizeGameEsportsName, platformForGame } from "@/lib/boards/game-platforms";
 import { ensureCelebrityRanking, isLikelyCelebrityName } from "@/lib/boards/celebrity";
 import { passesKpopTrotBoardFilter } from "@/lib/boards/trot";
+import { isLikelyTvProgramName } from "@/lib/boards/tv-program";
 import {
   ensureCultureGrantRanking,
   isCultureGrantBoard,
@@ -508,14 +509,32 @@ export function buildHeatmapItems({
           if (!isLikelyPoliticalPunditName(item.name ?? "")) return false;
         }
         if (item.tags?.includes(selected.slug)) {
+          if (
+            selected.slug === "realtime-tv-ratings" ||
+            selected.slug === "variety-hot-minute"
+          ) {
+            return isLikelyTvProgramName(item.name ?? "");
+          }
           return passesKpopTrotBoardFilter(selected.slug, item.name);
         }
         if (item.slug?.startsWith(`${selected.slug}--`)) {
+          if (
+            selected.slug === "realtime-tv-ratings" ||
+            selected.slug === "variety-hot-minute"
+          ) {
+            return isLikelyTvProgramName(item.name ?? "");
+          }
           return passesKpopTrotBoardFilter(selected.slug, item.name);
         }
         if (typeSet.size && typeSet.has(item.type)) {
           if (selected.slug === "star-reputation-index") {
             return isLikelyCelebrityName(item.name);
+          }
+          if (
+            selected.slug === "realtime-tv-ratings" ||
+            selected.slug === "variety-hot-minute"
+          ) {
+            return isLikelyTvProgramName(item.name ?? "");
           }
           return passesKpopTrotBoardFilter(selected.slug, item.name);
         }

@@ -14,6 +14,7 @@ import {
   isLikelyTrotArtist,
   passesKpopTrotBoardFilter,
 } from "@/lib/boards/trot";
+import { isLikelyTvProgramName } from "@/lib/boards/tv-program";
 import { rankLimitForBoard } from "@/lib/boards/limits";
 import {
   HEATMAP_SCREEN_LIVE_CAP,
@@ -84,6 +85,9 @@ function itemToRankEntry(
 function passesBoardLiveFilter(def: BoardDefinition, item: RankingEntity): boolean {
   if (def.slug === "star-reputation-index" || item.type === "celebrity") {
     return isLikelyCelebrityName(item.name);
+  }
+  if (def.slug === "realtime-tv-ratings" || def.slug === "variety-hot-minute") {
+    return isLikelyTvProgramName(item.name);
   }
   if (def.slug === "political-pundit-ranking") {
     if (matchPoliticsYoutubeSeed(item.name)?.influencer) return false;

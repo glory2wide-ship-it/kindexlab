@@ -1,6 +1,7 @@
 import { catalogEntries, matchCatalog } from "@/lib/ingestion/catalog";
 import { isLikelyCelebrityName } from "@/lib/boards/celebrity";
 import { isLikelyTrotArtist } from "@/lib/boards/trot";
+import { isLikelyTvProgramName } from "@/lib/boards/tv-program";
 import { fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
 import { isAllowedKrEnEntityName, namesOverlap, normalizeName } from "@/lib/ingestion/names";
 import { parseNumber, parseRssItems } from "@/lib/ingestion/parse";
@@ -209,7 +210,10 @@ export function classifyBuzzType(name: string, tags: string[]): EntityType {
   if (/스팀|PC 게임|동접/.test(blob)) return "pc_game";
   if (/PS5|플레이스테이션|닌텐도|Xbox|콘솔 게임/.test(blob)) return "console_game";
   if (/유튜버|인플루언서|스트리머|BJ|크리에이터/.test(blob)) return "influencer";
-  if (/예능|드라마|방송|뉴스/.test(blob)) return "tv_show";
+  if (/예능|드라마|방송|뉴스/.test(blob)) {
+    // Trends often tags retail/corp under “방송” — only keep programme-shaped titles.
+    return isLikelyTvProgramName(name) ? "tv_show" : "headline_news";
+  }
   if (/영화|박스오피스|개봉작|극장/.test(blob)) return "movie";
   if (/아이돌|K-?POP|걸그룹|보이그룹/.test(blob)) return "kpop";
   if (/트로트|미스터트롯|미스트롯|성인가요|가요무대|7080|트롯/.test(blob) || isLikelyTrotArtist(name)) {
@@ -218,7 +222,9 @@ export function classifyBuzzType(name: string, tags: string[]): EntityType {
   if (/배우|연예인|스타 평판/.test(blob) && isLikelyCelebrityName(name)) return "celebrity";
   // Person-shaped Hangul names only — never dump Trends noise into celebrity.
   if (isLikelyCelebrityName(name)) return "celebrity";
-  return "tv_show";
+  // Unknown Trends topics used to default to tv_show and flood TV 시청률.
+  if (isLikelyTvProgramName(name) && name.length <= 16) return "tv_show";
+  return "headline_news";
 }
 
 export async function fetchBuzzSources(): Promise<SourceResult[]> {

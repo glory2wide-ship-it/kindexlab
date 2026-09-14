@@ -293,6 +293,8 @@ function toEntity(
     }
   }
   // Native API charts: stamp live-chart + board slug + sourceChannel for overlays.
+  // tv_show from Google Trends buzz must NOT inherit the TV 시청률 board stamp —
+  // only Nielsen cable/terrestrial rows (tags 닐슨|지상파|케이블) may.
   let nativeSourceChannel: PostChannel | undefined;
   let nativeHeatmapGroup: string | undefined;
   if (isNativeChartEntityType(knownType)) {
@@ -309,11 +311,18 @@ function toEntity(
       trot: "trot-kayo-fandom-power",
     };
     const boardSlug = typeToBoard[knownType];
-    if (boardSlug && !tags.includes(boardSlug)) tags.unshift(boardSlug);
-    if (!tags.includes("live-chart")) tags.push("live-chart");
+    const nielsenBackedTvShow =
+      knownType === "tv_show" &&
+      tags.some((tag) => /닐슨|지상파|케이블/.test(tag));
+    const allowBoardStamp =
+      knownType !== "tv_show" || nielsenBackedTvShow;
+    if (boardSlug && allowBoardStamp && !tags.includes(boardSlug)) tags.unshift(boardSlug);
+    if (allowBoardStamp && !tags.includes("live-chart")) tags.push("live-chart");
     if (tags.length > 5) tags.length = 5;
-    nativeSourceChannel = (boardSlug && channelForBoardSlug(boardSlug)) || "entertainment";
-    nativeHeatmapGroup = boardSlug ? heatmapGroupForBoardSlug(boardSlug) : undefined;
+    if (allowBoardStamp) {
+      nativeSourceChannel = (boardSlug && channelForBoardSlug(boardSlug)) || "entertainment";
+      nativeHeatmapGroup = boardSlug ? heatmapGroupForBoardSlug(boardSlug) : undefined;
+    }
   }
 
   const boardFromTag = tags.map((tag) => getBoard(tag)?.shortTitle).find(Boolean);
