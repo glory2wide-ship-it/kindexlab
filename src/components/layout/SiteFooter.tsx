@@ -59,8 +59,7 @@ export function SiteFooter() {
                   href="/admin"
                   className="inline-flex shrink-0 items-center rounded-md border border-line bg-board px-2 py-0.5 text-[11px] font-medium leading-none text-ink hover:bg-panel sm:px-2.5 sm:py-1 sm:text-[13.8px]"
                 >
-                  <span className="sm:hidden">Admin</span>
-                  <span className="hidden sm:inline">{SITE.name} Admin</span>
+                  {SITE.name} Admin
                 </Link>
               </span>
               <br />
