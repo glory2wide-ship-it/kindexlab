@@ -85,8 +85,13 @@ export function CategorySubNav({
       {CHANNEL_SECTIONS.map((item) => {
         const href = channel ? channelSectionHref(channel, item.id) : siteSectionHref(item.id);
         const isActive = item.id === active;
-        // Mobile: 소개 is short — size to content so longer tabs get breathing room.
-        const isCompactMobile = embedded && item.id === "about";
+        // Mobile width roles: short tabs hug content; long magazine tab gets extra inset.
+        const mobileWidthClass =
+          item.id === "about" || item.id === "board"
+            ? "shrink-0 px-2"
+            : item.id === "archive"
+              ? "min-w-0 flex-[1.2] px-2"
+              : "min-w-0 flex-1 px-1.5";
         return (
           <Link
             key={item.id}
@@ -97,11 +102,7 @@ export function CategorySubNav({
             }}
             title={item.description}
             className={`${chipBase} ${
-              embedded
-                ? isCompactMobile
-                  ? "shrink-0 px-2"
-                  : "min-w-0 flex-1 px-1.5"
-                : "shrink-0 px-2.5 md:px-3"
+              embedded ? mobileWidthClass : "shrink-0 px-2.5 md:px-3"
             } ${
               isActive
                 ? "border-accent bg-accent font-semibold text-black"
