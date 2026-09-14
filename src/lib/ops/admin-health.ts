@@ -21,7 +21,8 @@ export interface WebHealthCheck {
 
 export interface WebHealthStatus {
   checkedAt: string;
-  windowHours: 6;
+  /** Admin page polls this board every 3h; evaluation still uses a 6h freshness window. */
+  windowHours: 3;
   level: HealthLevel;
   checks: WebHealthCheck[];
   trends: TrendsHealthReport;
@@ -130,7 +131,7 @@ export async function evaluateWebHealth(): Promise<WebHealthStatus> {
 
   return {
     checkedAt: new Date().toISOString(),
-    windowHours: 6,
+    windowHours: 3,
     level: worst(checks.map((check) => check.level)),
     checks,
     trends,

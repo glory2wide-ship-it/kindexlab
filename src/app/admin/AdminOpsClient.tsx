@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { AdminDashboardPayload } from "@/lib/ops/admin-dashboard";
+import {
+  ADMIN_REFRESH_SCHEDULE,
+  type AdminDashboardPayload,
+} from "@/lib/ops/admin-dashboard";
 
 function levelClass(level: string): string {
   if (level === "ok") return "text-emerald-700 bg-emerald-50 border-emerald-200";
@@ -25,14 +28,74 @@ function pct(n: number): string {
   return `${Math.round(n * 100)}%`;
 }
 
+function formatKst(iso: string): string {
+  return new Date(iso).toLocaleString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
+function formatKstDate(editionDate: string): string {
+  const [y, m, d] = editionDate.split("-").map(Number);
+  if (!y || !m || !d) return editionDate;
+  const dt = new Date(Date.UTC(y, m - 1, d, 3, 0, 0));
+  return dt.toLocaleDateString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
+}
+
+/** Milliseconds until the next KST wall-clock hour:minute (today or tomorrow). */
+function msUntilNextKstTime(hour: number, minute: number): number {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const pick = (type: string) =>
+    Number(parts.find((part) => part.type === type)?.value ?? "0");
+  const y = pick("year");
+  const mo = pick("month");
+  const d = pick("day");
+  const h = pick("hour");
+  const mi = pick("minute");
+  const s = pick("second");
+
+  const nowUtcMs = Date.now();
+  const asIfLocal = Date.UTC(y, mo - 1, d, h, mi, s);
+  const kstOffsetMs = asIfLocal - nowUtcMs;
+
+  let targetUtc = Date.UTC(y, mo - 1, d, hour, minute, 0) - kstOffsetMs;
+  if (targetUtc <= nowUtcMs + 500) {
+    targetUtc += 24 * 60 * 60 * 1000;
+  }
+  return Math.max(1_000, targetUtc - nowUtcMs);
+}
+
 function Section({
   title,
   subtitle,
+  meta,
   level,
   children,
 }: {
   title: string;
   subtitle: string;
+  meta?: string;
   level?: string;
   children: React.ReactNode;
 }) {
@@ -42,6 +105,7 @@ function Section({
         <div>
           <h2 className="text-lg font-semibold text-ink">{title}</h2>
           <p className="mt-1 text-sm text-muted">{subtitle}</p>
+          {meta ? <p className="mt-1 text-xs text-muted">{meta}</p> : null}
         </div>
         {level ? <LevelBadge level={level} /> : null}
       </div>
@@ -50,29 +114,133 @@ function Section({
   );
 }
 
+type SectionKey = "daily" | "webHealth" | "liveFill";
+
 export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) {
   const router = useRouter();
   const [data, setData] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [sectionUpdatedAt, setSectionUpdatedAt] = useState({
+    daily: initial.daily.updatedAt,
+    webHealth: initial.webHealth.updatedAt,
+    liveFill: initial.liveFill.updatedAt,
+  });
+  const editionRef = useRef(initial.editionDate);
+  editionRef.current = data.editionDate;
 
-  const refresh = useCallback(() => {
+  const fetchPayload = useCallback(async (): Promise<AdminDashboardPayload | null> => {
+    const res = await fetch(`/api/admin/ops?date=${encodeURIComponent(editionRef.current)}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      setError(`새로고침 실패 (${res.status})`);
+      return null;
+    }
+    return (await res.json()) as AdminDashboardPayload;
+  }, []);
+
+  const refreshSection = useCallback(
+    (key: SectionKey) => {
+      startTransition(async () => {
+        setError(null);
+        try {
+          const next = await fetchPayload();
+          if (!next) return;
+          setData((prev) => {
+            if (key === "daily") {
+              return {
+                ...prev,
+                generatedAt: next.generatedAt,
+                editionDate: next.editionDate,
+                daily: next.daily,
+                schedule: next.schedule,
+              };
+            }
+            if (key === "webHealth") {
+              return {
+                ...prev,
+                generatedAt: next.generatedAt,
+                webHealth: next.webHealth,
+              };
+            }
+            return {
+              ...prev,
+              generatedAt: next.generatedAt,
+              liveFill: next.liveFill,
+            };
+          });
+          setSectionUpdatedAt((prev) => ({
+            ...prev,
+            [key]:
+              key === "daily"
+                ? next.daily.updatedAt
+                : key === "webHealth"
+                  ? next.webHealth.updatedAt
+                  : next.liveFill.updatedAt,
+          }));
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "네트워크 오류");
+        }
+      });
+    },
+    [fetchPayload],
+  );
+
+  const refreshAll = useCallback(() => {
     startTransition(async () => {
       setError(null);
       try {
-        const res = await fetch(`/api/admin/ops?date=${encodeURIComponent(data.editionDate)}`, {
-          cache: "no-store",
+        const next = await fetchPayload();
+        if (!next) return;
+        setData(next);
+        setSectionUpdatedAt({
+          daily: next.daily.updatedAt,
+          webHealth: next.webHealth.updatedAt,
+          liveFill: next.liveFill.updatedAt,
         });
-        if (!res.ok) {
-          setError(`새로고침 실패 (${res.status})`);
-          return;
-        }
-        setData((await res.json()) as AdminDashboardPayload);
       } catch (err) {
         setError(err instanceof Error ? err.message : "네트워크 오류");
       }
     });
-  }, [data.editionDate]);
+  }, [fetchPayload]);
+
+  // Daily cost board — fire at 11:10 KST every day.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleNext = () => {
+      const wait = msUntilNextKstTime(
+        ADMIN_REFRESH_SCHEDULE.daily.hourKst,
+        ADMIN_REFRESH_SCHEDULE.daily.minuteKst,
+      );
+      timer = setTimeout(() => {
+        refreshSection("daily");
+        scheduleNext();
+      }, wait);
+    };
+    scheduleNext();
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [refreshSection]);
+
+  // Heatmap LIVE fill — every 30 minutes.
+  useEffect(() => {
+    const id = setInterval(
+      () => refreshSection("liveFill"),
+      ADMIN_REFRESH_SCHEDULE.liveFill.everyMs,
+    );
+    return () => clearInterval(id);
+  }, [refreshSection]);
+
+  // Web bottleneck / loading / landing — every 3 hours.
+  useEffect(() => {
+    const id = setInterval(
+      () => refreshSection("webHealth"),
+      ADMIN_REFRESH_SCHEDULE.webHealth.everyMs,
+    );
+    return () => clearInterval(id);
+  }, [refreshSection]);
 
   const logout = useCallback(() => {
     startTransition(async () => {
@@ -82,7 +250,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
     });
   }, [router]);
 
-  const { daily, traffic, webHealth, liveFill } = data;
+  const { daily, traffic, webHealth, liveFill, schedule } = data;
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-10 sm:px-6">
@@ -93,7 +261,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={refresh}
+              onClick={refreshAll}
               disabled={pending}
               className="rounded-lg border border-line bg-panel px-3 py-1.5 text-sm text-ink hover:bg-board disabled:opacity-50"
             >
@@ -110,8 +278,8 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
           </div>
         </div>
         <p className="mt-2 text-sm text-muted">
-          KST {data.editionDate} · 측정{" "}
-          {new Date(data.generatedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}
+          기준일 {formatKstDate(data.editionDate)} ({data.editionDate}) · 페이지 측정{" "}
+          {formatKst(data.generatedAt)}
         </p>
         <p className="mt-1 text-sm text-muted">
           웹 URL:{" "}
@@ -193,7 +361,8 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
 
       <Section
         title="일일 생성 · 비용"
-        subtitle="브리핑·히트맵 분석 성공/실패와 Gemini API 추정 비용. 보드 갱신 비용은 별도."
+        subtitle={`브리핑·히트맵 분석 성공/실패와 Gemini API 추정 비용. 보드 갱신 비용은 별도. · 자동 갱신 ${schedule.daily.label}`}
+        meta={`기준일 ${formatKstDate(daily.dateLabel)} (${daily.dateLabel}) · 마지막 업데이트 ${formatKst(sectionUpdatedAt.daily)}`}
       >
         {!daily.hasData ? (
           <p className="rounded-lg border border-dashed border-line bg-panel px-4 py-6 text-sm text-muted">
@@ -229,8 +398,9 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
 
       <Section
         title="웹 병목 · 로딩 · 랜딩"
-        subtitle="약 6시간 창 — 트렌드 스냅샷, 랜딩 캐시, published 보드 TTL."
+        subtitle={`트렌드 스냅샷, 랜딩 캐시, published 보드 TTL. · 자동 갱신 ${schedule.webHealth.label}`}
         level={webHealth.level}
+        meta={`마지막 업데이트 ${formatKst(sectionUpdatedAt.webHealth)}`}
       >
         <ul className="space-y-2">
           {webHealth.checks.map((check) => (
@@ -250,8 +420,9 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
 
       <Section
         title="히트맵 LIVE 채움"
-        subtitle="약 1시간 창 — 카테고리별 화면 헤드 LIVE 비율 (스냅샷·오버레이 기준)."
+        subtitle={`카테고리별 화면 헤드 LIVE 비율 (스냅샷·오버레이 기준). · 자동 갱신 ${schedule.liveFill.label}`}
         level={liveFill.level}
+        meta={`마지막 업데이트 ${formatKst(sectionUpdatedAt.liveFill)}`}
       >
         <p className="mb-4 text-sm text-muted">
           스냅샷 {liveFill.snapshotItems.toLocaleString("ko-KR")}항목

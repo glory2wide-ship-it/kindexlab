@@ -51,21 +51,23 @@ export function SiteFooter() {
             <p className="mt-2 text-muted sm:leading-6">
               {SITE.companyShort}
               <br />
-              {SITE.name} ({SITE.nameKo})
+              <span className="inline-flex flex-wrap items-center gap-2">
+                <span>
+                  {SITE.name} ({SITE.nameKo})
+                </span>
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center rounded-md border border-line bg-board px-2.5 py-1 text-[12.65px] font-medium leading-none text-ink hover:bg-panel sm:text-[13.8px]"
+                >
+                  {SITE.name} Admin
+                </Link>
+              </span>
               <br />
               {SITE.domain}
               <br />
               <a href={`mailto:${SITE.contactEmail}`} className="break-all hover:text-ink">
                 {SITE.contactEmail}
               </a>
-            </p>
-            <p className="mt-3">
-              <Link
-                href="/admin"
-                className="inline-flex items-center rounded-md border border-line bg-board px-2.5 py-1 text-[11px] font-medium text-ink hover:bg-panel sm:text-xs"
-              >
-                KinDex Admin
-              </Link>
             </p>
           </div>
         </div>
