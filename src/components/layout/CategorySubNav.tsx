@@ -85,6 +85,8 @@ export function CategorySubNav({
       {CHANNEL_SECTIONS.map((item) => {
         const href = channel ? channelSectionHref(channel, item.id) : siteSectionHref(item.id);
         const isActive = item.id === active;
+        // Mobile: 소개 is short — size to content so longer tabs get breathing room.
+        const isCompactMobile = embedded && item.id === "about";
         return (
           <Link
             key={item.id}
@@ -95,7 +97,11 @@ export function CategorySubNav({
             }}
             title={item.description}
             className={`${chipBase} ${
-              embedded ? "min-w-0 flex-1 px-1.5" : "shrink-0 px-2.5 md:px-3"
+              embedded
+                ? isCompactMobile
+                  ? "shrink-0 px-2"
+                  : "min-w-0 flex-1 px-1.5"
+                : "shrink-0 px-2.5 md:px-3"
             } ${
               isActive
                 ? "border-accent bg-accent font-semibold text-black"
