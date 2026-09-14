@@ -15,6 +15,419 @@
   "model": "gemini-3.6-flash",
   "notes": [
     "Backfilled from Daily briefings CI run 34776366509 (KST 2026-09-14 edition).",
-    "Gemini Batch · promptTokens=639177 · completionTokens=325571 · USD≈$1.7003 · FX 1,400."
+    "Gemini Batch · promptTokens=639177 · completionTokens=325571 · USD≈$1.7003 · FX 1,400.",
+    "Items backfilled from src/data/briefings/extra.json (editionDate=2026-09-14); cost allocated evenly across ok rows."
+  ],
+  "items": [
+    {
+      "name": "도심 속 자연 휴식처 한밭수목원 가을 방문 가이드",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "travel · deep-dive"
+    },
+    {
+      "name": "2026년 근로자 휴가지원사업 혜택과 주요 활용 포인트",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "travel · deep-dive"
+    },
+    {
+      "name": "필리핀 세부 여행 프로모션과 항공망 연계로 보는 가을 휴양 트렌드",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "travel · deep-dive"
+    },
+    {
+      "name": "방송과 미식계에서 재조명받은 진주 냉면의 조리법과 지역 특색",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "travel · deep-dive"
+    },
+    {
+      "name": "백제의 고도에서 만나는 가을 성곽길, 공주 공산성 여행 가이드",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "travel · deep-dive"
+    },
+    {
+      "name": "2026년 9월 송도 센트럴파크 K-컬처 축제 개최와 도심 휴양 현황",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "main",
+      "meta": "travel · main"
+    },
+    {
+      "name": "2026년 보수 정계 행보로 본 홍준표 이슈 핵심 흐름과 지지도 분석",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive"
+    },
+    {
+      "name": "여의도 30년 분석의 파급력과 박성민 (정치컨설턴트) 이슈 조명",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive"
+    },
+    {
+      "name": "2026년 9월 장성민의 시사탱크 이슈 재조명과 최근 정치 평론 분석",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive"
+    },
+    {
+      "name": "2026년 9월 국내외 대선 이슈 분석과 주요국 정치 향방",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive"
+    },
+    {
+      "name": "2026년 9월 더불어민주당 이슈 정당 지지도 분석과 야권 연대 향방",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive"
+    },
+    {
+      "name": "세종시 지역화폐 재편과 여민전 이슈의 핵심 정리",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive"
+    },
+    {
+      "name": "2026년 하반기 난방비 대비 에너지바우처 이슈 및 지자체별 신청 일정 정리",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive"
+    },
+    {
+      "name": "2026년 추석 전 조기 지급되는 자녀장려금 이슈 내용 정리",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "main",
+      "meta": "politics · main"
+    },
+    {
+      "name": "2026년 가요계 흐름 속 태진아 이슈의 전말과 향후 활동 전망",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive"
+    },
+    {
+      "name": "2026년 9월 방송 재편성과 화보 화제성으로 본 변우석 이슈 분석",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive"
+    },
+    {
+      "name": "2026년 무협 웹툰 시장의 각색 흐름과 북검전기 이슈 재조명",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive"
+    },
+    {
+      "name": "2026년 9월 정규 편성된 민주당 '민티07' 라이브 방송의 출범과 파급 효과",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive"
+    },
+    {
+      "name": "2026년 9월 음원 차트를 휩쓴 아이유 이슈와 신곡의 메시지",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive"
+    },
+    {
+      "name": "2026년 글로벌 K-POP 성과와 ATEEZ (에이티즈) 이슈 분석",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive"
+    },
+    {
+      "name": "한반도 배경 게임 잔혹성 논란과 Warfare II 이슈 재조명",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive"
+    },
+    {
+      "name": "2026년 글로벌 스타 섭외와 문명특급 이슈 분석",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive"
+    },
+    {
+      "name": "2026년 9월 에스파 리믹스 경연 결과와 Whiplash 이슈 분석",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "main",
+      "meta": "entertainment · main"
+    },
+    {
+      "name": "1061만 돌파한 영화 '오디세이 이슈' 분석과 2026년 추석 극장가 흥행 전망",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive"
+    },
+    {
+      "name": "2026년 외식 창업시장 진단, 프랜차이즈 비용 절감과 자동화 트렌드",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive"
+    },
+    {
+      "name": "2026년 9월 예금금리 3%대 재진입과 코픽스 공시 전 대출 시장 변화",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive"
+    },
+    {
+      "name": "퀄컴과 AI 칩 대형 계약 체결한 아마존, 빅테크 동향 분석",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive"
+    },
+    {
+      "name": "SK하이닉스 9월 개인 순매도 전환과 ADR 변동성 분석",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive"
+    },
+    {
+      "name": "2026년 원두 원가 압박 속 커피값 인상 추세와 소비 대응 전략",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive"
+    },
+    {
+      "name": "2026년 제주로형동호반베르디움 입지 환경과 청약 정보 점검",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive"
+    },
+    {
+      "name": "2026년 부모급여 자동 신청과 양육 지원 혜택 현황 분석",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive"
+    },
+    {
+      "name": "2026년 9월 SK하이닉스 환율 급락과 실적 전망 및 임단협 쟁점 진단",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "main",
+      "meta": "economy · main"
+    },
+    {
+      "name": "2026년 9월 미국 공급 보고서 발표를 앞둔 옥수수 시세 동향",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive"
+    },
+    {
+      "name": "2026년 추석 밥상과 방송 레시피로 본 불고기 활용 트렌드",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive"
+    },
+    {
+      "name": "[문화 브리핑] 성남 무대를 적신 뮤지컬 위키드 성남 기록과 관람 흐름",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive"
+    },
+    {
+      "name": "2026년 9월 건강검진 미디어 노출 논란과 수검자 확인 사항",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive"
+    },
+    {
+      "name": "대만관 논란과 현대미술 이슈, 부산비엔날레 본전시의 화제성 분석",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive"
+    },
+    {
+      "name": "2026년 하반기 무대를 뜨겁게 달군 핏빛 판타지 무대의 화제성 분석",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "main",
+      "meta": "culture · main"
+    },
+    {
+      "name": "2026년 하반기 문화누리카드 잔액 소진 이벤트 및 활용 가이드",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive"
+    },
+    {
+      "name": "2026년 9월 100대 한정판 아우디 A6 블랙 에디션 출시와 주요 특징",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 58.06,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive"
+    },
+    {
+      "name": "세네카, 오늘을 빼앗기고 있는 당신에게 1위 복귀가 보여준 인문학 열풍",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 57.98,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive"
+    }
   ]
 }

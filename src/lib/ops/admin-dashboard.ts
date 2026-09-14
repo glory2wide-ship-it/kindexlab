@@ -51,6 +51,14 @@ export async function buildAdminDashboard(editionDate?: string) {
       dateLabel: daily.editionDate,
       /** Latest digest write time, else this dashboard build. */
       updatedAt: latestDigestAt(digests) ?? generatedAt,
+      byCategory: daily.byCategory.map((row) => ({
+        ...row,
+        estimatedKrwLabel: formatKrw(row.estimatedKrw),
+      })),
+      byItem: daily.byItem.map((row) => ({
+        ...row,
+        estimatedKrwLabel: formatKrw(row.estimatedKrw),
+      })),
     },
     traffic,
     webHealth: {

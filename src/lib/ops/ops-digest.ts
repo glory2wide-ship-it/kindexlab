@@ -1,9 +1,33 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { GeminiUsageSnapshot } from "@/lib/ops/gemini-usage";
-import { countByStatus, type GenerationReport } from "@/lib/ops/generation-report";
+import {
+  countByStatus,
+  type GenerationReport,
+  type GenerationReportRow,
+  type ReportRowStatus,
+} from "@/lib/ops/generation-report";
+import { isPostChannel, POST_CHANNELS } from "@/lib/posts/channels";
 
 export type OpsDigestKind = "briefings" | "heatmap-analysis" | "board-refresh";
+
+export interface OpsDigestItem {
+  /** Article / keyword title. */
+  name: string;
+  /** Channel id when known (entertainment, politics, …). */
+  category: string;
+  /** Korean label for admin tables. */
+  categoryLabel: string;
+  status: ReportRowStatus;
+  /** Allocated Gemini API cost in KRW for this row. */
+  estimatedKrw: number;
+  /** briefings | heatmap-analysis */
+  pipeline: string;
+  /** deep-dive / main / boardSlug, etc. */
+  kind?: string;
+  meta?: string;
+  reason?: string;
+}
 
 export interface OpsDigest {
   kind: OpsDigestKind;
@@ -23,10 +47,25 @@ export interface OpsDigest {
   notes?: string[];
   /** Board refresh: how many boards were refreshed this run. */
   boardsRefreshed?: number;
+  /** Per-article rows for admin 글별 / 카테고리별 tables. */
+  items?: OpsDigestItem[];
+}
+
+export interface OpsCategorySummary {
+  category: string;
+  categoryLabel: string;
+  ok: number;
+  fail: number;
+  skip: number;
+  estimatedKrw: number;
 }
 
 const OPS_DAILY_DIR = path.join(process.cwd(), "src", "data", "ops", "daily");
 const ARTIFACTS_DIR = path.join(process.cwd(), "artifacts", "generation-reports");
+
+const CHANNEL_LABEL: Record<string, string> = Object.fromEntries(
+  POST_CHANNELS.map((row) => [row.id, row.label]),
+);
 
 function kstToday(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -35,6 +74,91 @@ function kstToday(): string {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+}
+
+export function categoryLabelFor(category: string): string {
+  if (CHANNEL_LABEL[category]) return CHANNEL_LABEL[category]!;
+  if (category === "unknown" || !category) return "미분류";
+  return category;
+}
+
+/**
+ * Parse channel (+ optional kind) from generation-report meta.
+ * Heatmap: `culture/bestseller-surge-index`
+ * Briefings: `entertainment · deep-dive · 엔터 데스크`
+ */
+export function parseItemCategory(meta?: string): { category: string; kind?: string } {
+  if (!meta?.trim()) return { category: "unknown" };
+  const trimmed = meta.trim();
+  if (trimmed.includes("/")) {
+    const [channel, ...rest] = trimmed.split("/");
+    const category = channel?.trim() || "unknown";
+    return {
+      category: isPostChannel(category) ? category : category || "unknown",
+      kind: rest.join("/") || undefined,
+    };
+  }
+  if (trimmed.includes(" · ")) {
+    const parts = trimmed.split(" · ").map((part) => part.trim()).filter(Boolean);
+    const category = parts[0] || "unknown";
+    return {
+      category: isPostChannel(category) ? category : category,
+      kind: parts[1],
+    };
+  }
+  if (isPostChannel(trimmed)) return { category: trimmed };
+  return { category: "unknown", kind: trimmed };
+}
+
+function allocateItemCosts(
+  rows: GenerationReportRow[],
+  totalKrw: number,
+): number[] {
+  const weights = rows.map((row) => {
+    if (row.status === "skip") return 0;
+    if (typeof row.costUsd === "number" && row.costUsd > 0) return row.costUsd;
+    return 1;
+  });
+  const weightSum = weights.reduce((acc, weight) => acc + weight, 0);
+  if (weightSum <= 0 || totalKrw <= 0) return rows.map(() => 0);
+
+  const raw = weights.map((weight) => (weight / weightSum) * totalKrw);
+  const rounded = raw.map((value) => Math.round(value * 100) / 100);
+  // Fix rounding drift on the last billable row.
+  const billableIdx = rows
+    .map((row, index) => (row.status === "skip" ? -1 : index))
+    .filter((index) => index >= 0);
+  if (billableIdx.length) {
+    const last = billableIdx[billableIdx.length - 1]!;
+    const drift =
+      Math.round((totalKrw - rounded.reduce((acc, value) => acc + value, 0)) * 100) / 100;
+    rounded[last] = Math.round(((rounded[last] ?? 0) + drift) * 100) / 100;
+  }
+  return rounded;
+}
+
+export function itemsFromGenerationReport(
+  report: GenerationReport,
+  kind: OpsDigestKind,
+): OpsDigestItem[] {
+  if (kind === "board-refresh") return [];
+  const rows = report.sections.flatMap((section) => section.rows);
+  const totalKrw = report.cost?.estimatedKrw ?? 0;
+  const costs = allocateItemCosts(rows, totalKrw);
+  return rows.map((row, index) => {
+    const parsed = parseItemCategory(row.meta);
+    return {
+      name: row.name,
+      category: parsed.category,
+      categoryLabel: categoryLabelFor(parsed.category),
+      status: row.status,
+      estimatedKrw: costs[index] ?? 0,
+      pipeline: kind,
+      kind: parsed.kind,
+      meta: row.meta,
+      reason: row.reason,
+    };
+  });
 }
 
 export function digestFromGenerationReport(
@@ -60,6 +184,7 @@ export function digestFromGenerationReport(
     calls: cost?.calls ?? 0,
     model: cost?.model,
     notes: report.notes,
+    items: itemsFromGenerationReport(report, kind),
   };
 }
 
@@ -128,11 +253,12 @@ async function loadDigestsFromDir(dir: string, editionDate: string): Promise<Ops
     }
     if ("pipeline" in parsed && "sections" in parsed) {
       const report = parsed as GenerationReport;
-      const kind: OpsDigestKind = report.pipeline.includes("heatmap")
-        ? "heatmap-analysis"
-        : report.pipeline.includes("board")
-          ? "board-refresh"
-          : "briefings";
+      const kind: OpsDigestKind =
+        report.pipeline.includes("heatmap")
+          ? "heatmap-analysis"
+          : report.pipeline.includes("board")
+            ? "board-refresh"
+            : "briefings";
       out.push(digestFromGenerationReport(report, kind));
     }
   }
@@ -150,11 +276,58 @@ export async function loadOpsDigestsForDate(editionDate = kstToday()): Promise<O
   return [...byKey.values()].sort((a, b) => b.generatedAt.localeCompare(a.generatedAt));
 }
 
+function rollupCategories(items: OpsDigestItem[]): OpsCategorySummary[] {
+  const map = new Map<string, OpsCategorySummary>();
+  for (const item of items) {
+    const key = item.category || "unknown";
+    const current = map.get(key) ?? {
+      category: key,
+      categoryLabel: item.categoryLabel || categoryLabelFor(key),
+      ok: 0,
+      fail: 0,
+      skip: 0,
+      estimatedKrw: 0,
+    };
+    if (item.status === "ok") current.ok += 1;
+    else if (item.status === "fail") current.fail += 1;
+    else current.skip += 1;
+    current.estimatedKrw = Math.round((current.estimatedKrw + item.estimatedKrw) * 100) / 100;
+    map.set(key, current);
+  }
+  const channelOrder = POST_CHANNELS.map((row) => row.id);
+  return [...map.values()].sort((a, b) => {
+    const ai = channelOrder.indexOf(a.category as (typeof channelOrder)[number]);
+    const bi = channelOrder.indexOf(b.category as (typeof channelOrder)[number]);
+    const aRank = ai === -1 ? 999 : ai;
+    const bRank = bi === -1 ? 999 : bi;
+    if (aRank !== bRank) return aRank - bRank;
+    return b.estimatedKrw - a.estimatedKrw;
+  });
+}
+
 export function summarizeDay(digests: OpsDigest[]) {
   const generation = digests.filter((row) => row.kind !== "board-refresh");
   const boards = digests.filter((row) => row.kind === "board-refresh");
   const sum = (rows: OpsDigest[], pick: (row: OpsDigest) => number) =>
     rows.reduce((acc, row) => acc + pick(row), 0);
+
+  const items = generation.flatMap((digest) =>
+    (digest.items ?? []).map((item) => ({
+      ...item,
+      pipeline: item.pipeline || digest.kind,
+      categoryLabel: item.categoryLabel || categoryLabelFor(item.category),
+    })),
+  );
+
+  // Prefer higher-cost / fail rows first for ops scanning.
+  const byItem = [...items].sort((a, b) => {
+    if (a.status !== b.status) {
+      const rank = { fail: 0, ok: 1, skip: 2 } as const;
+      return rank[a.status] - rank[b.status];
+    }
+    return b.estimatedKrw - a.estimatedKrw || a.name.localeCompare(b.name, "ko");
+  });
+
   return {
     editionDate: digests[0]?.editionDate ?? kstToday(),
     generationOk: sum(generation, (row) => row.ok),
@@ -165,6 +338,8 @@ export function summarizeDay(digests: OpsDigest[]) {
     boardRefreshOk: sum(boards, (row) => row.ok),
     boardRefreshFail: sum(boards, (row) => row.fail),
     boardsRefreshed: sum(boards, (row) => row.boardsRefreshed ?? row.ok),
+    byItem,
+    byCategory: rollupCategories(byItem),
     digests,
   };
 }

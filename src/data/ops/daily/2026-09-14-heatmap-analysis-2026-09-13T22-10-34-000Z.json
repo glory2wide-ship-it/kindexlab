@@ -16,6 +16,1879 @@
   "notes": [
     "Backfilled from Heatmap today's analysis CI run 34779728223.",
     "Job summary generated=170 skipped=16 failed=1; token ledger from 171 premium-article lines.",
-    "Gemini Batch · promptTokens=2804503 · completionTokens=1756080 · USD≈$8.6887 · FX 1,400."
+    "Gemini Batch · promptTokens=2804503 · completionTokens=1756080 · USD≈$8.6887 · FX 1,400.",
+    "Items backfilled from heatmap CI log progress + premium-article token lines; KRW scaled to digest total."
+  ],
+  "items": [
+    {
+      "name": "세네카, 오늘을 빼앗기고 있는 당신에게",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "culture",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "흔한남매 23",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "bestseller-surge-index",
+      "meta": "culture/bestseller-surge-index",
+      "estimatedKrw": 69.97
+    },
+    {
+      "name": "싯다르타",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "culture",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "그랬다고 적었다",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "culture",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "멜로우TV 팀 나빠 추리 탐정단 1",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "bestseller-surge-index",
+      "meta": "culture/bestseller-surge-index",
+      "estimatedKrw": 73.36
+    },
+    {
+      "name": "아이오닉6",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "car-review-ranking",
+      "meta": "culture/car-review-ranking",
+      "estimatedKrw": 71.87
+    },
+    {
+      "name": "EV3",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "car-review-ranking",
+      "meta": "culture/car-review-ranking",
+      "estimatedKrw": 71.96
+    },
+    {
+      "name": "EV9",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "car-review-ranking",
+      "meta": "culture/car-review-ranking",
+      "estimatedKrw": 71.31
+    },
+    {
+      "name": "아이오닉5",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "car-review-ranking",
+      "meta": "culture/car-review-ranking",
+      "estimatedKrw": 75.5
+    },
+    {
+      "name": "테슬라 모델Y",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "car-review-ranking",
+      "meta": "culture/car-review-ranking",
+      "estimatedKrw": 70.05
+    },
+    {
+      "name": "[문화체육관광부 / 한국문화예술위원회] 문화누리카드",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "culture-leisure-grant-ranking",
+      "meta": "culture/culture-leisure-grant-ranking",
+      "estimatedKrw": 72.05
+    },
+    {
+      "name": "[문화체육관광부] 청춘문화패스",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "culture-leisure-grant-ranking",
+      "meta": "culture/culture-leisure-grant-ranking",
+      "estimatedKrw": 68.62
+    },
+    {
+      "name": "[문화체육관광부] 통합문화이용권",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "culture-leisure-grant-ranking",
+      "meta": "culture/culture-leisure-grant-ranking",
+      "estimatedKrw": 72.65
+    },
+    {
+      "name": "[문화체육관광부] 스포츠강좌이용권",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "culture-leisure-grant-ranking",
+      "meta": "culture/culture-leisure-grant-ranking",
+      "estimatedKrw": 78.34
+    },
+    {
+      "name": "[한국문화예술위원회] 아르코 문학창작기금",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "culture-leisure-grant-ranking",
+      "meta": "culture/culture-leisure-grant-ranking",
+      "estimatedKrw": 71.83
+    },
+    {
+      "name": "[한국콘텐츠진흥원] 스토리창작 지원",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "culture-leisure-grant-ranking",
+      "meta": "culture/culture-leisure-grant-ranking",
+      "estimatedKrw": 69.75
+    },
+    {
+      "name": "[영화진흥위원회] 독립영화 제작지원",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "culture-leisure-grant-ranking",
+      "meta": "culture/culture-leisure-grant-ranking",
+      "estimatedKrw": 74.5
+    },
+    {
+      "name": "[한국예술인복지재단] 예술인 생활안정자금",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "culture-leisure-grant-ranking",
+      "meta": "culture/culture-leisure-grant-ranking",
+      "estimatedKrw": 76.38
+    },
+    {
+      "name": "[서울] [서울] ［굿바이특가할인］ 내셔널지오그래픽 특별기획 OCEAN 가장 거대한 기록",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "exhibition-popup-ranking",
+      "meta": "culture/exhibition-popup-ranking",
+      "estimatedKrw": 76.57
+    },
+    {
+      "name": "[경기] [경기] 2026 제29회 부천국제만화축제 얼리버드 티켓",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "exhibition-popup-ranking",
+      "meta": "culture/exhibition-popup-ranking",
+      "estimatedKrw": 68.47
+    },
+    {
+      "name": "[인천] 인천아트플랫폼 기획전",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "exhibition-popup-ranking",
+      "meta": "culture/exhibition-popup-ranking",
+      "estimatedKrw": 71.17
+    },
+    {
+      "name": "[부산] [부산] ［가을 맞이 특가 ~25%］ 울트라백화점 부산 : 텍스트 쇼핑 클럽",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "exhibition-popup-ranking",
+      "meta": "culture/exhibition-popup-ranking",
+      "estimatedKrw": 77.48
+    },
+    {
+      "name": "[대구] [대구] 대구간송미술관 특별전 〈겸재 정선〉",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "exhibition-popup-ranking",
+      "meta": "culture/exhibition-popup-ranking",
+      "estimatedKrw": 84.15
+    },
+    {
+      "name": "혈압",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "health-info-ranking",
+      "meta": "culture/health-info-ranking",
+      "estimatedKrw": 71.16
+    },
+    {
+      "name": "혈당",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "health-info-ranking",
+      "meta": "culture/health-info-ranking",
+      "estimatedKrw": 74.01
+    },
+    {
+      "name": "콜레스테롤",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "health-info-ranking",
+      "meta": "culture/health-info-ranking",
+      "estimatedKrw": 73.53
+    },
+    {
+      "name": "간수치",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "health-info-ranking",
+      "meta": "culture/health-info-ranking",
+      "estimatedKrw": 71.73
+    },
+    {
+      "name": "갑상선",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "health-info-ranking",
+      "meta": "culture/health-info-ranking",
+      "estimatedKrw": 72.14
+    },
+    {
+      "name": "[서울] [서울] 뮤지컬 〈엘리자벳〉",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "performance-ticket-ranking",
+      "meta": "culture/performance-ticket-ranking",
+      "estimatedKrw": 75.79
+    },
+    {
+      "name": "[경기] [경기] 2026 PLAVE World Tour ［KEEP IT MANIC］ in Incheon",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "performance-ticket-ranking",
+      "meta": "culture/performance-ticket-ranking",
+      "estimatedKrw": 74.57
+    },
+    {
+      "name": "[인천] 인천시립교향악단 정기연주회",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "performance-ticket-ranking",
+      "meta": "culture/performance-ticket-ranking",
+      "estimatedKrw": 74.59
+    },
+    {
+      "name": "[부산] [부산] 〈불꽃야구2〉2026시즌 열다섯 번째 직관",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "performance-ticket-ranking",
+      "meta": "culture/performance-ticket-ranking",
+      "estimatedKrw": 75.69
+    },
+    {
+      "name": "[대구] 뮤지컬 위키드 대구",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "performance-ticket-ranking",
+      "meta": "culture/performance-ticket-ranking",
+      "estimatedKrw": 72.51
+    },
+    {
+      "name": "김치찌개",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "recipe-ranking",
+      "meta": "culture/recipe-ranking",
+      "estimatedKrw": 73.32
+    },
+    {
+      "name": "된장찌개",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "recipe-ranking",
+      "meta": "culture/recipe-ranking",
+      "estimatedKrw": 75.0
+    },
+    {
+      "name": "순두부찌개",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "recipe-ranking",
+      "meta": "culture/recipe-ranking",
+      "estimatedKrw": 73.1
+    },
+    {
+      "name": "제육볶음",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "recipe-ranking",
+      "meta": "culture/recipe-ranking",
+      "estimatedKrw": 73.14
+    },
+    {
+      "name": "불고기",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "recipe-ranking",
+      "meta": "culture/recipe-ranking",
+      "estimatedKrw": 73.35
+    },
+    {
+      "name": "원달러",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "commodities-fx-index",
+      "meta": "economy/commodities-fx-index",
+      "estimatedKrw": 75.03
+    },
+    {
+      "name": "엔화",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "commodities-fx-index",
+      "meta": "economy/commodities-fx-index",
+      "estimatedKrw": 69.56
+    },
+    {
+      "name": "유로",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "commodities-fx-index",
+      "meta": "economy/commodities-fx-index",
+      "estimatedKrw": 72.12
+    },
+    {
+      "name": "위안화",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "commodities-fx-index",
+      "meta": "economy/commodities-fx-index",
+      "estimatedKrw": 75.35
+    },
+    {
+      "name": "달러인덱스",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "commodities-fx-index",
+      "meta": "economy/commodities-fx-index",
+      "estimatedKrw": 72.28
+    },
+    {
+      "name": "[금융위원회] 청년도약계좌",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 76.52
+    },
+    {
+      "name": "[중소벤처기업부] 소상공인 전기요금 지원",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 72.53
+    },
+    {
+      "name": "[보건복지부] 부모급여",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 75.28
+    },
+    {
+      "name": "[보건복지부] 기초연금",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 75.35
+    },
+    {
+      "name": "[국세청] 근로장려금",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 68.45
+    },
+    {
+      "name": "[국세청] 자녀장려금",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 75.1
+    },
+    {
+      "name": "[고용노동부] 국민취업지원제도",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 78.2
+    },
+    {
+      "name": "[국토교통부] 디딤돌대출",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 73.83
+    },
+    {
+      "name": "[서울] 래미안대치팰리스",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "housing-subscription-hotspot",
+      "meta": "economy/housing-subscription-hotspot",
+      "estimatedKrw": 79.74
+    },
+    {
+      "name": "[경기] 판교알파리움",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "housing-subscription-hotspot",
+      "meta": "economy/housing-subscription-hotspot",
+      "estimatedKrw": 73.77
+    },
+    {
+      "name": "[인천] 송도더샵센트럴파크",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "housing-subscription-hotspot",
+      "meta": "economy/housing-subscription-hotspot",
+      "estimatedKrw": 76.34
+    },
+    {
+      "name": "[부산] 해운대아이파크",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "housing-subscription-hotspot",
+      "meta": "economy/housing-subscription-hotspot",
+      "estimatedKrw": 76.91
+    },
+    {
+      "name": "[대구] 수성롯데캐슬더퍼스트",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "housing-subscription-hotspot",
+      "meta": "economy/housing-subscription-hotspot",
+      "estimatedKrw": 75.95
+    },
+    {
+      "name": "외식비",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "inflation-sentiment-index",
+      "meta": "economy/inflation-sentiment-index",
+      "estimatedKrw": 64.93
+    },
+    {
+      "name": "커피값",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "inflation-sentiment-index",
+      "meta": "economy/inflation-sentiment-index",
+      "estimatedKrw": 75.41
+    },
+    {
+      "name": "배달비",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "inflation-sentiment-index",
+      "meta": "economy/inflation-sentiment-index",
+      "estimatedKrw": 73.4
+    },
+    {
+      "name": "계란",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "inflation-sentiment-index",
+      "meta": "economy/inflation-sentiment-index",
+      "estimatedKrw": 77.67
+    },
+    {
+      "name": "김치",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "inflation-sentiment-index",
+      "meta": "economy/inflation-sentiment-index",
+      "estimatedKrw": 80.36
+    },
+    {
+      "name": "삼성전자",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "kospi-fomo-index",
+      "meta": "economy/kospi-fomo-index",
+      "estimatedKrw": 76.52
+    },
+    {
+      "name": "SK하이닉스",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "kospi-fomo-index",
+      "meta": "economy/kospi-fomo-index",
+      "estimatedKrw": 72.72
+    },
+    {
+      "name": "현대차",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "kospi-fomo-index",
+      "meta": "economy/kospi-fomo-index",
+      "estimatedKrw": 73.81
+    },
+    {
+      "name": "기아",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "kospi-fomo-index",
+      "meta": "economy/kospi-fomo-index",
+      "estimatedKrw": 68.14
+    },
+    {
+      "name": "네이버",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "kospi-fomo-index",
+      "meta": "economy/kospi-fomo-index",
+      "estimatedKrw": 71.79
+    },
+    {
+      "name": "엔비디아",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "overseas-stock-index",
+      "meta": "economy/overseas-stock-index",
+      "estimatedKrw": 75.83
+    },
+    {
+      "name": "테슬라",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "overseas-stock-index",
+      "meta": "economy/overseas-stock-index",
+      "estimatedKrw": 75.3
+    },
+    {
+      "name": "애플",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "overseas-stock-index",
+      "meta": "economy/overseas-stock-index",
+      "estimatedKrw": 71.62
+    },
+    {
+      "name": "TSMC",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "overseas-stock-index",
+      "meta": "economy/overseas-stock-index",
+      "estimatedKrw": 71.6
+    },
+    {
+      "name": "아마존",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "overseas-stock-index",
+      "meta": "economy/overseas-stock-index",
+      "estimatedKrw": 79.84
+    },
+    {
+      "name": "한국은행 기준금리",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "rates-finance-products",
+      "meta": "economy/rates-finance-products",
+      "estimatedKrw": 74.33
+    },
+    {
+      "name": "코픽스",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "rates-finance-products",
+      "meta": "economy/rates-finance-products",
+      "estimatedKrw": 64.56
+    },
+    {
+      "name": "주담대",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "rates-finance-products",
+      "meta": "economy/rates-finance-products",
+      "estimatedKrw": 77.37
+    },
+    {
+      "name": "전세대출",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "rates-finance-products",
+      "meta": "economy/rates-finance-products",
+      "estimatedKrw": 72.69
+    },
+    {
+      "name": "신용대출",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "rates-finance-products",
+      "meta": "economy/rates-finance-products",
+      "estimatedKrw": 75.69
+    },
+    {
+      "name": "편의점",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "startup-franchise-index",
+      "meta": "economy/startup-franchise-index",
+      "estimatedKrw": 74.76
+    },
+    {
+      "name": "카페 창업",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "startup-franchise-index",
+      "meta": "economy/startup-franchise-index",
+      "estimatedKrw": 73.28
+    },
+    {
+      "name": "치킨",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "startup-franchise-index",
+      "meta": "economy/startup-franchise-index",
+      "estimatedKrw": 72.05
+    },
+    {
+      "name": "피자",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "startup-franchise-index",
+      "meta": "economy/startup-franchise-index",
+      "estimatedKrw": 77.6
+    },
+    {
+      "name": "햄버거",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "startup-franchise-index",
+      "meta": "economy/startup-franchise-index",
+      "estimatedKrw": 74.13
+    },
+    {
+      "name": "오디세이",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "culture",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "옵세션",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "culture",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "스파이더맨: 브랜드 뉴 데이",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "entertainment",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "더 드라마",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "entertainment",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "포가튼 아일랜드",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "boxoffice-expectation",
+      "meta": "entertainment/boxoffice-expectation",
+      "estimatedKrw": 75.96
+    },
+    {
+      "name": "마지막 무대를 장식한 대망의 결승전 | GEN vs HLE | 2026 LCK Grand Finals",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "entertain-youtuber-ranking",
+      "meta": "entertainment/entertain-youtuber-ranking",
+      "estimatedKrw": 75.87
+    },
+    {
+      "name": "짠한형",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "entertainment",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "핑계고",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "entertainment",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "채널 십오야",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "entertain-youtuber-ranking",
+      "meta": "entertainment/entertain-youtuber-ranking",
+      "estimatedKrw": 79.76
+    },
+    {
+      "name": "[ 불도그 LIVE 생방송 9/13 ] 리니지m 대기열.. 몸풀기 개운디로 시작합니다. 호9대전 2탄 반만찾자!!",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "fail",
+      "pipeline": "heatmap-analysis",
+      "kind": "entertain-youtuber-ranking",
+      "meta": "entertainment/entertain-youtuber-ranking",
+      "estimatedKrw": 77.67
+    },
+    {
+      "name": "아쿠아랜드: 크레이지 서바이벌",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "game-esports-ranking",
+      "meta": "entertainment/game-esports-ranking",
+      "estimatedKrw": 72.75
+    },
+    {
+      "name": "이클립스: 더 어웨이크닝",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "entertainment",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "Plus Two",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "entertainment",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "협동마법디펜스 : 마법사 키우기",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "entertainment",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "운빨존많겜",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "game-esports-ranking",
+      "meta": "entertainment/game-esports-ranking",
+      "estimatedKrw": 74.86
+    },
+    {
+      "name": "Whiplash",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "entertainment",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "BIG Naughty",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "kpop-fandom-power",
+      "meta": "entertainment/kpop-fandom-power",
+      "estimatedKrw": 72.41
+    },
+    {
+      "name": "아일릿",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "kpop-fandom-power",
+      "meta": "entertainment/kpop-fandom-power",
+      "estimatedKrw": 72.45
+    },
+    {
+      "name": "하니",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "kpop-fandom-power",
+      "meta": "entertainment/kpop-fandom-power",
+      "estimatedKrw": 74.34
+    },
+    {
+      "name": "Hearts2Hearts",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "kpop-fandom-power",
+      "meta": "entertainment/kpop-fandom-power",
+      "estimatedKrw": 70.48
+    },
+    {
+      "name": "LEMONADE",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-music-chart",
+      "meta": "entertainment/realtime-music-chart",
+      "estimatedKrw": 68.54
+    },
+    {
+      "name": "노스탈지아",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-music-chart",
+      "meta": "entertainment/realtime-music-chart",
+      "estimatedKrw": 72.09
+    },
+    {
+      "name": "It's Me",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-music-chart",
+      "meta": "entertainment/realtime-music-chart",
+      "estimatedKrw": 74.08
+    },
+    {
+      "name": "Lemon Tang",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-music-chart",
+      "meta": "entertainment/realtime-music-chart",
+      "estimatedKrw": 83.54
+    },
+    {
+      "name": "RUDE!",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "entertainment",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "사랑이온다",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-tv-ratings",
+      "meta": "entertainment/realtime-tv-ratings",
+      "estimatedKrw": 77.67
+    },
+    {
+      "name": "포핸즈",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-tv-ratings",
+      "meta": "entertainment/realtime-tv-ratings",
+      "estimatedKrw": 73.87
+    },
+    {
+      "name": "MBC 뉴스데스크",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-tv-ratings",
+      "meta": "entertainment/realtime-tv-ratings",
+      "estimatedKrw": 72.39
+    },
+    {
+      "name": "재벌X형사2",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-tv-ratings",
+      "meta": "entertainment/realtime-tv-ratings",
+      "estimatedKrw": 74.82
+    },
+    {
+      "name": "유부녀킬러",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-tv-ratings",
+      "meta": "entertainment/realtime-tv-ratings",
+      "estimatedKrw": 75.78
+    },
+    {
+      "name": "히어로메이커",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-webtoon-rank",
+      "meta": "entertainment/realtime-webtoon-rank",
+      "estimatedKrw": 75.31
+    },
+    {
+      "name": "외모지상주의",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-webtoon-rank",
+      "meta": "entertainment/realtime-webtoon-rank",
+      "estimatedKrw": 70.91
+    },
+    {
+      "name": "소녀의 세계",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-webtoon-rank",
+      "meta": "entertainment/realtime-webtoon-rank",
+      "estimatedKrw": 70.7
+    },
+    {
+      "name": "똑 닮은 딸",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-webtoon-rank",
+      "meta": "entertainment/realtime-webtoon-rank",
+      "estimatedKrw": 72.44
+    },
+    {
+      "name": "쿠베라",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "realtime-webtoon-rank",
+      "meta": "entertainment/realtime-webtoon-rank",
+      "estimatedKrw": 72.0
+    },
+    {
+      "name": "장원영",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "star-reputation-index",
+      "meta": "entertainment/star-reputation-index",
+      "estimatedKrw": 69.19
+    },
+    {
+      "name": "카리나",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "star-reputation-index",
+      "meta": "entertainment/star-reputation-index",
+      "estimatedKrw": 69.56
+    },
+    {
+      "name": "안유진",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "star-reputation-index",
+      "meta": "entertainment/star-reputation-index",
+      "estimatedKrw": 69.01
+    },
+    {
+      "name": "해린",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "star-reputation-index",
+      "meta": "entertainment/star-reputation-index",
+      "estimatedKrw": 63.44
+    },
+    {
+      "name": "윈터",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "star-reputation-index",
+      "meta": "entertainment/star-reputation-index",
+      "estimatedKrw": 62.66
+    },
+    {
+      "name": "임영웅",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "trot-kayo-fandom-power",
+      "meta": "entertainment/trot-kayo-fandom-power",
+      "estimatedKrw": 62.56
+    },
+    {
+      "name": "영탁",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "trot-kayo-fandom-power",
+      "meta": "entertainment/trot-kayo-fandom-power",
+      "estimatedKrw": 64.15
+    },
+    {
+      "name": "이찬원",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "trot-kayo-fandom-power",
+      "meta": "entertainment/trot-kayo-fandom-power",
+      "estimatedKrw": 60.66
+    },
+    {
+      "name": "김호중",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "trot-kayo-fandom-power",
+      "meta": "entertainment/trot-kayo-fandom-power",
+      "estimatedKrw": 64.4
+    },
+    {
+      "name": "송가인",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "trot-kayo-fandom-power",
+      "meta": "entertainment/trot-kayo-fandom-power",
+      "estimatedKrw": 60.68
+    },
+    {
+      "name": "[금융위원회] 청년도약계좌",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 76.52
+    },
+    {
+      "name": "[중소벤처기업부] 소상공인 전기요금 지원",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 72.53
+    },
+    {
+      "name": "[보건복지부] 부모급여",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 75.28
+    },
+    {
+      "name": "[보건복지부] 기초연금",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 75.35
+    },
+    {
+      "name": "[국세청] 근로장려금",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 68.45
+    },
+    {
+      "name": "[국세청] 자녀장려금",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 75.1
+    },
+    {
+      "name": "[고용노동부] 국민취업지원제도",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 78.2
+    },
+    {
+      "name": "[국토교통부] 디딤돌대출",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "government-support-fund",
+      "meta": "politics/government-support-fund",
+      "estimatedKrw": 73.83
+    },
+    {
+      "name": "[서울특별시] 기후동행카드",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "governor-approval-index",
+      "meta": "politics/governor-approval-index",
+      "estimatedKrw": 68.23
+    },
+    {
+      "name": "[서울특별시] 청년월세 특별지원",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "governor-approval-index",
+      "meta": "politics/governor-approval-index",
+      "estimatedKrw": 66.72
+    },
+    {
+      "name": "[경기도] 청년기본소득",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "governor-approval-index",
+      "meta": "politics/governor-approval-index",
+      "estimatedKrw": 64.9
+    },
+    {
+      "name": "[경기도] 경기패스",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "governor-approval-index",
+      "meta": "politics/governor-approval-index",
+      "estimatedKrw": 61.92
+    },
+    {
+      "name": "[경기도 수원시] 새빛돌봄",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "governor-approval-index",
+      "meta": "politics/governor-approval-index",
+      "estimatedKrw": 67.49
+    },
+    {
+      "name": "더불어민주당",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "party-support-chart",
+      "meta": "politics/party-support-chart",
+      "estimatedKrw": 65.53
+    },
+    {
+      "name": "국민의힘",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "party-support-chart",
+      "meta": "politics/party-support-chart",
+      "estimatedKrw": 63.42
+    },
+    {
+      "name": "조국혁신당",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "party-support-chart",
+      "meta": "politics/party-support-chart",
+      "estimatedKrw": 70.07
+    },
+    {
+      "name": "개혁신당",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "party-support-chart",
+      "meta": "politics/party-support-chart",
+      "estimatedKrw": 68.46
+    },
+    {
+      "name": "진보당",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "party-support-chart",
+      "meta": "politics/party-support-chart",
+      "estimatedKrw": 67.02
+    },
+    {
+      "name": "김어준의 겸손은 힘들다 뉴스공장",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "political-influencer-power",
+      "meta": "politics/political-influencer-power",
+      "estimatedKrw": 68.84
+    },
+    {
+      "name": "김용민TV",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "political-influencer-power",
+      "meta": "politics/political-influencer-power",
+      "estimatedKrw": 65.51
+    },
+    {
+      "name": "가로세로연구소",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "political-influencer-power",
+      "meta": "politics/political-influencer-power",
+      "estimatedKrw": 66.9
+    },
+    {
+      "name": "신의한수",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "political-influencer-power",
+      "meta": "politics/political-influencer-power",
+      "estimatedKrw": 62.29
+    },
+    {
+      "name": "딴지방송국",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "political-influencer-power",
+      "meta": "politics/political-influencer-power",
+      "estimatedKrw": 65.48
+    },
+    {
+      "name": "유시민",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "political-pundit-ranking",
+      "meta": "politics/political-pundit-ranking",
+      "estimatedKrw": 67.52
+    },
+    {
+      "name": "진중권",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "political-pundit-ranking",
+      "meta": "politics/political-pundit-ranking",
+      "estimatedKrw": 68.72
+    },
+    {
+      "name": "김종배",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "political-pundit-ranking",
+      "meta": "politics/political-pundit-ranking",
+      "estimatedKrw": 68.9
+    },
+    {
+      "name": "김근식",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "political-pundit-ranking",
+      "meta": "politics/political-pundit-ranking",
+      "estimatedKrw": 68.62
+    },
+    {
+      "name": "이종훈",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "political-pundit-ranking",
+      "meta": "politics/political-pundit-ranking",
+      "estimatedKrw": 68.22
+    },
+    {
+      "name": "이재명",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "politician-support-chart",
+      "meta": "politics/politician-support-chart",
+      "estimatedKrw": 63.46
+    },
+    {
+      "name": "김문수",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "politician-support-chart",
+      "meta": "politics/politician-support-chart",
+      "estimatedKrw": 64.61
+    },
+    {
+      "name": "한동훈",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "politician-support-chart",
+      "meta": "politics/politician-support-chart",
+      "estimatedKrw": 66.19
+    },
+    {
+      "name": "이준석",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "politician-support-chart",
+      "meta": "politics/politician-support-chart",
+      "estimatedKrw": 59.67
+    },
+    {
+      "name": "조국",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "politician-support-chart",
+      "meta": "politics/politician-support-chart",
+      "estimatedKrw": 67.09
+    },
+    {
+      "name": "[서울] 경복궁",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "domestic-travel-ranking",
+      "meta": "travel/domestic-travel-ranking",
+      "estimatedKrw": 59.99
+    },
+    {
+      "name": "[경기] 가평 남이섬",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "domestic-travel-ranking",
+      "meta": "travel/domestic-travel-ranking",
+      "estimatedKrw": 67.89
+    },
+    {
+      "name": "[인천] 월미도",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "domestic-travel-ranking",
+      "meta": "travel/domestic-travel-ranking",
+      "estimatedKrw": 66.16
+    },
+    {
+      "name": "[부산] 해운대",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "domestic-travel-ranking",
+      "meta": "travel/domestic-travel-ranking",
+      "estimatedKrw": 66.23
+    },
+    {
+      "name": "[대구] 팔공산",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "domestic-travel-ranking",
+      "meta": "travel/domestic-travel-ranking",
+      "estimatedKrw": 69.61
+    },
+    {
+      "name": "[서울] 광장시장 마약김밥",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "food-restaurant-ranking",
+      "meta": "travel/food-restaurant-ranking",
+      "estimatedKrw": 67.06
+    },
+    {
+      "name": "[경기] 수원 갈비",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "food-restaurant-ranking",
+      "meta": "travel/food-restaurant-ranking",
+      "estimatedKrw": 68.77
+    },
+    {
+      "name": "[인천] 차이나타운 짜장면",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "food-restaurant-ranking",
+      "meta": "travel/food-restaurant-ranking",
+      "estimatedKrw": 70.08
+    },
+    {
+      "name": "[부산] 서면 밀면",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "food-restaurant-ranking",
+      "meta": "travel/food-restaurant-ranking",
+      "estimatedKrw": 68.66
+    },
+    {
+      "name": "[대구] 막창",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "food-restaurant-ranking",
+      "meta": "travel/food-restaurant-ranking",
+      "estimatedKrw": 64.44
+    },
+    {
+      "name": "일본 오사카",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "overseas-travel-ranking",
+      "meta": "travel/overseas-travel-ranking",
+      "estimatedKrw": 57.05
+    },
+    {
+      "name": "일본 도쿄",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "overseas-travel-ranking",
+      "meta": "travel/overseas-travel-ranking",
+      "estimatedKrw": 60.83
+    },
+    {
+      "name": "베트남 다낭",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "overseas-travel-ranking",
+      "meta": "travel/overseas-travel-ranking",
+      "estimatedKrw": 67.79
+    },
+    {
+      "name": "태국 방콕",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "overseas-travel-ranking",
+      "meta": "travel/overseas-travel-ranking",
+      "estimatedKrw": 67.0
+    },
+    {
+      "name": "대만 타이베이",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "overseas-travel-ranking",
+      "meta": "travel/overseas-travel-ranking",
+      "estimatedKrw": 65.79
+    },
+    {
+      "name": "[한국관광공사] 근로자 휴가지원사업",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "travel",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "[한국관광공사] 관광두레",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "travel-government-grant-ranking",
+      "meta": "travel/travel-government-grant-ranking",
+      "estimatedKrw": 68.33
+    },
+    {
+      "name": "[한국관광공사] 웰니스관광 클러스터",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "travel-government-grant-ranking",
+      "meta": "travel/travel-government-grant-ranking",
+      "estimatedKrw": 68.41
+    },
+    {
+      "name": "[문화체육관광부] 야간관광 특화도시",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "travel-government-grant-ranking",
+      "meta": "culture/travel-government-grant-ranking",
+      "estimatedKrw": 67.49
+    },
+    {
+      "name": "[한국관광공사] 관광벤처 공모전",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "travel-government-grant-ranking",
+      "meta": "travel/travel-government-grant-ranking",
+      "estimatedKrw": 63.9
+    },
+    {
+      "name": "[해양수산부] 어촌체험휴양마을",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "travel-government-grant-ranking",
+      "meta": "travel/travel-government-grant-ranking",
+      "estimatedKrw": 66.08
+    },
+    {
+      "name": "[산림청] 자연휴양림 이용권",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "skip",
+      "pipeline": "heatmap-analysis",
+      "kind": null,
+      "meta": "travel",
+      "estimatedKrw": 0.0
+    },
+    {
+      "name": "[문화체육관광부] 지역특화 관광개발",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "travel-government-grant-ranking",
+      "meta": "culture/travel-government-grant-ranking",
+      "estimatedKrw": 61.19
+    },
+    {
+      "name": "[서울] 한강공원",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "weekend-outing-ranking",
+      "meta": "travel/weekend-outing-ranking",
+      "estimatedKrw": 69.16
+    },
+    {
+      "name": "[경기] 에버랜드",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "weekend-outing-ranking",
+      "meta": "travel/weekend-outing-ranking",
+      "estimatedKrw": 75.25
+    },
+    {
+      "name": "[인천] 송도 센트럴파크",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "weekend-outing-ranking",
+      "meta": "travel/weekend-outing-ranking",
+      "estimatedKrw": 68.79
+    },
+    {
+      "name": "[부산] 광안리",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "weekend-outing-ranking",
+      "meta": "travel/weekend-outing-ranking",
+      "estimatedKrw": 64.59
+    },
+    {
+      "name": "[대구] 수성못",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "pipeline": "heatmap-analysis",
+      "kind": "weekend-outing-ranking",
+      "meta": "travel/weekend-outing-ranking",
+      "estimatedKrw": 68.25
+    }
   ]
 }
