@@ -11,12 +11,12 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow the login bounce: /admin?secret=… must reach the page to set the cookie.
-  if (pathname === "/admin" && secretMatches(request.nextUrl.searchParams.get("secret"))) {
-    const secret = request.nextUrl.searchParams.get("secret")!;
+  const providedSecret = request.nextUrl.searchParams.get("secret");
+  if (pathname === "/admin" && providedSecret && secretMatches(providedSecret)) {
     const url = request.nextUrl.clone();
     url.searchParams.delete("secret");
     const response = NextResponse.redirect(url);
-    response.headers.set("Set-Cookie", adminCookieHeader(secret));
+    response.headers.set("Set-Cookie", adminCookieHeader(providedSecret));
     return response;
   }
 
