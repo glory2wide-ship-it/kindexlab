@@ -398,6 +398,59 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
             </div>
 
             <div>
+              <h3 className="text-sm font-semibold text-ink">종류별</h3>
+              <p className="mt-1 text-xs text-muted">
+                투데이 브리핑 · 투데이 인사이트 · 오늘의 분석 성공 / 실패 / 글생성 API 비용 (Batch 요금
+                기준)
+              </p>
+              {daily.byArticleType.length === 0 ? (
+                <p className="mt-2 text-sm text-muted">글 단위 내역이 아직 없습니다.</p>
+              ) : (
+                <div className="mt-2 overflow-x-auto rounded-xl border border-line">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="bg-board text-xs text-muted">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">종류</th>
+                        <th className="px-3 py-2 font-medium">성공</th>
+                        <th className="px-3 py-2 font-medium">실패</th>
+                        <th className="px-3 py-2 font-medium">스킵</th>
+                        <th className="px-3 py-2 font-medium text-right">글생성 API 비용</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {daily.byArticleType.map((row) => (
+                        <tr key={row.type} className="border-t border-line">
+                          <td className="px-3 py-2.5 font-medium text-ink">{row.typeLabel}</td>
+                          <td className="px-3 py-2.5 tabular-nums text-emerald-700">{row.ok}</td>
+                          <td className="px-3 py-2.5 tabular-nums text-red-700">{row.fail}</td>
+                          <td className="px-3 py-2.5 tabular-nums text-muted">{row.skip}</td>
+                          <td className="px-3 py-2.5 text-right tabular-nums text-ink">
+                            {row.estimatedKrwLabel}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="border-t border-line bg-board/60 font-semibold">
+                        <td className="px-3 py-2.5 text-ink">합계</td>
+                        <td className="px-3 py-2.5 tabular-nums text-emerald-700">
+                          {daily.byArticleType.reduce((acc, row) => acc + row.ok, 0)}
+                        </td>
+                        <td className="px-3 py-2.5 tabular-nums text-red-700">
+                          {daily.byArticleType.reduce((acc, row) => acc + row.fail, 0)}
+                        </td>
+                        <td className="px-3 py-2.5 tabular-nums text-muted">
+                          {daily.byArticleType.reduce((acc, row) => acc + row.skip, 0)}
+                        </td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-ink">
+                          {daily.generationKrwLabel}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div>
               <h3 className="text-sm font-semibold text-ink">카테고리별</h3>
               <p className="mt-1 text-xs text-muted">
                 채널별 성공 / 실패 / 글생성 API 비용 (Batch 요금 기준)
@@ -492,8 +545,13 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                             </span>
                           </td>
                           <td className="px-3 py-2.5 text-muted">
-                            {row.pipeline === "briefings" ? "브리핑" : "히트맵"}
-                            {row.kind ? ` · ${row.kind}` : ""}
+                            {row.pipeline.includes("heatmap")
+                              ? "오늘의 분석"
+                              : row.kind === "main"
+                                ? "투데이 브리핑"
+                                : row.kind === "deep-dive" || row.pipeline.includes("briefing")
+                                  ? "투데이 인사이트"
+                                  : row.kind || "—"}
                           </td>
                           <td className="px-3 py-2.5 text-right tabular-nums text-ink">
                             {row.estimatedKrwLabel}

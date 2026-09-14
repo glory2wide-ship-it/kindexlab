@@ -41,6 +41,10 @@ export async function buildAdminDashboard(editionDate?: string) {
         ...row,
         estimatedKrwLabel: formatKrw(row.estimatedKrw),
       })),
+      byArticleType: daily.byArticleType.map((row) => ({
+        ...row,
+        estimatedKrwLabel: formatKrw(row.estimatedKrw),
+      })),
       byItem: daily.byItem.map((row) => ({
         ...row,
         estimatedKrwLabel: formatKrw(row.estimatedKrw),

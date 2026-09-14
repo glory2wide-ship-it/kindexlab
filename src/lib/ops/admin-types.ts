@@ -23,6 +23,16 @@ export type AdminOpsCategoryRow = {
   estimatedKrwLabel: string;
 };
 
+export type AdminOpsArticleTypeRow = {
+  type: "today-briefing" | "today-insight" | "today-analysis";
+  typeLabel: string;
+  ok: number;
+  fail: number;
+  skip: number;
+  estimatedKrw: number;
+  estimatedKrwLabel: string;
+};
+
 /** Client-safe shape of /admin dashboard payload (no server-only imports). */
 export type AdminDashboardPayload = {
   generatedAt: string;
@@ -47,6 +57,7 @@ export type AdminDashboardPayload = {
     generationBatchKrw?: number;
     generationLiveKrw?: number;
     byCategory: AdminOpsCategoryRow[];
+    byArticleType: AdminOpsArticleTypeRow[];
     byItem: AdminOpsItemRow[];
   };
   traffic: {
