@@ -1,7 +1,7 @@
 import { rankRowsToEntities, toHeatmapPayload, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
 import { getBoard } from "@/lib/boards/registry";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
-import { hash } from "@/lib/ingestion/names";
+import { hash, normalizeName } from "@/lib/ingestion/names";
 import { decodeRouteSlug, slugsMatch } from "@/lib/slugs";
 import { attachTimeframeMetrics } from "@/lib/timeframes";
 import type { EntityType, RankingEntity } from "@/lib/types";
@@ -15,6 +15,11 @@ function slugifyName(name: string): string {
     .slice(0, 48);
 }
 
+/** Compact key shared by ingest slugs (`브루노마스내한공연`) and display names. */
+export function entityNameKey(nameOrSlugTail: string): string {
+  return normalizeName(nameOrSlugTail.replace(/-/g, " "));
+}
+
 function typeFromBoardChannel(channel: HeatmapBoardPayload["channel"]): EntityType {
   if (channel === "economy") return "economy_board";
   if (channel === "culture" || channel === "travel") return "culture_board";
@@ -22,6 +27,10 @@ function typeFromBoardChannel(channel: HeatmapBoardPayload["channel"]): EntityTy
   return "influencer";
 }
 
+/**
+ * Placeholder only — never a real board rank. Detail pages must not claim "1위"
+ * when board/live lookup missed (slug hyphenation / bracket mismatches).
+ */
 export function synthesizeKeywordEntity(
   slug: string,
   name: string,
@@ -36,19 +45,32 @@ export function synthesizeKeywordEntity(
     name: keyword,
     nameEn: keyword,
     type,
-    rank: 1,
-    previousRank: 1,
+    // 0 = pending; index blurb must not invent a board position.
+    rank: 0,
+    previousRank: 0,
     buzzScore: score * 10,
     openScore: score * 10,
     fluctuationRate: 0,
     volume: 1200,
     sparkline: spark,
     history: spark.map((value, step) => ({ t: String(step), v: value })),
-    tags: [keyword],
-    summary: `${keyword} 순위 데이터를 찾는 중입니다.`,
+    tags: [keyword, "rank-pending"],
+    summary: `${keyword} 순위 데이터를 확인하는 중입니다.`,
     analysis: `${keyword} 키워드 분석`,
     products: [],
   });
+}
+
+export function entityMatchesBoardNameKey(entity: RankingEntity, nameKey: string): boolean {
+  const compact = entityNameKey(nameKey);
+  if (!compact) return false;
+  if (entityNameKey(entity.name) === compact) return true;
+  if (slugifyName(entity.name) === nameKey) return true;
+  if (slugifyName(entity.name).replace(/-/g, "") === compact) return true;
+  const tail = entity.slug.includes("--") ? entity.slug.slice(entity.slug.indexOf("--") + 2) : entity.slug;
+  if (tail === nameKey) return true;
+  if (entityNameKey(tail) === compact) return true;
+  return false;
 }
 
 export async function resolveBoardEntity(slug: string): Promise<RankingEntity | undefined> {
@@ -64,13 +86,14 @@ export async function resolveBoardEntity(slug: string): Promise<RankingEntity | 
     const payload = toHeatmapPayload(def, cached);
     const rows = payload.ranking ?? [];
     const entities = rankRowsToEntities(rows, payload);
-    // Aliased board slugs (e.g. retired 엔터 정부지원금 → 문화/생활) keep the
-    // old URL prefix; match by name when the full slug no longer lines up.
+    // Aliased board slugs keep old URL prefixes; match by normalized name when
+    // ingest compact slugs (`브루노마스…`) diverge from board hyphen slugs (`경기-브루노-…`).
     return entities.find(
       (item) =>
         slugsMatch(item.slug, decoded) ||
         slugifyName(item.name) === nameKey ||
-        item.slug.endsWith(`--${nameKey}`),
+        item.slug.endsWith(`--${nameKey}`) ||
+        entityMatchesBoardNameKey(item, nameKey),
     );
   } catch {
     return undefined;
@@ -101,8 +124,8 @@ export async function relatedEntitiesFromSameBoard(
         if (item.id === entity.id) return false;
         if (item.name === entity.name) return false;
         if (slugsMatch(item.slug, entity.slug)) return false;
-        // boardRowSlug lowercases Latin letters; inbound URLs may keep SK하이닉스 casing.
         if (item.slug.toLowerCase() === entity.slug.toLowerCase()) return false;
+        if (entityNameKey(item.name) === entityNameKey(entity.name)) return false;
         return true;
       })
       .slice(0, Math.max(1, limit));

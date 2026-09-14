@@ -247,9 +247,75 @@ export async function getTrendBySlug(
   return entity ? toTrendEntity(entity, timeframe) : undefined;
 }
 
-function findBySlug(items: RankingEntity[], slug: string): RankingEntity | undefined {
+function findBySlug(
+  items: RankingEntity[],
+  slug: string,
+  fallbackName?: string,
+): RankingEntity | undefined {
   const incoming = decodeRouteSlug(slug);
-  return items.find((item) => slugsMatch(item.slug, incoming));
+  const exact = items.find((item) => slugsMatch(item.slug, incoming));
+  if (exact) return exact;
+
+  const sep = incoming.indexOf("--");
+  const boardSlug = sep > 0 ? incoming.slice(0, sep) : undefined;
+  const nameKey = sep > 0 ? incoming.slice(sep + 2) : undefined;
+  const nameHint = fallbackName?.trim();
+
+  const pool =
+    boardSlug != null
+      ? items.filter(
+          (item) =>
+            item.slug.startsWith(`${boardSlug}--`) ||
+            item.tags.includes(boardSlug) ||
+            item.tags.includes("live-chart"),
+        )
+      : items;
+  const candidates = pool.length ? pool : items;
+
+  if (nameKey || nameHint) {
+    const { entityMatchesBoardNameKey, entityNameKey } = require("@/lib/entity/resolve") as typeof import("@/lib/entity/resolve");
+    const hit = candidates.find((item) => {
+      if (nameKey && entityMatchesBoardNameKey(item, nameKey)) return true;
+      if (nameHint && entityNameKey(item.name) === entityNameKey(nameHint)) return true;
+      return false;
+    });
+    if (hit) {
+      // Board detail URLs should report board-local rank, not desk-wide tape rank.
+      if (boardSlug) {
+        const peers = items
+          .filter(
+            (item) =>
+              item.slug.startsWith(`${boardSlug}--`) || item.tags.includes(boardSlug),
+          )
+          .sort((a, b) => a.rank - b.rank || b.buzzScore - a.buzzScore);
+        const index = peers.findIndex(
+          (item) => item.id === hit.id || entityNameKey(item.name) === entityNameKey(hit.name),
+        );
+        if (index >= 0) {
+          const localRank = index + 1;
+          const previous = peers[index]?.previousRank ?? hit.previousRank;
+          return {
+            ...hit,
+            rank: localRank,
+            previousRank: previous === hit.rank ? localRank : previous,
+            heatmapGroup: hit.heatmapGroup || getBoardShortTitle(boardSlug),
+            summary: "",
+          };
+        }
+      }
+      return hit;
+    }
+  }
+  return undefined;
+}
+
+function getBoardShortTitle(boardSlug: string): string | undefined {
+  try {
+    const { getBoard } = require("@/lib/boards/registry") as typeof import("@/lib/boards/registry");
+    return getBoard(boardSlug)?.shortTitle;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function getEntityBySlug(
@@ -257,16 +323,22 @@ export async function getEntityBySlug(
   fallbackName?: string,
 ): Promise<RankingEntity | undefined> {
   const incoming = decodeRouteSlug(slug);
-  // Heatmap tiles use `boardSlug--name` — resolve the board row first so we
-  // don't pay for a full getRankings() on the common click path.
+  // Heatmap tiles use `boardSlug--name` — prefer a real board row (never a
+  // synthesized keyword placeholder that used to hard-code rank 1).
   if (incoming.includes("--")) {
-    const { resolveBoardOrKeywordEntity } = await import("@/lib/entity/resolve");
-    const fromBoard = await resolveBoardOrKeywordEntity(slug, fallbackName);
+    const { resolveBoardEntity } = await import("@/lib/entity/resolve");
+    const fromBoard = await resolveBoardEntity(slug);
     if (fromBoard) return fromBoard;
   }
   const payload = await getRankings();
-  const live = findBySlug(payload.items, slug);
-  if (live) return live;
+  const live = findBySlug(payload.items, slug, fallbackName);
+  if (live) {
+    if (!live.summary) {
+      const { formatEntityIndexBlurb } = await import("@/lib/entity/index-blurb");
+      return { ...live, summary: formatEntityIndexBlurb(live) };
+    }
+    return live;
+  }
   const { resolveBoardOrKeywordEntity } = await import("@/lib/entity/resolve");
   return resolveBoardOrKeywordEntity(slug, fallbackName);
 }

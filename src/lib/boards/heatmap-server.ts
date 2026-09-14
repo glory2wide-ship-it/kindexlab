@@ -19,6 +19,8 @@ import {
   HEATMAP_SCREEN_LIVE_CAP,
   isNativeChartBoard,
 } from "@/lib/boards/live-priority";
+import { PERFORMANCE_BOARD_SLUG } from "@/lib/boards/region-catalogs";
+import { cultureFranchiseKey } from "@/lib/boards/regions";
 import { menuBoardsForChannel, isHeadlineNewsBoard } from "@/lib/boards/registry";
 import { seedBoardIfMissing } from "@/lib/boards/seed";
 import { normalizeCachedBoard } from "@/lib/boards/store";
@@ -123,6 +125,12 @@ function collectBoardTaggedLiveItems(
     .sort((a, b) => a.rank - b.rank || b.buzzScore - a.buzzScore);
 }
 
+function liveDedupeKey(boardSlug: string, name: string): string {
+  // Touring musicals (위키드 등) are seeded per 시/도 — collapse on the national board.
+  if (boardSlug === PERFORMANCE_BOARD_SLUG) return cultureFranchiseKey(name);
+  return name.replace(/\s+/g, "").toLowerCase();
+}
+
 function dedupeLiveItemsToRanking(
   def: BoardDefinition,
   items: RankingEntity[],
@@ -134,7 +142,7 @@ function dedupeLiveItemsToRanking(
     if (rows.length >= limit) break;
     const name = sanitizeLiveBoardName(def.slug, item.name);
     if (!name || name.length < 2 || isUnusableRankName(name)) continue;
-    const key = name.replace(/\s+/g, "").toLowerCase();
+    const key = liveDedupeKey(def.slug, name);
     if (!key || seen.has(key)) continue;
     seen.add(key);
     rows.push(itemToRankEntry(def, item, rows.length));
@@ -182,14 +190,14 @@ function mergeLiveBoardRanking(
   live: BoardRankEntry[],
   cached: CachedBoard,
   limit: number,
+  boardSlug: string,
 ): BoardRankEntry[] {
-  const nameKey = (name: string) => name.replace(/\s+/g, "").toLowerCase();
   const seen = new Set<string>();
   const merged: BoardRankEntry[] = [];
   const push = (row: BoardRankEntry) => {
     const name = (row.name ?? "").trim();
     if (!name || isUnusableRankName(name)) return;
-    const key = nameKey(name);
+    const key = liveDedupeKey(boardSlug, name);
     if (!key || seen.has(key)) return;
     seen.add(key);
     merged.push({ ...row, name, rank: merged.length + 1 });
@@ -214,7 +222,7 @@ function withLiveChartOverlay(
   if (!live) return toHeatmapPayload(def, cached);
   const limit = rankLimitForBoard(def);
   // Live leads, then pad with cached/seed ranking so heatmaps still fill 20 tiles.
-  const merged = mergeLiveBoardRanking(live, cached, limit);
+  const merged = mergeLiveBoardRanking(live, cached, limit, def.slug);
   const overlay = normalizeCachedBoard({
     ...cached,
     ranking: merged,
