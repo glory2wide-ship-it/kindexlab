@@ -77,7 +77,7 @@ export function CategorySubNav({
     <nav
       className={
         embedded
-          ? "category-sub-nav flex min-w-0 flex-1 items-stretch gap-1.5 overflow-x-hidden"
+          ? "category-sub-nav flex min-w-0 flex-1 items-stretch gap-1 overflow-x-hidden"
           : "category-sub-nav flex min-w-0 shrink-0 items-stretch gap-2 overflow-x-auto"
       }
       aria-label={meta ? `${meta.label} 서브 메뉴` : "전체 서브 메뉴"}
@@ -85,11 +85,11 @@ export function CategorySubNav({
       {CHANNEL_SECTIONS.map((item) => {
         const href = channel ? channelSectionHref(channel, item.id) : siteSectionHref(item.id);
         const isActive = item.id === active;
-        // Mobile width roles: short tabs hug content; long magazine tab gets extra inset.
+        // Mobile: short tabs hug content; briefing/magazine share space with matching inset.
         const mobileWidthClass =
           item.id === "about" || item.id === "board"
             ? "shrink-0 px-2"
-            : item.id === "archive"
+            : item.id === "briefing" || item.id === "archive"
               ? "min-w-0 flex-[1.2] px-2"
               : "min-w-0 flex-1 px-1.5";
         return (
@@ -126,7 +126,7 @@ export function CategorySubNav({
 
   if (embedded) {
     return (
-      <div className="flex w-full min-w-0 items-center justify-start gap-1.5 overflow-x-hidden pr-px">
+      <div className="flex w-full min-w-0 items-center justify-start gap-1 overflow-x-hidden pr-px">
         {nav}
         {search}
       </div>
