@@ -59,6 +59,11 @@ export function SiteFooter() {
                 {SITE.contactEmail}
               </a>
             </p>
+            <p className="mt-3">
+              <Link href="/admin" className="text-muted hover:text-ink">
+                Admin
+              </Link>
+            </p>
           </div>
         </div>
       </div>
