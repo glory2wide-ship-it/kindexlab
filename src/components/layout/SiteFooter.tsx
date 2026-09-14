@@ -4,14 +4,21 @@ import { SITE } from "@/lib/site";
 
 const CATEGORY_LABELS = POST_CHANNELS.map((item) => item.label).join("·");
 
+/** Shared by intro / 정책 / 운영사 so size + line-box match on mobile and desktop. */
+const FOOTER_HEADING =
+  "block text-base font-semibold leading-6 text-ink";
+
+const FOOTER_LIST =
+  "mt-2 space-y-[0.225rem] text-[11px] leading-[0.9rem] text-muted sm:space-y-[0.3375rem] sm:text-sm sm:leading-[1.35]";
+
 export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
     <footer className="mt-8 border-t border-line bg-panel">
-      <div className="mx-auto grid max-w-[72rem] gap-6 px-4 py-8 md:grid-cols-3 md:gap-8">
+      <div className="mx-auto grid max-w-[72rem] gap-6 px-4 py-8 md:grid-cols-3 md:gap-8 md:items-start">
         <div>
-          <Link href="/about" className="font-semibold hover:text-ink">
+          <Link href="/about" className={`${FOOTER_HEADING} hover:text-ink`}>
             KinDex / 킨덱스 소개
           </Link>
           <p className="mt-2 text-[0.83125rem] leading-[1.425rem] text-muted">
@@ -21,10 +28,9 @@ export function SiteFooter() {
         </div>
         {/* Mobile: 정책 | 운영사. md+: join the 3-col footer row. */}
         <div className="grid grid-cols-2 gap-3 md:contents">
-          <div className="min-w-0 text-[11px] leading-[0.9rem] sm:text-sm sm:leading-[1.35]">
-            {/* Match KinDex / 킨덱스 소개 weight+size (font-semibold, inherit size). */}
-            <p className="font-semibold leading-none">정책</p>
-            <ul className="mt-2 space-y-[0.225rem] text-muted sm:space-y-[0.3375rem]">
+          <div className="min-w-0">
+            <p className={FOOTER_HEADING}>정책</p>
+            <ul className={FOOTER_LIST}>
               <li>
                 <Link href="/terms" className="hover:text-ink">
                   이용약관
@@ -47,10 +53,9 @@ export function SiteFooter() {
               </li>
             </ul>
           </div>
-          <div className="min-w-0 text-[11px] leading-[0.9rem] sm:text-sm sm:leading-[1.35]">
-            <p className="font-semibold leading-none">운영사</p>
-            {/* Identical space-y / leading to 정책 so both columns share one rhythm. */}
-            <ul className="mt-2 space-y-[0.225rem] text-muted sm:space-y-[0.3375rem]">
+          <div className="min-w-0">
+            <p className={FOOTER_HEADING}>운영사</p>
+            <ul className={FOOTER_LIST}>
               <li className="leading-[inherit]">{SITE.companyShort}</li>
               <li className="leading-[inherit]">
                 <span className="inline-flex flex-nowrap items-center gap-1.5 sm:gap-2">
