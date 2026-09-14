@@ -51,15 +51,16 @@ export function SiteFooter() {
             <p className="mt-2 text-muted sm:leading-6">
               {SITE.companyShort}
               <br />
-              <span className="inline-flex flex-wrap items-center gap-2">
-                <span>
+              <span className="inline-flex flex-nowrap items-center gap-1.5 sm:gap-2">
+                <span className="whitespace-nowrap">
                   {SITE.name} ({SITE.nameKo})
                 </span>
                 <Link
                   href="/admin"
-                  className="inline-flex items-center rounded-md border border-line bg-board px-2.5 py-1 text-[12.65px] font-medium leading-none text-ink hover:bg-panel sm:text-[13.8px]"
+                  className="inline-flex shrink-0 items-center rounded-md border border-line bg-board px-2 py-0.5 text-[11px] font-medium leading-none text-ink hover:bg-panel sm:px-2.5 sm:py-1 sm:text-[13.8px]"
                 >
-                  {SITE.name} Admin
+                  <span className="sm:hidden">Admin</span>
+                  <span className="hidden sm:inline">{SITE.name} Admin</span>
                 </Link>
               </span>
               <br />
