@@ -76,6 +76,7 @@ export function TreemapView({
   onSelect,
   showChannelTags = false,
   showSourceCaptions = false,
+  maxItems,
 }: {
   items: RankingEntity[];
   category: CategoryId;
@@ -88,6 +89,8 @@ export function TreemapView({
   showChannelTags?: boolean;
   /** Category composite map: show submenu/board names under the rank (top tiles). */
   showSourceCaptions?: boolean;
+  /** Override default 20/15 caps (landing passes the full curated per-channel set). */
+  maxItems?: number;
 }) {
   const safeItems = Array.isArray(items) ? items : [];
   const router = useRouter();
@@ -106,7 +109,15 @@ export function TreemapView({
     return () => mq.removeEventListener("change", sync);
   }, []);
 
-  const tileCap = isMobileViewport ? MOBILE_TREEMAP_MAX_ITEMS : TREEMAP_MAX_ITEMS;
+  const tileCap = Math.max(
+    1,
+    maxItems ??
+      (showChannelTags
+        ? Math.max(safeItems.length, TREEMAP_MAX_ITEMS)
+        : isMobileViewport
+          ? MOBILE_TREEMAP_MAX_ITEMS
+          : TREEMAP_MAX_ITEMS),
+  );
   const visible = useMemo(() => pickHeatmapItems(safeItems, tileCap), [safeItems, tileCap]);
   const displayRankById = useMemo(() => {
     const ranks = new Map<string, number>();

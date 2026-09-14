@@ -6,7 +6,7 @@ import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { RankingEntity } from "@/lib/types";
 import type { PostChannel } from "@/lib/posts/types";
 
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const MAX_AGE_MS = DEFAULT_TRENDS_REVALIDATE_SEC * 1000;
 
 /** Slim shape only — avoids importing composite-desk (circular). */

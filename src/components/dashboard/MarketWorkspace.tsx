@@ -228,12 +228,15 @@ export function MarketWorkspace({
 
   const sortedItems = useMemo(() => {
     const desktopCap = Math.max(1, Math.min(maxItems, TREEMAP_MAX_ITEMS));
-    // Mobile paints top 15 of the *same* ordered pool as desktop (desktop cap 20).
-    const cap = isMobileViewport
-      ? Math.max(1, Math.min(desktopCap, MOBILE_TREEMAP_MAX_ITEMS))
-      : desktopCap;
+    // Landing curated set (showChannelTags): keep every per-channel top-4 tile on
+    // mobile too — the 15-cap was dropping whole categories after global re-rank.
+    const cap = showChannelTags
+      ? Math.max(desktopCap, rankedPool.length)
+      : isMobileViewport
+        ? Math.max(1, Math.min(desktopCap, MOBILE_TREEMAP_MAX_ITEMS))
+        : desktopCap;
     return rankedPool.slice(0, cap).map((item, index) => ({ ...item, rank: index + 1 }));
-  }, [rankedPool, maxItems, isMobileViewport]);
+  }, [rankedPool, maxItems, isMobileViewport, showChannelTags]);
 
   const listItems = useMemo(() => {
     const listCap = isMobileViewport ? MOBILE_LIST_MAX_ITEMS : LIST_MAX_ITEMS;
@@ -468,6 +471,7 @@ export function MarketWorkspace({
                   layoutKey={demoKey}
                   showChannelTags={showChannelTags}
                   showSourceCaptions={Boolean(channel) && !boardSlug}
+                  maxItems={showChannelTags ? sortedItems.length : undefined}
                 />
               </HeatmapErrorBoundary>
             </div>
