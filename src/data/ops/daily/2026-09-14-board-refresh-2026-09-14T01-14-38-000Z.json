@@ -16,6 +16,7 @@
   "boardsRefreshed": 4,
   "notes": [
     "Backfilled from Refresh ranking boards CI run 34793438646 (KST morning).",
-    "Gemini Batch · promptTokens=24880 · completionTokens=7921 · USD≈$0.0484 · FX 1,400."
+    "Gemini Batch · promptTokens=24880 · completionTokens=7921 · USD≈$0.0484 · FX 1,400.",
+    "Issue/board-refresh log: two KST runs (~₩39 + ~₩38). This digest is the morning run only (₩67.71). Evening run may be missing from ops/daily; CI also under-counted some Batch board:rank tokens."
   ]
 }
