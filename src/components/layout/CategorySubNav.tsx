@@ -95,7 +95,7 @@ export function CategorySubNav({
             }}
             title={item.description}
             className={`${chipBase} ${
-              embedded ? "px-2.5" : "px-2.5 md:px-3"
+              embedded ? "px-3" : "px-2.5 md:px-3"
             } ${
               isActive
                 ? "border-accent bg-accent font-semibold text-black"
@@ -104,8 +104,9 @@ export function CategorySubNav({
             style={{
               height: CHIP_H,
               fontSize: embedded ? CHIP_TEXT_MOBILE : CHIP_TEXT_DESKTOP,
-              // Keep a comfortable tap target even for short labels like 소개.
-              minWidth: embedded ? 56 : undefined,
+              // Comfortable tap width; label length sets natural chip size.
+              minWidth: embedded ? 64 : undefined,
+              letterSpacing: embedded ? "0.02em" : undefined,
             }}
           >
             {item.label}
