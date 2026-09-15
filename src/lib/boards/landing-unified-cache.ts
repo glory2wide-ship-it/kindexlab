@@ -2,12 +2,15 @@ import "server-only";
 
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { DESK_TOP_N, LANDING_PER_CHANNEL_TOP } from "@/lib/boards/landing-constants";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { RankingEntity } from "@/lib/types";
 import type { PostChannel } from "@/lib/posts/types";
 
-const CACHE_VERSION = 2;
+/** Bump when landing desk/heatmap contract changes (desk top-4, rank integrity). */
+const CACHE_VERSION = 3;
 const MAX_AGE_MS = DEFAULT_TRENDS_REVALIDATE_SEC * 1000;
+const EXPECTED_TILES = 5 * LANDING_PER_CHANNEL_TOP;
 
 /** Slim shape only — avoids importing composite-desk (circular). */
 export type LandingUnifiedCacheMarket = {
@@ -54,6 +57,15 @@ function isFresh(cacheFile: string): boolean {
   }
 }
 
+function isCompleteLandingMarket(market: LandingUnifiedCacheMarket): boolean {
+  if (market.items.length !== EXPECTED_TILES) return false;
+  if (market.desks.length < 5) return false;
+  const ranks = market.items.map((item) => item.rank);
+  if (new Set(ranks).size !== ranks.length) return false;
+  if (!ranks.every((rank, index) => rank === index + 1)) return false;
+  return market.desks.every((desk) => desk.top.length === DESK_TOP_N);
+}
+
 /**
  * Tiny precomputed landing board (≤20 tiles + 5 desks).
  * Avoids re-deriving the unified market from the multi-MB snapshot on cold isolates.
@@ -65,6 +77,8 @@ export function readLandingUnifiedCache(): LandingUnifiedCacheMarket | null {
       const parsed = JSON.parse(readFileSync(file, "utf8")) as LandingUnifiedCacheFile;
       if (parsed?.version !== CACHE_VERSION) continue;
       if (!parsed.market?.items?.length || !parsed.market.desks?.length) continue;
+      // Reject truncated desk tops / clobbered ranks from older builders.
+      if (!isCompleteLandingMarket(parsed.market)) continue;
       return parsed.market;
     } catch {
       continue;
@@ -74,7 +88,7 @@ export function readLandingUnifiedCache(): LandingUnifiedCacheMarket | null {
 }
 
 export function writeLandingUnifiedCache(market: LandingUnifiedCacheMarket): void {
-  if (!market.items?.length || !market.desks?.length) return;
+  if (!isCompleteLandingMarket(market)) return;
   const payload: LandingUnifiedCacheFile = {
     version: CACHE_VERSION,
     savedAt: new Date().toISOString(),

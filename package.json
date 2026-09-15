@@ -15,6 +15,7 @@
         "lint": "eslint",
         "ci:shell-check": "bash scripts/check-shell-scripts.sh",
         "landing:check": "node scripts/check-landing-desk.mjs",
+        "landing:tops": "node --require ./scripts/stub-server-only.cjs --import tsx scripts/rebuild-landing-tops.ts",
         "seo:check": "node scripts/check-seo-ready.mjs",
         "briefing:check": "node scripts/check-briefing-routing.mjs",
         "briefing:generate": "tsx scripts/generate-briefings.ts",

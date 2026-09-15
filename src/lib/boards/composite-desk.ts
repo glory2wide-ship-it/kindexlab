@@ -221,26 +221,78 @@ async function buildUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMark
     previousRank: index + 1,
   }));
 
+  // Desk cards show the same 1~4 as the heatmap pool (not a shorter slice).
   const deskTopsRaw = loaded.map(({ ranked }) =>
     ranked.slice(0, DESK_TOP_N).map(deskTopItem),
   );
 
-  const quoteTargets = [...itemsRaw, ...deskTopsRaw.flat()];
-  const quoted = await attachKospiQuotesSoft(quoteTargets);
-  const byId = new Map(quoted.map((item) => [item.id, item]));
+  // Quote once per id. Never let desk-top ranks (1–4 within a channel) overwrite
+  // the interleaved landing display ranks (1–20) via Map last-write-wins.
+  const quoteSeed = new Map<string, RankingEntity>();
+  for (const item of [...itemsRaw, ...deskTopsRaw.flat()]) {
+    if (!quoteSeed.has(item.id)) quoteSeed.set(item.id, item);
+  }
+  const quoted = await attachKospiQuotesSoft([...quoteSeed.values()]);
+  const quoteById = new Map(quoted.map((item) => [item.id, item]));
 
-  const items = itemsRaw.map((item) => byId.get(item.id) ?? item);
+  const withPreservedRank = (base: RankingEntity): RankingEntity => {
+    const quotedRow = quoteById.get(base.id);
+    if (!quotedRow) return base;
+    return {
+      ...quotedRow,
+      rank: base.rank,
+      previousRank: base.previousRank,
+      sourceChannel: base.sourceChannel ?? quotedRow.sourceChannel,
+    };
+  };
+
+  const items = itemsRaw.map(withPreservedRank);
   const desks: ChannelDesk[] = loaded.map(({ meta }, index) => ({
     channel: meta.id,
     label: meta.label,
     href: meta.href,
     eyebrow: meta.eyebrow,
-    top: (deskTopsRaw[index] ?? []).map((item) => byId.get(item.id) ?? item),
+    top: (deskTopsRaw[index] ?? []).map(withPreservedRank),
   }));
 
   const marketPayload = { items, desks };
-  writeLandingUnifiedCache(marketPayload);
+  if (!assertLandingMarketShape(marketPayload)) {
+    console.warn(
+      "[landing] unified market incomplete — refusing slim cache write",
+      summarizeLandingGaps(marketPayload),
+    );
+  } else {
+    writeLandingUnifiedCache(marketPayload);
+  }
   return marketPayload;
+}
+
+/** True when heatmap has 20 ranked tiles and every desk has 1~4 filled. */
+export function assertLandingMarketShape(market: UnifiedMarket): boolean {
+  if (market.items.length !== UNIFIED_HEATMAP_TILES) return false;
+  if (market.desks.length !== POST_CHANNELS.length) return false;
+  const ranks = market.items.map((item) => item.rank);
+  if (new Set(ranks).size !== ranks.length) return false;
+  if (!ranks.every((rank, index) => rank === index + 1)) return false;
+
+  for (const meta of POST_CHANNELS) {
+    const desk = market.desks.find((row) => row.channel === meta.id);
+    if (!desk || desk.top.length !== DESK_TOP_N) return false;
+    const channelTiles = market.items.filter((item) => item.sourceChannel === meta.id);
+    if (channelTiles.length !== LANDING_PER_CHANNEL_TOP) return false;
+  }
+  return true;
+}
+
+function summarizeLandingGaps(market: UnifiedMarket): Record<string, unknown> {
+  return {
+    items: market.items.length,
+    ranks: market.items.map((item) => item.rank),
+    desks: market.desks.map((desk) => ({
+      channel: desk.channel,
+      top: desk.top.length,
+    })),
+  };
 }
 
 /**
@@ -249,7 +301,7 @@ async function buildUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMark
  */
 const cachedUnifiedMarket = unstable_cache(
   async () => buildUnifiedMarket(),
-  ["unified-market-v4-5m-per-channel-top4"],
+  ["unified-market-v5-5m-per-channel-top4-desk4"],
   { revalidate: DEFAULT_TRENDS_REVALIDATE_SEC },
 );
 

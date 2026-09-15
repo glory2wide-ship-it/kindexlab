@@ -17,6 +17,7 @@ jobs:
       - run: npm ci
       - run: npm run ci:shell-check
       - run: npm run landing:check
+      - run: npm run landing:tops
       - run: npm run briefing:check
       - name: Trends health (live source + fresh snapshot)
         run: npm run trends:health

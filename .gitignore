@@ -51,6 +51,9 @@ yarn-error.log*
 /src/data/boards/*
 !/src/data/boards/published.json
 
+# Slim landing board rebuilds from snapshot at runtime (do not commit).
+/src/data/ingestion/landing-unified.json
+
 # Google News handle→publisher URL cache. Local rebuild accelerator only:
 # `flushUnwrapCache` refuses to write when VERCEL=1 and the resolver has no
 # bundled fallback, so shipping it would add weight without helping production.

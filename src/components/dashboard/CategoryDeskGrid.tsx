@@ -49,7 +49,7 @@ export function CategoryDeskGrid({
         {desks.map((desk) => (
           <article
             key={desk.channel}
-            className={`flex min-h-[11rem] min-w-0 flex-col rounded-2xl border border-line bg-panel px-2.5 py-[11px] transition-colors hover:border-accent/50 sm:min-h-[12.1rem] sm:px-3 sm:py-[13.2px]${
+            className={`flex min-h-[13.2rem] min-w-0 flex-col rounded-2xl border border-line bg-panel px-2.5 py-[11px] transition-colors hover:border-accent/50 sm:min-h-[14.5rem] sm:px-3 sm:py-[13.2px]${
               desk.channel === "politics" ? " max-md:hidden" : ""
             }`}
           >

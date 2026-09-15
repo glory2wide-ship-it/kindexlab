@@ -8,8 +8,11 @@ import type { RankingEntity, Timeframe } from "@/lib/types";
 export const LANDING_HEATMAP_TIMEFRAME: Timeframe = "5m";
 /** Top N per category under those defaults (5 channels × 4 = 20 tiles). */
 export const LANDING_PER_CHANNEL_TOP = 4;
-/** Rows shown on each desk summary card. */
-export const DESK_TOP_N = 3;
+/**
+ * Rows on each landing desk card — must match heatmap per-channel top
+ * (methodology: 카테고리별 1~4위). Do not set lower than LANDING_PER_CHANNEL_TOP.
+ */
+export const DESK_TOP_N = LANDING_PER_CHANNEL_TOP;
 
 /** Desk card on the landing category grid (client-safe type). */
 export interface ChannelDesk {
