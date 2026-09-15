@@ -114,11 +114,15 @@ jobs:
       # Push whatever landed on disk — including when the job was cancelled at 6h.
       - name: Commit and push analysis cache
         if: always() && steps.generate.outcome != 'skipped'
-        continue-on-error: true
+        # Do not swallow push failures — admin ops digests live under src/data/ops/daily
+        # and are only visible after this step succeeds.
+        continue-on-error: false
         run: |
           chmod +x scripts/ci-commit-push.sh scripts/ci-checkpoint-analysis-cache.sh
+          EDITION="${{ steps.generate.outputs.edition }}"
+          if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
           scripts/ci-checkpoint-analysis-cache.sh \
-            "chore: publish heatmap today's analysis (${{ steps.generate.outputs.edition || 'partial' }})" \
+            "chore: publish heatmap analysis (${EDITION})" \
             src/data/analysis/cache.json
 
       - name: Email heatmap analysis report

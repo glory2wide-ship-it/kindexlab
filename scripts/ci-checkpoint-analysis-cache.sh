@@ -3,7 +3,9 @@
 # Safe to call mid-run (after each overnight batch) and again on job cancel.
 set -euo pipefail
 
-MESSAGE="${1:-chore: checkpoint heatmap today's analysis}"
+# Avoid apostrophes in ${1:-default} — bash treats ' specially inside :- words
+# and aborts with "unexpected EOF while looking for matching `''" (seen 2026-09-15).
+MESSAGE="${1:-chore: checkpoint heatmap analysis cache}"
 CACHE_PATH="${2:-src/data/analysis/cache.json}"
 
 if [ ! -f "$CACHE_PATH" ]; then
