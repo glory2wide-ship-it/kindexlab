@@ -18,4 +18,21 @@ PATHS=("$CACHE_PATH")
 if [ -d src/data/ops/daily ]; then
   PATHS+=(src/data/ops/daily)
 fi
+
+# Final publish must include the edition digest; mid-run checkpoints leave this unset.
+if [ -n "${REQUIRE_OPS_DIGEST:-}" ] && [ -n "${OPS_DIGEST_EDITION:-}" ]; then
+  chmod +x scripts/ci-assert-ops-digest.sh
+  scripts/ci-assert-ops-digest.sh \
+    "$OPS_DIGEST_EDITION" \
+    "${OPS_DIGEST_KIND:-heatmap-analysis}" \
+    present
+fi
+
 scripts/ci-commit-push.sh "$MESSAGE" "${PATHS[@]}"
+
+if [ -n "${REQUIRE_OPS_DIGEST:-}" ] && [ -n "${OPS_DIGEST_EDITION:-}" ]; then
+  scripts/ci-assert-ops-digest.sh \
+    "$OPS_DIGEST_EDITION" \
+    "${OPS_DIGEST_KIND:-heatmap-analysis}" \
+    tracked
+fi

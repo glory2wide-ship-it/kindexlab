@@ -277,6 +277,14 @@ async function main() {
   );
   console.log(`[report] ${delivery.detail}`);
 
+  if (
+    (process.env.CI === "true" || process.env.REQUIRE_OPS_DIGEST === "1") &&
+    !delivery.digestPath
+  ) {
+    console.error("[ops] missing heatmap ops digest — admin would not see this run");
+    process.exitCode = 1;
+  }
+
   if (run.generated === 0 && targets.length > 0) {
     process.exitCode = 1;
   }

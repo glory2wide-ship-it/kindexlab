@@ -99,6 +99,7 @@ jobs:
           ANALYSIS_CHECKPOINT: "1"
           ANALYSIS_CHECKPOINT_INTERVAL_MS: "0"
           CI: "true"
+          REQUIRE_OPS_DIGEST: "1"
           GEMINI_MAX_CONCURRENCY: "4"
           TRENDS_DATA_SOURCE: live
           # Same search/API keys as ingest + board refresh — without these,
@@ -111,6 +112,16 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           REPORT_EMAIL_TO: glory2wide@gmail.com
 
+      # Guardrails: digest must exist before publish, and stay git-tracked after.
+      - name: Assert heatmap ops digest on disk
+        if: always() && steps.generate.outcome == 'success'
+        run: |
+          chmod +x scripts/ci-assert-ops-digest.sh scripts/check-shell-scripts.sh
+          scripts/check-shell-scripts.sh
+          EDITION="${{ steps.generate.outputs.edition }}"
+          if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
+          scripts/ci-assert-ops-digest.sh "$EDITION" heatmap-analysis present
+
       # Push whatever landed on disk — including when the job was cancelled at 6h.
       - name: Commit and push analysis cache
         if: always() && steps.generate.outcome != 'skipped'
@@ -118,12 +129,28 @@ jobs:
         # and are only visible after this step succeeds.
         continue-on-error: false
         run: |
-          chmod +x scripts/ci-commit-push.sh scripts/ci-checkpoint-analysis-cache.sh
+          chmod +x scripts/ci-commit-push.sh scripts/ci-checkpoint-analysis-cache.sh scripts/ci-assert-ops-digest.sh
+          bash -n scripts/ci-checkpoint-analysis-cache.sh
+          bash -n scripts/ci-commit-push.sh
           EDITION="${{ steps.generate.outputs.edition }}"
           if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
+          export OPS_DIGEST_EDITION="$EDITION"
+          export OPS_DIGEST_KIND=heatmap-analysis
+          # Require digest only when generation finished cleanly; still salvage cache on cancel/timeout.
+          if [ "${{ steps.generate.outcome }}" = "success" ]; then
+            export REQUIRE_OPS_DIGEST=1
+          fi
           scripts/ci-checkpoint-analysis-cache.sh \
             "chore: publish heatmap analysis (${EDITION})" \
             src/data/analysis/cache.json
+
+      - name: Verify heatmap ops digest published
+        if: success() && steps.generate.outcome == 'success'
+        run: |
+          chmod +x scripts/ci-assert-ops-digest.sh
+          EDITION="${{ steps.generate.outputs.edition }}"
+          if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
+          scripts/ci-assert-ops-digest.sh "$EDITION" heatmap-analysis tracked
 
       - name: Email heatmap analysis report
         if: always() && steps.generate.outcome != 'skipped'

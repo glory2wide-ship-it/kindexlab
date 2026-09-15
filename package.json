@@ -13,6 +13,7 @@
         "build": "next build",
         "start": "next start",
         "lint": "eslint",
+        "ci:shell-check": "bash scripts/check-shell-scripts.sh",
         "landing:check": "node scripts/check-landing-desk.mjs",
         "seo:check": "node scripts/check-seo-ready.mjs",
         "briefing:check": "node scripts/check-briefing-routing.mjs",

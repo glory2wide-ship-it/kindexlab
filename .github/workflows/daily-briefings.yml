@@ -90,14 +90,27 @@ jobs:
           # Serper disabled (cost). Re-enable with SERPER_ENABLED=1 + SERPER_API_KEY.
           REPORT_EMAIL_TO: glory2wide@gmail.com
 
+      - name: Assert briefing ops digest on disk
+        if: success()
+        run: |
+          chmod +x scripts/ci-assert-ops-digest.sh scripts/check-shell-scripts.sh
+          scripts/check-shell-scripts.sh
+          EDITION="${{ steps.generate.outputs.edition }}"
+          if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
+          scripts/ci-assert-ops-digest.sh "$EDITION" briefings present
+
       # Persist edition first so a missing mail secret cannot block publish.
       - name: Commit and push briefings
         if: success()
         run: |
-          chmod +x scripts/ci-commit-push.sh
+          chmod +x scripts/ci-commit-push.sh scripts/ci-assert-ops-digest.sh
+          bash -n scripts/ci-commit-push.sh
+          EDITION="${{ steps.generate.outputs.edition }}"
+          if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
           scripts/ci-commit-push.sh "chore: publish KST daily briefings" \
             src/data/briefings/extra.json \
             src/data/ops/daily
+          scripts/ci-assert-ops-digest.sh "$EDITION" briefings tracked
 
       - name: Email briefing generation report
         if: always() && steps.generate.outcome != 'skipped'

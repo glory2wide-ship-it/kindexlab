@@ -295,20 +295,31 @@ function opsDigestKindForPipeline(pipeline: string): "briefings" | "heatmap-anal
 export async function deliverGenerationReport(
   report: GenerationReport,
   fileStem: string,
-): Promise<{ emailed: boolean; to?: string; detail: string; htmlPath: string }> {
+): Promise<{
+  emailed: boolean;
+  to?: string;
+  detail: string;
+  htmlPath: string;
+  digestPath?: string;
+}> {
   const withCost: GenerationReport = {
     ...report,
     cost: report.cost ?? snapshotGeminiUsage(),
   };
   const artifacts = await writeGenerationReportArtifacts(withCost, fileStem);
+  let digestPath: string | undefined;
   try {
     const { digestFromGenerationReport, persistOpsDigest } = await import("@/lib/ops/ops-digest");
-    const digestPath = await persistOpsDigest(
+    digestPath = await persistOpsDigest(
       digestFromGenerationReport(withCost, opsDigestKindForPipeline(withCost.pipeline)),
     );
     console.log(`[ops] digest ${digestPath}`);
   } catch (error) {
     console.warn("[ops] digest persist failed", error);
+    // Admin /admin reads src/data/ops/daily — CI must not swallow a missing digest.
+    if (process.env.CI === "true" || process.env.REQUIRE_OPS_DIGEST === "1") {
+      throw error instanceof Error ? error : new Error(String(error));
+    }
   }
   const to = (process.env.REPORT_EMAIL_TO ?? DEFAULT_REPORT_EMAIL_TO).trim();
 
@@ -334,6 +345,7 @@ export async function deliverGenerationReport(
           to,
           detail: `resend → ${artifacts.htmlPath}`,
           htmlPath: artifacts.htmlPath,
+          digestPath,
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -343,6 +355,7 @@ export async function deliverGenerationReport(
           to,
           detail: `email error; wrote ${artifacts.htmlPath}`,
           htmlPath: artifacts.htmlPath,
+          digestPath,
         };
       }
     }
@@ -353,5 +366,6 @@ export async function deliverGenerationReport(
     to,
     detail: `wrote ${artifacts.htmlPath} (CI email step → ${to})`,
     htmlPath: artifacts.htmlPath,
+    digestPath,
   };
 }
