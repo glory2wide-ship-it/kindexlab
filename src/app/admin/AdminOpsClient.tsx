@@ -114,11 +114,21 @@ function Section({
 
 type SectionKey = "daily" | "webHealth" | "liveFill";
 
+type TabId = "daily" | "webHealth" | "liveFill" | "detailCollect";
+
+const TABS: Array<{ id: TabId; label: string }> = [
+  { id: "daily", label: "일일 글생성비용" },
+  { id: "webHealth", label: "웹 병목 · 로딩 · 랜딩" },
+  { id: "liveFill", label: "히트맵 LIVE 채움" },
+  { id: "detailCollect", label: "상세페이지 정보수집" },
+];
+
 export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) {
   const router = useRouter();
   const [data, setData] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [activeTab, setActiveTab] = useState<TabId>("daily");
   const [sectionUpdatedAt, setSectionUpdatedAt] = useState({
     daily: initial.daily.updatedAt,
     webHealth: initial.webHealth.updatedAt,
@@ -154,6 +164,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                 daily: next.daily,
                 schedule: next.schedule,
                 categoryInfoRefresh: next.categoryInfoRefresh,
+                detailCollectApiCost: next.detailCollectApiCost,
               };
             }
             if (key === "webHealth") {
@@ -249,7 +260,15 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
     });
   }, [router]);
 
-  const { daily, traffic, webHealth, liveFill, schedule, categoryInfoRefresh } = data;
+  const {
+    daily,
+    traffic,
+    webHealth,
+    liveFill,
+    schedule,
+    categoryInfoRefresh,
+    detailCollectApiCost,
+  } = data;
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-10 sm:px-6">
@@ -291,51 +310,6 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
         </p>
         {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
       </header>
-
-      <Section
-        title="종목 상세 정보 갱신"
-        subtitle="채널 구분별 권장 주기와 최근·다음 업데이트 시각(KST). 실제 조회 캐시도 이 주기에 맞춰 재검증합니다."
-        meta={`정책 기준 ${formatKst(data.generatedAt)}`}
-      >
-        <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-board text-xs text-muted">
-              <tr>
-                <th className="px-3 py-2 font-medium">구분</th>
-                <th className="px-3 py-2 font-medium">권장 주기</th>
-                <th className="px-3 py-2 font-medium">채널</th>
-                <th className="px-3 py-2 font-medium">최신 업데이트</th>
-                <th className="px-3 py-2 font-medium">다음 업데이트</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categoryInfoRefresh.map((row) => (
-                <tr key={row.id} className="border-t border-line align-top">
-                  <td className="px-3 py-2.5">
-                    <div className="font-medium text-ink">{row.label}</div>
-                    <div className="mt-0.5 text-xs text-muted">{row.reason}</div>
-                  </td>
-                  <td className="px-3 py-2.5 tabular-nums text-ink">{row.cadenceLabel}</td>
-                  <td className="max-w-[14rem] px-3 py-2.5 text-xs text-muted">
-                    {row.channelsLabel}
-                  </td>
-                  <td className="px-3 py-2.5 text-xs tabular-nums text-ink">
-                    {formatKst(row.lastUpdatedAt)}
-                  </td>
-                  <td className="px-3 py-2.5 text-xs tabular-nums">
-                    <span className={row.overdue ? "font-medium text-amber-800" : "text-ink"}>
-                      {formatKst(row.nextUpdateAt)}
-                    </span>
-                    {row.overdue ? (
-                      <span className="mt-0.5 block text-[11px] text-amber-700">갱신 지연</span>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Section>
 
       <Section
         title="방문자"
@@ -403,284 +377,409 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
         </div>
       </Section>
 
-      <Section
-        title="일일 생성 · 비용"
-        subtitle={`브리핑·히트맵 분석 성공/실패와 Gemini API 추정 비용(Batch 요금 기준, Live 대비 −50%). 보드 갱신 비용은 별도. · 자동 갱신 ${schedule.daily.label}`}
-        meta={`기준일 ${formatKstDate(daily.dateLabel)} (${daily.dateLabel}) · 마지막 업데이트 ${formatKst(sectionUpdatedAt.daily)}`}
+      <nav
+        className="flex flex-wrap gap-1 border-b border-line"
+        role="tablist"
+        aria-label="운영 현황 탭"
       >
-        {!daily.hasData ? (
-          <p className="rounded-lg border border-dashed border-line bg-panel px-4 py-6 text-sm text-muted">
-            오늘자 ops digest가 아직 없습니다. CI 생성 잡이 커밋하면 여기에 쌓입니다.
-          </p>
-        ) : (
-          <div className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <dl className="rounded-xl border border-line bg-panel px-4 py-4">
-                <dt className="text-xs text-muted">생성 성공 / 실패 / 스킵</dt>
-                <dd className="mt-2 text-2xl font-semibold tabular-nums text-ink">
-                  {daily.generationOk}
-                  <span className="mx-1 text-base font-normal text-muted">/</span>
-                  {daily.generationFail}
-                  <span className="mx-1 text-base font-normal text-muted">/</span>
-                  {daily.generationSkip}
-                </dd>
-                <dd className="mt-3 text-sm text-muted">
-                  생성 API {daily.generationKrwLabel}
-                  <span className="text-muted"> · Batch 요금</span>
-                </dd>
-              </dl>
-              <dl className="rounded-xl border border-line bg-panel px-4 py-4">
-                <dt className="text-xs text-muted">보드 갱신</dt>
-                <dd className="mt-2 text-2xl font-semibold tabular-nums text-ink">
-                  {daily.boardsRefreshed}
-                  <span className="ml-2 text-base font-normal text-muted">보드</span>
-                </dd>
-                <dd className="mt-3 text-sm text-muted">
-                  갱신 API {daily.boardRefreshKrwLabel}
-                  <span className="text-muted"> · Batch 요금</span>
-                  {daily.boardRefreshFail > 0 ? ` · 실패 ${daily.boardRefreshFail}` : ""}
-                </dd>
-              </dl>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-ink">종류별</h3>
-              <p className="mt-1 text-xs text-muted">
-                투데이 브리핑 · 투데이 인사이트 · 오늘의 분석 성공 / 실패 / 글생성 API 비용 (Batch 요금
-                기준)
-              </p>
-              {daily.byArticleType.length === 0 ? (
-                <p className="mt-2 text-sm text-muted">글 단위 내역이 아직 없습니다.</p>
-              ) : (
-                <div className="mt-2 overflow-x-auto rounded-xl border border-line">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="bg-board text-xs text-muted">
-                      <tr>
-                        <th className="px-3 py-2 font-medium">종류</th>
-                        <th className="px-3 py-2 font-medium">성공</th>
-                        <th className="px-3 py-2 font-medium">실패</th>
-                        <th className="px-3 py-2 font-medium">스킵</th>
-                        <th className="px-3 py-2 font-medium text-right">글생성 API 비용</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {daily.byArticleType.map((row) => (
-                        <tr key={row.type} className="border-t border-line">
-                          <td className="px-3 py-2.5 font-medium text-ink">{row.typeLabel}</td>
-                          <td className="px-3 py-2.5 tabular-nums text-emerald-700">{row.ok}</td>
-                          <td className="px-3 py-2.5 tabular-nums text-red-700">{row.fail}</td>
-                          <td className="px-3 py-2.5 tabular-nums text-muted">{row.skip}</td>
-                          <td className="px-3 py-2.5 text-right tabular-nums text-ink">
-                            {row.estimatedKrwLabel}
-                          </td>
-                        </tr>
-                      ))}
-                      <tr className="border-t border-line bg-board/60 font-semibold">
-                        <td className="px-3 py-2.5 text-ink">합계</td>
-                        <td className="px-3 py-2.5 tabular-nums text-emerald-700">
-                          {daily.byArticleType.reduce((acc, row) => acc + row.ok, 0)}
-                        </td>
-                        <td className="px-3 py-2.5 tabular-nums text-red-700">
-                          {daily.byArticleType.reduce((acc, row) => acc + row.fail, 0)}
-                        </td>
-                        <td className="px-3 py-2.5 tabular-nums text-muted">
-                          {daily.byArticleType.reduce((acc, row) => acc + row.skip, 0)}
-                        </td>
-                        <td className="px-3 py-2.5 text-right tabular-nums text-ink">
-                          {daily.generationKrwLabel}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-ink">카테고리별</h3>
-              <p className="mt-1 text-xs text-muted">
-                채널별 성공 / 실패 / 글생성 API 비용 (Batch 요금 기준)
-              </p>
-              {daily.byCategory.length === 0 ? (
-                <p className="mt-2 text-sm text-muted">글 단위 내역이 아직 없습니다.</p>
-              ) : (
-                <div className="mt-2 overflow-x-auto rounded-xl border border-line">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="bg-board text-xs text-muted">
-                      <tr>
-                        <th className="px-3 py-2 font-medium">카테고리</th>
-                        <th className="px-3 py-2 font-medium">성공</th>
-                        <th className="px-3 py-2 font-medium">실패</th>
-                        <th className="px-3 py-2 font-medium">스킵</th>
-                        <th className="px-3 py-2 font-medium text-right">글생성 API 비용</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {daily.byCategory.map((row) => (
-                        <tr key={row.category} className="border-t border-line">
-                          <td className="px-3 py-2.5 font-medium text-ink">{row.categoryLabel}</td>
-                          <td className="px-3 py-2.5 tabular-nums text-emerald-700">{row.ok}</td>
-                          <td className="px-3 py-2.5 tabular-nums text-red-700">{row.fail}</td>
-                          <td className="px-3 py-2.5 tabular-nums text-muted">{row.skip}</td>
-                          <td className="px-3 py-2.5 text-right tabular-nums text-ink">
-                            {row.estimatedKrwLabel}
-                          </td>
-                        </tr>
-                      ))}
-                      <tr className="border-t border-line bg-board/60 font-semibold">
-                        <td className="px-3 py-2.5 text-ink">합계</td>
-                        <td className="px-3 py-2.5 tabular-nums text-emerald-700">
-                          {daily.byCategory.reduce((acc, row) => acc + row.ok, 0)}
-                        </td>
-                        <td className="px-3 py-2.5 tabular-nums text-red-700">
-                          {daily.byCategory.reduce((acc, row) => acc + row.fail, 0)}
-                        </td>
-                        <td className="px-3 py-2.5 tabular-nums text-muted">
-                          {daily.byCategory.reduce((acc, row) => acc + row.skip, 0)}
-                        </td>
-                        <td className="px-3 py-2.5 text-right tabular-nums text-ink">
-                          {daily.generationKrwLabel}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-ink">글별</h3>
-              <p className="mt-1 text-xs text-muted">
-                개별 글·키워드 성공 / 실패 / 글생성 API 비용 (Batch 요금 기준)
-              </p>
-              {daily.byItem.length === 0 ? (
-                <p className="mt-2 text-sm text-muted">글 단위 내역이 아직 없습니다.</p>
-              ) : (
-                <div className="mt-2 max-h-[28rem] overflow-auto rounded-xl border border-line">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="sticky top-0 bg-board text-xs text-muted">
-                      <tr>
-                        <th className="px-3 py-2 font-medium">글</th>
-                        <th className="px-3 py-2 font-medium">카테고리</th>
-                        <th className="px-3 py-2 font-medium">결과</th>
-                        <th className="px-3 py-2 font-medium">구분</th>
-                        <th className="px-3 py-2 font-medium text-right">글생성 API 비용</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {daily.byItem.map((row, index) => (
-                        <tr
-                          key={`${row.pipeline}:${row.category}:${row.name}:${index}`}
-                          className="border-t border-line"
-                        >
-                          <td className="max-w-[16rem] truncate px-3 py-2.5 font-medium text-ink">
-                            {row.name}
-                          </td>
-                          <td className="px-3 py-2.5 text-muted">{row.categoryLabel}</td>
-                          <td className="px-3 py-2.5">
-                            <span
-                              className={
-                                row.status === "ok"
-                                  ? "font-medium text-emerald-700"
-                                  : row.status === "fail"
-                                    ? "font-medium text-red-700"
-                                    : "text-muted"
-                              }
-                            >
-                              {row.status === "ok" ? "성공" : row.status === "fail" ? "실패" : "스킵"}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2.5 text-muted">
-                            {row.pipeline.includes("heatmap")
-                              ? "오늘의 분석"
-                              : row.kind === "main"
-                                ? "투데이 브리핑"
-                                : row.kind === "deep-dive" || row.pipeline.includes("briefing")
-                                  ? "투데이 인사이트"
-                                  : row.kind || "—"}
-                          </td>
-                          <td className="px-3 py-2.5 text-right tabular-nums text-ink">
-                            {row.estimatedKrwLabel}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </Section>
-
-      <Section
-        title="웹 병목 · 로딩 · 랜딩"
-        subtitle={`트렌드 스냅샷, 랜딩 캐시, published 보드 TTL. · 자동 갱신 ${schedule.webHealth.label}`}
-        level={webHealth.level}
-        meta={`마지막 업데이트 ${formatKst(sectionUpdatedAt.webHealth)}`}
-      >
-        <ul className="space-y-2">
-          {webHealth.checks.map((check) => (
-            <li
-              key={check.id}
-              className="flex flex-col gap-1 rounded-lg border border-line bg-panel px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(tab.id)}
+              className={
+                isActive
+                  ? "-mb-px border-b-2 border-ink px-3 py-2.5 text-sm font-semibold text-ink"
+                  : "-mb-px border-b-2 border-transparent px-3 py-2.5 text-sm text-muted hover:text-ink"
+              }
             >
-              <div className="flex items-center gap-2">
-                <LevelBadge level={check.level} />
-                <span className="text-sm font-medium text-ink">{check.label}</span>
-              </div>
-              <p className="text-sm text-muted sm:max-w-[60%] sm:text-right">{check.detail}</p>
-            </li>
-          ))}
-        </ul>
-      </Section>
+              {tab.label}
+            </button>
+          );
+        })}
+      </nav>
 
-      <Section
-        title="히트맵 LIVE 채움"
-        subtitle={`카테고리별 화면 헤드 LIVE 비율 (스냅샷·오버레이 기준). · 자동 갱신 ${schedule.liveFill.label}`}
-        level={liveFill.level}
-        meta={`마지막 업데이트 ${formatKst(sectionUpdatedAt.liveFill)}`}
-      >
-        <p className="mb-4 text-sm text-muted">
-          스냅샷 {liveFill.snapshotItems.toLocaleString("ko-KR")}항목
-          {liveFill.snapshotAgeMinutes != null ? ` · ${liveFill.snapshotAgeMinutes}분 전` : ""}
-          {" · "}
-          랜딩 LIVE {liveFill.landingLiveLead}/{liveFill.screenCap} ({pct(liveFill.landingLivePct)})
-        </p>
-        {liveFill.notes.length > 0 ? (
-          <ul className="mb-4 list-disc space-y-1 pl-5 text-sm text-amber-800">
-            {liveFill.notes.map((note) => (
-              <li key={note}>{note}</li>
-            ))}
-          </ul>
+      <div role="tabpanel">
+        {activeTab === "daily" ? (
+          <Section
+            title="일일 생성 · 비용"
+            subtitle={`브리핑·히트맵 분석 성공/실패와 Gemini API 추정 비용(Batch 요금 기준, Live 대비 −50%). 보드 갱신 비용은 별도. · 자동 갱신 ${schedule.daily.label}`}
+            meta={`기준일 ${formatKstDate(daily.dateLabel)} (${daily.dateLabel}) · 마지막 업데이트 ${formatKst(sectionUpdatedAt.daily)}`}
+          >
+            {!daily.hasData ? (
+              <p className="rounded-lg border border-dashed border-line bg-panel px-4 py-6 text-sm text-muted">
+                오늘자 ops digest가 아직 없습니다. CI 생성 잡이 커밋하면 여기에 쌓입니다.
+              </p>
+            ) : (
+              <div className="space-y-5">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <dl className="rounded-xl border border-line bg-panel px-4 py-4">
+                    <dt className="text-xs text-muted">생성 성공 / 실패 / 스킵</dt>
+                    <dd className="mt-2 text-2xl font-semibold tabular-nums text-ink">
+                      {daily.generationOk}
+                      <span className="mx-1 text-base font-normal text-muted">/</span>
+                      {daily.generationFail}
+                      <span className="mx-1 text-base font-normal text-muted">/</span>
+                      {daily.generationSkip}
+                    </dd>
+                    <dd className="mt-3 text-sm text-muted">
+                      생성 API {daily.generationKrwLabel}
+                      <span className="text-muted"> · Batch 요금</span>
+                    </dd>
+                  </dl>
+                  <dl className="rounded-xl border border-line bg-panel px-4 py-4">
+                    <dt className="text-xs text-muted">보드 갱신</dt>
+                    <dd className="mt-2 text-2xl font-semibold tabular-nums text-ink">
+                      {daily.boardsRefreshed}
+                      <span className="ml-2 text-base font-normal text-muted">보드</span>
+                    </dd>
+                    <dd className="mt-3 text-sm text-muted">
+                      갱신 API {daily.boardRefreshKrwLabel}
+                      <span className="text-muted"> · Batch 요금</span>
+                      {daily.boardRefreshFail > 0 ? ` · 실패 ${daily.boardRefreshFail}` : ""}
+                    </dd>
+                  </dl>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-ink">종류별</h3>
+                  <p className="mt-1 text-xs text-muted">
+                    투데이 브리핑 · 투데이 인사이트 · 오늘의 분석 성공 / 실패 / 글생성 API 비용 (Batch
+                    요금 기준)
+                  </p>
+                  {daily.byArticleType.length === 0 ? (
+                    <p className="mt-2 text-sm text-muted">글 단위 내역이 아직 없습니다.</p>
+                  ) : (
+                    <div className="mt-2 overflow-x-auto rounded-xl border border-line">
+                      <table className="min-w-full text-left text-sm">
+                        <thead className="bg-board text-xs text-muted">
+                          <tr>
+                            <th className="px-3 py-2 font-medium">종류</th>
+                            <th className="px-3 py-2 font-medium">성공</th>
+                            <th className="px-3 py-2 font-medium">실패</th>
+                            <th className="px-3 py-2 font-medium">스킵</th>
+                            <th className="px-3 py-2 font-medium text-right">글생성 API 비용</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {daily.byArticleType.map((row) => (
+                            <tr key={row.type} className="border-t border-line">
+                              <td className="px-3 py-2.5 font-medium text-ink">{row.typeLabel}</td>
+                              <td className="px-3 py-2.5 tabular-nums text-emerald-700">{row.ok}</td>
+                              <td className="px-3 py-2.5 tabular-nums text-red-700">{row.fail}</td>
+                              <td className="px-3 py-2.5 tabular-nums text-muted">{row.skip}</td>
+                              <td className="px-3 py-2.5 text-right tabular-nums text-ink">
+                                {row.estimatedKrwLabel}
+                              </td>
+                            </tr>
+                          ))}
+                          <tr className="border-t border-line bg-board/60 font-semibold">
+                            <td className="px-3 py-2.5 text-ink">합계</td>
+                            <td className="px-3 py-2.5 tabular-nums text-emerald-700">
+                              {daily.byArticleType.reduce((acc, row) => acc + row.ok, 0)}
+                            </td>
+                            <td className="px-3 py-2.5 tabular-nums text-red-700">
+                              {daily.byArticleType.reduce((acc, row) => acc + row.fail, 0)}
+                            </td>
+                            <td className="px-3 py-2.5 tabular-nums text-muted">
+                              {daily.byArticleType.reduce((acc, row) => acc + row.skip, 0)}
+                            </td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-ink">
+                              {daily.generationKrwLabel}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-ink">카테고리별</h3>
+                  <p className="mt-1 text-xs text-muted">
+                    채널별 성공 / 실패 / 글생성 API 비용 (Batch 요금 기준)
+                  </p>
+                  {daily.byCategory.length === 0 ? (
+                    <p className="mt-2 text-sm text-muted">글 단위 내역이 아직 없습니다.</p>
+                  ) : (
+                    <div className="mt-2 overflow-x-auto rounded-xl border border-line">
+                      <table className="min-w-full text-left text-sm">
+                        <thead className="bg-board text-xs text-muted">
+                          <tr>
+                            <th className="px-3 py-2 font-medium">카테고리</th>
+                            <th className="px-3 py-2 font-medium">성공</th>
+                            <th className="px-3 py-2 font-medium">실패</th>
+                            <th className="px-3 py-2 font-medium">스킵</th>
+                            <th className="px-3 py-2 font-medium text-right">글생성 API 비용</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {daily.byCategory.map((row) => (
+                            <tr key={row.category} className="border-t border-line">
+                              <td className="px-3 py-2.5 font-medium text-ink">{row.categoryLabel}</td>
+                              <td className="px-3 py-2.5 tabular-nums text-emerald-700">{row.ok}</td>
+                              <td className="px-3 py-2.5 tabular-nums text-red-700">{row.fail}</td>
+                              <td className="px-3 py-2.5 tabular-nums text-muted">{row.skip}</td>
+                              <td className="px-3 py-2.5 text-right tabular-nums text-ink">
+                                {row.estimatedKrwLabel}
+                              </td>
+                            </tr>
+                          ))}
+                          <tr className="border-t border-line bg-board/60 font-semibold">
+                            <td className="px-3 py-2.5 text-ink">합계</td>
+                            <td className="px-3 py-2.5 tabular-nums text-emerald-700">
+                              {daily.byCategory.reduce((acc, row) => acc + row.ok, 0)}
+                            </td>
+                            <td className="px-3 py-2.5 tabular-nums text-red-700">
+                              {daily.byCategory.reduce((acc, row) => acc + row.fail, 0)}
+                            </td>
+                            <td className="px-3 py-2.5 tabular-nums text-muted">
+                              {daily.byCategory.reduce((acc, row) => acc + row.skip, 0)}
+                            </td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-ink">
+                              {daily.generationKrwLabel}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-ink">글별</h3>
+                  <p className="mt-1 text-xs text-muted">
+                    개별 글·키워드 성공 / 실패 / 글생성 API 비용 (Batch 요금 기준)
+                  </p>
+                  {daily.byItem.length === 0 ? (
+                    <p className="mt-2 text-sm text-muted">글 단위 내역이 아직 없습니다.</p>
+                  ) : (
+                    <div className="mt-2 max-h-[28rem] overflow-auto rounded-xl border border-line">
+                      <table className="min-w-full text-left text-sm">
+                        <thead className="sticky top-0 bg-board text-xs text-muted">
+                          <tr>
+                            <th className="px-3 py-2 font-medium">글</th>
+                            <th className="px-3 py-2 font-medium">카테고리</th>
+                            <th className="px-3 py-2 font-medium">결과</th>
+                            <th className="px-3 py-2 font-medium">구분</th>
+                            <th className="px-3 py-2 font-medium text-right">글생성 API 비용</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {daily.byItem.map((row, index) => (
+                            <tr
+                              key={`${row.pipeline}:${row.category}:${row.name}:${index}`}
+                              className="border-t border-line"
+                            >
+                              <td className="max-w-[16rem] truncate px-3 py-2.5 font-medium text-ink">
+                                {row.name}
+                              </td>
+                              <td className="px-3 py-2.5 text-muted">{row.categoryLabel}</td>
+                              <td className="px-3 py-2.5">
+                                <span
+                                  className={
+                                    row.status === "ok"
+                                      ? "font-medium text-emerald-700"
+                                      : row.status === "fail"
+                                        ? "font-medium text-red-700"
+                                        : "text-muted"
+                                  }
+                                >
+                                  {row.status === "ok"
+                                    ? "성공"
+                                    : row.status === "fail"
+                                      ? "실패"
+                                      : "스킵"}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2.5 text-muted">
+                                {row.pipeline.includes("heatmap")
+                                  ? "오늘의 분석"
+                                  : row.kind === "main"
+                                    ? "투데이 브리핑"
+                                    : row.kind === "deep-dive" || row.pipeline.includes("briefing")
+                                      ? "투데이 인사이트"
+                                      : row.kind || "—"}
+                              </td>
+                              <td className="px-3 py-2.5 text-right tabular-nums text-ink">
+                                {row.estimatedKrwLabel}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </Section>
         ) : null}
-        <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-board text-xs text-muted">
-              <tr>
-                <th className="px-3 py-2 font-medium">카테고리</th>
-                <th className="px-3 py-2 font-medium">상태</th>
-                <th className="px-3 py-2 font-medium">LIVE</th>
-                <th className="px-3 py-2 font-medium">채움</th>
-                <th className="px-3 py-2 font-medium">보드</th>
-              </tr>
-            </thead>
-            <tbody>
-              {liveFill.channels.map((row) => (
-                <tr key={row.channel} className="border-t border-line">
-                  <td className="px-3 py-2.5 font-medium text-ink">{row.label}</td>
-                  <td className="px-3 py-2.5">
-                    <LevelBadge level={row.level} />
-                  </td>
-                  <td className="px-3 py-2.5 tabular-nums text-ink">{pct(row.livePct)}</td>
-                  <td className="px-3 py-2.5 tabular-nums text-ink">{pct(row.fillPct)}</td>
-                  <td className="px-3 py-2.5 tabular-nums text-muted">{row.boardCount}</td>
-                </tr>
+
+        {activeTab === "webHealth" ? (
+          <Section
+            title="웹 병목 · 로딩 · 랜딩"
+            subtitle={`트렌드 스냅샷, 랜딩 캐시, published 보드 TTL. · 자동 갱신 ${schedule.webHealth.label}`}
+            level={webHealth.level}
+            meta={`마지막 업데이트 ${formatKst(sectionUpdatedAt.webHealth)}`}
+          >
+            <ul className="space-y-2">
+              {webHealth.checks.map((check) => (
+                <li
+                  key={check.id}
+                  className="flex flex-col gap-1 rounded-lg border border-line bg-panel px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <LevelBadge level={check.level} />
+                    <span className="text-sm font-medium text-ink">{check.label}</span>
+                  </div>
+                  <p className="text-sm text-muted sm:max-w-[60%] sm:text-right">{check.detail}</p>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </Section>
+            </ul>
+          </Section>
+        ) : null}
+
+        {activeTab === "liveFill" ? (
+          <Section
+            title="히트맵 LIVE 채움"
+            subtitle={`카테고리별 화면 헤드 LIVE 비율 (스냅샷·오버레이 기준). · 자동 갱신 ${schedule.liveFill.label}`}
+            level={liveFill.level}
+            meta={`마지막 업데이트 ${formatKst(sectionUpdatedAt.liveFill)}`}
+          >
+            <p className="mb-4 text-sm text-muted">
+              스냅샷 {liveFill.snapshotItems.toLocaleString("ko-KR")}항목
+              {liveFill.snapshotAgeMinutes != null ? ` · ${liveFill.snapshotAgeMinutes}분 전` : ""}
+              {" · "}
+              랜딩 LIVE {liveFill.landingLiveLead}/{liveFill.screenCap} ({pct(liveFill.landingLivePct)})
+            </p>
+            {liveFill.notes.length > 0 ? (
+              <ul className="mb-4 list-disc space-y-1 pl-5 text-sm text-amber-800">
+                {liveFill.notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="overflow-x-auto rounded-xl border border-line">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-board text-xs text-muted">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">카테고리</th>
+                    <th className="px-3 py-2 font-medium">상태</th>
+                    <th className="px-3 py-2 font-medium">LIVE</th>
+                    <th className="px-3 py-2 font-medium">채움</th>
+                    <th className="px-3 py-2 font-medium">보드</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {liveFill.channels.map((row) => (
+                    <tr key={row.channel} className="border-t border-line">
+                      <td className="px-3 py-2.5 font-medium text-ink">{row.label}</td>
+                      <td className="px-3 py-2.5">
+                        <LevelBadge level={row.level} />
+                      </td>
+                      <td className="px-3 py-2.5 tabular-nums text-ink">{pct(row.livePct)}</td>
+                      <td className="px-3 py-2.5 tabular-nums text-ink">{pct(row.fillPct)}</td>
+                      <td className="px-3 py-2.5 tabular-nums text-muted">{row.boardCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Section>
+        ) : null}
+
+        {activeTab === "detailCollect" ? (
+          <>
+            <Section
+              title="종목 상세 정보 갱신"
+              subtitle="채널 구분별 권장 주기와 최근·다음 업데이트 시각(KST). 실제 조회 캐시도 이 주기에 맞춰 재검증합니다."
+              meta={`정책 기준 ${formatKst(data.generatedAt)}`}
+            >
+              <div className="overflow-x-auto rounded-xl border border-line">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-board text-xs text-muted">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">구분</th>
+                      <th className="px-3 py-2 font-medium">권장 주기</th>
+                      <th className="px-3 py-2 font-medium">채널</th>
+                      <th className="px-3 py-2 font-medium">최신 업데이트</th>
+                      <th className="px-3 py-2 font-medium">다음 업데이트</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categoryInfoRefresh.map((row) => (
+                      <tr key={row.id} className="border-t border-line align-top">
+                        <td className="px-3 py-2.5">
+                          <div className="font-medium text-ink">{row.label}</div>
+                          <div className="mt-0.5 text-xs text-muted">{row.reason}</div>
+                        </td>
+                        <td className="px-3 py-2.5 tabular-nums text-ink">{row.cadenceLabel}</td>
+                        <td className="max-w-[14rem] px-3 py-2.5 text-xs text-muted">
+                          {row.channelsLabel}
+                        </td>
+                        <td className="px-3 py-2.5 text-xs tabular-nums text-ink">
+                          {formatKst(row.lastUpdatedAt)}
+                        </td>
+                        <td className="px-3 py-2.5 text-xs tabular-nums">
+                          <span className={row.overdue ? "font-medium text-amber-800" : "text-ink"}>
+                            {formatKst(row.nextUpdateAt)}
+                          </span>
+                          {row.overdue ? (
+                            <span className="mt-0.5 block text-[11px] text-amber-700">갱신 지연</span>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Section>
+
+            <Section
+              title="정보수집 API 비용 (오늘)"
+              subtitle={`YouTube · OpenAI 추정 비용 (KST ${detailCollectApiCost.dayKst}).`}
+              meta={`마지막 업데이트 ${formatKst(detailCollectApiCost.updatedAt)}`}
+            >
+              <div className="overflow-x-auto rounded-xl border border-line">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-board text-xs text-muted">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">API</th>
+                      <th className="px-3 py-2 font-medium text-right">추정 비용</th>
+                      <th className="px-3 py-2 font-medium">비고</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t border-line align-top">
+                      <td className="px-3 py-2.5 font-medium text-ink">YouTube API</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-ink">
+                        {detailCollectApiCost.youtube.estimatedKrwLabel}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-muted">
+                        {detailCollectApiCost.youtube.note}
+                      </td>
+                    </tr>
+                    <tr className="border-t border-line align-top">
+                      <td className="px-3 py-2.5 font-medium text-ink">OpenAI API</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-ink">
+                        {detailCollectApiCost.openai.estimatedKrwLabel}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-muted">
+                        {detailCollectApiCost.openai.note}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </Section>
+          </>
+        ) : null}
+      </div>
     </main>
   );
 }
