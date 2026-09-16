@@ -66,20 +66,28 @@ npm run seo:check
 
 배포 반영 후 아래 순서로 진행하세요.
 
-1. **요청 → 사이트맵 제출**: `https://www.kindexlab.com/sitemap.xml`  
+**메뉴 위치:** 왼쪽 사이드바 **요청**을 펼치면 네 항목이 보입니다.  
+`웹 페이지 수집` · `웹 페이지 검색 제외` · **`RSS 제출`** · **`사이트맵 제출`**  
+(「웹 페이지 수집」 화면만 열려 있어도, 그 아래/옆에 RSS·사이트맵 메뉴가 있습니다.)
+
+1. **요청 → 사이트맵 제출** 클릭 → URL: `https://www.kindexlab.com/sitemap.xml`  
    - 이미 있으면 삭제하지 말고 유지. 미제출이면 제출.
-2. **요청 → RSS 제출**: `https://www.kindexlab.com/feed.xml`  
+2. **요청 → RSS 제출** 클릭 → URL: `https://www.kindexlab.com/feed.xml`  
    - 네이버는 RSS를 “콘텐츠 피드”로 주기 재방문합니다. **브리핑 본문이 들어간 피드**가 중요합니다.
-3. **검증 → robots.txt**: Yeti 허용·`/sitemap.xml` 링크 확인.
-4. **요청 → 웹페이지 수집** (하루 한도 내, 허브 우선):
-   - `/`
-   - `/briefing`
-   - `/entertainment` `/politics` `/economy` `/culture` `/travel`
+3. **검증 → robots.txt**: 상단 **수집요청**으로 최신본 재수집.  
+   - 기대 내용: `User-Agent: Yeti`, `Disallow: /search`, `Sitemap: https://www.kindexlab.com/sitemap.xml`  
+   - 예전 스냅샷에 Sitemap/Yeti가 없으면 프로덕션 배포 후 재수집.
+4. **요청 → 웹 페이지 수집** (하루 한도 내, 허브 우선) — URL은 **전체 주소**로 입력:
+   - `https://www.kindexlab.com/`
+   - `https://www.kindexlab.com/briefing`
+   - `/entertainment` `/politics` `/economy` `/culture` `/travel` 허브
    - 최근 투데이 브리핑 URL 5~10개  
-   - `인간극장 시청률`·`기본소득당 지지율`처럼 의도 검색에 맞는 상세(품질 통과분) 소수
-5. **수집 현황**을 2~3일 간격으로 확인: 완료 페이지 수가 3 → 수십·수백으로 늘어야 정상.
-6. 노출/클릭 리포트가 생기면: 노출 키워드 CTR을 보고 브리핑 제목을 검색 의에 맞게 다듬기.
-7. (선택) 서치어드바이저에서 **IndexNow** 키가 있으면 env로 연동해 신규 브리핑 발행 시 알림 — 수집 가속.
+   - `인간극장 시청률`·`기본소득당 지지율`처럼 의도 검색에 맞는 상세(품질 통과분) 소수  
+   - 입력칸에 `briefing`만 넣지 말고 전체 URL을 넣으세요.
+5. **검증 → 색인 상태 확인**에서 홈 SEO 경고(`H1` 2개)는 코드에서 섹션 제목을 `h2`로 내려 수정함 — 배포 후 **수집 요청**으로 재진단.
+6. **수집 현황**을 2~3일 간격으로 확인: 완료 페이지 수가 3 → 수십·수백으로 늘어야 정상.
+7. 노출/클릭 리포트가 생기면: 노출 키워드 CTR을 보고 브리핑 제목을 검색 의에 맞게 다듬기.
+8. (선택) 서치어드바이저에서 **IndexNow** 키가 있으면 env로 연동해 신규 브리핑 발행 시 알림 — 수집 가속.
 
 ### 콘텐츠·유입 운영 팁 (네이버)
 
