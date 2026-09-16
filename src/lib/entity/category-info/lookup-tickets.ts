@@ -10,9 +10,24 @@ export type TicketLookup = {
   price?: string;
   url?: string;
   bookingPercent?: string;
-  source: "인터파크" | "티켓링크" | "예스24티켓";
+  source: "놀티켓" | "티켓링크" | "예스24티켓";
   kind: "performance" | "exhibition";
 };
+
+type NolRankRow = {
+  goodsName?: string;
+  placeName?: string;
+  bookingPercent?: string | number;
+  goodsCode?: string;
+  playPeriod?: string;
+  playStartDate?: string;
+  playEndDate?: string;
+  url?: string;
+  rank?: number;
+};
+
+const NOL_ORIGIN = "https://nol.yanolja.com";
+const NOL_TICKET_HOST = "https://tickets.interpark.com";
 
 function plain(raw?: string): string | undefined {
   if (!raw) return undefined;
@@ -40,6 +55,9 @@ function formatYmd(raw?: string): string | undefined {
   }
   const iso = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
   if (iso) return `${iso[1]}.${iso[2]}.${iso[3]}`;
+  // NOL playPeriod often uses YY.MM.DD
+  const short = raw.match(/(\d{2})\.(\d{2})\.(\d{2})/g);
+  if (short?.length) return plain(raw);
   return plain(raw);
 }
 
@@ -50,26 +68,113 @@ function formatPeriod(start?: string, end?: string): string | undefined {
   return a || b;
 }
 
-type InterparkRow = {
-  goodsName?: string;
-  placeName?: string;
-  bookingPercent?: string | number;
-  goodsCode?: string;
-  playPeriod?: string;
-  playStartDate?: string;
-  playEndDate?: string;
-  url?: string;
-};
+function looksLikeUiChrome(value?: string): boolean {
+  if (!value) return true;
+  return /예매 전|가격 전체 보기|확인해 주세요|로그인|쿠키|javascript|function\s*\(/i.test(
+    value,
+  );
+}
 
-async function fetchInterpark(genre: string): Promise<InterparkRow[]> {
+function unescapeJsonFragment(value: string): string {
+  return value
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, "\\");
+}
+
+function goodsUrl(goodsCode?: string, fallback?: string): string | undefined {
+  if (goodsCode) return `${NOL_TICKET_HOST}/goods/${goodsCode}`;
+  if (!fallback) return undefined;
+  if (fallback.startsWith("//")) return `https:${fallback}`;
+  if (fallback.startsWith("http")) return fallback;
+  if (fallback.startsWith("/")) return `${NOL_TICKET_HOST}${fallback}`;
+  return fallback;
+}
+
+/** Genre slugs on nol.yanolja.com/ticket/display/ranking/* */
+function nolRankingPaths(kind: "performance" | "exhibition"): string[] {
+  if (kind === "exhibition") return ["exhibition"];
+  return ["musical", "concert", "play", "classic", "family"];
+}
+
+/** Legacy rankingTypes accepted by tickets.interpark.com contents API. */
+function nolApiGenres(kind: "performance" | "exhibition"): string[] {
+  if (kind === "exhibition") return ["EXHIBIT", "exhibit"];
+  return ["MUSICAL", "CONCERT", "PLAY", "CLASSIC", "musical", "concert", "drama", "classic"];
+}
+
+function parseNolRankingHtml(html: string): NolRankRow[] {
+  const rows: NolRankRow[] = [];
+  const seen = new Set<string>();
+  for (const match of html.matchAll(
+    /goodsCode\\":\\"([^\\"]+)\\",\\"goodsName\\":\\"(.*?)\\",\\"posterImageUrl\\":\\"[^\\"]*\\",\\"placeName\\":\\"(.*?)\\",\\"playPeriod\\":\\"(.*?)\\"/g,
+  )) {
+    const goodsCode = match[1];
+    const goodsName = plain(unescapeJsonFragment(match[2] ?? ""));
+    if (!goodsCode || !goodsName || seen.has(goodsCode)) continue;
+    seen.add(goodsCode);
+    rows.push({
+      goodsCode,
+      goodsName,
+      placeName: plain(unescapeJsonFragment(match[3] ?? "")),
+      playPeriod: plain(unescapeJsonFragment(match[4] ?? "")),
+    });
+    if (rows.length >= 40) break;
+  }
+  if (rows.length) {
+    // Attach visible 예매율 when present near the title.
+    for (const row of rows) {
+      if (!row.goodsName) continue;
+      const idx = html.indexOf(row.goodsName);
+      if (idx < 0) continue;
+      const window = html.slice(idx, idx + 1200);
+      const pct = window.match(/예매율\s*([\d.]+)\s*퍼센트/i)?.[1];
+      if (pct) row.bookingPercent = pct;
+    }
+    return rows;
+  }
+
+  // Visible SSR cards (no escaped JSON).
+  for (const match of html.matchAll(
+    />([^<]{2,80})<\/h3>[\s\S]{0,400}?장소\s*<\/span>([^<]{2,60})[\s\S]{0,200}?공연기간\s*<\/span>([^<]{6,40})[\s\S]{0,200}?예매율\s*([\d.]+)\s*퍼센트/gi,
+  )) {
+    const goodsName = plain(match[1]);
+    if (!goodsName || seen.has(goodsName)) continue;
+    seen.add(goodsName);
+    rows.push({
+      goodsName,
+      placeName: plain(match[2]),
+      playPeriod: plain(match[3]),
+      bookingPercent: match[4],
+    });
+    if (rows.length >= 40) break;
+  }
+  return rows;
+}
+
+async function fetchNolRankingHtml(path: string): Promise<NolRankRow[]> {
   try {
-    const data = await fetchJson<Record<string, InterparkRow[] | undefined>>(
-      `https://tickets.interpark.com/contents/api/ranking?period=D&date=&goodsCode=&page=1&pageSize=30&rankingTypes=${encodeURIComponent(genre)}`,
+    const html = await fetchText(`${NOL_ORIGIN}/ticket/display/ranking/${path}`, {
+      headers: {
+        Accept: "text/html,*/*",
+        Referer: `${NOL_ORIGIN}/ticket/display/ranking/${path}`,
+      },
+    });
+    return parseNolRankingHtml(html);
+  } catch {
+    return [];
+  }
+}
+
+async function fetchNolRankingApi(genre: string): Promise<NolRankRow[]> {
+  try {
+    const data = await fetchJson<Record<string, NolRankRow[] | undefined>>(
+      `${NOL_TICKET_HOST}/contents/api/ranking?period=D&date=&goodsCode=&page=1&pageSize=30&rankingTypes=${encodeURIComponent(genre)}`,
       {
         headers: {
           Accept: "application/json",
-          Referer: "https://tickets.interpark.com/contents/ranking",
-          Origin: "https://tickets.interpark.com",
+          Referer: `${NOL_ORIGIN}/ticket/display/ranking/${genre.toLowerCase()}`,
+          Origin: NOL_ORIGIN,
         },
       },
     );
@@ -79,20 +184,13 @@ async function fetchInterpark(genre: string): Promise<InterparkRow[]> {
   }
 }
 
-function looksLikeUiChrome(value?: string): boolean {
-  if (!value) return true;
-  return /예매 전|가격 전체 보기|확인해 주세요|로그인|쿠키|javascript|function\s*\(/i.test(
-    value,
-  );
-}
-
-async function enrichInterparkDetail(
+async function enrichNolGoodsDetail(
   goodsCode: string,
 ): Promise<{ schedule?: string; time?: string; price?: string; url: string }> {
-  const url = `https://tickets.interpark.com/goods/${goodsCode}`;
+  const url = goodsUrl(goodsCode)!;
   try {
     const html = await fetchText(url, {
-      headers: { Referer: "https://tickets.interpark.com/" },
+      headers: { Referer: `${NOL_ORIGIN}/` },
     });
     const scheduleRaw =
       plain(
@@ -120,24 +218,32 @@ async function enrichInterparkDetail(
   }
 }
 
-async function lookupInterpark(
+async function lookupNolTicket(
   name: string,
   kind: "performance" | "exhibition",
 ): Promise<TicketLookup | undefined> {
-  const genres =
-    kind === "exhibition"
-      ? ["EXHIBIT", "exhibit"]
-      : ["MUSICAL", "CONCERT", "PLAY", "CLASSIC", "musical", "concert", "drama", "classic"];
-  const rows: InterparkRow[] = [];
+  const rows: NolRankRow[] = [];
   const seen = new Set<string>();
-  for (const genre of genres) {
-    for (const row of await fetchInterpark(genre)) {
+  const pushAll = (batch: NolRankRow[]) => {
+    for (const row of batch) {
       const key = row.goodsCode || row.goodsName || "";
       if (!key || seen.has(key)) continue;
       seen.add(key);
       rows.push(row);
     }
+  };
+
+  // 1) NOL display ranking pages (yanolja)
+  for (const path of nolRankingPaths(kind)) {
+    pushAll(await fetchNolRankingHtml(path));
   }
+  // 2) Shared ranking API still served under tickets.interpark.com
+  if (rows.length < 5) {
+    for (const genre of nolApiGenres(kind)) {
+      pushAll(await fetchNolRankingApi(genre));
+    }
+  }
+
   const scored = rows
     .map((row) => ({
       row,
@@ -147,34 +253,28 @@ async function lookupInterpark(
     .sort((a, b) => b.score - a.score);
   const top = scored[0]?.row;
   if (!top?.goodsName) return undefined;
+
   const detail = top.goodsCode
-    ? await enrichInterparkDetail(String(top.goodsCode))
+    ? await enrichNolGoodsDetail(String(top.goodsCode))
     : {
         schedule: undefined,
         time: undefined,
         price: undefined,
-        url: undefined as string | undefined,
+        url: goodsUrl(undefined, top.url),
       };
   const pct = Number(top.bookingPercent);
-  const rankingUrl = top.url
-    ? top.url.startsWith("//")
-      ? `https:${top.url}`
-      : top.url.startsWith("http")
-        ? top.url
-        : `https://tickets.interpark.com${top.url}`
-    : undefined;
   return {
     title: plain(top.goodsName)!,
     venue: plain(top.placeName),
     schedule:
-      formatPeriod(top.playStartDate, top.playEndDate) ||
       plain(top.playPeriod) ||
+      formatPeriod(top.playStartDate, top.playEndDate) ||
       detail.schedule,
     time: detail.time,
     price: detail.price,
-    url: detail.url || rankingUrl,
+    url: detail.url || goodsUrl(top.goodsCode, top.url),
     bookingPercent: Number.isFinite(pct) ? `예매율 ${pct}%` : undefined,
-    source: "인터파크",
+    source: "놀티켓",
     kind,
   };
 }
@@ -228,15 +328,15 @@ async function lookupTicketlink(
   }
 }
 
-/** Resolve performance/exhibition venue·schedule·price via ticket site crawls. */
+/** Resolve performance/exhibition venue·schedule·price via NOL Ticket + Ticketlink crawls. */
 export async function lookupTicketFacts(
   name: string,
   kind: "performance" | "exhibition",
 ): Promise<TicketLookup | undefined> {
   const q = name.trim();
   if (!q) return undefined;
-  const interpark = await lookupInterpark(q, kind);
-  if (interpark?.venue || interpark?.schedule || interpark?.price) return interpark;
+  const nol = await lookupNolTicket(q, kind);
+  if (nol?.venue || nol?.schedule || nol?.price) return nol;
   const ticketlink = await lookupTicketlink(q, kind);
-  return ticketlink ?? interpark;
+  return ticketlink ?? nol;
 }

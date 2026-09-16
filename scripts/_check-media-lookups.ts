@@ -52,7 +52,8 @@ async function main() {
       ? `${ticketLive.source} · ${ticketLive.venue ?? "-"} · ${ticketLive.schedule ?? ticketLive.price ?? "-"}`
       : "miss",
   );
-  assert.ok(ticketLive?.venue || ticketLive?.schedule, "interpark ranking crawl should hit 드라큘라");
+  assert.ok(ticketLive?.venue || ticketLive?.schedule, "놀티켓 ranking crawl should hit 드라큘라");
+  assert.equal(ticketLive?.source, "놀티켓");
 
   const ticket = await lookupTicketFacts("팬텀", "performance");
   console.log(

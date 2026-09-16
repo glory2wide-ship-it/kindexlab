@@ -305,7 +305,7 @@ export async function rankBoard(input: {
   logger: AnalysisLogger;
   timeoutMs?: number;
   previousRanking?: BoardRankEntry[];
-  /** NOL 인터파크·예스24 등 티켓몰 공개 예매 순위 라인. */
+  /** 놀티켓(NOL)·예스24 등 티켓몰 공개 예매 순위 라인. */
   ticketChartLines?: string[];
   /** `[지역] 공연/행사명` 씨드 — 랭킹 상단에 우선 반영. */
   ticketSeeds?: string[];
@@ -325,7 +325,7 @@ export async function rankBoard(input: {
 
   const ticketBlock = input.ticketChartLines?.length
     ? [
-        "티켓몰 예매 순위(NOL 인터파크·예스24·티켓링크·KOPIS 공개 랭킹):",
+        "티켓몰 예매 순위(놀티켓·예스24·티켓링크·KOPIS 공개 랭킹):",
         ...input.ticketChartLines,
         "위 예매 순위를 최우선 근거로 삼아 실제 공연명/행사명 랭킹을 구성하라. 공연장·미술관·몰 이름만 단독으로 올리지 마라.",
       ].join("\n")

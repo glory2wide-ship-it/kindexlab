@@ -100,10 +100,12 @@ type InterparkRankRow = {
 
 type InterparkRankingPayload = Record<string, InterparkRankRow[] | undefined>;
 
+const NOL_ORIGIN = "https://nol.yanolja.com";
+
 const INTERPARK_HEADERS = {
   Accept: "application/json",
-  Referer: "https://tickets.interpark.com/contents/ranking",
-  Origin: "https://tickets.interpark.com",
+  Referer: `${NOL_ORIGIN}/ticket/display/ranking/musical`,
+  Origin: NOL_ORIGIN,
 };
 
 function rowsFromInterparkPayload(data: InterparkRankingPayload): InterparkRankRow[] {
@@ -128,10 +130,12 @@ function chartRowsFromInterpark(rows: InterparkRankRow[], tag: string, rankingTy
       metric: Number.isFinite(pct) ? pct : Math.max(1, 60 - index),
       volume: Number.isFinite(pct) ? Math.round(pct * 10_000) : undefined,
       measurement: Number.isFinite(pct)
-        ? { value: pct, unit: "%", label: "예매율", source: "NOL 인터파크" }
+        ? { value: pct, unit: "%", label: "예매율", source: "놀티켓" }
         : undefined,
       imageUrl: image?.startsWith("//") ? `https:${image}` : image,
-      tags: ["NOL", "인터파크", tag, row.displayGenre ?? rankingTypes].filter(Boolean) as string[],
+      tags: ["놀티켓", "NOL", "인터파크", tag, row.displayGenre ?? rankingTypes].filter(
+        Boolean,
+      ) as string[],
     });
   }
   return items;
@@ -179,6 +183,14 @@ function parseInterparkRankingHtml(html: string, genreKey: string): InterparkRan
   return rows;
 }
 
+const NOL_HTML_PATH: Record<string, string> = {
+  MUSICAL: "musical",
+  CONCERT: "concert",
+  DRAMA: "play",
+  CLASSIC: "classic",
+  EXHIBIT: "exhibition",
+};
+
 async function fetchInterparkGenre(rankingTypes: string, tag: string): Promise<ChartRow[]> {
   const url = `https://tickets.interpark.com/contents/api/ranking?period=D&page=1&pageSize=50&rankingTypes=${encodeURIComponent(rankingTypes)}`;
   try {
@@ -186,21 +198,22 @@ async function fetchInterparkGenre(rankingTypes: string, tag: string): Promise<C
     const items = chartRowsFromInterpark(rowsFromInterparkPayload(data), tag, rankingTypes);
     if (items.length) return items;
   } catch {
-    // Fall through to HTML scrape.
+    // Fall through to NOL HTML scrape.
   }
-  const html = await fetchText("https://tickets.interpark.com/contents/ranking", {
-    headers: { Accept: "text/html,*/*", Referer: "https://tickets.interpark.com/" },
+  const path = NOL_HTML_PATH[rankingTypes.toUpperCase()] ?? rankingTypes.toLowerCase();
+  const html = await fetchText(`${NOL_ORIGIN}/ticket/display/ranking/${path}`, {
+    headers: { Accept: "text/html,*/*", Referer: `${NOL_ORIGIN}/` },
   });
   return chartRowsFromInterpark(parseInterparkRankingHtml(html, rankingTypes), tag, rankingTypes);
 }
 
 async function fetchInterparkSources(): Promise<SourceResult[]> {
   const jobs: { id: string; label: string; type: string; tag: string }[] = [
-    { id: "interpark-musical", label: "NOL 인터파크 뮤지컬 랭킹", type: "MUSICAL", tag: "뮤지컬" },
-    { id: "interpark-concert", label: "NOL 인터파크 콘서트 랭킹", type: "CONCERT", tag: "콘서트" },
-    { id: "interpark-drama", label: "NOL 인터파크 연극 랭킹", type: "DRAMA", tag: "연극" },
-    { id: "interpark-classic", label: "NOL 인터파크 클래식/무용 랭킹", type: "CLASSIC", tag: "클래식" },
-    { id: "interpark-exhibit", label: "NOL 인터파크 전시/행사 랭킹", type: "EXHIBIT", tag: "전시" },
+    { id: "interpark-musical", label: "놀티켓 뮤지컬 랭킹", type: "MUSICAL", tag: "뮤지컬" },
+    { id: "interpark-concert", label: "놀티켓 콘서트 랭킹", type: "CONCERT", tag: "콘서트" },
+    { id: "interpark-drama", label: "놀티켓 연극 랭킹", type: "DRAMA", tag: "연극" },
+    { id: "interpark-classic", label: "놀티켓 클래식/무용 랭킹", type: "CLASSIC", tag: "클래식" },
+    { id: "interpark-exhibit", label: "놀티켓 전시/행사 랭킹", type: "EXHIBIT", tag: "전시" },
   ];
   return Promise.all(
     jobs.map(async (job) => {
@@ -208,7 +221,7 @@ async function fetchInterparkSources(): Promise<SourceResult[]> {
         const items = await fetchInterparkGenre(job.type, job.tag);
         return result(job.id, job.label, items);
       } catch (error) {
-        return result(job.id, job.label, [], error instanceof Error ? error.message : "interpark error");
+        return result(job.id, job.label, [], error instanceof Error ? error.message : "놀티켓 error");
       }
     }),
   );
