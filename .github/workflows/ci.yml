@@ -28,3 +28,4 @@ jobs:
       - run: npm run live:gates
       - run: npm run live:entity-guards
       - run: npm run live:index-blurb
+      - run: npm run live:category-info
