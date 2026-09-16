@@ -7,6 +7,7 @@
  * editors can update members, agencies, hits, cast, synopsis, venue, etc.
  */
 
+import { entityNarrativeSummary } from "@/lib/entity/index-blurb";
 import type { EntityType, RankingEntity } from "@/lib/types";
 
 export type EntertainmentFactRow = { label: string; value: string };
@@ -818,7 +819,9 @@ function fallbackFacts(
           { label: "멤버", items: [] },
           { label: "최근 히트곡", items: [] },
         ],
-        synopsis: entity.summary?.trim() || `${entity.name}의 멤버·소속사·히트곡 정보는 주 1회 갱신됩니다.`,
+        synopsis:
+          entityNarrativeSummary(entity) ||
+          `${entity.name}의 멤버·소속사·히트곡 정보는 주 1회 갱신됩니다.`,
       };
     case "music":
       return {
@@ -828,7 +831,9 @@ function fallbackFacts(
           { label: "아티스트", value: "가수/그룹 확인 중" },
           { label: "소속사", value: "소속사 확인 중" },
         ],
-        synopsis: entity.summary?.trim() || `${entity.name}의 아티스트·소속사 정보는 주 1회 갱신됩니다.`,
+        synopsis:
+          entityNarrativeSummary(entity) ||
+          `${entity.name}의 아티스트·소속사 정보는 주 1회 갱신됩니다.`,
       };
     case "star":
       return {
@@ -839,7 +844,9 @@ function fallbackFacts(
           { label: "직업", value: tags.find((t) => /배우|가수|예능|모델/.test(t)) ?? "연예인" },
         ],
         chips: [{ label: "출연작품", items: [] }],
-        synopsis: entity.summary?.trim() || `${entity.name}의 소속사·출연작품 정보는 주 1회 갱신됩니다.`,
+        synopsis:
+          entityNarrativeSummary(entity) ||
+          `${entity.name}의 소속사·출연작품 정보는 주 1회 갱신됩니다.`,
       };
     case "movie":
       return {
@@ -847,7 +854,9 @@ function fallbackFacts(
         checkedAt,
         rows: [{ label: "개봉/배급", value: "정보 확인 중" }],
         chips: [{ label: "출연", items: [] }],
-        synopsis: entity.summary?.trim() || `${entity.name}의 출연진·시놉시스는 주 1회 갱신됩니다.`,
+        synopsis:
+          entityNarrativeSummary(entity) ||
+          `${entity.name}의 출연진·시놉시스는 주 1회 갱신됩니다.`,
       };
     case "webtoon":
       return {
@@ -861,7 +870,9 @@ function fallbackFacts(
           { label: "작가", value: "작가 정보 확인 중" },
         ],
         chips: [{ label: "주요 인물", items: [] }],
-        synopsis: entity.summary?.trim() || `${entity.name}의 줄거리·캐릭터 정보는 주 1회 갱신됩니다.`,
+        synopsis:
+          entityNarrativeSummary(entity) ||
+          `${entity.name}의 줄거리·캐릭터 정보는 주 1회 갱신됩니다.`,
       };
     case "performance":
       return {
@@ -874,7 +885,9 @@ function fallbackFacts(
           { label: "티켓 가격", value: "예매처 공지 기준" },
         ],
         chips: [{ label: "출연", items: [] }],
-        synopsis: entity.summary?.trim() || `${entity.name}의 출연·시놉시스·티켓 정보는 주 1회 갱신됩니다.`,
+        synopsis:
+          entityNarrativeSummary(entity) ||
+          `${entity.name}의 출연·시놉시스·티켓 정보는 주 1회 갱신됩니다.`,
       };
     case "exhibition":
       return {
@@ -885,7 +898,9 @@ function fallbackFacts(
           { label: "행사 시간", value: "운영시간 확인 중" },
           { label: "입장료", value: "요금 확인 중" },
         ],
-        synopsis: entity.summary?.trim() || `${entity.name}의 장소·시간·입장료 정보는 주 1회 갱신됩니다.`,
+        synopsis:
+          entityNarrativeSummary(entity) ||
+          `${entity.name}의 장소·시간·입장료 정보는 주 1회 갱신됩니다.`,
       };
   }
 }
@@ -911,7 +926,7 @@ export function resolveEntertainmentFacts(
       domain,
       rows,
       chips: hit.chips?.map((c) => ({ ...c, items: c.items.filter(Boolean) })),
-      synopsis: hit.synopsis ?? entity.summary?.trim(),
+      synopsis: hit.synopsis ?? entityNarrativeSummary(entity),
       checkedAt: hit.checkedAt ?? ENTERTAINMENT_FACTS_CATALOGUE_CHECKED_AT,
     };
   }

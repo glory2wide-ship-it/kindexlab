@@ -2,6 +2,11 @@ import {
   buildTvProgramProfile,
   tvProgramGenreLabel,
 } from "@/lib/boards/tv-program-profile";
+import {
+  entityNarrativeSummary,
+  formatEntityIndexBlurb,
+  isEntityIndexBlurbText,
+} from "@/lib/entity/index-blurb";
 import type { RankingEntity } from "@/lib/types";
 
 /**
@@ -22,6 +27,16 @@ export function TvProgramInfoCard({ entity }: { entity: RankingEntity }) {
   if (genreLabel) {
     rows.push({ label: "장르", value: genreLabel });
   }
+
+  const indexBlurb = formatEntityIndexBlurb(entity);
+  const plotRaw = profile.plotSummary?.trim();
+  const plot =
+    plotRaw &&
+    entityNarrativeSummary(plotRaw) &&
+    plotRaw !== indexBlurb &&
+    !isEntityIndexBlurbText(plotRaw)
+      ? plotRaw
+      : undefined;
 
   return (
     <section className="rounded-2xl border border-line bg-panel p-[18px] md:p-8">
@@ -70,7 +85,10 @@ export function TvProgramInfoCard({ entity }: { entity: RankingEntity }) {
 
       <div className="mt-4 border-t border-line pt-4">
         <h3 className="text-[11px] font-semibold tracking-wide text-soft">핵심 줄거리 요약</h3>
-        <p className="mt-2 text-sm leading-6 text-ink/90">{profile.plotSummary}</p>
+        <p className="mt-2 text-sm leading-6 text-ink/90">
+          {plot ||
+            `${profile.title}의 핵심 줄거리와 회차 하이라이트는 방송사·OTT 공식 소개를 기준으로 요약됩니다.`}
+        </p>
       </div>
 
       <p className="mt-4 text-[11px] leading-5 text-muted">

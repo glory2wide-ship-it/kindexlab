@@ -36,6 +36,7 @@
         "boards:audit": "tsx scripts/audit-boards.ts",
         "live:gates": "tsx scripts/_check-live-overlay-gates.ts",
         "live:entity-guards": "tsx scripts/_check-board-entity-guards.ts",
+        "live:index-blurb": "tsx scripts/_check-index-blurb-dedupe.ts",
         "live:first": "tsx scripts/_check-live-first-heatmap.ts",
         "live:completeness": "tsx scripts/_check-live-completeness.ts",
         "live:refresh-thin": "tsx --env-file=.env.local scripts/refresh-thin-live-boards.ts",

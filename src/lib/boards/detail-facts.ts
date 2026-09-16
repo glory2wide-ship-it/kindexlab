@@ -10,6 +10,7 @@
  * when editors refresh rows.
  */
 
+import { entityNarrativeSummary } from "@/lib/entity/index-blurb";
 import {
   entertainmentFactsAreStale,
   listStaleEntertainmentProfiles,
@@ -507,7 +508,7 @@ function resolveDailyFacts(
       rows: hit.rows,
       chips: hit.chips?.map((c) => ({ ...c, items: c.items.filter(Boolean) })),
       links: hit.links?.slice(0, 5),
-      synopsis: hit.synopsis ?? entity.summary?.trim(),
+      synopsis: hit.synopsis ?? entityNarrativeSummary(entity),
       notice: hit.notice,
       checkedAt: hit.checkedAt ?? DETAIL_FACTS_DAILY_CHECKED_AT,
     };

@@ -4,6 +4,10 @@ import type { RankingEntity } from "@/lib/types";
 
 const SLUG_LIKE = /^[a-z0-9]+(?:-[a-z0-9]+)+$/i;
 
+/** Structured rank/등락 one-liner stamped onto `entity.summary` by ingest/heatmap. */
+const INDEX_BLURB_PATTERN =
+  /^.+?(은|는)\s+.+\s+기준\s+\d+위입니다\.\s*등락\s+-?\d+(?:\.\d+)?%\.?\s*$/u;
+
 const CHANNEL_LABEL: Record<PostChannel, string> = {
   entertainment: "엔터",
   politics: "정치",
@@ -18,6 +22,34 @@ function topicJosa(word: string): "은" | "는" {
   const code = last.charCodeAt(0);
   if (code < 0xac00 || code > 0xd7a3) return "는";
   return (code - 0xac00) % 28 === 0 ? "는" : "은";
+}
+
+/** True when text is (or duplicates) the structured index blurb — not a real synopsis. */
+export function isEntityIndexBlurbText(text: string | undefined | null): boolean {
+  const trimmed = text?.trim();
+  if (!trimmed) return false;
+  // Exact structured line, or the same line repeated / joined with a separator.
+  const parts = trimmed
+    .split(/\s*\/\s*|\n+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length >= 2 && parts.every((part) => INDEX_BLURB_PATTERN.test(part))) {
+    return true;
+  }
+  return INDEX_BLURB_PATTERN.test(trimmed);
+}
+
+/**
+ * Narrative copy only. Index blurbs live in `formatEntityIndexBlurb` on the hero —
+ * never reuse them as 프로필 시놉시스 / TV 줄거리 (that caused the duplicate line).
+ */
+export function entityNarrativeSummary(
+  entity: Pick<RankingEntity, "summary"> | string | undefined | null,
+): string | undefined {
+  const raw = typeof entity === "string" || entity == null ? entity : entity.summary;
+  const trimmed = raw?.trim();
+  if (!trimmed || isEntityIndexBlurbText(trimmed)) return undefined;
+  return trimmed;
 }
 
 /** Humanize a board slug when no heatmap group is stamped on the entity. */
@@ -97,7 +129,8 @@ export function formatEntityIndexBlurb(entity: RankingEntity): string {
     entity.id.startsWith("keyword:") ||
     entity.tags.includes("rank-pending")
   ) {
-    return entity.summary?.trim() || `${entity.name} 순위 데이터를 확인하는 중입니다.`;
+    const narrative = entityNarrativeSummary(entity);
+    return narrative || `${entity.name} 순위 데이터를 확인하는 중입니다.`;
   }
   const scope = entityIndexScopeLabel(entity);
   const particle = topicJosa(entity.name);

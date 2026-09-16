@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import { formatEntityIndexBlurb } from "@/lib/entity/index-blurb";
+import {
+  entityNarrativeSummary,
+  formatEntityIndexBlurb,
+  isEntityIndexBlurbText,
+} from "@/lib/entity/index-blurb";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel } from "@/lib/format";
 import {
   formatNaverMeasurement,
@@ -131,11 +135,19 @@ function DetailFactsBlock({
   detailFacts,
   detailFactsStale,
   refreshLabel,
+  indexBlurb,
 }: {
   detailFacts: NonNullable<ReturnType<typeof resolveDetailFacts>>;
   detailFactsStale: boolean;
   refreshLabel: string;
+  /** Hero index line — never repeat it inside the profile synopsis. */
+  indexBlurb?: string;
 }) {
+  const synopsis = entityNarrativeSummary(detailFacts.synopsis);
+  const showSynopsis =
+    Boolean(synopsis) &&
+    !isEntityIndexBlurbText(synopsis) &&
+    synopsis !== indexBlurb?.trim();
   return (
     <div className="mt-3 space-y-3 border-t border-line pt-3 md:mt-4 md:pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -202,9 +214,7 @@ function DetailFactsBlock({
           </ul>
         </div>
       ) : null}
-      {detailFacts.synopsis ? (
-        <p className="text-sm leading-6 text-ink/90">{detailFacts.synopsis}</p>
-      ) : null}
+      {showSynopsis ? <p className="text-sm leading-6 text-ink/90">{synopsis}</p> : null}
       {detailFacts.notice ? (
         <p className="rounded-lg bg-board px-3 py-2 text-[11px] leading-5 text-muted">
           주의: {detailFacts.notice}
@@ -224,6 +234,7 @@ export function EntityHero({
   const detailFacts = resolveDetailFacts(entity);
   const detailFactsStale = detailFacts ? detailFactsAreStale(detailFacts) : false;
   const refreshLabel = detailFacts?.refresh === "daily" ? "일 1회 점검" : "주 1회 점검";
+  const indexBlurb = formatEntityIndexBlurb(entity);
 
   const stockQuote = isNaverStockMeasurement(entity.measurement) ? entity.measurement : undefined;
   if (stockQuote) {
@@ -234,6 +245,7 @@ export function EntityHero({
             detailFacts={detailFacts}
             detailFactsStale={detailFactsStale}
             refreshLabel={refreshLabel}
+            indexBlurb={indexBlurb}
           />
         ) : null}
       </MarketQuoteHero>
@@ -298,11 +310,12 @@ export function EntityHero({
           detailFacts={detailFacts}
           detailFactsStale={detailFactsStale}
           refreshLabel={refreshLabel}
+          indexBlurb={indexBlurb}
         />
       ) : null}
 
       <p className="mt-[0.9375rem] max-w-3xl text-sm leading-7 text-ink/85 max-md:leading-[0.984rem] md:mt-5">
-        {formatEntityIndexBlurb(entity)}
+        {indexBlurb}
       </p>
     </section>
   );

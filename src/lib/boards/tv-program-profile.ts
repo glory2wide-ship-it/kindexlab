@@ -4,6 +4,7 @@
  */
 
 import { inferTvGenre, TV_GENRE_LABEL, type TvGenreSegment } from "@/lib/boards/tv-genre";
+import { entityNarrativeSummary } from "@/lib/entity/index-blurb";
 import { inferTvChannelChip } from "@/lib/heatmap-rank-meta";
 import type { RankingEntity } from "@/lib/types";
 
@@ -283,7 +284,7 @@ export function buildTvProgramProfile(
       genre,
       plotSummary:
         catalog.plotSummary ||
-        entity.summary ||
+        entityNarrativeSummary(entity) ||
         `${entity.name}의 최근 방송 화제와 시청 반응을 요약한 해설입니다.`,
     };
   }
@@ -296,7 +297,7 @@ export function buildTvProgramProfile(
     rerunTime: genre === "ott" ? undefined : "재방송 시각 집계 중",
     cast: [],
     plotSummary:
-      entity.summary?.trim() ||
+      entityNarrativeSummary(entity) ||
       `${entity.name}의 핵심 줄거리와 회차 하이라이트는 방송사·OTT 공식 소개를 기준으로 요약됩니다.`,
     genre,
   };
