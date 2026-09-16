@@ -35,9 +35,9 @@ export const CATEGORY_INFO_REFRESH_TIERS: readonly CategoryInfoRefreshTier[] = [
   {
     id: "live_signal",
     label: "부동산·차트·뉴스·보조금",
-    cadenceLabel: "1시간",
-    intervalMs: HOUR,
-    revalidateSec: 3600,
+    cadenceLabel: "하루 1회",
+    intervalMs: DAY,
+    revalidateSec: 24 * 3600,
     channels: [
       "housing",
       "stock",
@@ -54,7 +54,7 @@ export const CATEGORY_INFO_REFRESH_TIERS: readonly CategoryInfoRefreshTier[] = [
       "party_support",
       "politician_support",
     ],
-    reason: "실거래·예매/차트·지원 공고 등 변동 신호가 빠른 채널",
+    reason: "실거래·차트·지원 공고 등 — 일 1회 재수집으로 비용·지연을 맞춥니다",
   },
   {
     id: "ticket_food",

@@ -30,7 +30,7 @@ const STATE_PATH = path.join(process.cwd(), "src/data/ops/category-info-refresh.
 const TOUCH_DEBOUNCE_MS = 5 * 60 * 1000;
 
 function defaultLastFor(id: CategoryInfoRefreshTierId): string {
-  if (id === "ticket_food" || id === "media_catalog") {
+  if (id === "live_signal" || id === "ticket_food" || id === "media_catalog") {
     return DETAIL_FACTS_DAILY_CHECKED_AT;
   }
   if (id === "entertainment_curated") {
@@ -145,6 +145,7 @@ export function buildCategoryInfoRefreshStatus(
 ): CategoryInfoRefreshTierStatus[] {
   const state = readState();
   // Keep curated anchors aligned with catalogue stamps when newer.
+  state.tiers.live_signal = pickLater(state.tiers.live_signal, DETAIL_FACTS_DAILY_CHECKED_AT);
   state.tiers.ticket_food = pickLater(state.tiers.ticket_food, DETAIL_FACTS_DAILY_CHECKED_AT);
   state.tiers.media_catalog = pickLater(
     state.tiers.media_catalog,
