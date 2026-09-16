@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense, cache } from "react";
 import { BuzzChart } from "@/components/entity/BuzzChart";
 import { EntityHero } from "@/components/entity/EntityHero";
+import { RelatedBriefingLinks } from "@/components/entity/RelatedBriefingLinks";
 import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
@@ -15,6 +16,7 @@ import { getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
 import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import {
   breadcrumbJsonLd,
+  entityDatasetJsonLd,
   entitySeoDescription,
   entitySeoTitle,
   isIndexableEntityPage,
@@ -115,12 +117,20 @@ export default async function PoliticsSupportDetailPage({
     { name: "정치", url: `${SITE.url}/politics` },
     { name: entity.name, url: `${SITE.url}${politicsDetailPath(entity.slug)}` },
   ]);
+  const dataset = entityDatasetJsonLd(
+    entity,
+    `${SITE.url}${politicsDetailPath(entity.slug)}`,
+  );
 
   return (
     <div className="space-y-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(crumbs) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(dataset) }}
       />
       <p className="text-sm text-muted">
         <Link href="/politics" className="hover:text-ink">
@@ -134,6 +144,9 @@ export default async function PoliticsSupportDetailPage({
       <SupportIndexChart kind={kind} subject={entity.name} />
       <Suspense fallback={null}>
         <TodayAnalysisSlot id={id} name={name} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <RelatedBriefingLinks entity={entity} />
       </Suspense>
       <Suspense fallback={null}>
         <PollDeskSection entity={entity} />

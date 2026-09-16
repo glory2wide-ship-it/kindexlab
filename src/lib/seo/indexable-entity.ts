@@ -65,29 +65,35 @@ export function isIndexableEntityPage(
   return true;
 }
 
-/** SERP-oriented title — intent keyword before the brand template. */
+/** SERP-oriented title — intent keyword + clear value before the brand template. */
 export function entitySeoTitle(
   entity: Pick<RankingEntity, "name" | "type">,
   options?: { rateLabel?: string },
 ): string {
-  const typeLabel = TYPE_LABEL[entity.type] ?? "이슈";
-  const metric = scoreLabel(entity.type);
+  const name = entity.name.trim();
   if (entity.type === "party_support") {
-    return `${entity.name} 지지율 · 정당 지지도`;
+    return `${name} 실시간 지지율 지수 및 여론 분석`;
   }
   if (entity.type === "politician_support") {
-    return `${entity.name} 지지도 · 정치인 지지율`;
+    return `${name} 실시간 지지도 지수 및 트렌드 분석`;
   }
   if (entity.type === "tv_rating" || entity.type === "tv_show") {
-    return `${entity.name} 시청률 · TV 화제성`;
+    return `${name} 실시간 시청률 지수 및 트렌드 분석`;
   }
   if (entity.type === "movie") {
-    return `${entity.name} 박스오피스 · 영화 화제성`;
+    return `${name} 실시간 박스오피스·화제성 지수 분석`;
+  }
+  if (entity.type === "celebrity") {
+    return `${name} 실시간 셀럽 화제성 지수 및 트렌드 분석`;
+  }
+  if (entity.type === "music_chart" || entity.type === "kpop" || entity.type === "trot") {
+    return `${name} 실시간 음원·팬덤 화제성 지수 분석`;
   }
   if (options?.rateLabel) {
-    return `${entity.name} ${typeLabel} · ${options.rateLabel}`;
+    return `${name} 실시간 화제성 지수 ${options.rateLabel}`;
   }
-  return `${entity.name} ${typeLabel} · ${metric}`;
+  const typeLabel = TYPE_LABEL[entity.type] ?? "이슈";
+  return `${name} 실시간 ${typeLabel} 화제성 지수 및 트렌드 분석`;
 }
 
 export function entitySeoDescription(
@@ -97,12 +103,73 @@ export function entitySeoDescription(
   const summary = entity.summary?.trim();
   if (summary && summary.length >= 40) return summary.slice(0, 160);
   if (entity.type === "party_support" || entity.type === "politician_support") {
-    return `${entity.name} ${typeLabel} 지지도와 여론·화제성 추이를 KinDex 지수로 확인하세요.`;
+    return `${entity.name} ${typeLabel} 지지도와 여론·화제성 추이를 KinDex 실시간 지수로 확인하세요.`;
   }
   if (entity.type === "tv_rating" || entity.type === "tv_show") {
-    return `${entity.name} 시청률·방송 화제성을 실시간 지수로 정리한 KinDex 상세 페이지입니다.`;
+    return `${entity.name} 실시간 시청률과 방송 화제성을 지수·차트로 정리한 KinDex 상세 페이지입니다.`;
   }
-  return `${entity.name} ${typeLabel} 화제성 지수와 오늘의 분석을 KinDex에서 확인하세요.`;
+  return `${entity.name} ${typeLabel} 실시간 화제성 지수와 오늘의 분석을 KinDex에서 확인하세요.`;
+}
+
+/** Dataset + WebPage helpers for ranking/board rich results. */
+export function entityDatasetJsonLd(
+  entity: Pick<RankingEntity, "name" | "type" | "summary" | "slug">,
+  pageUrl: string,
+): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    name: entitySeoTitle(entity),
+    description: entitySeoDescription(entity),
+    url: pageUrl,
+    creator: { "@type": "Organization", name: "KinDex" },
+    inLanguage: "ko",
+    variableMeasured: scoreLabel(entity.type),
+    measurementTechnique: "KinDex buzz and support index",
+  };
+}
+
+export function boardItemListJsonLd(input: {
+  title: string;
+  url: string;
+  description: string;
+  items: { rank: number; name: string; url: string }[];
+}): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: input.title,
+    description: input.description,
+    url: input.url,
+    numberOfItems: input.items.length,
+    itemListOrder: "https://schema.org/ItemListOrderAscending",
+    itemListElement: input.items.map((row) => ({
+      "@type": "ListItem",
+      position: row.rank,
+      name: row.name,
+      url: row.url,
+      item: row.url,
+    })),
+  };
+}
+
+export function boardDatasetJsonLd(input: {
+  title: string;
+  url: string;
+  description: string;
+  unitLabel?: string;
+}): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    name: input.title,
+    description: input.description,
+    url: input.url,
+    creator: { "@type": "Organization", name: "KinDex" },
+    inLanguage: "ko",
+    variableMeasured: input.unitLabel || "화제성 지수",
+    measurementTechnique: "KinDex board ranking",
+  };
 }
 
 export function breadcrumbJsonLd(

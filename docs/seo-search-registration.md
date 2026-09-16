@@ -5,17 +5,26 @@
 이미 준비된 것:
 
 - `https://www.kindexlab.com/robots.txt`
-- `https://www.kindexlab.com/sitemap.xml`
+- `https://www.kindexlab.com/sitemap.xml` (10분 ISR · 품질 게이트 통과 URL만)
 - 정책 페이지: `/terms`, `/disclaimer`, `/contact`, `/privacy`
 - 소유권 메타: Google·네이버 확인 토큰은 `src/lib/seo-verification.ts`에 반영됨 (env로 덮어쓰기 가능)
 - 상세(`/ranking`, `/politics`)는 **체인(Gemini) 분석 + 이름 품질 게이트**를 통과할 때만 `index`
-- 사이트맵은 카테고리 허브·보드·브리핑·품질 통과 상세만 포함 (`/search`는 robots disallow)
+- 랭킹/보드: `ItemList` + `Dataset` + `BreadcrumbList` JSON-LD
+- 브리핑: `NewsArticle` JSON-LD (정치 브리핑 포함)
+- 상세 ↔ 투데이 브리핑 내부 링크 (`RelatedBriefingLinks`)
+- SERP 제목: `실시간 … 지수 및 트렌드 분석` 형태
+- `/search`는 robots disallow
 
 로컬·프로덕션 헬스:
 
 ```bash
 npm run seo:check
 ```
+
+## 렌더링 메모 (구글봇)
+
+- 카테고리·보드·브리핑·정치 상세는 RSC/SSR(ISR)로 **완성 HTML**을 제공합니다.
+- `/ranking/[slug]`는 시세 실시간성을 위해 `force-dynamic`이지만 서버에서 히어로·요약·브리핑 링크를 먼저 렌더합니다. 차트 캔버스만 클라이언트입니다.
 
 ## GSC 현황 해석 (2026-09 기준)
 
@@ -29,7 +38,7 @@ npm run seo:check
 
 ## 1. Google Search Console — 지금 할 일
 
-1. **Sitemaps**에서 `/sitemap.xml` 재제출(배포 후) → “발견된 페이지”가 품질 URL 위주로 재집계되는지 확인
+1. **Sitemaps**에서 `/sitemap.xml` 재제출(배포 후) → “발견된 페이지”가 품질 URL 위주로 재집계되는지 확인 (기존 항목 **삭제 불필요**)
 2. **URL 검사 → 색인 생성 요청** (하루 소량, 허브 우선):
    - `/`
    - `/entertainment` `/politics` `/economy` `/culture` `/travel`
@@ -39,7 +48,7 @@ npm run seo:check
    - 색인됨 / 제외됨 사유를 주 1회 확인
    - “크롤됨 - 현재 색인이 생성되지 않음”, “중복”, “소프트 404” 비중을 줄이는 게 목표
 4. **실적**에서 노출이 생긴 쿼리·페이지를 주 1회 점검 — CTR 0%면 제목·설명을 키워드 의도에 맞게 조정
-5. 제품 스니펫(1회 노출)은 부수적 — KinDex는 지수/랭킹·NewsArticle이 본선
+5. 제품 스니펫(1회 노출)은 부수적 — KinDex는 지수/랭킹·NewsArticle·Dataset이 본선
 
 ## 2. 네이버 서치어드바이저
 
@@ -56,5 +65,5 @@ npm run seo:check
 ## 코드 쪽 메모
 
 - Google·네이버 확인 토큰: `src/lib/seo-verification.ts`
-- 상세 색인 게이트: `src/lib/seo/indexable-entity.ts`
-- 카테고리/상세 메타 제목은 `화제성·지지율·시청률` 등 검색 의도 키워드를 앞에 둠
+- 상세 색인 게이트·SERP 제목·Dataset: `src/lib/seo/indexable-entity.ts`
+- 상세→브리핑 링크: `src/lib/seo/related-briefings.ts`, `RelatedBriefingLinks`

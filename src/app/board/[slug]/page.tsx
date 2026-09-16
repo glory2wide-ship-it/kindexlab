@@ -14,8 +14,15 @@ import {
   isDeskBoard,
 } from "@/lib/boards/registry";
 import { boardUsesRegionFilter } from "@/lib/boards/regions";
+import { boardRowSlug } from "@/lib/boards/heatmap";
 import { getPostChannel } from "@/lib/posts/channels";
+import {
+  boardDatasetJsonLd,
+  boardItemListJsonLd,
+  breadcrumbJsonLd,
+} from "@/lib/seo/indexable-entity";
 import { SITE } from "@/lib/site";
+import { rankingUrl } from "@/lib/slugs";
 import { SetActiveChannel } from "@/components/providers/ActiveChannelProvider";
 import { DeskEyebrow } from "@/components/ui/DeskEyebrow";
 
@@ -44,9 +51,14 @@ export async function generateMetadata({
   }
   const regionHint = boardUsesRegionFilter(board.slug) ? "·지역별 " : "";
   return {
-    title: `${board.title} TOP 10`,
-    description: `${board.criteria} 기준으로 산출한 ${board.title} 상위 순위와 성별·연령${regionHint}순위.`,
+    title: `${board.title} 실시간 TOP 랭킹·화제성 지수`,
+    description: `${board.criteria} 기준으로 산출한 ${board.title} 실시간 상위 순위와 성별·연령${regionHint}순위를 KinDex에서 확인하세요.`,
     alternates: { canonical: boardPath(board.slug) },
+    openGraph: {
+      title: `${board.title} 실시간 TOP 랭킹·화제성 지수`,
+      description: board.criteria,
+      url: `${SITE.url}${boardPath(board.slug)}`,
+    },
   };
 }
 
@@ -102,18 +114,29 @@ export default async function BoardDetailPage({ params }: { params: Promise<{ sl
   }
 
   const entry = await seedBoardIfMissing(board);
-
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    name: board.title,
-    url: `${SITE.url}${boardPath(board.slug)}`,
-    itemListElement: entry.ranking.map((row) => ({
-      "@type": "ListItem",
-      position: row.rank,
-      name: row.name,
-    })),
-  };
+  const boardUrl = `${SITE.url}${boardPath(board.slug)}`;
+  const listItems = entry.ranking.slice(0, 20).map((row) => ({
+    rank: row.rank,
+    name: row.name,
+    url: rankingUrl(SITE.url, boardRowSlug(board.slug, row.name)),
+  }));
+  const jsonLd = boardItemListJsonLd({
+    title: board.title,
+    url: boardUrl,
+    description: board.criteria,
+    items: listItems,
+  });
+  const dataset = boardDatasetJsonLd({
+    title: `${board.title} 실시간 랭킹`,
+    url: boardUrl,
+    description: board.criteria,
+    unitLabel: board.unitLabel,
+  });
+  const crumbs = breadcrumbJsonLd([
+    { name: "KinDex", url: SITE.url },
+    { name: channel.label, url: `${SITE.url}${categoryBoardPath(board.channel)}` },
+    { name: board.title, url: boardUrl },
+  ]);
 
   return (
     <div className="space-y-8">
@@ -121,6 +144,14 @@ export default async function BoardDetailPage({ params }: { params: Promise<{ sl
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(dataset) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(crumbs) }}
       />
 
       <p className="text-sm text-muted">

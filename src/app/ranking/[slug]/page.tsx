@@ -6,6 +6,7 @@ import { BuzzChart } from "@/components/entity/BuzzChart";
 import { EntityHeroLive } from "@/components/entity/EntityHeroLive";
 import { TvProgramInfoCard } from "@/components/entity/TvProgramInfoCard";
 import { MarketPriceChart } from "@/components/entity/MarketPriceChart";
+import { RelatedBriefingLinks } from "@/components/entity/RelatedBriefingLinks";
 import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
@@ -26,6 +27,7 @@ import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
 import { channelFromLead, getPostChannel } from "@/lib/posts/channels";
 import {
   breadcrumbJsonLd,
+  entityDatasetJsonLd,
   entitySeoDescription,
   entitySeoTitle,
   isIndexableEntityPage,
@@ -161,6 +163,7 @@ export default async function RankingDetailPage({
     { name: channelMeta.label, url: `${SITE.url}${channelMeta.href}` },
     { name: entity.name, url: rankingUrl(SITE.url, entity.slug) },
   ]);
+  const dataset = entityDatasetJsonLd(entity, rankingUrl(SITE.url, entity.slug));
 
   return (
     <div className="space-y-8">
@@ -172,6 +175,10 @@ export default async function RankingDetailPage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(crumbs) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(dataset) }}
       />
       <p className="text-sm text-muted">
         <Link href="/" className="hover:text-ink">
@@ -203,6 +210,9 @@ export default async function RankingDetailPage({
       ) : null}
       <Suspense fallback={null}>
         <TodayAnalysisSlot slug={slug} name={name} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <RelatedBriefingLinks entity={entity} />
       </Suspense>
       <Suspense fallback={null}>
         <PollDeskSlot entity={entity} />
