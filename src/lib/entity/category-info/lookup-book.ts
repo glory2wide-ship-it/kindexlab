@@ -27,74 +27,71 @@ function titleScore(candidate: string, name: string): number {
   return 0;
 }
 
+/** Yes24 search HTML occasionally embeds goods cards; also try entity-escaped JSON. */
 async function lookupYes24(name: string): Promise<BookLookup | undefined> {
-  const url =
-    `https://www.yes24.com/Product/Search?domain=BOOK&query=${encodeURIComponent(name)}`;
+  const url = `https://www.yes24.com/Product/Search?domain=BOOK&query=${encodeURIComponent(name)}`;
   try {
     const html = await fetchText(url, {
-      headers: { Accept: "text/html", Referer: "https://www.yes24.com/" },
+      headers: { Referer: "https://www.yes24.com/" },
     });
-    const blocks = [
-      ...html.matchAll(
-        /<div[^>]*class="[^"]*itemUnit[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?=<div[^>]*class="[^"]*itemUnit|<\/div>\s*<div[^>]*class="[^"]*sTitle)/gi,
-      ),
-    ];
     const candidates: BookLookup[] = [];
-    const loose = [
-      ...html.matchAll(
-        /gd_name[^>]*href="([^"]+)"[^>]*>([^<]+)<[\s\S]{0,800}?info_auth[\s\S]{0,200}?>([\s\S]{0,200}?)<\/span>[\s\S]{0,400}?info_pub[\s\S]{0,200}?>([\s\S]{0,120}?)<\/span>/gi,
-      ),
-    ];
-    for (const match of loose) {
-      const href = match[1]?.startsWith("http")
-        ? match[1]
-        : `https://www.yes24.com${match[1] ?? ""}`;
+
+    for (const match of html.matchAll(
+      /gd_name[^>]*href="([^"]+)"[^>]*>([^<]+)</gi,
+    )) {
       const title = plain(match[2]);
       if (!title || titleScore(title, name) < 60) continue;
+      const idx = match.index ?? 0;
+      const window = html.slice(idx, idx + 1400);
+      const author = plain(
+        window.match(/info_auth[^>]*>([\s\S]*?)<\/span>/i)?.[1],
+      )?.replace(/\s*저\s*$/, "");
+      const publisher = plain(
+        window.match(/info_pub[^>]*>([\s\S]*?)<\/span>/i)?.[1],
+      );
+      const href = match[1]?.startsWith("http")
+        ? match[1]!
+        : `https://www.yes24.com${match[1] ?? ""}`;
       candidates.push({
         title,
-        author: plain(match[3])?.replace(/\s*저\s*$/, ""),
-        publisher: plain(match[4]),
+        author,
+        publisher,
         url: href,
         source: "예스24",
       });
+      if (candidates.length >= 5) break;
     }
-    // Fallback: title + nearby author text
+
+    // Entity-escaped JSON blob fallback (some Yes24 responses omit gd_name markup).
     if (!candidates.length) {
-      for (const match of html.matchAll(
-        /gd_name[^>]*href="([^"]+)"[^>]*>([^<]+)</gi,
-      )) {
-        const title = plain(match[2]);
+      const names = [
+        ...html.matchAll(/goods_name(?:&quot;|"):(?:&quot;|")([^&"]+)(?:&quot;|")/gi),
+      ];
+      const nos = [
+        ...html.matchAll(/goods_no(?:&quot;|"):(?:&quot;|")(\d+)(?:&quot;|")/gi),
+      ];
+      for (let i = 0; i < names.length; i += 1) {
+        const title = plain(names[i]?.[1]);
         if (!title || titleScore(title, name) < 60) continue;
-        const idx = match.index ?? 0;
-        const window = html.slice(idx, idx + 1200);
-        const author = plain(
-          window.match(/info_auth[^>]*>([\s\S]*?)<\/span>/i)?.[1],
-        )?.replace(/\s*저\s*$/, "");
-        const publisher = plain(
-          window.match(/info_pub[^>]*>([\s\S]*?)<\/span>/i)?.[1],
-        );
-        const href = match[1]?.startsWith("http")
-          ? match[1]!
-          : `https://www.yes24.com${match[1] ?? ""}`;
+        const goodsNo = nos[i]?.[1];
         candidates.push({
           title,
-          author,
-          publisher,
-          url: href,
+          url: goodsNo
+            ? `https://www.yes24.com/Product/Goods/${goodsNo}`
+            : undefined,
           source: "예스24",
         });
         if (candidates.length >= 5) break;
       }
     }
-    void blocks;
+
     candidates.sort((a, b) => titleScore(b.title, name) - titleScore(a.title, name));
     const top = candidates[0];
     if (!top?.url) return top;
-    // Detail page for synopsis when possible
+
     try {
       const detail = await fetchText(top.url, {
-        headers: { Accept: "text/html", Referer: "https://www.yes24.com/" },
+        headers: { Referer: "https://www.yes24.com/" },
       });
       const synopsis =
         plain(
@@ -103,9 +100,24 @@ async function lookupYes24(name: string): Promise<BookLookup | undefined> {
           )?.[1],
         ) ||
         plain(
-          detail.match(/property=["']og:description["']\s+content=["']([^"']+)["']/i)?.[1],
+          detail.match(
+            /property=["']og:description["']\s+content=["']([^"']+)["']/i,
+          )?.[1],
         );
-      return { ...top, synopsis: synopsis?.slice(0, 220) };
+      const author =
+        top.author ||
+        plain(
+          detail.match(/(?:저자|지은이)[^<]{0,40}>([^<]{2,40})</i)?.[1],
+        )?.replace(/\s*저\s*$/, "");
+      const publisher =
+        top.publisher ||
+        plain(detail.match(/(?:출판사|펴낸곳)[^<]{0,40}>([^<]{2,40})</i)?.[1]);
+      return {
+        ...top,
+        author,
+        publisher,
+        synopsis: synopsis?.slice(0, 220),
+      };
     } catch {
       return top;
     }
@@ -118,20 +130,27 @@ async function lookupAladin(name: string): Promise<BookLookup | undefined> {
   const url = `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=Book&SearchWord=${encodeURIComponent(name)}`;
   try {
     const html = await fetchText(url, {
-      headers: { Accept: "text/html", Referer: "https://www.aladin.co.kr/" },
+      headers: { Referer: "https://www.aladin.co.kr/" },
     });
     const candidates: BookLookup[] = [];
-    for (const match of html.matchAll(
-      /class=["']bo3["'][^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]{0,500}?class=["']ss_book_list["'][\s\S]{0,300}?<li>([\s\S]*?)<\/li>/gi,
-    )) {
-      const title = plain(match[2]);
+    // Aladin puts href before class="bo3" on the title anchor.
+    const titleRe =
+      /<a\s+href="([^"]+)"\s+class=["']bo3["'][^>]*>([\s\S]*?)<\/a>|<a\s+class=["']bo3["'][^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+    for (const match of html.matchAll(titleRe)) {
+      const hrefRaw = match[1] || match[3];
+      const title = plain(match[2] || match[4]);
       if (!title || titleScore(title, name) < 60) continue;
-      const meta = plain(match[3]) ?? "";
-      const author = meta.split("|")[0]?.replace(/\s*지음\s*$/, "").trim();
-      const publisher = meta.split("|")[1]?.trim();
-      const href = match[1]?.startsWith("http")
-        ? match[1]
-        : `https://www.aladin.co.kr${match[1] ?? ""}`;
+      const idx = match.index ?? 0;
+      const window = html.slice(idx, idx + 900);
+      const author = plain(
+        window.match(/>([^<]+)<\/a>\s*\(지은이\)/)?.[1],
+      );
+      const publisher = plain(
+        window.match(/\(지은이\)\s*\|\s*<a[^>]*>([^<]+)<\/a>/i)?.[1],
+      );
+      const href = hrefRaw?.startsWith("http")
+        ? hrefRaw
+        : `https://www.aladin.co.kr${hrefRaw ?? ""}`;
       candidates.push({
         title,
         author: author || undefined,
@@ -142,7 +161,21 @@ async function lookupAladin(name: string): Promise<BookLookup | undefined> {
       if (candidates.length >= 5) break;
     }
     candidates.sort((a, b) => titleScore(b.title, name) - titleScore(a.title, name));
-    return candidates[0];
+    const top = candidates[0];
+    if (!top?.url) return top;
+    try {
+      const detail = await fetchText(top.url, {
+        headers: { Referer: "https://www.aladin.co.kr/" },
+      });
+      const synopsis = plain(
+        detail.match(
+          /property=["']og:description["']\s+content=["']([^"']+)["']/i,
+        )?.[1],
+      );
+      return { ...top, synopsis: synopsis?.slice(0, 220) };
+    } catch {
+      return top;
+    }
   } catch {
     return undefined;
   }

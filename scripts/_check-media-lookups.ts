@@ -43,10 +43,20 @@ async function main() {
 
   const book = await lookupBookFacts("세이노의 가르침");
   console.log("book:", book ? `${book.source} · ${book.author ?? "-"} / ${book.publisher ?? "-"}` : "miss");
+  assert.ok(book?.author || book?.publisher, "book lookup should resolve author/publisher");
+
+  const ticketLive = await lookupTicketFacts("드라큘라", "performance");
+  console.log(
+    "ticket(live):",
+    ticketLive
+      ? `${ticketLive.source} · ${ticketLive.venue ?? "-"} · ${ticketLive.schedule ?? ticketLive.price ?? "-"}`
+      : "miss",
+  );
+  assert.ok(ticketLive?.venue || ticketLive?.schedule, "interpark ranking crawl should hit 드라큘라");
 
   const ticket = await lookupTicketFacts("팬텀", "performance");
   console.log(
-    "ticket:",
+    "ticket(search):",
     ticket
       ? `${ticket.source} · ${ticket.venue ?? "-"} · ${ticket.schedule ?? ticket.price ?? "-"}`
       : "miss",
