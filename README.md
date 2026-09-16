@@ -75,6 +75,25 @@ GitHub Actions `Daily briefings`가 **매일 04:00 KST**(`0 19 * * *` UTC)에 �
 
 시크릿이 없으면 Gmail은 **발송되지 않고**, 같은 내용이 GitHub Issue(`generation-report` 라벨)로만 남습니다. 예: [#7 2026-09-09 보고](https://github.com/glory2wide-ship-it/kindexlab/issues/7).
 
+## 공공데이터 OpenAPI
+
+`DATA_GO_KR_SERVICE_KEY`(data.go.kr **Decoding** 일반인증키)를 넣으면 아래가 자동 연동됩니다.
+
+| 활용처 | API |
+| --- | --- |
+| 종목 상세 `ItemDetailCategoryInfo` | 보조금24 · 복지로(중앙/지자체) · 국토부 아파트 매매/전월세 실거래 |
+| 히트맵 LIVE ingest | 지원금·여행지원·창업·부동산 보드에 public-data 소스 행 추가 |
+| 글생성 RAG | `collectArticleContext`에 공식 공고·실거래 요약 주입 |
+
+```bash
+# .env.local
+DATA_GO_KR_SERVICE_KEY=…   # Decoding 키
+# BIZINFO_API_KEY=…        # (선택) 기업마당 네이티브
+npm run live:public-data
+```
+
+Vercel / GitHub Actions에도 동일 Secrets 이름으로 등록하세요. 기업마당 data.go.kr(15157820)는 운영 심의승인·Swagger Base URL 확인 후 `MSS_BIZINFO_API_BASE`로 지정할 수 있습니다.
+
 ```bash
 npm run briefing:generate
 npm run briefing:generate -- --force 2026-08-25

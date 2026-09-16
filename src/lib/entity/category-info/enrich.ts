@@ -10,6 +10,9 @@ import type {
 import { fetchText } from "@/lib/ingestion/http";
 import { decodeHtml, stripTags } from "@/lib/ingestion/parse";
 import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
+import { matchPublicGrant } from "@/lib/public-data/grants";
+import { summarizeHousingPublicData } from "@/lib/public-data/housing";
+import type { PublicGrantRecord } from "@/lib/public-data/types";
 
 const UPDATING = "실시간 정보 업데이트 중";
 
@@ -294,18 +297,73 @@ function mergeLinks(primary: CategoryInfoLink[], secondary: CategoryInfoLink[]):
   return out;
 }
 
+function applyGrantRecord(
+  rows: CategoryInfoRow[],
+  grant: PublicGrantRecord,
+): CategoryInfoRow[] {
+  let next = rows;
+  if (grant.agency) {
+    next = fillUpdatingRows(next, [
+      { label: /주관 기관/, value: grant.agency, emphasize: true },
+    ]);
+  }
+  if (grant.deadline) {
+    next = fillUpdatingRows(next, [{ label: "신청 기간", value: grant.deadline }]);
+  }
+  if (grant.target || grant.criteria) {
+    next = fillUpdatingRows(next, [
+      {
+        label: /신청 자격|자격·조건/,
+        value: [grant.target, grant.criteria].filter(Boolean).join(" · ").slice(0, 160),
+      },
+    ]);
+  }
+  if (grant.documents || grant.howToApply) {
+    next = fillUpdatingRows(next, [
+      {
+        label: "준비사항",
+        value: [grant.documents, grant.howToApply].filter(Boolean).join(" · ").slice(0, 160),
+      },
+    ]);
+  }
+  if (grant.url) {
+    next = next.map((row) =>
+      /주관 기관/.test(row.label)
+        ? {
+            ...row,
+            href: grant.url,
+            value: isUpdating(row.value) ? grant.agency || grant.title : row.value,
+          }
+        : row,
+    );
+  }
+  return next;
+}
+
 /**
  * Live crawl enrichment for ItemDetailCategoryInfo.
- * Uses news retrieval + Naver web/blog Open API (+ Melon chart / YouTube when useful).
+ * Uses news retrieval + Naver web/blog Open API (+ Melon chart / YouTube when useful)
+ * and data.go.kr (보조금24·복지로·국토부 실거래) when DATA_GO_KR_SERVICE_KEY is set.
  * Never throws — returns the base payload on soft failures.
  */
 export async function enrichCategoryInfoPayload(
   base: CategoryInfoPayload,
 ): Promise<CategoryInfoPayload> {
   const name = base.entityName;
-  const [newsDocs, webDocs] = await Promise.all([
+  const wantsGrant =
+    base.channel === "gov_subsidy" ||
+    base.channel === "travel_grant" ||
+    base.channel === "local_policy" ||
+    base.channel === "startup";
+  const wantsHousing = base.channel === "housing";
+
+  const [newsDocs, webDocs, publicGrant, housingPublic] = await Promise.all([
     crawlNews(name),
     crawlWeb(name, base.channel),
+    wantsGrant ? matchPublicGrant(name).catch(() => undefined) : Promise.resolve(undefined),
+    wantsHousing
+      ? summarizeHousingPublicData(name).catch(() => undefined)
+      : Promise.resolve(undefined),
   ]);
 
   const youtubeDocs =
@@ -420,12 +478,15 @@ export async function enrichCategoryInfoPayload(
     }
     case "gov_subsidy":
     case "travel_grant": {
+      if (publicGrant) {
+        rows = applyGrantRecord(rows, publicGrant);
+      }
       const official = webDocs.find((doc) =>
         /\.go\.kr|korea\.kr|gov|지원|복지|청$|재단|공사/i.test(
           `${doc.url} ${doc.publisher ?? ""} ${doc.title}`,
         ),
       );
-      if (official) {
+      if (official && !publicGrant?.url) {
         rows = fillUpdatingRows(rows, [
           {
             label: "주관 기관 홈페이지",
@@ -439,23 +500,55 @@ export async function enrichCategoryInfoPayload(
             : row,
         );
       }
-      const period = firstMatch(corpus, [
-        /신청\s*기간[:\s]*([^\n.]{6,60})/,
-        /(\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*[~～-]\s*\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2})/,
-      ]);
-      const eligibility = firstMatch(corpus, [
-        /(?:신청\s*자격|지원\s*대상|자격\s*요건)[:\s]*([^\n.]{6,80})/,
-      ]);
-      if (period) rows = fillUpdatingRows(rows, [{ label: "신청 기간", value: period }]);
-      if (eligibility) {
-        rows = fillUpdatingRows(rows, [{ label: /신청 자격|자격·조건/, value: eligibility }]);
+      if (!publicGrant) {
+        const period = firstMatch(corpus, [
+          /신청\s*기간[:\s]*([^\n.]{6,60})/,
+          /(\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*[~～-]\s*\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2})/,
+        ]);
+        const eligibility = firstMatch(corpus, [
+          /(?:신청\s*자격|지원\s*대상|자격\s*요건)[:\s]*([^\n.]{6,80})/,
+        ]);
+        if (period) rows = fillUpdatingRows(rows, [{ label: "신청 기간", value: period }]);
+        if (eligibility) {
+          rows = fillUpdatingRows(rows, [{ label: /신청 자격|자격·조건/, value: eligibility }]);
+        }
+      }
+      break;
+    }
+    case "startup": {
+      if (publicGrant) {
+        rows = applyGrantRecord(rows, publicGrant);
+        if (publicGrant.summary) {
+          synopsis = synopsis || publicGrant.summary;
+        }
       }
       break;
     }
     case "housing": {
-      if (housing) {
+      if (housingPublic?.tradeSummary) {
+        rows = fillUpdatingRows(rows, [
+          { label: /실거래가/, value: housingPublic.tradeSummary, emphasize: true },
+        ]);
+      } else if (housing) {
         rows = fillUpdatingRows(rows, [
           { label: /실거래가/, value: housing, emphasize: true },
+        ]);
+      }
+      if (housingPublic?.rentSummary) {
+        rows = fillUpdatingRows(rows, [
+          {
+            label: /매매·전세·월세|전세|월세/,
+            value: housingPublic.rentSummary,
+          },
+        ]);
+      }
+      if (housingPublic?.regionLabel) {
+        rows = fillUpdatingRows(rows, [
+          {
+            label: "단지/지역",
+            value: `${name} · ${housingPublic.regionLabel}`,
+            emphasize: true,
+          },
         ]);
       }
       break;
@@ -490,7 +583,25 @@ export async function enrichCategoryInfoPayload(
     ),
   );
 
-  const links = mergeLinks(crawledLinks, base.links);
+  const officialGrantLinks: CategoryInfoLink[] = publicGrant?.url
+    ? [
+        {
+          title: publicGrant.title,
+          href: publicGrant.url,
+          source:
+            publicGrant.source === "gov24"
+              ? "보조금24"
+              : publicGrant.source.startsWith("welfare")
+                ? "복지로"
+                : "기업마당",
+        },
+      ]
+    : [];
+
+  const links = mergeLinks(officialGrantLinks, mergeLinks(crawledLinks, base.links));
+  if (!synopsis && publicGrant?.summary) {
+    synopsis = publicGrant.summary;
+  }
   const filledCount = rows.filter((row) => !isUpdating(row.value)).length;
   if (filledCount > 0 || links.length >= 3 || synopsis) {
     sparse = false;
@@ -512,7 +623,9 @@ export async function enrichCategoryInfoPayload(
     links: links.slice(0, 5),
     notice:
       base.notice ||
-      "채널 맞춤 정보는 공개 뉴스·웹 문서를 주기적으로 수집해 보완합니다. 공식 발표와 다를 수 있습니다.",
+      (publicGrant || housingPublic
+        ? "채널 맞춤 정보는 공공데이터포털(보조금24·복지로·국토부 실거래)과 공개 뉴스·웹 문서를 주기적으로 수집해 보완합니다. 공식 발표와 다를 수 있습니다."
+        : "채널 맞춤 정보는 공개 뉴스·웹 문서를 주기적으로 수집해 보완합니다. 공식 발표와 다를 수 있습니다."),
     updatedAt: new Date().toISOString(),
   };
 }

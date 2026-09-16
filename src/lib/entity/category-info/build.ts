@@ -174,7 +174,8 @@ function housingRows(entity: RankingEntity): CategoryInfoRow[] {
     },
     {
       label: "수집 계획",
-      value: "1차 국토교통부 실거래가 API · 2차 네이버페이 부동산 참고",
+      value:
+        "국토교통부 아파트 매매·전월세 실거래가 OpenAPI(data.go.kr) 연동 · 네이버페이 부동산은 보조 참고",
     },
   ];
 }

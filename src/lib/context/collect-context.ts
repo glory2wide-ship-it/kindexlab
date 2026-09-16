@@ -17,6 +17,7 @@ import {
 import { buildSignalBrief } from "@/lib/context/signal-brief";
 import { resolveSourceStrategy } from "@/lib/context/source-strategy";
 import { officialUrlSeeds } from "@/lib/context/official-url-seeds";
+import { collectPublicDataContextSources } from "@/lib/public-data/context-sources";
 import type { CollectedContext, ContextSource } from "@/lib/context/types";
 import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
 import { isGoogleNewsUrl, publisherFromUrl, unwrapNewsUrls } from "@/lib/news/unwrap";
@@ -291,6 +292,21 @@ export async function collectArticleContext(
   if (seeded.length) {
     providers.push("official-url-seeds");
     sources = mergeSources(sources, seeded);
+  }
+
+  // data.go.kr: 보조금24·복지로·국토부 실거래 — grant/housing/startup RAG grounding.
+  try {
+    const publicData = await collectPublicDataContextSources({
+      keyword,
+      boardSlug: options.boardSlug,
+      entityType: entity?.type,
+    });
+    if (publicData.sources.length) {
+      providers.push(...publicData.providers);
+      sources = mergeSources(sources, publicData.sources);
+    }
+  } catch {
+    /* soft-fail */
   }
 
   let newsCount = countNewsSources(sources);

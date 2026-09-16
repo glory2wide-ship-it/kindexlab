@@ -8,6 +8,7 @@ import { fetchCategoryLiveSources } from "@/lib/ingestion/sources/category-live"
 import { fetchGameSources } from "@/lib/ingestion/sources/games";
 import { fetchMusicSources } from "@/lib/ingestion/sources/music";
 import { fetchMovieSources } from "@/lib/ingestion/sources/movies";
+import { fetchPublicDataLiveSources } from "@/lib/ingestion/sources/public-data";
 import { fetchShortsSources } from "@/lib/ingestion/sources/shorts";
 import { fetchPoliticsSources } from "@/lib/ingestion/sources/politics";
 import { fetchPoliticsYoutubeSources } from "@/lib/ingestion/sources/youtube-politics";
@@ -130,6 +131,7 @@ async function gatherSourceFamilies(): Promise<SourceResult[]> {
     ["tickets", fetchTicketSources],
     ["books", fetchBookSources],
     ["category-live", fetchCategoryLiveSources],
+    ["public-data", fetchPublicDataLiveSources],
   ];
 
   const batches = await withTimeout(
