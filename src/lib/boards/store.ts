@@ -209,13 +209,23 @@ async function loadDisk(): Promise<void> {
     const stamp = Math.max(published.mtimeMs, local.mtimeMs);
     if (stamp === loadedMtimeMs && stamp > 0) return;
     memory.clear();
-    // Published first (deployed), then local cache overlays (dev / CI writes).
-    for (const entry of published.entries) {
-      if (entry?.slug) memory.set(entry.slug, normalizeCachedBoard(entry));
-    }
-    for (const entry of local.entries) {
-      if (entry?.slug) memory.set(entry.slug, normalizeCachedBoard(entry));
-    }
+    // Merge published (deployed) + local cache (dev / CI writes) by freshness.
+    // Blind cache overlay used to hide newer published.json rows when a stale
+    // gitignored cache.json lingered from an older machine run.
+    const consider = (entry: CachedBoard | undefined) => {
+      if (!entry?.slug) return;
+      const next = normalizeCachedBoard(entry);
+      const prev = memory.get(entry.slug);
+      if (!prev) {
+        memory.set(entry.slug, next);
+        return;
+      }
+      const prevAt = new Date(prev.generatedAt).getTime();
+      const nextAt = new Date(next.generatedAt).getTime();
+      if (nextAt >= prevAt) memory.set(entry.slug, next);
+    };
+    for (const entry of published.entries) consider(entry);
+    for (const entry of local.entries) consider(entry);
     loadedMtimeMs = stamp;
   })().finally(() => {
     boardLoadPromise = null;

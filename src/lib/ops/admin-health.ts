@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { CachedBoard } from "@/lib/boards/types";
+import { getBoard, isDeskBoard, isRailBoard } from "@/lib/boards/registry";
 import { evaluateTrendsHealth, type TrendsHealthReport } from "@/lib/ingestion/health";
 import { readPersistedSnapshot } from "@/lib/ingestion/job";
 import {
@@ -40,6 +41,12 @@ function trendsLevel(trends: TrendsHealthReport): HealthLevel {
   if (!trends.ok) return "fail";
   if (trends.issues.some((issue) => issue.level === "warn")) return "warn";
   return "ok";
+}
+
+/** Boards the refresh cron actually maintains (rail, non-desk). */
+function isCronMaintainedBoard(slug: string): boolean {
+  const def = getBoard(slug);
+  return Boolean(def && isRailBoard(def) && !isDeskBoard(def));
 }
 
 export async function evaluateWebHealth(): Promise<WebHealthStatus> {
@@ -103,15 +110,18 @@ export async function evaluateWebHealth(): Promise<WebHealthStatus> {
       "utf8",
     );
     const published = JSON.parse(publishedRaw) as { entries?: CachedBoard[] };
-    const entries = published.entries ?? [];
+    const entries = (published.entries ?? []).filter((row) => isCronMaintainedBoard(row.slug));
     const now = Date.now();
     const fresh = entries.filter((row) => new Date(row.expiresAt).getTime() > now).length;
     const ratio = entries.length ? fresh / entries.length : 0;
+    const skipped = (published.entries?.length ?? 0) - entries.length;
     checks.push({
       id: "published-boards",
       label: "보드 published.json",
       level: entries.length === 0 ? "fail" : ratio < 0.4 ? "warn" : "ok",
-      detail: `${fresh}/${entries.length} boards still within TTL`,
+      detail: `${fresh}/${entries.length} rail boards within TTL${
+        skipped > 0 ? ` · skipped ${skipped} railHidden/desk` : ""
+      }`,
     });
   } catch {
     checks.push({

@@ -3,18 +3,20 @@ name: Refresh ranking boards
 # Rebuilds expired LLM/RSS boards and commits published.json so production
 # heatmaps (경제·문화·여행 desks without ingest coverage) can move.
 # Cost controls: Gemini Batch (−50%), expired-only picks, skip polish/pump,
-# 6h cadence, 24h TTL.
+# 6h cadence, 36h TTL.
+# Throughput: 8 boards × 4 runs/day ≈ 32/day covers ~31 rail boards (36h TTL).
+# A limit of 4 left a permanent TTL backlog (warn at <40% fresh).
 
 on:
   schedule:
-    # Every 6 hours — was hourly; expired-only + longer TTL covers the set.
+    # Every 6 hours — expired-only + TTL must keep pace with board count.
     - cron: "20 */6 * * *"
   workflow_dispatch:
     inputs:
       limit:
         description: "Boards to refresh this run"
         required: false
-        default: "4"
+        default: "8"
 
 concurrency:
   group: refresh-ranking-boards
@@ -49,12 +51,13 @@ jobs:
           # −50% vs Live for board LLM calls
           GEMINI_USE_BATCH: "true"
           # Prefer freshness window over thrashing warm boards
-          BOARDS_TTL_HOURS: "24"
+          # 36h TTL × ~31 boards ≈ 21/day needed; 8×4 runs = 32/day capacity.
+          BOARDS_TTL_HOURS: "36"
           # Skip optional editor / shorts LLM steps (template pump kept)
           BOARDS_SKIP_POLISH: "1"
           BOARDS_SKIP_PUMP: "1"
         run: |
-          LIMIT="${{ github.event.inputs.limit || '4' }}"
+          LIMIT="${{ github.event.inputs.limit || '8' }}"
           npx tsx scripts/refresh-stale-boards.ts --limit="$LIMIT"
       - name: Commit and push published boards
         if: success()
