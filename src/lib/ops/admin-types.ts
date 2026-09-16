@@ -38,6 +38,17 @@ export type AdminDashboardPayload = {
   generatedAt: string;
   editionDate: string;
   schedule: typeof ADMIN_REFRESH_SCHEDULE;
+  categoryInfoRefresh: Array<{
+    id: string;
+    label: string;
+    cadenceLabel: string;
+    reason: string;
+    channelsLabel: string;
+    intervalMs: number;
+    lastUpdatedAt: string;
+    nextUpdateAt: string;
+    overdue: boolean;
+  }>;
   daily: {
     editionDate: string;
     generationOk: number;

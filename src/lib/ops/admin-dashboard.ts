@@ -3,6 +3,7 @@ import { evaluateLiveFillStatus, evaluateWebHealth } from "@/lib/ops/admin-healt
 import { ADMIN_REFRESH_SCHEDULE } from "@/lib/ops/admin-schedule";
 import { loadOpsDigestsForDate, summarizeDay } from "@/lib/ops/ops-digest";
 import { getTrafficSnapshot } from "@/lib/analytics/traffic";
+import { buildCategoryInfoRefreshStatus } from "@/lib/entity/category-info/refresh-status";
 
 export { ADMIN_REFRESH_SCHEDULE } from "@/lib/ops/admin-schedule";
 
@@ -23,11 +24,13 @@ export async function buildAdminDashboard(editionDate?: string) {
     evaluateLiveFillStatus(),
     getTrafficSnapshot(editionDate),
   ]);
+  const categoryInfoRefresh = buildCategoryInfoRefreshStatus();
 
   return {
     generatedAt,
     editionDate: daily.editionDate,
     schedule: ADMIN_REFRESH_SCHEDULE,
+    categoryInfoRefresh,
     daily: {
       ...daily,
       generationKrwLabel: formatKrw(daily.generationKrw),

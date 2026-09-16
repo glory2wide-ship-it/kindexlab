@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
 
 /**
  * Detail-facts freshness check.
- * - Daily domains (유튜브 / 이슈뉴스 / 도서 / 맛집 / 나들이): flag > 1 day
+ * - Daily domains (맛집 / 나들이 / 이슈뉴스): flag > 1 day
+ * - 3-day domains (유튜브 / 도서): flag > 3 days
  * - Weekly entertainment pack: flag > 7 days
  *
  * Schedule example: 0 8 * * * (every day 08:00 KST)

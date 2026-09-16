@@ -32,7 +32,8 @@ export type DetailFacts = {
     | "book"
     | "food"
     | "outing";
-  refresh: "daily" | "weekly";
+  /** daily=1d · every3days=웹툰·도서·유튜브 · weekly=연예 큐레이션 */
+  refresh: "daily" | "every3days" | "weekly";
   rows: DetailFactRow[];
   chips?: Array<{ label: string; items: string[] }>;
   links?: Array<{ title: string; href: string }>;
@@ -42,8 +43,9 @@ export type DetailFacts = {
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const THREE_DAY_MS = 3 * DAY_MS;
 
-/** Bump when editors refresh the daily catalogue. */
+/** Bump when editors refresh the daily / 3-day catalogue. */
 export const DETAIL_FACTS_DAILY_CHECKED_AT = "2026-09-14T09:00:00+09:00";
 
 export function detailFactsAreStale(
@@ -55,7 +57,8 @@ export function detailFactsAreStale(
   }
   const ts = Date.parse(facts.checkedAt);
   if (!Number.isFinite(ts)) return true;
-  return now - ts > DAY_MS;
+  const window = facts.refresh === "every3days" ? THREE_DAY_MS : DAY_MS;
+  return now - ts > window;
 }
 
 function compact(value: string): string {
@@ -384,7 +387,7 @@ function youtubeFallback(name: string): DetailFacts {
     : `https://www.youtube.com/results?search_query=${encodeURIComponent(name)}`;
   return {
     domain: "youtube",
-    refresh: "daily",
+    refresh: "every3days",
     checkedAt: DETAIL_FACTS_DAILY_CHECKED_AT,
     rows: [
       {
@@ -400,7 +403,7 @@ function youtubeFallback(name: string): DetailFacts {
       { title: `${name} 화제 영상 이슈`, href: naverNewsUrl(`${name} 유튜브`) },
       { title: `${name} 최신 클립`, href: naverNewsUrl(`${name} 영상`) },
     ],
-    synopsis: `${name} 채널 URL과 최근 이슈 영상 정보는 하루 1회 점검합니다.`,
+    synopsis: `${name} 채널 URL과 최근 이슈 영상 정보는 3일마다 점검합니다.`,
   };
 }
 
@@ -422,7 +425,7 @@ function issueNewsFallback(name: string): DetailFacts {
 function bookFallback(name: string): DetailFacts {
   return {
     domain: "book",
-    refresh: "daily",
+    refresh: "every3days",
     checkedAt: DETAIL_FACTS_DAILY_CHECKED_AT,
     rows: [
       { label: "작가", value: "작가 정보 확인 중" },
@@ -430,7 +433,7 @@ function bookFallback(name: string): DetailFacts {
     ],
     chips: [{ label: "작가 필모그래피", items: [] }],
     links: newsLinks(name, ["서평", "베스트셀러", "인터뷰"]),
-    synopsis: `${name}의 작가·출판사·요약·관련 뉴스는 하루 1회 점검합니다.`,
+    synopsis: `${name}의 작가·출판사·요약·관련 뉴스는 3일마다 점검합니다.`,
   };
 }
 
@@ -502,9 +505,11 @@ function resolveDailyFacts(
 
   const hit = lookupDaily(entity.name, domain);
   if (hit) {
+    const refresh =
+      domain === "book" || domain === "youtube" ? "every3days" : "daily";
     return {
       domain,
-      refresh: "daily",
+      refresh,
       rows: hit.rows,
       chips: hit.chips?.map((c) => ({ ...c, items: c.items.filter(Boolean) })),
       links: hit.links?.slice(0, 5),
@@ -546,7 +551,9 @@ export function listStaleDailyDetailProfiles(now = Date.now()): string[] {
   }
   for (const entry of DAILY_CATALOG) {
     const checkedAt = entry.checkedAt ?? DETAIL_FACTS_DAILY_CHECKED_AT;
-    if (detailFactsAreStale({ checkedAt, refresh: "daily" }, now)) {
+    const refresh =
+      entry.domain === "book" || entry.domain === "youtube" ? "every3days" : "daily";
+    if (detailFactsAreStale({ checkedAt, refresh }, now)) {
       stale.push(`${entry.domain}:${entry.title}`);
     }
   }

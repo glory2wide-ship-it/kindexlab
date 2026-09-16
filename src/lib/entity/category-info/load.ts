@@ -1,15 +1,19 @@
 import { unstable_cache } from "next/cache";
 import { buildCategoryInfoPayload } from "@/lib/entity/category-info/build";
+import { resolveCategoryInfoChannel } from "@/lib/entity/category-info/channel";
 import { enrichCategoryInfoPayload } from "@/lib/entity/category-info/enrich";
+import { categoryInfoRevalidateSec } from "@/lib/entity/category-info/refresh-policy";
+import { touchCategoryInfoRefreshTier } from "@/lib/entity/category-info/refresh-status";
 import type { CategoryInfoPayload } from "@/lib/entity/category-info/types";
 import type { RankingEntity } from "@/lib/types";
 
-/** 1 hour — keep detail packs fresh without hammering sources each request. */
+/** @deprecated Prefer categoryInfoRevalidateSec(channel). */
 export const CATEGORY_INFO_REVALIDATE_SEC = 3600;
 
-function cacheKey(entity: RankingEntity): string[] {
+function cacheKey(entity: RankingEntity, channel: string): string[] {
   return [
-    "item-detail-category-info-v6-nol-ticket",
+    "item-detail-category-info-v7-tiered-refresh",
+    channel,
     entity.slug,
     entity.type,
     entity.heatmapGroup ?? "",
@@ -21,9 +25,10 @@ function cacheKey(entity: RankingEntity): string[] {
 async function buildAndEnrich(entity: RankingEntity): Promise<CategoryInfoPayload> {
   const base = buildCategoryInfoPayload(entity);
   try {
-    return await enrichCategoryInfoPayload(base);
+    const enriched = await enrichCategoryInfoPayload(base);
+    touchCategoryInfoRefreshTier(enriched.channel);
+    return enriched;
   } catch {
-    // Soft-fail: still show curated/fallback pack if crawl is down.
     return {
       ...base,
       notice:
@@ -35,15 +40,17 @@ async function buildAndEnrich(entity: RankingEntity): Promise<CategoryInfoPayloa
 
 /**
  * Cached builder for ItemDetailCategoryInfo.
- * Revalidates every hour; crawl enrichment runs inside the cache boundary.
+ * Revalidate window follows the channel refresh-policy tier.
  */
 export async function loadCategoryInfoPayload(
   entity: RankingEntity,
 ): Promise<CategoryInfoPayload> {
+  const channel = resolveCategoryInfoChannel(entity).channel;
+  const revalidate = categoryInfoRevalidateSec(channel);
   const cached = unstable_cache(
     async () => buildAndEnrich(entity),
-    cacheKey(entity),
-    { revalidate: CATEGORY_INFO_REVALIDATE_SEC },
+    cacheKey(entity, channel),
+    { revalidate },
   );
   return cached();
 }

@@ -13,3 +13,8 @@ export {
   CATEGORY_INFO_REVALIDATE_SEC,
   loadCategoryInfoPayload,
 } from "@/lib/entity/category-info/load";
+export {
+  CATEGORY_INFO_REFRESH_TIERS,
+  categoryInfoRevalidateSec,
+  resolveCategoryInfoRefreshTier,
+} from "@/lib/entity/category-info/refresh-policy";

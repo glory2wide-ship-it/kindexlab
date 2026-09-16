@@ -153,6 +153,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                 editionDate: next.editionDate,
                 daily: next.daily,
                 schedule: next.schedule,
+                categoryInfoRefresh: next.categoryInfoRefresh,
               };
             }
             if (key === "webHealth") {
@@ -248,7 +249,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
     });
   }, [router]);
 
-  const { daily, traffic, webHealth, liveFill, schedule } = data;
+  const { daily, traffic, webHealth, liveFill, schedule, categoryInfoRefresh } = data;
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-10 sm:px-6">
@@ -290,6 +291,51 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
         </p>
         {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
       </header>
+
+      <Section
+        title="종목 상세 정보 갱신"
+        subtitle="채널 구분별 권장 주기와 최근·다음 업데이트 시각(KST). 실제 조회 캐시도 이 주기에 맞춰 재검증합니다."
+        meta={`정책 기준 ${formatKst(data.generatedAt)}`}
+      >
+        <div className="overflow-x-auto rounded-xl border border-line">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-board text-xs text-muted">
+              <tr>
+                <th className="px-3 py-2 font-medium">구분</th>
+                <th className="px-3 py-2 font-medium">권장 주기</th>
+                <th className="px-3 py-2 font-medium">채널</th>
+                <th className="px-3 py-2 font-medium">최신 업데이트</th>
+                <th className="px-3 py-2 font-medium">다음 업데이트</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categoryInfoRefresh.map((row) => (
+                <tr key={row.id} className="border-t border-line align-top">
+                  <td className="px-3 py-2.5">
+                    <div className="font-medium text-ink">{row.label}</div>
+                    <div className="mt-0.5 text-xs text-muted">{row.reason}</div>
+                  </td>
+                  <td className="px-3 py-2.5 tabular-nums text-ink">{row.cadenceLabel}</td>
+                  <td className="max-w-[14rem] px-3 py-2.5 text-xs text-muted">
+                    {row.channelsLabel}
+                  </td>
+                  <td className="px-3 py-2.5 text-xs tabular-nums text-ink">
+                    {formatKst(row.lastUpdatedAt)}
+                  </td>
+                  <td className="px-3 py-2.5 text-xs tabular-nums">
+                    <span className={row.overdue ? "font-medium text-amber-800" : "text-ink"}>
+                      {formatKst(row.nextUpdateAt)}
+                    </span>
+                    {row.overdue ? (
+                      <span className="mt-0.5 block text-[11px] text-amber-700">갱신 지연</span>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
 
       <Section
         title="방문자"
