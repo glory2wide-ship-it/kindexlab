@@ -33,12 +33,14 @@ import { kstDateString } from "../src/lib/briefing/dates";
 import { OVERSEAS_STOCK_BOARD_SLUG } from "../src/lib/market/stock-codes";
 import {
   deliverGenerationReport,
-  writeGenerationReportArtifacts,
+  persistGenerationReportForAdmin,
+  persistGenerationReportForAdminSync,
   type GenerationReport,
 } from "../src/lib/ops/generation-report";
 import { formatKrw, resetGeminiUsage, snapshotGeminiUsage } from "../src/lib/ops/gemini-usage";
 import { POST_CHANNELS } from "../src/lib/posts/channels";
 import type { PostChannel } from "../src/lib/posts/types";
+import type { HeatmapAnalysisTarget } from "../src/lib/analysis/heatmap-inventory";
 
 /** Rare mid-run git push only (default off). Final publish is the workflow step. */
 function checkpointEnabled(): boolean {
@@ -69,7 +71,17 @@ function buildAnalysisReport(
   editionDate: string,
   items: HeatmapOvernightItem[],
   notes: string[],
+  unfinished: HeatmapAnalysisTarget[] = [],
 ): GenerationReport {
+  const doneSlugs = new Set(items.map((item) => item.slug));
+  const pendingRows = unfinished
+    .filter((target) => !doneSlugs.has(target.entity.slug))
+    .map((target) => ({
+      name: target.entity.name,
+      status: "skip" as const,
+      meta: `${target.channel}/${target.boardSlug}`,
+      reason: "timeout-cancelled",
+    }));
   return {
     subject: `[KinDex] 오늘의 분석 생성 보고 · ${editionDate}`,
     editionDate,
@@ -79,18 +91,21 @@ function buildAnalysisReport(
     sections: [
       {
         title: "오늘의 분석",
-        rows: items.map((item) => ({
-          name: item.keyword,
-          status: item.skipped ? ("skip" as const) : item.ok ? ("ok" as const) : ("fail" as const),
-          meta: `${item.channel}/${item.boardSlug}`,
-          reason: item.skipped
-            ? item.reason ?? "ttl-hit"
-            : item.ok
-              ? item.chars
-                ? `${item.chars}자`
-                : undefined
-              : item.reason,
-        })),
+        rows: [
+          ...items.map((item) => ({
+            name: item.keyword,
+            status: item.skipped ? ("skip" as const) : item.ok ? ("ok" as const) : ("fail" as const),
+            meta: `${item.channel}/${item.boardSlug}`,
+            reason: item.skipped
+              ? item.reason ?? "ttl-hit"
+              : item.ok
+                ? item.chars
+                  ? `${item.chars}자`
+                  : undefined
+                : item.reason,
+          })),
+          ...pendingRows,
+        ],
       },
     ],
     notes,
@@ -176,20 +191,31 @@ async function main() {
   }
 
   let latestItems: HeatmapOvernightItem[] = [];
-  // Do not git-push on SIGTERM: the workflow `always()` step publishes once.
+  // Flush ops digest sync on cancel — /admin reads src/data/ops/daily only.
+  // Do not git-push here: the workflow `always()` step publishes once.
+  const flushPartialReport = (reason: string, markUnfinished: boolean) => {
+    const generatedSoFar = latestItems.filter((item) => item.ok && !item.skipped).length;
+    const notes = [
+      reason,
+      "partial=true",
+      `progress=${latestItems.length}/${targets.length}`,
+      `generated=${generatedSoFar}`,
+      `API 추정 ${formatKrw(snapshotGeminiUsage().estimatedKrw)}`,
+    ];
+    const report = buildAnalysisReport(
+      editionDate,
+      latestItems,
+      notes,
+      markUnfinished ? targets : [],
+    );
+    persistGenerationReportForAdminSync(report, `heatmap-analysis-${editionDate}`);
+  };
   const onSignal = (signal: string) => {
     console.warn(
-      `[checkpoint] received ${signal} — writing partial report; final workflow step will push cache`,
+      `[checkpoint] received ${signal} — writing partial ops digest for /admin; final workflow step will push`,
     );
     try {
-      void writeGenerationReportArtifacts(
-        buildAnalysisReport(editionDate, latestItems, [
-          `signal=${signal}`,
-          "partial=true",
-          `API 추정 ${formatKrw(snapshotGeminiUsage().estimatedKrw)}`,
-        ]),
-        `heatmap-analysis-${editionDate}`,
-      );
+      flushPartialReport(`signal=${signal}`, true);
     } catch (error) {
       console.warn("[checkpoint] partial report write failed", error);
     }
@@ -203,6 +229,9 @@ async function main() {
     force,
     batchSize,
     onProgress: (item, position, total) => {
+      const existing = latestItems.findIndex((row) => row.slug === item.slug);
+      if (existing >= 0) latestItems[existing] = item;
+      else latestItems.push(item);
       const tag = item.skipped ? "skip" : item.ok ? "ok" : "fail";
       console.log(
         `[${position}/${total}] ${tag} ${item.keyword} (${item.kind ?? item.reason ?? "-"}) ${item.ms}ms`,
@@ -224,7 +253,8 @@ async function main() {
       );
 
       try {
-        await writeGenerationReportArtifacts(
+        // Persist digest every batch so a mid-batch kill still leaves /admin data.
+        await persistGenerationReportForAdmin(
           buildAnalysisReport(editionDate, itemsSoFar, [
             "partial=true",
             `progress=${position}/${total}`,

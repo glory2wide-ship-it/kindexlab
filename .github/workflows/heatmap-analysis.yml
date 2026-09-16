@@ -12,6 +12,10 @@ name: Heatmap today's analysis
 #   so Vercel is not billed for dozens of deploys (optional rare git-only
 #   backups: ANALYSIS_CHECKPOINT_INTERVAL_MS, commits include [vercel skip]).
 #
+# Ops digests (src/data/ops/daily) are written after every batch and on SIGTERM
+# so /admin still shows 오늘의 분석 success/fail when the job times out.
+# A salvage step rebuilds the digest from cache/artifact before the final push.
+#
 # Email report → glory2wide@gmail.com after generation. Requires repo secrets:
 #   RESEND_API_KEY  OR  SMTP_USER + SMTP_PASS (Gmail app password)
 # Without those secrets a GitHub Issue is opened instead of sending Gmail.
@@ -122,6 +126,16 @@ jobs:
           if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
           scripts/ci-assert-ops-digest.sh "$EDITION" heatmap-analysis present
 
+      # Cancel/timeout used to leave HTML/Issue reports without ops/daily — /admin
+      # then showed 오늘의 분석 0. Rebuild digest from artifact/cache before push.
+      - name: Salvage heatmap ops digest for admin
+        if: always() && steps.generate.outcome != 'skipped'
+        run: |
+          chmod +x scripts/ci-salvage-heatmap-ops-digest.sh scripts/backfill-heatmap-ops-digest.ts
+          EDITION="${{ steps.generate.outputs.edition }}"
+          if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
+          scripts/ci-salvage-heatmap-ops-digest.sh "$EDITION"
+
       # Push whatever landed on disk — including when the job was cancelled at 6h.
       - name: Commit and push analysis cache
         if: always() && steps.generate.outcome != 'skipped'
@@ -136,8 +150,9 @@ jobs:
           if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
           export OPS_DIGEST_EDITION="$EDITION"
           export OPS_DIGEST_KIND=heatmap-analysis
-          # Require digest only when generation finished cleanly; still salvage cache on cancel/timeout.
-          if [ "${{ steps.generate.outcome }}" = "success" ]; then
+          # Require digest on success AND on cancel/timeout once salvage ran —
+          # otherwise /admin silently drops 오늘의 분석 (2026-09-16).
+          if [ "${{ steps.generate.outcome }}" = "success" ] || [ "${{ steps.generate.outcome }}" = "cancelled" ]; then
             export REQUIRE_OPS_DIGEST=1
           fi
           scripts/ci-checkpoint-analysis-cache.sh \
@@ -145,13 +160,12 @@ jobs:
             src/data/analysis/cache.json
 
       - name: Verify heatmap ops digest published
-        if: success() && steps.generate.outcome == 'success'
+        if: always() && (steps.generate.outcome == 'success' || steps.generate.outcome == 'cancelled')
         run: |
           chmod +x scripts/ci-assert-ops-digest.sh
           EDITION="${{ steps.generate.outputs.edition }}"
           if [ -z "$EDITION" ]; then EDITION="$(TZ=Asia/Seoul date +%F)"; fi
           scripts/ci-assert-ops-digest.sh "$EDITION" heatmap-analysis tracked
-
       - name: Email heatmap analysis report
         if: always() && steps.generate.outcome != 'skipped'
         continue-on-error: true

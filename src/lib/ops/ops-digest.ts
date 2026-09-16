@@ -1,4 +1,5 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { existsSync, mkdirSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { GeminiUsageSnapshot } from "@/lib/ops/gemini-usage";
 import {
@@ -259,11 +260,77 @@ export function digestFromBoardRefresh(input: {
   };
 }
 
-export async function persistOpsDigest(digest: OpsDigest): Promise<string> {
-  await mkdir(OPS_DAILY_DIR, { recursive: true });
+function digestFileName(digest: OpsDigest): string {
   const stamp = digest.generatedAt.replace(/[:.]/g, "-");
-  const file = path.join(OPS_DAILY_DIR, `${digest.editionDate}-${digest.kind}-${stamp}.json`);
+  return `${digest.editionDate}-${digest.kind}-${stamp}.json`;
+}
+
+/** Drop older same-edition/same-kind digests so partial checkpoints do not stack. */
+async function pruneOlderDigests(digest: OpsDigest, keepFile: string): Promise<void> {
+  let names: string[] = [];
+  try {
+    names = await readdir(OPS_DAILY_DIR);
+  } catch {
+    return;
+  }
+  const prefix = `${digest.editionDate}-${digest.kind}-`;
+  await Promise.all(
+    names
+      .filter((name) => name.startsWith(prefix) && name.endsWith(".json"))
+      .map((name) => path.join(OPS_DAILY_DIR, name))
+      .filter((file) => file !== keepFile)
+      .map(async (file) => {
+        try {
+          await unlink(file);
+        } catch {
+          /* ignore race */
+        }
+      }),
+  );
+}
+
+function pruneOlderDigestsSync(digest: OpsDigest, keepFile: string): void {
+  if (!existsSync(OPS_DAILY_DIR)) return;
+  const prefix = `${digest.editionDate}-${digest.kind}-`;
+  for (const name of readdirSync(OPS_DAILY_DIR)) {
+    if (!name.startsWith(prefix) || !name.endsWith(".json")) continue;
+    const file = path.join(OPS_DAILY_DIR, name);
+    if (file === keepFile) continue;
+    try {
+      unlinkSync(file);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+export async function persistOpsDigest(
+  digest: OpsDigest,
+  options?: { replaceSameKind?: boolean },
+): Promise<string> {
+  await mkdir(OPS_DAILY_DIR, { recursive: true });
+  const file = path.join(OPS_DAILY_DIR, digestFileName(digest));
   await writeFile(file, `${JSON.stringify(digest, null, 2)}\n`, "utf8");
+  if (options?.replaceSameKind !== false && digest.kind !== "board-refresh") {
+    await pruneOlderDigests(digest, file);
+  }
+  return file;
+}
+
+/**
+ * Sync persist for SIGTERM/SIGINT handlers — async writes can be killed before
+ * they flush, which left /admin without 오늘의 분석 after the 6h cancel (2026-09-16).
+ */
+export function persistOpsDigestSync(
+  digest: OpsDigest,
+  options?: { replaceSameKind?: boolean },
+): string {
+  mkdirSync(OPS_DAILY_DIR, { recursive: true });
+  const file = path.join(OPS_DAILY_DIR, digestFileName(digest));
+  writeFileSync(file, `${JSON.stringify(digest, null, 2)}\n`, "utf8");
+  if (options?.replaceSameKind !== false && digest.kind !== "board-refresh") {
+    pruneOlderDigestsSync(digest, file);
+  }
   return file;
 }
 
@@ -306,6 +373,22 @@ async function loadDigestsFromDir(dir: string, editionDate: string): Promise<Ops
   return out;
 }
 
+/**
+ * Briefings / heatmap leave one authoritative digest per kind (latest wins).
+ * Board refreshes may run several times a day — keep them all.
+ */
+export function dedupeDigestsForAdmin(digests: OpsDigest[]): OpsDigest[] {
+  const boards = digests.filter((row) => row.kind === "board-refresh");
+  const generation = digests.filter((row) => row.kind !== "board-refresh");
+  const latestByKind = new Map<OpsDigestKind, OpsDigest>();
+  for (const row of [...generation].sort((a, b) => a.generatedAt.localeCompare(b.generatedAt))) {
+    latestByKind.set(row.kind, row);
+  }
+  return [...latestByKind.values(), ...boards].sort((a, b) =>
+    b.generatedAt.localeCompare(a.generatedAt),
+  );
+}
+
 export async function loadOpsDigestsForDate(editionDate = kstToday()): Promise<OpsDigest[]> {
   const fromOps = await loadDigestsFromDir(OPS_DAILY_DIR, editionDate);
   const fromArtifacts = await loadDigestsFromDir(ARTIFACTS_DIR, editionDate);
@@ -314,7 +397,7 @@ export async function loadOpsDigestsForDate(editionDate = kstToday()): Promise<O
   for (const row of merged) {
     byKey.set(`${row.kind}:${row.generatedAt}`, row);
   }
-  return [...byKey.values()].sort((a, b) => b.generatedAt.localeCompare(a.generatedAt));
+  return dedupeDigestsForAdmin([...byKey.values()]);
 }
 
 function rollupCategories(items: OpsDigestItem[]): OpsCategorySummary[] {

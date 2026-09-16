@@ -1,3 +1,4 @@
+import { mkdirSync, writeFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -254,6 +255,65 @@ export async function writeGenerationReportArtifacts(
   return { jsonPath, htmlPath, textPath };
 }
 
+function writeGenerationReportArtifactsSync(
+  report: GenerationReport,
+  fileStem: string,
+): { jsonPath: string; htmlPath: string; textPath: string } {
+  const dir = path.join(process.cwd(), "artifacts", "generation-reports");
+  mkdirSync(dir, { recursive: true });
+  const jsonPath = path.join(dir, `${fileStem}.json`);
+  const htmlPath = path.join(dir, `${fileStem}.html`);
+  const textPath = path.join(dir, `${fileStem}.txt`);
+  writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  writeFileSync(htmlPath, `${renderGenerationReportHtml(report)}\n`, "utf8");
+  writeFileSync(textPath, `${renderGenerationReportText(report)}\n`, "utf8");
+  return { jsonPath, htmlPath, textPath };
+}
+
+/**
+ * Writes report artifacts + ops digest used by /admin.
+ * Prefer this over artifacts-only writes so cancel/timeout still updates admin.
+ */
+export async function persistGenerationReportForAdmin(
+  report: GenerationReport,
+  fileStem: string,
+): Promise<{ htmlPath: string; digestPath: string; jsonPath: string }> {
+  const withCost: GenerationReport = {
+    ...report,
+    cost: report.cost ?? snapshotGeminiUsage(),
+  };
+  const artifacts = await writeGenerationReportArtifacts(withCost, fileStem);
+  const { digestFromGenerationReport, persistOpsDigest } = await import("@/lib/ops/ops-digest");
+  const digestPath = await persistOpsDigest(
+    digestFromGenerationReport(withCost, opsDigestKindForPipeline(withCost.pipeline)),
+  );
+  console.log(`[ops] digest ${digestPath}`);
+  return { htmlPath: artifacts.htmlPath, digestPath, jsonPath: artifacts.jsonPath };
+}
+
+/** Sync variant for SIGTERM/SIGINT — must finish before the runner SIGKILLs. */
+export function persistGenerationReportForAdminSync(
+  report: GenerationReport,
+  fileStem: string,
+): { htmlPath: string; digestPath: string; jsonPath: string } {
+  const withCost: GenerationReport = {
+    ...report,
+    cost: report.cost ?? snapshotGeminiUsage(),
+  };
+  const artifacts = writeGenerationReportArtifactsSync(withCost, fileStem);
+  // Dynamic require avoids a static cycle with ops-digest (which imports this module).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const opsDigest = require("@/lib/ops/ops-digest") as typeof import("@/lib/ops/ops-digest");
+  const digestPath = opsDigest.persistOpsDigestSync(
+    opsDigest.digestFromGenerationReport(
+      withCost,
+      opsDigestKindForPipeline(withCost.pipeline),
+    ),
+  );
+  console.log(`[ops] digest(sync) ${digestPath}`);
+  return { htmlPath: artifacts.htmlPath, digestPath, jsonPath: artifacts.jsonPath };
+}
+
 async function sendViaResend(options: {
   to: string;
   from: string;
@@ -306,20 +366,20 @@ export async function deliverGenerationReport(
     ...report,
     cost: report.cost ?? snapshotGeminiUsage(),
   };
-  const artifacts = await writeGenerationReportArtifacts(withCost, fileStem);
   let digestPath: string | undefined;
+  let htmlPath: string;
   try {
-    const { digestFromGenerationReport, persistOpsDigest } = await import("@/lib/ops/ops-digest");
-    digestPath = await persistOpsDigest(
-      digestFromGenerationReport(withCost, opsDigestKindForPipeline(withCost.pipeline)),
-    );
-    console.log(`[ops] digest ${digestPath}`);
+    const persisted = await persistGenerationReportForAdmin(withCost, fileStem);
+    digestPath = persisted.digestPath;
+    htmlPath = persisted.htmlPath;
   } catch (error) {
     console.warn("[ops] digest persist failed", error);
     // Admin /admin reads src/data/ops/daily — CI must not swallow a missing digest.
     if (process.env.CI === "true" || process.env.REQUIRE_OPS_DIGEST === "1") {
       throw error instanceof Error ? error : new Error(String(error));
     }
+    const artifacts = await writeGenerationReportArtifacts(withCost, fileStem);
+    htmlPath = artifacts.htmlPath;
   }
   const to = (process.env.REPORT_EMAIL_TO ?? DEFAULT_REPORT_EMAIL_TO).trim();
 
@@ -343,8 +403,8 @@ export async function deliverGenerationReport(
         return {
           emailed: true,
           to,
-          detail: `resend → ${artifacts.htmlPath}`,
-          htmlPath: artifacts.htmlPath,
+          detail: `resend → ${htmlPath}`,
+          htmlPath,
           digestPath,
         };
       } catch (error) {
@@ -353,8 +413,8 @@ export async function deliverGenerationReport(
         return {
           emailed: false,
           to,
-          detail: `email error; wrote ${artifacts.htmlPath}`,
-          htmlPath: artifacts.htmlPath,
+          detail: `email error; wrote ${htmlPath}`,
+          htmlPath,
           digestPath,
         };
       }
@@ -364,8 +424,8 @@ export async function deliverGenerationReport(
   return {
     emailed: false,
     to,
-    detail: `wrote ${artifacts.htmlPath} (CI email step → ${to})`,
-    htmlPath: artifacts.htmlPath,
+    detail: `wrote ${htmlPath} (CI email step → ${to})`,
+    htmlPath,
     digestPath,
   };
 }
