@@ -138,12 +138,19 @@ async function attachStockQuotes(entities: RankingEntity[]): Promise<RankingEnti
   return entities.map((entity) => {
     const quote = quotes.get(entity.name);
     if (!quote) return entity;
+    const isIndex = quote.market === "kr_index";
+    const priceText = isIndex
+      ? quote.price.toLocaleString("ko-KR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      : formatStockPrice(quote);
     return withQuote(entity, {
       price: quote.price,
       changeRate: quote.changeRate,
-      unit: quote.currency === "USD" ? "USD" : "원",
+      unit: isIndex ? "pt" : quote.currency === "USD" ? "USD" : "원",
       observedAt: quote.observedAt,
-      priceText: formatStockPrice(quote),
+      priceText,
       marketCap: quote.marketCap,
       high52Week: quote.high52Week,
       low52Week: quote.low52Week,

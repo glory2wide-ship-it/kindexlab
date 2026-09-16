@@ -94,6 +94,12 @@ const TV_SHOW_CHANNEL: Record<string, string> = {
   "환승연애": "TV조선",
   "솔로지옥": "ENA",
   "폭싹 속았수다": "Netflix",
+  "성난 사람들2": "넷플릭스",
+  "성난 사람들 2": "넷플릭스",
+  "성난사람들2": "넷플릭스",
+  "아이돌급 외모": "티빙",
+  "아이돌급외모": "티빙",
+  "결혼지옥": "티빙",
 };
 
 function normalizeTvChannel(raw: string | undefined): string | undefined {

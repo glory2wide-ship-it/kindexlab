@@ -121,6 +121,52 @@ export async function withKrStockFundamentals(quote: StockQuote): Promise<StockQ
   return next;
 }
 
+async function fetchKrIndexQuotes(codes: string[]): Promise<Map<string, StockQuote>> {
+  const out = new Map<string, StockQuote>();
+  const unique = [...new Set(codes.filter(Boolean))];
+  if (!unique.length) return out;
+
+  const url = `https://polling.finance.naver.com/api/realtime/domestic/index/${unique.join(",")}`;
+  const { status, contentType, buffer } = await fetchBuffer(url, {
+    ...QUOTE_FETCH,
+    headers: {
+      Accept: "application/json,text/plain,*/*",
+      "User-Agent": "Mozilla/5.0",
+    },
+  });
+  if (status >= 400) return out;
+
+  const text = decodeBody(buffer, contentType || "application/json; charset=utf-8");
+  let payload: { datas?: Record<string, unknown>[] };
+  try {
+    payload = JSON.parse(text) as typeof payload;
+  } catch {
+    return out;
+  }
+
+  const observedAt = new Date().toISOString();
+  for (const row of payload.datas ?? []) {
+    const code = String(row.itemCode ?? row.symbolCode ?? row.indexCode ?? "");
+    const price =
+      parseNumber(row.closePriceRaw) ??
+      parseNumber(row.closePrice) ??
+      parseNumber(row.lastSalePrice);
+    const changeRate =
+      parseNumber(row.fluctuationsRatioRaw) ?? parseNumber(row.fluctuationsRatio);
+    if (!code || price == null || changeRate == null) continue;
+    out.set(code, {
+      name: String(row.stockName ?? row.indexName ?? code),
+      market: "kr_index",
+      code,
+      price,
+      changeRate,
+      currency: "KRW",
+      observedAt,
+    });
+  }
+  return out;
+}
+
 async function fetchKrQuotes(codes: string[]): Promise<Map<string, StockQuote>> {
   const out = new Map<string, StockQuote>();
   const unique = [...new Set(codes.filter(Boolean))];
@@ -213,6 +259,7 @@ export async function fetchNaverQuotesForNames(names: string[]): Promise<Map<str
   const byName = new Map<string, StockQuote>();
   const now = Date.now();
   const pendingKr: { name: string; code: string }[] = [];
+  const pendingKrIndex: { name: string; code: string }[] = [];
   const pendingUs: { name: string; code: string }[] = [];
 
   for (const name of names) {
@@ -225,6 +272,7 @@ export async function fetchNaverQuotesForNames(names: string[]): Promise<Map<str
       continue;
     }
     if (symbol.market === "kr") pendingKr.push({ name, code: symbol.code });
+    else if (symbol.market === "kr_index") pendingKrIndex.push({ name, code: symbol.code });
     else pendingUs.push({ name, code: symbol.code });
   }
 
@@ -234,6 +282,16 @@ export async function fetchNaverQuotesForNames(names: string[]): Promise<Map<str
       const quote = kr.get(item.code);
       if (!quote) continue;
       quoteCache.set(cacheKey({ market: "kr", code: item.code }), { at: now, quote });
+      byName.set(item.name, quote);
+    }
+  }
+
+  if (pendingKrIndex.length) {
+    const idx = await fetchKrIndexQuotes(pendingKrIndex.map((item) => item.code));
+    for (const item of pendingKrIndex) {
+      const quote = idx.get(item.code);
+      if (!quote) continue;
+      quoteCache.set(cacheKey({ market: "kr_index", code: item.code }), { at: now, quote });
       byName.set(item.name, quote);
     }
   }

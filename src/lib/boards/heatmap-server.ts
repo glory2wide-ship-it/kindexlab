@@ -7,6 +7,8 @@ import {
 } from "@/lib/boards/heatmap";
 import { liveEntityTypesForBoard } from "@/lib/boards/entity-type";
 import { isLikelyCelebrityName } from "@/lib/boards/celebrity";
+import { isLikelyMovieTitle } from "@/lib/boards/movie-title";
+import { isLikelyPartyName } from "@/lib/boards/party-name";
 import { isLikelyPoliticalPunditName } from "@/lib/politics/labeled-rank";
 import { matchPoliticsYoutubeSeed } from "@/lib/politics/youtube-seeds";
 import {
@@ -89,6 +91,12 @@ function passesBoardLiveFilter(def: BoardDefinition, item: RankingEntity): boole
   }
   if (def.slug === "realtime-tv-ratings" || def.slug === "variety-hot-minute") {
     return isLikelyTvProgramName(item.name);
+  }
+  if (def.slug === "boxoffice-expectation") {
+    return isLikelyMovieTitle(item.name);
+  }
+  if (def.slug === "party-support-chart") {
+    return isLikelyPartyName(item.name);
   }
   if (def.slug === "political-pundit-ranking") {
     if (matchPoliticsYoutubeSeed(item.name)?.influencer) return false;

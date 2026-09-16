@@ -19,7 +19,7 @@ import { CHANNEL_SHORT_LABEL } from "@/lib/posts/channels";
 import { summarizeHeadlineTitle } from "@/lib/news/headline-title";
 import { layoutHeatmapLeaves } from "@/lib/treemapLayout";
 import { TREEMAP_FRAME_CLASS, TREEMAP_MAX_ITEMS, MOBILE_TREEMAP_MAX_ITEMS } from "@/components/dashboard/treemap-config";
-import { heatmapChangeRate, heatmapPriceLabel } from "@/lib/market/kospi-quotes-ui";
+import { heatmapChangeRate, heatmapPriceLabel, heatmapShowHeaderRate } from "@/lib/market/kospi-quotes-ui";
 import { changeForEntity, scoreForTimeframe } from "@/lib/timeframes";
 import { entityHref } from "@/lib/slugs";
 import { layoutTreemapLabel } from "@/lib/treemapLabel";
@@ -222,8 +222,9 @@ export function TreemapView({
           const rankBadge = formatHeatmapRank(rank);
           /** Hide ±% in the name block — rate moves next to the rank badge. */
           const omitRate = true;
-          /** Show ±% beside/below the rank when the header has room. */
-          const showHeaderRate = rank < 10 && w >= 56 && h >= 28;
+          /** Show ±% beside/below the rank when the header has room.
+           * Market-quote tiles (주식 등) keep Naver day-change through desktop top-20. */
+          const showHeaderRate = heatmapShowHeaderRate(entity, rank, w, h);
           const group = groupLabel(entity);
           const tile = heatmapTileLabel(entity);
           const isHeadline = entity.type === "headline_news";

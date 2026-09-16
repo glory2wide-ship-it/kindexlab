@@ -1,4 +1,5 @@
 import { kstDateString } from "@/lib/briefing/dates";
+import { isLikelyMovieTitle } from "@/lib/boards/movie-title";
 import { fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
 import { parseNumber, parseRssItems, stripTags } from "@/lib/ingestion/parse";
 import { normalizeName } from "@/lib/ingestion/names";
@@ -275,6 +276,7 @@ export async function fetchMaxmovieBoxOffice(): Promise<SourceResult> {
         for (const raw of candidates) {
           const title = stripTags(raw).replace(/\s+/g, " ").trim();
           if (!title || title.length < 2 || /박스|관객|예매율|박스오피스|영화진흥/.test(title)) continue;
+          if (!isLikelyMovieTitle(title)) continue;
           const key = normalizeName(title);
           if (!key || seen.has(key)) continue;
           seen.add(key);

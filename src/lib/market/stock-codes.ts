@@ -1,17 +1,24 @@
 /**
  * Display-name → Naver Finance symbol for 주식 / 해외 주식 heatmap quotes.
- * Theme keywords (코스피, 이차전지 …) are intentionally omitted.
+ * Theme keywords without a tradable series (이차전지 …) stay omitted;
+ * 코스피/코스닥 use kr_index symbols above.
  */
 
-export type StockMarket = "kr" | "us";
+export type StockMarket = "kr" | "us" | "kr_index";
 
 export interface StockSymbol {
   market: StockMarket;
-  /** KR: 6-digit code. US: Reuters-style code for api.stock.naver.com (e.g. NVDA.O). */
+  /** KR: 6-digit code. US: Reuters-style. kr_index: KOSPI/KOSDAQ. */
   code: string;
 }
 
 const BY_NAME: Record<string, StockSymbol> = {
+  // Domestic equity indices (Naver index API — show points + day %)
+  코스피: { market: "kr_index", code: "KOSPI" },
+  코스닥: { market: "kr_index", code: "KOSDAQ" },
+  KOSPI: { market: "kr_index", code: "KOSPI" },
+  KOSDAQ: { market: "kr_index", code: "KOSDAQ" },
+
   // Domestic
   삼성전자: { market: "kr", code: "005930" },
   SK하이닉스: { market: "kr", code: "000660" },

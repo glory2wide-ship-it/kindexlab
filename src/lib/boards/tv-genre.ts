@@ -70,6 +70,11 @@ const KNOWN_TV_GENRE: Record<string, TvGenreSegment> = {
   미스터트롯: "variety",
   미스트롯: "variety",
   골때리는그녀들: "variety",
+  // Confirmed buzz / cable titles that land on entertainment composite
+  성난사람들2: "drama",
+  성난사람들: "drama",
+  아이돌급외모: "variety",
+  결혼지옥: "drama",
   // OTT originals
   오징어게임: "ott",
   "d.p.": "ott",

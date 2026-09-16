@@ -12,8 +12,7 @@ import {
   regionFromName,
 } from "@/lib/boards/regions";
 import type { RegionSegment } from "@/lib/boards/types";
-import {
-  boardSlugOf,
+import { boardSlugOf,
   inferBookGenreChip,
   inferCelebrityJobChip,
   inferMusicGenreChip,
@@ -29,6 +28,7 @@ import {
 import { namesOverlap } from "@/lib/ingestion/names";
 import { heatmapSourceCaption } from "@/lib/news/headline-title";
 import { parseBracketLabel } from "@/lib/politics/labeled-rank";
+import { politicianPartyName } from "@/lib/politics/politician-party";
 import type { RankingEntity } from "@/lib/types";
 
 const GAME_GROUPS = new Set(["게임", "게임 e스포츠"]);
@@ -106,6 +106,13 @@ function isStarEntity(entity: Pick<RankingEntity, "type" | "slug" | "heatmapGrou
   const slug = boardSlugOf(entity);
   const group = entity.heatmapGroup ?? "";
   return slug === "star-reputation-index" || group === "스타";
+}
+
+function isPoliticianEntity(entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">): boolean {
+  if (entity.type === "politician_support") return true;
+  const slug = boardSlugOf(entity);
+  const group = entity.heatmapGroup ?? "";
+  return slug === "politician-support-chart" || group.includes("정치인");
 }
 
 function isBookEntity(entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">): boolean {
@@ -206,6 +213,11 @@ export function heatmapRankPrefixChip(
   if (isStarEntity(entity)) {
     const job = inferCelebrityJobChip(entity);
     if (job) return stripChipBrackets(job);
+  }
+
+  if (isPoliticianEntity(entity)) {
+    const party = politicianPartyName(entity.name);
+    if (party) return stripChipBrackets(party);
   }
 
   if (isBookEntity(entity)) {

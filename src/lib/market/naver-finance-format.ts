@@ -24,6 +24,13 @@ export function formatNaverMeasurement(measurement: {
   const unit = measurement.unit.trim();
   const price = measurement.value;
 
+  if (unit === "pt" || unit === "지수") {
+    return price.toLocaleString("ko-KR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
   if (unit === "KRW" || unit === "원") {
     return formatStockPrice({
       price,
