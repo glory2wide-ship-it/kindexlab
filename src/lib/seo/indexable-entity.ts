@@ -15,6 +15,7 @@ import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import type { CachedAnalysis } from "@/lib/analysis/store";
 import { TYPE_LABEL, scoreLabel } from "@/lib/format";
 import { isAllowedKrEnEntityName } from "@/lib/ingestion/names";
+import { entityNarrativeSummary, isEntityIndexBlurbText } from "@/lib/entity/index-blurb";
 import type { EntityType, RankingEntity } from "@/lib/types";
 
 /** Single-token / scrap fragments that must never compete in SERP. */
@@ -100,8 +101,10 @@ export function entitySeoDescription(
   entity: Pick<RankingEntity, "name" | "type" | "summary">,
 ): string {
   const typeLabel = TYPE_LABEL[entity.type] ?? "이슈";
-  const summary = entity.summary?.trim();
-  if (summary && summary.length >= 40) return summary.slice(0, 160);
+  const narrative = entityNarrativeSummary(entity);
+  if (narrative && narrative.length >= 24 && !isEntityIndexBlurbText(narrative)) {
+    return narrative.slice(0, 160);
+  }
   if (entity.type === "party_support" || entity.type === "politician_support") {
     return `${entity.name} ${typeLabel} 지지도와 여론·화제성 추이를 KinDex 실시간 지수로 확인하세요.`;
   }
