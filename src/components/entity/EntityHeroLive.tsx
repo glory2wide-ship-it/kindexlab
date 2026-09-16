@@ -6,6 +6,7 @@ import {
   detailFactsAreStale,
   resolveDetailFacts,
 } from "@/lib/boards/detail-facts";
+import { entityNarrativeSummary } from "@/lib/entity/index-blurb";
 import { TYPE_LABEL } from "@/lib/format";
 import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
 import type { RankingEntity } from "@/lib/types";
@@ -91,7 +92,13 @@ function MarketQuotePendingHero({
 
   const detailFacts = resolveDetailFacts(entity);
   const detailFactsStale = detailFacts ? detailFactsAreStale(detailFacts) : false;
-  const refreshLabel = detailFacts?.refresh === "daily" ? "일 1회 점검" : "주 1회 점검";
+  const refreshLabel =
+    detailFacts?.refresh === "daily"
+      ? "하루 1회"
+      : detailFacts?.refresh === "every3days"
+        ? "3일"
+        : "주 1회";
+  const synopsis = entityNarrativeSummary(detailFacts?.synopsis);
 
   return (
     <section className="rounded-2xl border border-line bg-panel p-[18px] md:p-8">
@@ -111,7 +118,7 @@ function MarketQuotePendingHero({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] font-semibold tracking-wide text-soft">종목 프로필</p>
             <p className="text-[10px] text-muted">
-              정보 점검 {detailFacts.checkedAt.slice(0, 10)}
+              최근 {detailFacts.checkedAt.slice(0, 10)}
               {detailFactsStale ? " · 갱신 필요" : ` · ${refreshLabel}`}
             </p>
           </div>
@@ -155,9 +162,7 @@ function MarketQuotePendingHero({
               </ul>
             </div>
           ) : null}
-          {detailFacts.synopsis ? (
-            <p className="text-sm leading-6 text-ink/90">{detailFacts.synopsis}</p>
-          ) : null}
+          {synopsis ? <p className="text-sm leading-6 text-ink/90">{synopsis}</p> : null}
         </div>
       ) : null}
     </section>

@@ -7,6 +7,8 @@ const SLUG_LIKE = /^[a-z0-9]+(?:-[a-z0-9]+)+$/i;
 /** Structured rank/등락 one-liner stamped onto `entity.summary` by ingest/heatmap. */
 const INDEX_BLURB_PATTERN =
   /^.+?(은|는)\s+.+\s+기준\s+\d+위입니다\.\s*등락\s+-?\d+(?:\.\d+)?%\.?\s*$/u;
+const INDEX_BLURB_INLINE =
+  /[^\n]*?(은|는)\s+[^\n]*?\s+기준\s+\d+위입니다\.\s*등락\s+-?\d+(?:\.\d+)?%\.?/gu;
 
 const CHANNEL_LABEL: Record<PostChannel, string> = {
   entertainment: "엔터",
@@ -45,6 +47,15 @@ export function isEntityIndexBlurbText(text: string | undefined | null): boolean
 export function stripRefreshBoilerplate(text: string | undefined | null): string | undefined {
   const trimmed = text?.trim();
   if (!trimmed) return undefined;
+  // Drop cadence / refresh notice sentences anywhere in the copy.
+  const withoutCadence = trimmed
+    .replace(
+      /[^.。\n]*?(정보|시놉시스|뉴스는?|링크는?)\s*(는|은)?\s*(하루\s*1회|주\s*1회|3일마다|주기적으로)?\s*(점검|갱신)(합니다|됩니다)\.?/gu,
+      " ",
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!withoutCadence) return undefined;
   if (
     /정보는\s*(하루\s*1회|주\s*1회|3일마다)\s*(점검|갱신)합니다\.?\s*$/u.test(trimmed) ||
     /정보는\s*주\s*1회\s*갱신됩니다\.?\s*$/u.test(trimmed) ||
@@ -63,18 +74,20 @@ export function stripRefreshBoilerplate(text: string | undefined | null): string
   ) {
     return undefined;
   }
-  return trimmed;
+  return withoutCadence;
 }
 
 /**
- * Narrative copy only. Index blurbs live in `formatEntityIndexBlurb` on the hero —
- * never reuse them as 프로필 시놉시스 / TV 줄거리 (that caused the duplicate line).
+ * Narrative copy only. Index blurbs must never appear as 프로필 시놉시스 / TV 줄거리.
  */
 export function entityNarrativeSummary(
   entity: Pick<RankingEntity, "summary"> | string | undefined | null,
 ): string | undefined {
   const raw = typeof entity === "string" || entity == null ? entity : entity.summary;
-  const trimmed = raw?.trim();
+  let trimmed = raw?.trim();
+  if (!trimmed) return undefined;
+  if (isEntityIndexBlurbText(trimmed)) return undefined;
+  trimmed = trimmed.replace(INDEX_BLURB_INLINE, " ").replace(/\s+/g, " ").trim();
   if (!trimmed || isEntityIndexBlurbText(trimmed)) return undefined;
   return stripRefreshBoilerplate(trimmed);
 }

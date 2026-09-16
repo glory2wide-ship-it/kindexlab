@@ -8,6 +8,8 @@ import {
   fetchAptTrades,
   filterAptDeals,
   formatManwon,
+  monthlyJeonseMids,
+  monthlyRentMids,
   monthlyTradeMids,
   summarizeRents,
   summarizeTrades,
@@ -64,6 +66,10 @@ export type HousingPublicSummary = {
   saleOfferUrl?: string;
   /** 월별 중위 매매가 (스파크라인용, 만원). */
   trendPoints?: Array<{ label: string; value: number }>;
+  /** 전세 보증금 추이 (만원). */
+  jeonseTrendPoints?: Array<{ label: string; value: number }>;
+  /** 월세 월임대료 추이 (만원). */
+  monthlyRentTrendPoints?: Array<{ label: string; value: number }>;
   trendSummary?: string;
   landNaverUrl?: string;
   sampleApt?: string;
@@ -72,6 +78,16 @@ export type HousingPublicSummary = {
 
 function landNaverSearchUrl(name: string): string {
   return `https://new.land.naver.com/search?ms=37.5665,126.9780,12&a=APT:ABYG:JGC&e=RETAIL&article=false&keyword=${encodeURIComponent(name)}`;
+}
+
+/**
+ * Sample months for 최근 1개월~10년 추이 without 120× lawd API fan-out.
+ * Dense near-term, then yearly anchors back to ~10y.
+ */
+function housingTrendMonthsBack(): number[] {
+  const near = [0, 1, 2, 3, 5, 8, 11];
+  const yearly = [23, 35, 47, 59, 71, 83, 95, 107, 119];
+  return [...new Set([...near, ...yearly])].sort((a, b) => a - b);
 }
 
 async function naverSaleOfferFallback(
@@ -125,17 +141,19 @@ export async function summarizeHousingPublicData(
   }
   region = region ?? "seoul";
   const lawds = REGION_LAWD_CODES[region] ?? REGION_LAWD_CODES.seoul;
-  const monthsBack = [0, 1, 2, 3, 4, 5];
+  const monthsBack = housingTrendMonthsBack();
   const allTrades: AptTradeDeal[] = [];
   const allRents: AptRentDeal[] = [];
 
   if (hasDataGoKrKey()) {
+    // One lawd for deep history; second lawd only for the latest 2 months (평수별).
     for (const back of monthsBack) {
       const ymd = dealYmdMonthsBack(back);
-      for (const lawd of lawds.slice(0, 2)) {
+      const lawdSlice = back <= 1 ? lawds.slice(0, 2) : lawds.slice(0, 1);
+      for (const lawd of lawdSlice) {
         const [trades, rents] = await Promise.all([
-          fetchAptTrades(lawd, ymd, { numOfRows: 100 }),
-          back <= 2 ? fetchAptRents(lawd, ymd, { numOfRows: 80 }) : Promise.resolve([]),
+          fetchAptTrades(lawd, ymd, { numOfRows: back <= 1 ? 100 : 60 }),
+          fetchAptRents(lawd, ymd, { numOfRows: back <= 1 ? 80 : 40 }),
         ]);
         allTrades.push(...trades);
         allRents.push(...rents);
@@ -148,18 +166,27 @@ export async function summarizeHousingPublicData(
   const useTrades = matchedTrades.length ? matchedTrades : regionForApartment(name) ? [] : allTrades;
   const useRents = matchedRents.length ? matchedRents : regionForApartment(name) ? [] : allRents;
 
+  const recentTradePool = (matchedTrades.length ? matchedTrades : useTrades).filter((d) => {
+    const ymd = `${d.dealYear}${String(d.dealMonth).padStart(2, "0")}`;
+    const latest = dealYmdMonthsBack(0);
+    const prev = dealYmdMonthsBack(1);
+    return ymd === latest || ymd === prev;
+  });
+
   const tradeSummary = summarizeTrades(useTrades.length ? useTrades : matchedTrades, name);
   const rentSummary = summarizeRents(useRents.length ? useRents : matchedRents, name);
   const byPyeong = summarizeTradesByPyeong(
-    matchedTrades.length ? matchedTrades : useTrades,
-    matchedTrades.length ? undefined : name,
+    recentTradePool.length ? recentTradePool : matchedTrades.length ? matchedTrades : useTrades,
+    matchedTrades.length || recentTradePool.length ? undefined : name,
   );
-  const trendPoints = monthlyTradeMids(matchedTrades.length ? matchedTrades : useTrades);
+  const tradePool = matchedTrades.length ? matchedTrades : useTrades;
+  const rentPool = matchedRents.length ? matchedRents : useRents;
+  const trendPoints = monthlyTradeMids(tradePool);
+  const jeonseTrendPoints = monthlyJeonseMids(rentPool);
+  const monthlyRentTrendPoints = monthlyRentMids(rentPool);
   const trendSummary =
     trendPoints.length >= 2
-      ? trendPoints
-          .map((p) => `${p.label} ${formatManwon(p.value)}`)
-          .join(" → ")
+      ? `매매 ${trendPoints[0]!.label} ${formatManwon(trendPoints[0]!.value)} → ${trendPoints.at(-1)!.label} ${formatManwon(trendPoints.at(-1)!.value)}`
       : undefined;
 
   const sale = await naverSaleOfferFallback(name);
@@ -170,7 +197,9 @@ export async function summarizeHousingPublicData(
     !rentSummary &&
     !byPyeong &&
     !sale?.text &&
-    trendPoints.length === 0
+    trendPoints.length === 0 &&
+    jeonseTrendPoints.length === 0 &&
+    monthlyRentTrendPoints.length === 0
   ) {
     return {
       region,
@@ -190,6 +219,8 @@ export async function summarizeHousingPublicData(
     saleOffer: sale?.text,
     saleOfferUrl: sale?.url || landUrl,
     trendPoints: trendPoints.length ? trendPoints : undefined,
+    jeonseTrendPoints: jeonseTrendPoints.length ? jeonseTrendPoints : undefined,
+    monthlyRentTrendPoints: monthlyRentTrendPoints.length ? monthlyRentTrendPoints : undefined,
     trendSummary,
     landNaverUrl: landUrl,
     sampleApt: (matchedTrades[0] || useTrades[0])?.aptName,

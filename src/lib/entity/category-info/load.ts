@@ -18,7 +18,7 @@ export const CATEGORY_INFO_REVALIDATE_SEC = 3600;
 
 function cacheKey(entity: RankingEntity, channel: string): string[] {
   return [
-    "item-detail-category-info-v8-admin-tabs-copy",
+    "item-detail-category-info-v9-housing-admin-tabs",
     channel,
     entity.slug,
     entity.type,

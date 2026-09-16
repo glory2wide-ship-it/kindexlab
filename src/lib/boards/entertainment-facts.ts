@@ -964,7 +964,7 @@ function lookupCatalog(name: string, domain: EntertainmentFacts["domain"]): Cata
       bestScore = score;
     }
   }
-  return bestScore >= 80 ? best : undefined;
+  return bestScore >= 60 ? best : undefined;
 }
 
 function inferWebtoonPlatform(name: string, tags: string[] | undefined): string | undefined {

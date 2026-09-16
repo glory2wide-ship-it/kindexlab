@@ -114,9 +114,10 @@ function Section({
 
 type SectionKey = "daily" | "webHealth" | "liveFill";
 
-type TabId = "daily" | "webHealth" | "liveFill" | "detailCollect";
+type TabId = "traffic" | "daily" | "webHealth" | "liveFill" | "detailCollect";
 
 const TABS: Array<{ id: TabId; label: string }> = [
+  { id: "traffic", label: "방문자 현황" },
   { id: "daily", label: "일일 글생성비용" },
   { id: "webHealth", label: "웹 병목 · 로딩 · 랜딩" },
   { id: "liveFill", label: "히트맵 LIVE 채움" },
@@ -128,7 +129,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
   const [data, setData] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const [activeTab, setActiveTab] = useState<TabId>("daily");
+  const [activeTab, setActiveTab] = useState<TabId>("traffic");
   const [sectionUpdatedAt, setSectionUpdatedAt] = useState({
     daily: initial.daily.updatedAt,
     webHealth: initial.webHealth.updatedAt,
@@ -311,74 +312,8 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
         {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
       </header>
 
-      <Section
-        title="방문자"
-        subtitle={`일일 순방문자 · 현재 접속(최근 ${traffic.activeWindowMinutes}분 하트비트).`}
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <dl className="rounded-xl border border-line bg-panel px-4 py-4">
-            <dt className="text-xs text-muted">오늘 방문자 (KST)</dt>
-            <dd className="mt-2 text-2xl font-semibold tabular-nums text-ink">
-              {traffic.dailyVisitors.toLocaleString("ko-KR")}
-              <span className="ml-2 text-base font-normal text-muted">명</span>
-            </dd>
-          </dl>
-          <dl className="rounded-xl border border-line bg-panel px-4 py-4">
-            <dt className="text-xs text-muted">현재 방문자</dt>
-            <dd className="mt-2 text-2xl font-semibold tabular-nums text-ink">
-              {traffic.activeVisitors.toLocaleString("ko-KR")}
-              <span className="ml-2 text-base font-normal text-muted">명</span>
-            </dd>
-          </dl>
-        </div>
-        {traffic.note ? <p className="mt-3 text-xs text-amber-800">{traffic.note}</p> : null}
-
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <div>
-            <h3 className="text-sm font-semibold text-ink">오늘 많이 본 글</h3>
-            {traffic.topBriefings.length === 0 ? (
-              <p className="mt-2 text-sm text-muted">아직 집계된 브리핑 조회가 없습니다.</p>
-            ) : (
-              <ol className="mt-2 space-y-2 text-sm">
-                {traffic.topBriefings.map((row, index) => (
-                  <li
-                    key={row.slug}
-                    className="flex items-baseline justify-between gap-3 border-b border-line/50 py-1.5 last:border-0"
-                  >
-                    <a className="min-w-0 truncate text-ink hover:underline" href={row.path}>
-                      {index + 1}. {row.title}
-                    </a>
-                    <span className="shrink-0 tabular-nums text-muted">{row.count}</span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-ink">오늘 많이 본 종목</h3>
-            {traffic.topRankings.length === 0 ? (
-              <p className="mt-2 text-sm text-muted">아직 집계된 종목 조회가 없습니다.</p>
-            ) : (
-              <ol className="mt-2 space-y-2 text-sm">
-                {traffic.topRankings.map((row, index) => (
-                  <li
-                    key={row.slug}
-                    className="flex items-baseline justify-between gap-3 border-b border-line/50 py-1.5 last:border-0"
-                  >
-                    <a className="min-w-0 truncate text-ink hover:underline" href={row.path}>
-                      {index + 1}. {row.title}
-                    </a>
-                    <span className="shrink-0 tabular-nums text-muted">{row.count}</span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
-        </div>
-      </Section>
-
       <nav
-        className="flex flex-wrap gap-1 border-b border-line"
+        className="mt-6 flex flex-wrap gap-1.5 border-b border-line pb-3"
         role="tablist"
         aria-label="운영 현황 탭"
       >
@@ -393,8 +328,8 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
               onClick={() => setActiveTab(tab.id)}
               className={
                 isActive
-                  ? "-mb-px border-b-2 border-ink px-3 py-2.5 text-sm font-semibold text-ink"
-                  : "-mb-px border-b-2 border-transparent px-3 py-2.5 text-sm text-muted hover:text-ink"
+                  ? "rounded-md border border-accent bg-accent px-2.5 py-1.5 text-sm font-semibold text-black"
+                  : "rounded-md border border-line bg-panel px-2.5 py-1.5 text-sm font-semibold text-ink hover:border-accent hover:text-accent"
               }
             >
               {tab.label}
@@ -404,6 +339,74 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
       </nav>
 
       <div role="tabpanel">
+        {activeTab === "traffic" ? (
+          <Section
+            title="방문자 현황"
+            subtitle={`일일 순방문자 · 현재 접속(최근 ${traffic.activeWindowMinutes}분 하트비트).`}
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <dl className="rounded-xl border border-line bg-panel px-4 py-4">
+                <dt className="text-xs text-muted">오늘 방문자 (KST)</dt>
+                <dd className="mt-2 text-2xl font-semibold tabular-nums text-ink">
+                  {traffic.dailyVisitors.toLocaleString("ko-KR")}
+                  <span className="ml-2 text-base font-normal text-muted">명</span>
+                </dd>
+              </dl>
+              <dl className="rounded-xl border border-line bg-panel px-4 py-4">
+                <dt className="text-xs text-muted">현재 방문자</dt>
+                <dd className="mt-2 text-2xl font-semibold tabular-nums text-ink">
+                  {traffic.activeVisitors.toLocaleString("ko-KR")}
+                  <span className="ml-2 text-base font-normal text-muted">명</span>
+                </dd>
+              </dl>
+            </div>
+            {traffic.note ? <p className="mt-3 text-xs text-amber-800">{traffic.note}</p> : null}
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div>
+                <h3 className="text-sm font-semibold text-ink">오늘 많이 본 글</h3>
+                {traffic.topBriefings.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted">아직 집계된 브리핑 조회가 없습니다.</p>
+                ) : (
+                  <ol className="mt-2 space-y-2 text-sm">
+                    {traffic.topBriefings.map((row, index) => (
+                      <li
+                        key={row.slug}
+                        className="flex items-baseline justify-between gap-3 border-b border-line/50 py-1.5 last:border-0"
+                      >
+                        <a className="min-w-0 truncate text-ink hover:underline" href={row.path}>
+                          {index + 1}. {row.title}
+                        </a>
+                        <span className="shrink-0 tabular-nums text-muted">{row.count}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-ink">오늘 많이 본 종목</h3>
+                {traffic.topRankings.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted">아직 집계된 종목 조회가 없습니다.</p>
+                ) : (
+                  <ol className="mt-2 space-y-2 text-sm">
+                    {traffic.topRankings.map((row, index) => (
+                      <li
+                        key={row.slug}
+                        className="flex items-baseline justify-between gap-3 border-b border-line/50 py-1.5 last:border-0"
+                      >
+                        <a className="min-w-0 truncate text-ink hover:underline" href={row.path}>
+                          {index + 1}. {row.title}
+                        </a>
+                        <span className="shrink-0 tabular-nums text-muted">{row.count}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            </div>
+          </Section>
+        ) : null}
+
         {activeTab === "daily" ? (
           <Section
             title="일일 생성 · 비용"

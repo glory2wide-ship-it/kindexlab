@@ -203,6 +203,13 @@ export function ItemDetailCategoryInfoView({
         <CategoryInfoSparklineChart sparkline={payload.sparkline} />
       ) : null}
 
+      {(payload.sparklines ?? [])
+        .filter((chart) => chart.points.length >= 2)
+        .filter((chart) => chart.title !== payload.sparkline?.title)
+        .map((chart) => (
+          <CategoryInfoSparklineChart key={chart.title} sparkline={chart} />
+        ))}
+
       {payload.synopsis ? (
         <p className="mt-4 break-words text-base leading-7 text-ink/90">{payload.synopsis}</p>
       ) : null}

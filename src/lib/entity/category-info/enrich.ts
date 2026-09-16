@@ -18,6 +18,7 @@ import { matchPublicGrant } from "@/lib/public-data/grants";
 import { summarizeHousingPublicData } from "@/lib/public-data/housing";
 import type { PublicGrantRecord } from "@/lib/public-data/types";
 import { lookupYoutubeChannelProfile } from "@/lib/public-data/youtube-channel";
+import { entityNarrativeSummary } from "@/lib/entity/index-blurb";
 
 const UPDATING = "실시간 정보 업데이트 중";
 
@@ -543,6 +544,7 @@ export async function enrichCategoryInfoPayload(
   let statusMessage = base.statusMessage;
   let sparse = base.sparse;
   let sparkline = base.sparkline;
+  let sparklines = base.sparklines ? [...base.sparklines] : [];
 
   const agency = extractAgency(corpus);
   const hitSongs = melonHits.length ? melonHits : extractHitSongs(corpus, name);
@@ -778,11 +780,37 @@ export async function enrichCategoryInfoPayload(
       }
       if (housingPublic?.trendPoints && housingPublic.trendPoints.length >= 2) {
         sparkline = {
-          title: "월별 중위 매매가 (국토부 실거래)",
+          title: "매매가 추이 (국토부 실거래 · 중위)",
           unit: "만원",
           points: housingPublic.trendPoints,
         };
       }
+      const housingCharts: NonNullable<CategoryInfoPayload["sparklines"]> = [];
+      if (housingPublic?.trendPoints && housingPublic.trendPoints.length >= 2) {
+        housingCharts.push({
+          title: "매매가 (1개월~10년 샘플)",
+          unit: "만원",
+          points: housingPublic.trendPoints,
+        });
+      }
+      if (housingPublic?.jeonseTrendPoints && housingPublic.jeonseTrendPoints.length >= 2) {
+        housingCharts.push({
+          title: "전세 보증금 추이",
+          unit: "만원",
+          points: housingPublic.jeonseTrendPoints,
+        });
+      }
+      if (
+        housingPublic?.monthlyRentTrendPoints &&
+        housingPublic.monthlyRentTrendPoints.length >= 2
+      ) {
+        housingCharts.push({
+          title: "월세 월임대료 추이",
+          unit: "만원",
+          points: housingPublic.monthlyRentTrendPoints,
+        });
+      }
+      if (housingCharts.length) sparklines = housingCharts;
       break;
     }
     case "webtoon": {
@@ -1050,10 +1078,11 @@ export async function enrichCategoryInfoPayload(
     ...base,
     rows: containRows(dedupeRows(rows)),
     chips: dedupeChips(chips.filter((chip) => chip.items.length > 0)),
-    synopsis,
+    synopsis: entityNarrativeSummary(synopsis),
     statusMessage,
     sparse,
     sparkline,
+    sparklines: sparklines.length ? sparklines : undefined,
     links: links.slice(0, 5),
     notice:
       base.notice ||

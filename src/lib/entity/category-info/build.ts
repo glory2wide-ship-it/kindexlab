@@ -386,7 +386,7 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
     statusMessage: sparse ? statusMessage || UPDATING : statusMessage,
     rows: nonemptyRows(rows),
     chips: nonemptyChips(chips),
-    synopsis,
+    synopsis: entityNarrativeSummary(synopsis),
     notice,
     links: links.slice(0, 5),
   };

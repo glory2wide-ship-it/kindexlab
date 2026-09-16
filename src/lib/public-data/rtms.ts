@@ -181,6 +181,48 @@ export function monthlyTradeMids(
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
+/** 전세(월세 0) 중위 보증금 시계열. */
+export function monthlyJeonseMids(
+  deals: AptRentDeal[],
+  aptHint?: string,
+): Array<{ label: string; value: number }> {
+  const filtered = filterAptDeals(deals, aptHint).filter((d) => d.monthlyRentManwon === 0);
+  const byMonth = new Map<string, number[]>();
+  for (const deal of filtered) {
+    const label = `${deal.dealYear}.${String(deal.dealMonth).padStart(2, "0")}`;
+    const list = byMonth.get(label) ?? [];
+    list.push(deal.depositManwon);
+    byMonth.set(label, list);
+  }
+  return [...byMonth.entries()]
+    .map(([label, amounts]) => {
+      const sorted = [...amounts].sort((a, b) => a - b);
+      return { label, value: sorted[Math.floor(sorted.length / 2)]! };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/** 월세 중위 월임대료 시계열 (보증금은 제외). */
+export function monthlyRentMids(
+  deals: AptRentDeal[],
+  aptHint?: string,
+): Array<{ label: string; value: number }> {
+  const filtered = filterAptDeals(deals, aptHint).filter((d) => d.monthlyRentManwon > 0);
+  const byMonth = new Map<string, number[]>();
+  for (const deal of filtered) {
+    const label = `${deal.dealYear}.${String(deal.dealMonth).padStart(2, "0")}`;
+    const list = byMonth.get(label) ?? [];
+    list.push(deal.monthlyRentManwon);
+    byMonth.set(label, list);
+  }
+  return [...byMonth.entries()]
+    .map(([label, amounts]) => {
+      const sorted = [...amounts].sort((a, b) => a - b);
+      return { label, value: sorted[Math.floor(sorted.length / 2)]! };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export function summarizeTrades(deals: AptTradeDeal[], aptHint?: string): string | undefined {
   const filtered = filterAptDeals(deals, aptHint);
   if (!filtered.length) return undefined;

@@ -98,6 +98,8 @@ export type CategoryInfoBase = {
   links: CategoryInfoLink[];
   /** Optional mini trend (e.g. housing monthly mid prices). */
   sparkline?: CategoryInfoSparkline;
+  /** Extra trends (매매·전세·월세) when more than one series is available. */
+  sparklines?: CategoryInfoSparkline[];
 };
 
 export type CategoryInfoPayload = CategoryInfoBase;
