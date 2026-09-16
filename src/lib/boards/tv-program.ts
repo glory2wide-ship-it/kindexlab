@@ -12,6 +12,10 @@ const NON_TV_PROGRAM =
 const HEADLINE_SHAPED =
   /(트렌드는|전망$|속보$|종합$|이유는|관련주|수혜|급등|급락|실적|영업익|매출|중단$|점검중|접속장애|서비스\s*장애)/;
 
+/** Sports matchups / league scraps Trends dumps onto TV boards. */
+const SPORTS_TV_NOISE =
+  /(국가\s*대표|축구|야구|농구|MLB|KBO|NBA|EPL|프리미어리그|더비$|\s대\s|vs\.?|VS|브레이브스|맨체스터|리버풀|토트넘|레알|바르사)/i;
+
 /** Service / AS / festival / diet-ad / YouTube-ops noise often scraped into TV boards. */
 const SERVICE_EVENT_NOISE =
   /(유튜브\s*중단|유튜브\s*장애|요요\s*없는|요요없는|예비\s*글로벌|글로벌\s*축제|축제$|페스티벌|뮤직\s*페스티벌|방송의\s*날|수발|A\s*\/\s*S|A\/S|에이에스|애프터\s*서비스|AS\b|고객센터|콜센터|수리|교체|보증|다이어트|살빼|비만|클리닉|병원$|의원$|약국$|보험료|대출|금리|공매도|펀드|ETF|채권)/i;
@@ -89,6 +93,7 @@ export function isLikelyTvProgramName(name: string): boolean {
   if (EXACT_TV_NOISE.has(compactNoiseKey(cleaned))) return false;
   if (NON_TV_PROGRAM.test(cleaned)) return false;
   if (HEADLINE_SHAPED.test(cleaned)) return false;
+  if (SPORTS_TV_NOISE.test(cleaned)) return false;
   if (SERVICE_EVENT_NOISE.test(cleaned)) return false;
   // Single buzz syllables / interjections (깜짝, 활짝) are idol-news scraps.
   const hangulOnly = cleaned.replace(/[^가-힣]/g, "");

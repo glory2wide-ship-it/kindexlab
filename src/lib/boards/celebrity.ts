@@ -39,7 +39,11 @@ const EXACT_MEDIA_OUTLETS = new Set(
 );
 
 const NON_PERSON_TOKENS =
-  /^(ppi|iphone|애플|바르셀로나|카페|도둑|방아쇠|사랑|이유|오늘|속보|종합|공개|부모|학대|구금)$/i;
+  /^(ppi|iphone|애플|바르셀로나|카페|도둑|방아쇠|사랑|이유|오늘|속보|종합|공개|부모|학대|구금|마취|맞춤형복지|복지|정책|지원금|대출|금리|환율|주가|코스피|코스닥)$/i;
+
+/** Institutional / policy compound nouns that Trends misfiles as people. */
+const NON_PERSON_COMPOUND =
+  /(복지|지원금|정책|대출|금리|공매도|펀드|예산|세금|연금|보험료|부동산|아파트|청약)$/;
 
 /** Hangul person-ish: 2–6 syllables, optional English stage name. */
 export function isLikelyCelebrityName(name: string): boolean {
@@ -50,6 +54,7 @@ export function isLikelyCelebrityName(name: string): boolean {
   if (COMPANY_NOISE.test(cleaned) || DRAMA_OR_TITLE_NOISE.test(cleaned)) return false;
   if (MEDIA_OUTLET_NOISE.test(cleaned)) return false;
   if (NON_PERSON_TOKENS.test(cleaned.replace(/\s+/g, ""))) return false;
+  if (NON_PERSON_COMPOUND.test(cleaned.replace(/\s+/g, ""))) return false;
   if (/\d{2,}/.test(cleaned)) return false;
   // Sports matchup "A 대 B" is never a celebrity.
   if (/\s대\s/.test(cleaned) || /대[가-힣]{2,}/.test(cleaned.replace(/\s+/g, ""))) {
