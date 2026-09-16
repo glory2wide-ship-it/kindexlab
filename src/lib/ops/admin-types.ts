@@ -49,6 +49,25 @@ export type AdminDashboardPayload = {
     nextUpdateAt: string;
     overdue: boolean;
   }>;
+  detailCollectApiCost: {
+    dayKst: string;
+    youtube: {
+      units: number;
+      calls: number;
+      estimatedKrw: number;
+      estimatedKrwLabel: string;
+      note: string;
+    };
+    openai: {
+      promptTokens: number;
+      completionTokens: number;
+      calls: number;
+      estimatedKrw: number;
+      estimatedKrwLabel: string;
+      note: string;
+    };
+    updatedAt: string;
+  };
   daily: {
     editionDate: string;
     generationOk: number;

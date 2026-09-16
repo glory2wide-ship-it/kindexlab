@@ -403,7 +403,7 @@ function youtubeFallback(name: string): DetailFacts {
       { title: `${name} 화제 영상 이슈`, href: naverNewsUrl(`${name} 유튜브`) },
       { title: `${name} 최신 클립`, href: naverNewsUrl(`${name} 영상`) },
     ],
-    synopsis: `${name} 채널 URL과 최근 이슈 영상 정보는 3일마다 점검합니다.`,
+    synopsis: `${name} 채널 URL과 최근 이슈 영상 정보는 관련 채널에서 확인하세요.`,
   };
 }
 
@@ -418,7 +418,7 @@ function issueNewsFallback(name: string): DetailFacts {
       { label: "검색 키워드", value: name },
     ],
     links,
-    synopsis: `${name} 관련 최근 뉴스 링크는 하루 1회 점검합니다.`,
+    synopsis: `${name} 관련 최근 뉴스 링크를 함께 모았습니다.`,
   };
 }
 
@@ -433,7 +433,7 @@ function bookFallback(name: string): DetailFacts {
     ],
     chips: [{ label: "작가 필모그래피", items: [] }],
     links: newsLinks(name, ["서평", "베스트셀러", "인터뷰"]),
-    synopsis: `${name}의 작가·출판사·요약·관련 뉴스는 3일마다 점검합니다.`,
+    synopsis: `${name}의 작가·출판사·요약 정보를 정리했습니다.`,
   };
 }
 
@@ -453,7 +453,7 @@ function foodFallback(name: string): DetailFacts {
     ],
     notice:
       "맛집 정보(주소·영업시간·메뉴)는 사정에 따라 변경될 수 있습니다. 반드시 공식 채널·지도 앱으로 재확인하세요.",
-    synopsis: `${place} 맛집 추천 정보는 하루 1회 점검합니다.`,
+    synopsis: `${place} 맛집 추천 포인트입니다. 방문 전 영업시간을 확인해 주세요.`,
   };
 }
 
@@ -473,7 +473,7 @@ function outingFallback(name: string): DetailFacts {
     ],
     notice:
       "행사장 운영시간·입장료·통제 구간은 수시로 바뀔 수 있습니다. 방문 전 공식 홈페이지·안내 센터를 확인하세요.",
-    synopsis: `${place} 나들이 정보는 하루 1회 점검합니다.`,
+    synopsis: `${place} 나들이 포인트입니다. 운영시간·주차는 현장 공지를 확인해 주세요.`,
   };
 }
 

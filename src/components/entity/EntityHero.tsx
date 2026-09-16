@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import {
   entityNarrativeSummary,
-  formatEntityIndexBlurb,
   isEntityIndexBlurbText,
 } from "@/lib/entity/index-blurb";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel } from "@/lib/format";
@@ -135,25 +134,19 @@ function DetailFactsBlock({
   detailFacts,
   detailFactsStale,
   refreshLabel,
-  indexBlurb,
 }: {
   detailFacts: NonNullable<ReturnType<typeof resolveDetailFacts>>;
   detailFactsStale: boolean;
   refreshLabel: string;
-  /** Hero index line — never repeat it inside the profile synopsis. */
-  indexBlurb?: string;
 }) {
   const synopsis = entityNarrativeSummary(detailFacts.synopsis);
-  const showSynopsis =
-    Boolean(synopsis) &&
-    !isEntityIndexBlurbText(synopsis) &&
-    synopsis !== indexBlurb?.trim();
+  const showSynopsis = Boolean(synopsis) && !isEntityIndexBlurbText(synopsis);
   return (
     <div className="mt-3 space-y-3 border-t border-line pt-3 md:mt-4 md:pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] font-semibold tracking-wide text-soft">종목 프로필</p>
         <p className="text-[10px] text-muted">
-          정보 점검 {detailFacts.checkedAt.slice(0, 10)}
+          최근 {detailFacts.checkedAt.slice(0, 10)}
           {detailFactsStale ? " · 갱신 필요" : ` · ${refreshLabel}`}
         </p>
       </div>
@@ -233,8 +226,12 @@ export function EntityHero({
 }) {
   const detailFacts = resolveDetailFacts(entity);
   const detailFactsStale = detailFacts ? detailFactsAreStale(detailFacts) : false;
-  const refreshLabel = detailFacts?.refresh === "daily" ? "일 1회 점검" : "주 1회 점검";
-  const indexBlurb = formatEntityIndexBlurb(entity);
+  const refreshLabel =
+    detailFacts?.refresh === "daily"
+      ? "하루 1회"
+      : detailFacts?.refresh === "every3days"
+        ? "3일"
+        : "주 1회";
 
   const stockQuote = isNaverStockMeasurement(entity.measurement) ? entity.measurement : undefined;
   if (stockQuote) {
@@ -245,7 +242,6 @@ export function EntityHero({
             detailFacts={detailFacts}
             detailFactsStale={detailFactsStale}
             refreshLabel={refreshLabel}
-            indexBlurb={indexBlurb}
           />
         ) : null}
       </MarketQuoteHero>
@@ -310,13 +306,8 @@ export function EntityHero({
           detailFacts={detailFacts}
           detailFactsStale={detailFactsStale}
           refreshLabel={refreshLabel}
-          indexBlurb={indexBlurb}
         />
       ) : null}
-
-      <p className="mt-[0.9375rem] max-w-3xl text-sm leading-7 text-ink/85 max-md:leading-[0.984rem] md:mt-5">
-        {indexBlurb}
-      </p>
     </section>
   );
 }

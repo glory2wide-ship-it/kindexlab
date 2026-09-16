@@ -15,6 +15,7 @@ export type EntertainmentFactRow = { label: string; value: string };
 export type EntertainmentFacts = {
   domain:
     | "kpop"
+    | "trot"
     | "music"
     | "star"
     | "movie"
@@ -731,10 +732,184 @@ const CATALOG: CatalogEntry[] = [
     ],
     synopsis: "더현대 서울에서 열리는 시즌 브랜드 협업 팝업 전시·판매 공간.",
   },
+
+  // —— Trot / 성인가요 ——
+  {
+    title: "임영웅",
+    aliases: ["영웅시대"],
+    domain: "trot",
+    rows: [{ label: "소속사", value: "물고기뮤직" }],
+    chips: [{ label: "최근 히트곡", items: ["사랑은 늘 도망가", "별빛 같은 나의 사랑아", "이제 나만 믿어요"] }],
+    synopsis: "미스터트롯 출신 트로트 스타. 전국 투어와 음원 차트를 동시에 이끈다.",
+  },
+  {
+    title: "영탁",
+    aliases: ["YOUNGTAK"],
+    domain: "trot",
+    rows: [{ label: "소속사", value: "수아크리에이티브" }],
+    chips: [{ label: "최근 히트곡", items: ["찐이야", "니가 왜 거기서 나와", "꺾어"] }],
+  },
+  {
+    title: "이찬원",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "초이크리에이티브랩" }],
+    chips: [{ label: "최근 히트곡", items: ["진또배기", "고백", "편리한 남자"] }],
+  },
+  {
+    title: "김호중",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "생각엔터테인먼트" }],
+    chips: [{ label: "최근 히트곡", items: ["희망가", "나보다 너를", "만남이 잦은 너"] }],
+  },
+  {
+    title: "송가인",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "투애니원컴퍼니" }],
+    chips: [{ label: "최근 히트곡", items: ["가인이어라", "엄마 아빠 감사합니다", "서울의 달"] }],
+  },
+  {
+    title: "장민호",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "파라파라 엔터테인먼트" }],
+    chips: [{ label: "최근 히트곡", items: ["짠짜라", "남자는 말합니다", "일소일소"] }],
+  },
+  {
+    title: "정동원",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "쇼플레이" }],
+    chips: [{ label: "최근 히트곡", items: ["좋아요", "부모", "품바"] }],
+  },
+  {
+    title: "나훈아",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "예음기획" }],
+    chips: [{ label: "최근 히트곡", items: ["고향역", "사랑", "테스형!"] }],
+  },
+  {
+    title: "심수봉",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "독립/개인활동" }],
+    chips: [{ label: "최근 히트곡", items: ["남자는 배 여자는 항구", "무궁화", "정 때문에"] }],
+  },
+  {
+    title: "주현미",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "독립/개인활동" }],
+    chips: [{ label: "최근 히트곡", items: ["비내리는 영동교", "신사동 그 사람", "잠깐만"] }],
+  },
+  {
+    title: "태진아",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "진아기획" }],
+    chips: [{ label: "최근 히트곡", items: ["사랑은 아무나 하나", "동반자", "옥경이"] }],
+  },
+  {
+    title: "조용필",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "필 ent." }],
+    chips: [{ label: "최근 히트곡", items: ["돌아와요 부산항에", "친구여", "Bounce"] }],
+  },
+  {
+    title: "이미자",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "독립/개인활동" }],
+    chips: [{ label: "최근 히트곡", items: ["동백아가씨", "여자의 일생", "님 그리워"] }],
+  },
+  {
+    title: "설운도",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "설운도기획" }],
+    chips: [{ label: "최근 히트곡", items: ["누이", "쌈바의 여인", "보라빛 엽서"] }],
+  },
+  {
+    title: "진성",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "진성기획" }],
+    chips: [{ label: "최근 히트곡", items: ["보릿고개", "태클을 걸지마", "안동역에서"] }],
+  },
+  {
+    title: "신유",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "쇼플레이" }],
+    chips: [{ label: "최근 히트곡", items: ["찰랑찰랑", "그 사람", "연모"] }],
+  },
+  {
+    title: "황치열",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "빅마마엔터테인먼트" }],
+    chips: [{ label: "최근 히트곡", items: ["매일 매일 기다려", "너 하나만", "어찌하나요"] }],
+  },
+  {
+    title: "김용임",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "독립/개인활동" }],
+    chips: [{ label: "최근 히트곡", items: ["부초 같은 인생", "찔레꽃", "묵련화"] }],
+  },
+  {
+    title: "김연자",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "독립/개인활동" }],
+    chips: [{ label: "최근 히트곡", items: ["아모르파티", "제3한강교", "님아"] }],
+  },
+  {
+    title: "패티김",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "독립/개인활동" }],
+    chips: [{ label: "최근 히트곡", items: ["사랑해", "이별", "서울의 찬가"] }],
+  },
+  {
+    title: "조항조",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "독립/개인활동" }],
+    chips: [{ label: "최근 히트곡", items: ["보고싶다 내 사랑", "일편단심 민들레야", "안동역에서"] }],
+  },
+  {
+    title: "장윤정",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "미래이엔티" }],
+    chips: [{ label: "최근 히트곡", items: ["어화둥둥", "짠짜라", "어머나"] }],
+  },
+  {
+    title: "박현빈",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "지니뮤직 계열" }],
+    chips: [{ label: "최근 히트곡", items: ["빠빠빠", "샤방샤방", "곤드레 맘드레"] }],
+  },
+  {
+    title: "김수찬",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "쇼플레이" }],
+    chips: [{ label: "최근 히트곡", items: ["일소일소", "진짜 내가 좋아하는 사람", "나야"] }],
+  },
+  {
+    title: "금잔디",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "독립/개인활동" }],
+    chips: [{ label: "최근 히트곡", items: ["담다디", "백만송이 장미", "님은 먼곳에"] }],
+  },
+  {
+    title: "강진",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "독립/개인활동" }],
+    chips: [{ label: "최근 히트곡", items: ["땡벌", "둥지", "보릿고개"] }],
+  },
+  {
+    title: "현숙",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "독립/개인활동" }],
+    chips: [{ label: "최근 히트곡", items: ["정말 좋았는데", "썸남썸녀", "내 마음에 주단을 깔고"] }],
+  },
+  {
+    title: "김혜연",
+    domain: "trot",
+    rows: [{ label: "소속사", value: "독립/개인활동" }],
+    chips: [{ label: "최근 히트곡", items: ["서울이여 안녕", "사랑은 창밖에 빗물 같아요", "만남"] }],
+  },
 ];
 
 const TYPE_DOMAIN: Partial<Record<EntityType, EntertainmentFacts["domain"]>> = {
   kpop: "kpop",
+  trot: "trot",
   music_chart: "music",
   celebrity: "star",
   movie: "movie",
@@ -745,6 +920,7 @@ const TYPE_DOMAIN: Partial<Record<EntityType, EntertainmentFacts["domain"]>> = {
 
 const SLUG_DOMAIN: Array<{ test: (slug: string) => boolean; domain: EntertainmentFacts["domain"] }> = [
   { test: (s) => s.startsWith("kpop-fandom-power"), domain: "kpop" },
+  { test: (s) => s.startsWith("trot-kayo-fandom-power"), domain: "trot" },
   { test: (s) => s.startsWith("realtime-music-chart"), domain: "music" },
   { test: (s) => s.startsWith("star-reputation-index"), domain: "star" },
   { test: (s) => s.startsWith("boxoffice-expectation"), domain: "movie" },
@@ -764,6 +940,7 @@ function domainOf(entity: Pick<RankingEntity, "type" | "slug" | "heatmapGroup">)
   if (fromType) return fromType;
   const group = entity.heatmapGroup ?? "";
   if (/K\s*POP|케이팝|아이돌/i.test(group)) return "kpop";
+  if (/트로트|가요/.test(group)) return "trot";
   if (/음원/.test(group)) return "music";
   if (/스타|셀럽/.test(group)) return "star";
   if (/영화|박스오피스/.test(group)) return "movie";
@@ -819,9 +996,15 @@ function fallbackFacts(
           { label: "멤버", items: [] },
           { label: "최근 히트곡", items: [] },
         ],
-        synopsis:
-          entityNarrativeSummary(entity) ||
-          `${entity.name}의 멤버·소속사·히트곡 정보는 주 1회 갱신됩니다.`,
+        synopsis: entityNarrativeSummary(entity),
+      };
+    case "trot":
+      return {
+        domain,
+        checkedAt,
+        rows: [{ label: "소속사", value: "소속사 확인 중" }],
+        chips: [{ label: "최근 히트곡", items: [] }],
+        synopsis: entityNarrativeSummary(entity),
       };
     case "music":
       return {
@@ -831,9 +1014,7 @@ function fallbackFacts(
           { label: "아티스트", value: "가수/그룹 확인 중" },
           { label: "소속사", value: "소속사 확인 중" },
         ],
-        synopsis:
-          entityNarrativeSummary(entity) ||
-          `${entity.name}의 아티스트·소속사 정보는 주 1회 갱신됩니다.`,
+        synopsis: entityNarrativeSummary(entity),
       };
     case "star":
       return {
@@ -844,9 +1025,7 @@ function fallbackFacts(
           { label: "직업", value: tags.find((t) => /배우|가수|예능|모델/.test(t)) ?? "연예인" },
         ],
         chips: [{ label: "출연작품", items: [] }],
-        synopsis:
-          entityNarrativeSummary(entity) ||
-          `${entity.name}의 소속사·출연작품 정보는 주 1회 갱신됩니다.`,
+        synopsis: entityNarrativeSummary(entity),
       };
     case "movie":
       return {
@@ -854,9 +1033,7 @@ function fallbackFacts(
         checkedAt,
         rows: [{ label: "개봉/배급", value: "정보 확인 중" }],
         chips: [{ label: "출연", items: [] }],
-        synopsis:
-          entityNarrativeSummary(entity) ||
-          `${entity.name}의 출연진·시놉시스는 주 1회 갱신됩니다.`,
+        synopsis: entityNarrativeSummary(entity),
       };
     case "webtoon":
       return {
@@ -870,9 +1047,7 @@ function fallbackFacts(
           { label: "작가", value: "작가 정보 확인 중" },
         ],
         chips: [{ label: "주요 인물", items: [] }],
-        synopsis:
-          entityNarrativeSummary(entity) ||
-          `${entity.name}의 줄거리·캐릭터 정보는 주 1회 갱신됩니다.`,
+        synopsis: entityNarrativeSummary(entity),
       };
     case "performance":
       return {
@@ -885,9 +1060,7 @@ function fallbackFacts(
           { label: "티켓 가격", value: "예매처 공지 기준" },
         ],
         chips: [{ label: "출연", items: [] }],
-        synopsis:
-          entityNarrativeSummary(entity) ||
-          `${entity.name}의 출연·시놉시스·티켓 정보는 주 1회 갱신됩니다.`,
+        synopsis: entityNarrativeSummary(entity),
       };
     case "exhibition":
       return {
@@ -898,9 +1071,7 @@ function fallbackFacts(
           { label: "행사 시간", value: "운영시간 확인 중" },
           { label: "입장료", value: "요금 확인 중" },
         ],
-        synopsis:
-          entityNarrativeSummary(entity) ||
-          `${entity.name}의 장소·시간·입장료 정보는 주 1회 갱신됩니다.`,
+        synopsis: entityNarrativeSummary(entity),
       };
   }
 }

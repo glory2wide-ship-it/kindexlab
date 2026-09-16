@@ -40,6 +40,33 @@ export function isEntityIndexBlurbText(text: string | undefined | null): boolean
 }
 
 /**
+ * Strip scheduled refresh boilerplate so detail cards only keep real synopsis.
+ */
+export function stripRefreshBoilerplate(text: string | undefined | null): string | undefined {
+  const trimmed = text?.trim();
+  if (!trimmed) return undefined;
+  if (
+    /정보는\s*(하루\s*1회|주\s*1회|3일마다)\s*(점검|갱신)합니다\.?\s*$/u.test(trimmed) ||
+    /정보는\s*주\s*1회\s*갱신됩니다\.?\s*$/u.test(trimmed) ||
+    /줄거리·캐릭터 정보는\s*주\s*1회/u.test(trimmed) ||
+    /멤버·소속사·히트곡 정보는\s*주\s*1회/u.test(trimmed) ||
+    /아티스트·소속사 정보는\s*주\s*1회/u.test(trimmed) ||
+    /소속사·출연작품 정보는\s*주\s*1회/u.test(trimmed) ||
+    /출연진·시놉시스는\s*주\s*1회/u.test(trimmed) ||
+    /출연·시놉시스·티켓 정보는\s*주\s*1회/u.test(trimmed) ||
+    /장소·시간·입장료 정보는\s*주\s*1회/u.test(trimmed) ||
+    /작가·출판사·요약·관련 뉴스는\s*3일마다/u.test(trimmed) ||
+    /채널 URL과 최근 이슈 영상 정보는\s*3일마다/u.test(trimmed) ||
+    /맛집 추천 정보는\s*하루\s*1회/u.test(trimmed) ||
+    /나들이 정보는\s*하루\s*1회/u.test(trimmed) ||
+    /관련 최근 뉴스 링크는\s*하루\s*1회/u.test(trimmed)
+  ) {
+    return undefined;
+  }
+  return trimmed;
+}
+
+/**
  * Narrative copy only. Index blurbs live in `formatEntityIndexBlurb` on the hero —
  * never reuse them as 프로필 시놉시스 / TV 줄거리 (that caused the duplicate line).
  */
@@ -49,7 +76,7 @@ export function entityNarrativeSummary(
   const raw = typeof entity === "string" || entity == null ? entity : entity.summary;
   const trimmed = raw?.trim();
   if (!trimmed || isEntityIndexBlurbText(trimmed)) return undefined;
-  return trimmed;
+  return stripRefreshBoilerplate(trimmed);
 }
 
 /** Humanize a board slug when no heatmap group is stamped on the entity. */
