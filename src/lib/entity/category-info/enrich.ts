@@ -1,6 +1,10 @@
 import { fetchNaverWebFallback } from "@/lib/context/fallback-naver";
 import { fetchYoutubeFallback } from "@/lib/context/fallback-youtube";
 import type { ContextSource } from "@/lib/context/types";
+import { lookupBookFacts } from "@/lib/entity/category-info/lookup-book";
+import { lookupFoodFacts } from "@/lib/entity/category-info/lookup-food";
+import { lookupTicketFacts } from "@/lib/entity/category-info/lookup-tickets";
+import { lookupWebtoonFacts } from "@/lib/entity/category-info/lookup-webtoon";
 import type { CategoryInfoChannel } from "@/lib/entity/category-info/types";
 import type {
   CategoryInfoLink,
@@ -381,7 +385,7 @@ function applyGrantRecord(
 
 /**
  * Live crawl enrichment for ItemDetailCategoryInfo.
- * Uses news retrieval + Naver web/blog Open API (+ Melon chart / YouTube when useful)
+ * Uses news retrieval + Naver web/blog Open API (+ Melon / YouTube / ticket·bookstore crawls)
  * and data.go.kr (보조금24·복지로·국토부 실거래) when DATA_GO_KR_SERVICE_KEY is set.
  * Never throws — returns the base payload on soft failures.
  */
@@ -397,19 +401,44 @@ export async function enrichCategoryInfoPayload(
   const wantsHousing = base.channel === "housing";
   const wantsYoutube =
     base.channel === "youtuber" || base.channel === "politics_youtube";
+  const wantsWebtoon = base.channel === "webtoon";
+  const wantsBook = base.channel === "book";
+  const wantsTickets =
+    base.channel === "performance" || base.channel === "exhibition";
+  const wantsFood = base.channel === "food";
 
-  const [newsDocs, webDocs, publicGrant, housingPublic, youtubeProfile] =
-    await Promise.all([
-      crawlNews(name),
-      crawlWeb(name, base.channel),
-      wantsGrant ? matchPublicGrant(name).catch(() => undefined) : Promise.resolve(undefined),
-      wantsHousing
-        ? summarizeHousingPublicData(name).catch(() => undefined)
-        : Promise.resolve(undefined),
-      wantsYoutube
-        ? lookupYoutubeChannelProfile(name).catch(() => undefined)
-        : Promise.resolve(undefined),
-    ]);
+  const [
+    newsDocs,
+    webDocs,
+    publicGrant,
+    housingPublic,
+    youtubeProfile,
+    webtoonFacts,
+    bookFacts,
+    ticketFacts,
+    foodFacts,
+  ] = await Promise.all([
+    crawlNews(name),
+    crawlWeb(name, base.channel),
+    wantsGrant ? matchPublicGrant(name).catch(() => undefined) : Promise.resolve(undefined),
+    wantsHousing
+      ? summarizeHousingPublicData(name).catch(() => undefined)
+      : Promise.resolve(undefined),
+    wantsYoutube
+      ? lookupYoutubeChannelProfile(name).catch(() => undefined)
+      : Promise.resolve(undefined),
+    wantsWebtoon
+      ? lookupWebtoonFacts(name).catch(() => undefined)
+      : Promise.resolve(undefined),
+    wantsBook ? lookupBookFacts(name).catch(() => undefined) : Promise.resolve(undefined),
+    wantsTickets
+      ? lookupTicketFacts(
+          name,
+          base.channel === "exhibition" ? "exhibition" : "performance",
+        ).catch(() => undefined)
+      : Promise.resolve(undefined),
+    wantsFood ? lookupFoodFacts(name).catch(() => undefined) : Promise.resolve(undefined),
+  ]);
 
   const youtubeDocs =
     wantsYoutube && !youtubeProfile?.recentVideoTitles.length
@@ -668,59 +697,160 @@ export async function enrichCategoryInfoPayload(
       break;
     }
     case "webtoon": {
-      const platform = extractPlatform(corpus);
-      const author = extractAuthor(corpus, name);
-      if (platform) rows = upsertRow(rows, "플랫폼", platform, true);
-      if (author) rows = upsertRow(rows, "작가", author);
+      if (webtoonFacts) {
+        rows = fillUpdatingRows(rows, [
+          { label: "플랫폼", value: webtoonFacts.platform, emphasize: true },
+          { label: "작가", value: webtoonFacts.author },
+        ]);
+        if (webtoonFacts.scoreLabel) {
+          rows = upsertRow(rows, "독자 반응", webtoonFacts.scoreLabel);
+        }
+        if (webtoonFacts.url) {
+          rows = rows.map((row) =>
+            row.label === "플랫폼"
+              ? {
+                  ...row,
+                  href: webtoonFacts.url,
+                  value: isUpdating(row.value)
+                    ? webtoonFacts.platform
+                    : row.value,
+                }
+              : row,
+          );
+        }
+        if (webtoonFacts.synopsis) synopsis = synopsis || webtoonFacts.synopsis;
+      } else {
+        const platform = extractPlatform(corpus);
+        const author = extractAuthor(corpus, name);
+        if (platform) rows = upsertRow(rows, "플랫폼", platform, true);
+        if (author) rows = upsertRow(rows, "작가", author);
+      }
       if (crawledSynopsis) synopsis = synopsis || crawledSynopsis;
       break;
     }
     case "book": {
-      const author = extractAuthor(corpus, name);
-      const publisher = firstMatch(corpus, [
-        /(?:출판사|펴낸곳)\s*[:\s]*([가-힣A-Za-z0-9\s]{2,30})/,
-      ]);
-      if (author) rows = upsertRow(rows, "작가", author, true);
-      if (publisher) rows = upsertRow(rows, "출판사", publisher);
+      if (bookFacts) {
+        rows = fillUpdatingRows(rows, [
+          { label: "작가", value: bookFacts.author, emphasize: true },
+          { label: "출판사", value: bookFacts.publisher },
+        ]);
+        if (bookFacts.url) {
+          rows = rows.map((row) =>
+            row.label === "작가" || row.label === "출판사"
+              ? {
+                  ...row,
+                  href: row.href || bookFacts.url,
+                }
+              : row,
+          );
+        }
+        if (bookFacts.synopsis) synopsis = synopsis || bookFacts.synopsis;
+      } else {
+        const author = extractAuthor(corpus, name);
+        const publisher = firstMatch(corpus, [
+          /(?:출판사|펴낸곳)\s*[:\s]*([가-힣A-Za-z0-9\s]{2,30})/,
+        ]);
+        if (author) rows = upsertRow(rows, "작가", author, true);
+        if (publisher) rows = upsertRow(rows, "출판사", publisher);
+      }
       if (crawledSynopsis) synopsis = synopsis || crawledSynopsis;
       break;
     }
     case "exhibition":
     case "performance": {
-      if (cast.length && base.channel === "performance") {
+      const isExhibition = base.channel === "exhibition";
+      if (ticketFacts) {
+        rows = fillUpdatingRows(rows, [
+          {
+            label: isExhibition ? /행사\s*장소/ : /공연\s*장소|장소/,
+            value: ticketFacts.venue,
+            emphasize: true,
+          },
+          {
+            label: isExhibition ? /행사\s*시간|일정/ : /공연\s*일정|일정/,
+            value: ticketFacts.schedule || ticketFacts.time,
+          },
+          {
+            label: isExhibition ? /입장료/ : /티켓\s*가격|가격/,
+            value: ticketFacts.price || ticketFacts.bookingPercent,
+          },
+        ]);
+        if (!isExhibition && ticketFacts.time && ticketFacts.schedule) {
+          rows = fillUpdatingRows(rows, [
+            { label: /공연\s*시간/, value: ticketFacts.time },
+          ]);
+        }
+        if (ticketFacts.url) {
+          rows = rows.map((row) =>
+            /장소|입장료|티켓/.test(row.label)
+              ? { ...row, href: row.href || ticketFacts.url }
+              : row,
+          );
+        }
+      } else {
+        const venue = extractVenue(corpus);
+        if (venue) {
+          rows = upsertRow(
+            rows,
+            isExhibition ? "행사 장소" : "공연 장소",
+            venue,
+          );
+        }
+        const schedule = firstMatch(corpus, [
+          /(?:기간|일정|일시)\s*[:\s]*([^\n.]{6,50})/,
+          /(\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*[~～-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2})/,
+        ]);
+        if (schedule) {
+          rows = upsertRow(
+            rows,
+            isExhibition ? "행사 시간" : "공연 일정",
+            schedule,
+          );
+        }
+        const fee = firstMatch(corpus, [
+          /(?:입장료|티켓|관람료)\s*[:\s]*([^\n.]{2,40})/,
+        ]);
+        if (fee) {
+          rows = upsertRow(rows, isExhibition ? "입장료" : "티켓 가격", fee);
+        }
+      }
+      if (cast.length && !isExhibition) {
         rows = fillUpdatingRows(rows, [{ label: /출연/, value: cast.join(" · ") }]);
-      }
-      const venue = extractVenue(corpus);
-      if (venue) rows = upsertRow(rows, base.channel === "exhibition" ? "행사장소" : "장소", venue);
-      const schedule = firstMatch(corpus, [
-        /(?:기간|일정|일시)\s*[:\s]*([^\n.]{6,50})/,
-        /(\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*[~～-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2})/,
-      ]);
-      if (schedule) {
-        rows = upsertRow(
-          rows,
-          base.channel === "exhibition" ? "행사시간" : "일정",
-          schedule,
-        );
-      }
-      const fee = firstMatch(corpus, [
-        /(?:입장료|티켓|관람료)\s*[:\s]*([^\n.]{2,40})/,
-      ]);
-      if (fee) {
-        rows = upsertRow(
-          rows,
-          base.channel === "exhibition" ? "입장료" : "티켓 가격",
-          fee,
-        );
+        const existing = chips.find((chip) => /출연/.test(chip.label));
+        if (existing) {
+          chips = chips.map((chip) =>
+            chip === existing ? { ...chip, items: cast } : chip,
+          );
+        } else {
+          chips = [...chips, { label: "출연", items: cast }];
+        }
       }
       if (crawledSynopsis) synopsis = synopsis || crawledSynopsis;
       break;
     }
     case "food": {
-      const food = extractFoodMeta(corpus);
-      if (food.address) rows = upsertRow(rows, "주소", food.address, true);
-      if (food.hours) rows = upsertRow(rows, "영업시간", food.hours);
-      if (food.menu) rows = upsertRow(rows, "추천 메뉴", food.menu);
+      if (foodFacts) {
+        rows = fillUpdatingRows(rows, [
+          { label: "주소", value: foodFacts.address, emphasize: true },
+          { label: "영업시간", value: foodFacts.hours },
+          { label: "추천 메뉴", value: foodFacts.menu },
+        ]);
+        if (foodFacts.phone) {
+          rows = upsertRow(rows, "전화", foodFacts.phone);
+        }
+        if (foodFacts.url) {
+          rows = rows.map((row) =>
+            row.label === "주소"
+              ? { ...row, href: row.href || foodFacts.url }
+              : row,
+          );
+        }
+      } else {
+        const food = extractFoodMeta(corpus);
+        if (food.address) rows = upsertRow(rows, "주소", food.address, true);
+        if (food.hours) rows = upsertRow(rows, "영업시간", food.hours);
+        if (food.menu) rows = upsertRow(rows, "추천 메뉴", food.menu);
+      }
       if (crawledSynopsis) synopsis = synopsis || crawledSynopsis;
       break;
     }
@@ -763,7 +893,40 @@ export async function enrichCategoryInfoPayload(
       ]
     : [];
 
-  const links = mergeLinks(officialGrantLinks, mergeLinks(crawledLinks, base.links));
+  const specializedLinks: CategoryInfoLink[] = [];
+  if (webtoonFacts?.url) {
+    specializedLinks.push({
+      title: `${webtoonFacts.title} · ${webtoonFacts.platform}`,
+      href: webtoonFacts.url,
+      source: webtoonFacts.platform,
+    });
+  }
+  if (bookFacts?.url) {
+    specializedLinks.push({
+      title: `${bookFacts.title} · ${bookFacts.source}`,
+      href: bookFacts.url,
+      source: bookFacts.source,
+    });
+  }
+  if (ticketFacts?.url) {
+    specializedLinks.push({
+      title: `${ticketFacts.title} · ${ticketFacts.source}`,
+      href: ticketFacts.url,
+      source: ticketFacts.source,
+    });
+  }
+  if (foodFacts?.url) {
+    specializedLinks.push({
+      title: `${name} · ${foodFacts.source} 장소 정보`,
+      href: foodFacts.url,
+      source: foodFacts.source,
+    });
+  }
+
+  const links = mergeLinks(
+    specializedLinks,
+    mergeLinks(officialGrantLinks, mergeLinks(crawledLinks, base.links)),
+  );
   if (!synopsis && publicGrant?.summary) {
     synopsis = publicGrant.summary;
   }
@@ -778,6 +941,15 @@ export async function enrichCategoryInfoPayload(
     statusMessage = statusMessage || UPDATING;
   }
 
+  const usedSpecialized =
+    Boolean(webtoonFacts) ||
+    Boolean(bookFacts) ||
+    Boolean(ticketFacts) ||
+    Boolean(foodFacts) ||
+    Boolean(publicGrant) ||
+    Boolean(housingPublic) ||
+    Boolean(youtubeProfile);
+
   return {
     ...base,
     rows: dedupeRows(rows),
@@ -789,8 +961,8 @@ export async function enrichCategoryInfoPayload(
     links: links.slice(0, 5),
     notice:
       base.notice ||
-      (publicGrant || housingPublic || youtubeProfile
-        ? "채널 맞춤 정보는 공공데이터포털·YouTube Data API·공개 뉴스·웹 문서를 주기적으로 수집해 보완합니다. 공식 발표와 다를 수 있습니다."
+      (usedSpecialized
+        ? "채널 맞춤 정보는 플랫폼·서점·티켓·지도 공개 페이지와 공공데이터·뉴스·웹 문서를 주기적으로 수집해 보완합니다. 공식 발표와 다를 수 있습니다."
         : "채널 맞춤 정보는 공개 뉴스·웹 문서를 주기적으로 수집해 보완합니다. 공식 발표와 다를 수 있습니다."),
     updatedAt: new Date().toISOString(),
   };
