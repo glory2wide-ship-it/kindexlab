@@ -107,12 +107,58 @@ export function filterAptDeals<T extends { aptName: string }>(
   if (!aptHint) return deals;
   const hint = aptHint.replace(/\s+/g, "");
   if (!hint) return deals;
+
+  const strip = (s: string) =>
+    s
+      .replace(/\s+/g, "")
+      .replace(/아파트|단지|재건축|뉴타운/g, "")
+      .replace(/\d+단지$/g, "");
+
+  const hintCore = strip(hint);
   return deals.filter((d) => {
     const apt = d.aptName.replace(/\s+/g, "");
     if (!apt) return false;
-    if (apt === hint || apt.includes(hint)) return true;
-    return apt.length >= 4 && hint.includes(apt);
+    if (apt === hint || apt.includes(hint) || hint.includes(apt)) return true;
+    const aptCore = strip(apt);
+    if (!aptCore || !hintCore) return false;
+    if (aptCore === hintCore || aptCore.includes(hintCore) || hintCore.includes(aptCore)) {
+      return true;
+    }
+    const tokens = hintCore.match(/[가-힣A-Za-z]{3,}/g) ?? [];
+    return tokens.some((token) => token.length >= 3 && aptCore.includes(token));
   });
+}
+
+/**
+ * When exact/contains matching fails, pick the RTMS apt name that shares the
+ * strongest brand token with the entity (e.g. 잠실엘스 → 엘스). Returns [] if weak.
+ */
+export function bestEffortAptDeals<T extends { aptName: string }>(
+  deals: T[],
+  aptHint?: string,
+): T[] {
+  if (!aptHint || !deals.length) return [];
+  const hint = aptHint.replace(/\s+/g, "").replace(/아파트|단지|재건축|뉴타운/g, "");
+  const tokens = (hint.match(/[가-힣A-Za-z]{2,}/g) ?? []).filter((t) => t.length >= 2);
+  if (!tokens.length) return [];
+
+  const scores = new Map<string, number>();
+  for (const deal of deals) {
+    const apt = deal.aptName.replace(/\s+/g, "");
+    if (!apt) continue;
+    let score = 0;
+    for (const token of tokens) {
+      if (apt.includes(token)) score += token.length;
+    }
+    if (score <= 0) continue;
+    scores.set(apt, Math.max(scores.get(apt) ?? 0, score));
+  }
+  if (!scores.size) return [];
+  const best = [...scores.entries()].sort((a, b) => b[1] - a[1])[0]!;
+  // Require a meaningful overlap (e.g. "엘스" = 2 is too weak alone if many hits;
+  // need ≥ 3 char token match or total score ≥ 4).
+  if (best[1] < 3) return [];
+  return deals.filter((d) => d.aptName.replace(/\s+/g, "") === best[0]);
 }
 
 export function formatManwon(amount: number): string {

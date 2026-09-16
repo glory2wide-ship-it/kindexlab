@@ -505,10 +505,24 @@ nav[aria-label$="서브 메뉴"] {
   zoom: 1.1;
 }
 
-@media (min-width: 768px) {
-  .detail-copy-110-desktop {
-    zoom: 1.1;
-  }
+.detail-copy-110-desktop {
+  zoom: 1.1;
+}
+
+/* Hero metrics (rank / open / volume) — 20%; entity name stays outside. */
+.detail-metrics-120 {
+  zoom: 1.2;
+}
+
+/* 맞춤 정보 refresh stamp — 20%, two lines. */
+.category-info-refresh-120 {
+  font-size: 13.2px; /* 11px × 1.2 */
+  line-height: 1.35;
+}
+
+/* Housing sparkline title + legend — 20%. */
+.housing-spark-120 {
+  zoom: 1.2;
 }
 
 /* Category-info fact table: keep cell text inside the grid. */

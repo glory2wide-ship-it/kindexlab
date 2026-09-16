@@ -12,12 +12,19 @@ function formatDateOnly(iso?: string): string {
   }).format(date);
 }
 
-function formatSparkValue(value: number): string {
-  if (value >= 10_000) {
-    const eok = value / 10_000;
-    return `${eok % 1 === 0 ? eok.toFixed(0) : eok.toFixed(1)}억`;
-  }
-  return `${Math.round(value).toLocaleString("ko-KR")}만`;
+/** Display values as 억원 (public RTMS points are in 만원). */
+function formatSparkEok(valueManwon: number): string {
+  const eok = valueManwon / 10_000;
+  if (eok >= 10) return `${eok % 1 < 0.05 ? eok.toFixed(0) : eok.toFixed(1)}억`;
+  if (eok >= 1) return `${eok.toFixed(1)}억`;
+  return `${Math.round(valueManwon).toLocaleString("ko-KR")}만`;
+}
+
+function formatAxisTime(label: string): string {
+  // "2024.03" → "2024.3" / keep year.month
+  const m = label.match(/^(\d{4})\.(\d{1,2})$/);
+  if (!m) return label;
+  return `${m[1]}.${Number(m[2])}`;
 }
 
 function CategoryInfoSparklineChart({ sparkline }: { sparkline: CategoryInfoSparkline }) {
@@ -25,28 +32,71 @@ function CategoryInfoSparklineChart({ sparkline }: { sparkline: CategoryInfoSpar
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = Math.max(max - min, 1);
-  const w = 280;
-  const h = 56;
-  const pad = 4;
+  const w = 320;
+  const h = 120;
+  const padL = 42;
+  const padR = 10;
+  const padT = 12;
+  const padB = 28;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
   const coords = sparkline.points.map((point, index) => {
     const x =
       sparkline.points.length === 1
-        ? w / 2
-        : pad + (index / (sparkline.points.length - 1)) * (w - pad * 2);
-    const y = h - pad - ((point.value - min) / span) * (h - pad * 2);
-    return `${x},${y}`;
+        ? padL + plotW / 2
+        : padL + (index / (sparkline.points.length - 1)) * plotW;
+    const y = padT + plotH - ((point.value - min) / span) * plotH;
+    return { x, y, point };
   });
-  const polyline = coords.join(" ");
+  const polyline = coords.map((c) => `${c.x},${c.y}`).join(" ");
+  const yTicks = [max, (max + min) / 2, min];
+  const xLabels =
+    sparkline.points.length <= 6
+      ? sparkline.points.map((p, i) => ({ i, label: p.label }))
+      : [
+          { i: 0, label: sparkline.points[0]!.label },
+          {
+            i: Math.floor((sparkline.points.length - 1) / 2),
+            label: sparkline.points[Math.floor((sparkline.points.length - 1) / 2)]!.label,
+          },
+          { i: sparkline.points.length - 1, label: sparkline.points.at(-1)!.label },
+        ];
 
   return (
-    <div className="mt-4 rounded-xl border border-line bg-board/50 px-3 py-3">
+    <div className="housing-spark-120 mt-4 rounded-xl border border-line bg-board/50 px-3 py-3">
       <p className="text-xs font-semibold tracking-wide text-soft">{sparkline.title}</p>
+      <p className="mt-0.5 text-[10px] text-muted">X: 시간(연·월) · Y: 거래금액(억원)</p>
       <svg
         viewBox={`0 0 ${w} ${h}`}
-        className="mt-2 h-14 w-full text-accent"
+        className="mt-2 h-36 w-full text-accent"
         role="img"
         aria-label={sparkline.title}
       >
+        {yTicks.map((tick) => {
+          const y = padT + plotH - ((tick - min) / span) * plotH;
+          return (
+            <g key={`y-${tick}`}>
+              <line
+                x1={padL}
+                x2={w - padR}
+                y1={y}
+                y2={y}
+                stroke="currentColor"
+                strokeOpacity="0.12"
+                strokeWidth="1"
+              />
+              <text
+                x={padL - 4}
+                y={y + 3}
+                textAnchor="end"
+                className="fill-current"
+                style={{ fontSize: 8, opacity: 0.55 }}
+              >
+                {formatSparkEok(tick)}
+              </text>
+            </g>
+          );
+        })}
         <polyline
           fill="none"
           stroke="currentColor"
@@ -55,15 +105,32 @@ function CategoryInfoSparklineChart({ sparkline }: { sparkline: CategoryInfoSpar
           strokeLinecap="round"
           points={polyline}
         />
-        {sparkline.points.map((point, index) => {
-          const [x, y] = coords[index]!.split(",").map(Number);
-          return <circle key={point.label} cx={x} cy={y} r="2.5" fill="currentColor" />;
+        {coords.map(({ x, y, point }) => (
+          <circle key={point.label} cx={x} cy={y} r="2.5" fill="currentColor" />
+        ))}
+        {xLabels.map(({ i, label }) => {
+          const x =
+            sparkline.points.length === 1
+              ? padL + plotW / 2
+              : padL + (i / (sparkline.points.length - 1)) * plotW;
+          return (
+            <text
+              key={`x-${label}-${i}`}
+              x={x}
+              y={h - 8}
+              textAnchor="middle"
+              className="fill-current"
+              style={{ fontSize: 8, opacity: 0.55 }}
+            >
+              {formatAxisTime(label)}
+            </text>
+          );
         })}
       </svg>
       <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
         {sparkline.points.map((point) => (
           <li key={point.label}>
-            {point.label} {formatSparkValue(point.value)}
+            {formatAxisTime(point.label)} {formatSparkEok(point.value)}
           </li>
         ))}
       </ul>
@@ -96,30 +163,16 @@ export function ItemDetailCategoryInfoView({
             <span className="ml-2 text-base font-medium text-soft">· {payload.entityName}</span>
           </h2>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md border border-line bg-board px-2 py-1 text-xs font-semibold text-soft">
-            {payload.category === "entertainment"
-              ? "엔터"
-              : payload.category === "politics"
-                ? "정치"
-                : payload.category === "economy"
-                  ? "경제"
-                  : payload.category === "culture"
-                    ? "문화/생활"
-                    : "여행/맛집"}
-          </span>
+        <div className="flex flex-wrap items-end gap-2">
           {payload.sparse ? (
             <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-800 dark:text-amber-200">
               업데이트 중
             </span>
           ) : null}
           {lastLabel || nextLabel ? (
-            <span className="max-w-[14rem] text-right text-[11px] leading-4 text-muted">
+            <span className="category-info-refresh-120 max-w-[11rem] text-right leading-snug text-muted">
               {lastLabel ? <span className="block">최근 {lastLabel}</span> : null}
               {nextLabel ? <span className="block">다음 {nextLabel}</span> : null}
-              {payload.refreshCadenceLabel ? (
-                <span className="block text-[10px] opacity-80">{payload.refreshCadenceLabel}</span>
-              ) : null}
             </span>
           ) : null}
         </div>

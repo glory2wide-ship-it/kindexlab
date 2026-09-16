@@ -15,10 +15,48 @@ export type YoutubeChannelProfile = {
   recentVideoTitles: string[];
 };
 
+/**
+ * Verified UC channel IDs only. Do not add @handles here — squatters reuse popular
+ * handles (e.g. @chimchakman → 3-subscriber channel) and destroy trust.
+ */
+const ENTERTAINMENT_YOUTUBE_SEEDS: Array<{
+  name: string;
+  aliases?: string[];
+  channelId: string;
+}> = [
+  // IDs must be UC… and verified via channels.list (not forHandle alone).
+];
+
+function matchEntertainmentYoutubeSeed(
+  text: string,
+): (typeof ENTERTAINMENT_YOUTUBE_SEEDS)[number] | undefined {
+  const needle = text.replace(/\s+/g, "").toLowerCase();
+  return ENTERTAINMENT_YOUTUBE_SEEDS.find((seed) => {
+    const names = [seed.name, ...(seed.aliases ?? [])].map((n) =>
+      n.replace(/\s+/g, "").toLowerCase(),
+    );
+    return names.some((n) => needle.includes(n) || n.includes(needle));
+  });
+}
+
 function formatSubscribers(count: number): string {
   if (count >= 100_000_000) return `${(count / 100_000_000).toFixed(1).replace(/\.0$/, "")}억명`;
   if (count >= 10_000) return `${Math.round(count / 10_000).toLocaleString("ko-KR")}만명`;
   return `${count.toLocaleString("ko-KR")}명`;
+}
+
+function titleSimilarity(a: string, b: string): number {
+  const left = a.replace(/\s+/g, "").toLowerCase();
+  const right = b.replace(/\s+/g, "").toLowerCase();
+  if (!left || !right) return 0;
+  if (left === right) return 10;
+  if (left.includes(right) || right.includes(left)) return 7;
+  const tokens = right.match(/[가-힣a-z0-9]{2,}/g) ?? [];
+  let score = 0;
+  for (const token of tokens) {
+    if (left.includes(token)) score += Math.min(token.length, 4);
+  }
+  return score;
 }
 
 async function channelsByIds(
@@ -87,6 +125,25 @@ async function recentVideoTitles(
 }
 
 /**
+ * Prefer stable /channel/UC… URLs. Only emit @handles when the handle itself
+ * resembles the entity name AND the channel has meaningful subscribers
+ * (blocks handle-squatter channels with 0–3 subs).
+ */
+function channelPublicUrl(
+  channelId: string,
+  customUrl: string | undefined,
+  queryName: string,
+  subscriberCount?: number,
+): string {
+  const handle = customUrl?.replace(/^@/, "").trim();
+  if (handle && (subscriberCount ?? 0) >= 10_000) {
+    const handleScore = titleSimilarity(handle, queryName);
+    if (handleScore >= 4) return `https://www.youtube.com/@${handle}`;
+  }
+  return `https://www.youtube.com/channel/${channelId}`;
+}
+
+/**
  * Resolve a YouTube channel (seed ID or name search) + subscriber stats + top videos.
  * Soft-fails to undefined when YOUTUBE_API_KEY is missing.
  */
@@ -99,29 +156,35 @@ export async function lookupYoutubeChannelProfile(
   if (!q) return undefined;
 
   try {
-    const seed = matchPoliticsYoutubeSeed(q);
-    let channelId = seed?.channelId;
+    const politics = matchPoliticsYoutubeSeed(q);
+    const entertainment = matchEntertainmentYoutubeSeed(q);
+    let channelId =
+      (politics?.channelId && /^UC[\w-]{20,}$/.test(politics.channelId)
+        ? politics.channelId
+        : undefined) || entertainment?.channelId;
+
     if (!channelId) {
       const search = await fetchJson<{
         items?: { id?: { channelId?: string }; snippet?: { channelId?: string; title?: string } }[];
+        error?: { message?: string };
       }>(
         `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel` +
           `&q=${encodeURIComponent(q)}` +
-          `&maxResults=5&regionCode=KR&relevanceLanguage=ko&key=${encodeURIComponent(key)}`,
+          `&maxResults=8&regionCode=KR&relevanceLanguage=ko&key=${encodeURIComponent(key)}`,
       );
       recordYoutubeApiUnits(100, 1);
-      const needle = q.replace(/\s+/g, "");
-      const ranked = [...(search.items ?? [])].sort((a, b) => {
-        const aTitle = (a.snippet?.title ?? "").replace(/\s+/g, "");
-        const bTitle = (b.snippet?.title ?? "").replace(/\s+/g, "");
-        const aHit = aTitle.includes(needle) || needle.includes(aTitle) ? 1 : 0;
-        const bHit = bTitle.includes(needle) || needle.includes(bTitle) ? 1 : 0;
-        return bHit - aHit;
-      });
-      channelId =
-        ranked[0]?.id?.channelId ||
-        ranked[0]?.snippet?.channelId ||
-        undefined;
+      if (search.error) return undefined;
+      const ranked = [...(search.items ?? [])]
+        .map((item) => {
+          const id = item.id?.channelId || item.snippet?.channelId;
+          const title = item.snippet?.title ?? "";
+          return { id, title, score: titleSimilarity(title, q) };
+        })
+        .filter((row): row is { id: string; title: string; score: number } => Boolean(row.id))
+        .sort((a, b) => b.score - a.score);
+      // Reject weak matches — wrong channels destroy trust more than missing URLs.
+      if (!ranked[0] || ranked[0].score < 4) return undefined;
+      channelId = ranked[0].id;
     }
     if (!channelId) return undefined;
 
@@ -131,14 +194,16 @@ export async function lookupYoutubeChannelProfile(
     ]);
     const channel = channels[0];
     if (!channel) return undefined;
-    const handle = channel.customUrl?.replace(/^@/, "");
-    const url = handle
-      ? `https://www.youtube.com/@${handle}`
-      : `https://www.youtube.com/channel/${channel.id}`;
+    if (!politics && !entertainment && titleSimilarity(channel.title, q) < 4) {
+      return undefined;
+    }
+    // Reject ghost / squatter channels even if title somehow matched.
+    if ((channel.subscriberCount ?? 0) < 1000 && !politics) return undefined;
+
     return {
       channelId: channel.id,
       title: channel.title,
-      url,
+      url: channelPublicUrl(channel.id, channel.customUrl, q, channel.subscriberCount),
       subscriberCount: channel.subscriberCount,
       subscriberLabel:
         channel.subscriberCount != null

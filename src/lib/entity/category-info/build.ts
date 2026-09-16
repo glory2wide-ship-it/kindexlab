@@ -169,11 +169,6 @@ function housingRows(entity: RankingEntity): CategoryInfoRow[] {
       label: "매매·전세·월세 추이",
       value: UPDATING,
     },
-    {
-      label: "네이버페이 부동산",
-      value: "검색으로 이동",
-      href: `https://new.land.naver.com/search?ms=37.5665,126.9780,12&a=APT:ABYG:JGC&e=RETAIL&article=false&keyword=${encodeURIComponent(entity.name)}`,
-    },
   ];
 }
 
@@ -252,8 +247,31 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
     case "movie":
     case "webtoon":
     case "performance":
-    case "exhibition":
-    case "book":
+    case "exhibition": {
+      rows = nonemptyRows([...entertainment.rows, ...detail.rows]);
+      chips = nonemptyChips([...entertainment.chips, ...detail.chips]);
+      synopsis = entertainment.synopsis || detail.synopsis;
+      notice = detail.notice;
+      links = detail.links;
+      break;
+    }
+    case "book": {
+      // Table-only 맞춤 정보 — do not merge hero profile rows (작가/출판사) or they duplicate.
+      rows = [
+        { label: "도서명", value: entity.name, emphasize: true },
+        { label: "작가", value: UPDATING, emphasize: true },
+        { label: "출판사", value: UPDATING },
+        { label: "서점/판매처", value: UPDATING },
+        { label: "출간·판형", value: UPDATING },
+      ];
+      chips = [];
+      synopsis = undefined;
+      notice = detail.notice;
+      links = detail.links.length
+        ? detail.links
+        : buildRelatedNewsLinks(entity.name, newsExtrasForChannel("book"));
+      break;
+    }
     case "weekend_outing":
     case "youtuber":
     case "politics_youtube": {

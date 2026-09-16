@@ -257,7 +257,7 @@ export function EntityHero({
         <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{entity.name}</h1>
         {entity.nameEn ? <p className="mt-1 text-sm text-muted">{entity.nameEn}</p> : null}
       </div>
-      <dl className="mt-[1.125rem] grid grid-cols-2 gap-3 border-t border-line pt-3 text-sm sm:grid-cols-4 md:mt-6 md:gap-4 md:pt-4">
+      <dl className="detail-metrics-120 mt-[1.125rem] grid grid-cols-3 gap-3 border-t border-line pt-3 text-sm md:mt-6 md:gap-4 md:pt-4">
         <div>
           <dt className="text-muted">현재 순위</dt>
           <dd className="mt-0.5 font-sans text-lg tabular-nums md:mt-1">{entity.rank}위</dd>
@@ -269,10 +269,6 @@ export function EntityHero({
         <div>
           <dt className="text-muted">{metricLabel(entity.type)}</dt>
           <dd className="mt-0.5 font-sans text-lg tabular-nums md:mt-1">{formatCompact(entity.volume)}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">태그</dt>
-          <dd className="mt-0.5 md:mt-1">{entity.tags.join(" · ")}</dd>
         </div>
       </dl>
       {entity.measurement ? (

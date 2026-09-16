@@ -27,9 +27,13 @@ function toRecord(row: Gov24Row): PublicGrantRecord | undefined {
   const id = pick(row, ["서비스ID", "SVC_ID", "svcId"]);
   const title = pick(row, ["서비스명"]);
   if (!id || !title) return undefined;
+  // Always use the canonical 보조금24 detail URL. 온라인신청사이트URL often points
+  // at third-party / unrelated hosts and previously broke trust (e.g. 자녀장려금).
+  const detailHint = pick(row, ["상세조회URL"]);
   const url =
-    pick(row, ["상세조회URL", "온라인신청사이트URL"]) ||
-    `https://www.gov.kr/portal/rcvfvrSvc/dtlEx/${id}`;
+    detailHint && /gov\.kr/i.test(detailHint)
+      ? detailHint
+      : `https://www.gov.kr/portal/rcvfvrSvc/dtlEx/${id}`;
   return {
     id,
     title,
@@ -93,7 +97,8 @@ export async function fetchGov24ServiceDetail(
     criteria: pick(row, ["선정기준"]) || base.criteria,
     content: pick(row, ["지원내용"]) || base.content,
     deadline: pick(row, ["신청기한"]) || base.deadline,
-    url: pick(row, ["온라인신청사이트URL", "상세조회URL"]) || base.url,
+    // Keep canonical gov.kr URL from toRecord — never replace with 온라인신청사이트URL.
+    url: base.url,
   };
 }
 
@@ -108,13 +113,24 @@ export async function matchGov24Service(
     if (list.length) break;
   }
   if (!list.length) return undefined;
-  const normalized = keyword.replace(/\s+/g, "");
-  const ranked = [...list].sort((a, b) => {
-    const aHit = a.title.replace(/\s+/g, "").includes(normalized) ? 1 : 0;
-    const bHit = b.title.replace(/\s+/g, "").includes(normalized) ? 1 : 0;
-    return bHit - aHit;
-  });
-  const top = ranked[0]!;
+  const normalized = keyword.replace(/\s+/g, "").replace(/^\[[^\]]+\]/, "");
+  const ranked = [...list]
+    .map((row) => {
+      const title = row.title.replace(/\s+/g, "");
+      let score = 0;
+      if (title === normalized) score += 10;
+      if (title.includes(normalized) || normalized.includes(title)) score += 5;
+      // Token overlap (자녀장려금 ↔ 근로·자녀장려금)
+      const tokens = normalized.match(/[가-힣A-Za-z0-9]{2,}/g) ?? [];
+      for (const token of tokens) {
+        if (title.includes(token)) score += Math.min(token.length, 4);
+      }
+      return { row, score };
+    })
+    .filter((item) => item.score >= 4)
+    .sort((a, b) => b.score - a.score);
+  const top = ranked[0]?.row;
+  if (!top) return undefined;
   const detail = await fetchGov24ServiceDetail(top.id);
   return detail ?? top;
 }

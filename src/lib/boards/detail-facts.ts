@@ -98,17 +98,21 @@ type DailyEntry = {
   checkedAt?: string;
 };
 
+function youtubeSearchUrl(name: string): string {
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(name)}`;
+}
+
 const DAILY_CATALOG: DailyEntry[] = [
   {
     title: "침착맨",
     aliases: ["침투부"],
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "youtube.com/@chimchakman", href: "https://www.youtube.com/@chimchakman" },
+      { label: "채널 URL", value: "유튜브에서 채널 확인", href: youtubeSearchUrl("침착맨") },
       { label: "최근 이슈 영상", value: "침착맨 최신 업로드 (채널에서 확인)" },
     ],
     links: [
-      { title: "침착맨 채널", href: "https://www.youtube.com/@chimchakman" },
+      { title: "침착맨 유튜브 검색", href: youtubeSearchUrl("침착맨") },
       { title: "침착맨 관련 뉴스", href: naverNewsUrl("침착맨") },
       { title: "침착맨 화제 영상", href: naverNewsUrl("침착맨 유튜브") },
     ],
@@ -117,7 +121,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "피식대학",
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "youtube.com/@psickuniv", href: "https://www.youtube.com/@psickuniv" },
+      { label: "채널 URL", value: "유튜브에서 채널 확인", href: youtubeSearchUrl("피식대학") },
       { label: "최근 이슈 영상", value: "피식대학 최신 스케치 (채널에서 확인)" },
     ],
     links: newsLinks("피식대학", ["유튜브", "스케치"]),
@@ -126,7 +130,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "문명특급",
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "youtube.com/@mmspecial", href: "https://www.youtube.com/@mmspecial" },
+      { label: "채널 URL", value: "유튜브에서 채널 확인", href: youtubeSearchUrl("문명특급") },
       { label: "최근 이슈 영상", value: "문명특급 최신 인터뷰 (채널에서 확인)" },
     ],
     links: newsLinks("문명특급", ["유튜브", "인터뷰"]),
@@ -135,7 +139,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "워크맨",
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "youtube.com/@workman", href: "https://www.youtube.com/@workman" },
+      { label: "채널 URL", value: "유튜브에서 채널 확인", href: youtubeSearchUrl("워크맨") },
       { label: "최근 이슈 영상", value: "워크맨 직업체험 최신화 (채널에서 확인)" },
     ],
     links: newsLinks("워크맨", ["유튜브", "직장"]),
@@ -144,7 +148,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "보겸",
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "youtube.com/@bokyem", href: "https://www.youtube.com/@bokyem" },
+      { label: "채널 URL", value: "유튜브에서 채널 확인", href: youtubeSearchUrl("보겸") },
       { label: "최근 이슈 영상", value: "보겸 TV 최신 업로드 (채널에서 확인)" },
     ],
     links: newsLinks("보겸", ["유튜브", "이슈"]),
@@ -153,7 +157,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "쯔양",
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "youtube.com/@tzuyang", href: "https://www.youtube.com/@tzuyang" },
+      { label: "채널 URL", value: "유튜브에서 채널 확인", href: youtubeSearchUrl("쯔양") },
       { label: "최근 이슈 영상", value: "쯔양 먹방 최신화 (채널에서 확인)" },
     ],
     links: newsLinks("쯔양", ["먹방", "유튜브"]),
@@ -202,8 +206,6 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "마흔에 읽는 쇼펜하우어",
     domain: "book",
     rows: [
-      { label: "작가", value: "강용수" },
-      { label: "출판사", value: "유노북스" },
     ],
     chips: [{ label: "작가 필모그래피", items: ["마흔에 읽는 니체", "철학 에세이 시리즈"] }],
     links: newsLinks("마흔에 읽는 쇼펜하우어", ["베스트셀러", "서평", "인터뷰"]),
@@ -214,8 +216,6 @@ const DAILY_CATALOG: DailyEntry[] = [
     aliases: ["세이노의-가르침"],
     domain: "book",
     rows: [
-      { label: "작가", value: "세이노" },
-      { label: "출판사", value: "데이원" },
     ],
     chips: [{ label: "작가 필모그래피", items: ["세이노 칼럼", "경제·자기계발 에세이"] }],
     links: newsLinks("세이노의 가르침", ["베스트셀러", "서평", "추천"]),
@@ -225,8 +225,6 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "역행자",
     domain: "book",
     rows: [
-      { label: "작가", value: "자청" },
-      { label: "출판사", value: "웅진지식하우스" },
     ],
     chips: [{ label: "작가 필모그래피", items: ["역행자 확장판", "자기계발 강의"] }],
     links: newsLinks("역행자", ["자청", "베스트셀러", "서평"]),
@@ -236,8 +234,6 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "도둑맞은 집중력",
     domain: "book",
     rows: [
-      { label: "작가", value: "요한 하리" },
-      { label: "출판사", value: "어크로스" },
     ],
     chips: [{ label: "작가 필모그래피", items: ["죽은 경찰들의 사회", "치유"] }],
     links: newsLinks("도둑맞은 집중력", ["서평", "집중력", "디지털"]),
@@ -382,9 +378,10 @@ function lookupDaily(name: string, domain: DetailFacts["domain"]): DailyEntry | 
 
 function youtubeFallback(name: string): DetailFacts {
   const seed = matchPoliticsYoutubeSeed(name);
-  const href = seed
-    ? `https://www.youtube.com/channel/${seed.channelId}`
-    : `https://www.youtube.com/results?search_query=${encodeURIComponent(name)}`;
+  const hasId = Boolean(seed?.channelId && /^UC[\w-]{20,}$/.test(seed.channelId));
+  const href = hasId
+    ? `https://www.youtube.com/channel/${seed!.channelId}`
+    : youtubeSearchUrl(name);
   return {
     domain: "youtube",
     refresh: "every3days",
@@ -392,7 +389,7 @@ function youtubeFallback(name: string): DetailFacts {
     rows: [
       {
         label: "채널 URL",
-        value: seed ? `youtube.com/channel/${seed.channelId}` : "유튜브 검색 결과",
+        value: hasId ? `youtube.com/channel/${seed!.channelId}` : "유튜브에서 채널 확인",
         href,
       },
       { label: "최근 이슈 영상", value: `${name} 최신 업로드·화제 영상 (채널에서 확인)` },
@@ -427,13 +424,11 @@ function bookFallback(name: string): DetailFacts {
     domain: "book",
     refresh: "every3days",
     checkedAt: DETAIL_FACTS_DAILY_CHECKED_AT,
-    rows: [
-      { label: "작가", value: "작가 정보 확인 중" },
-      { label: "출판사", value: "출판사 확인 중" },
-    ],
-    chips: [{ label: "작가 필모그래피", items: [] }],
+    // Rows live in 맞춤 정보 table — keep hero to synopsis + links to avoid duplication.
+    rows: [],
+    chips: [],
     links: newsLinks(name, ["서평", "베스트셀러", "인터뷰"]),
-    synopsis: `${name}의 작가·출판사·요약 정보를 정리했습니다.`,
+    synopsis: `${name}의 작가·출판사·서점 정보는 아래 맞춤 정보 표에서 확인하세요.`,
   };
 }
 

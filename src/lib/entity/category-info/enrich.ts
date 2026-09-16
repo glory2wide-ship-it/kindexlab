@@ -297,33 +297,89 @@ async function crawlYoutube(name: string): Promise<ContextSource[]> {
   }
 }
 
-/** Melon chart page — fill song chips when the artist appears on the live chart. */
+/** Melon chart + artist search — fill song chips when the artist appears. */
 async function crawlMelonChartHits(name: string): Promise<string[]> {
-  try {
-    const html = await fetchText("https://www.melon.com/chart/index.htm", {
-      headers: { Referer: "https://www.melon.com/" },
-      next: { revalidate: 3600 },
-    });
-    const songs: string[] = [];
+  const songs: string[] = [];
+  const seen = new Set<string>();
+  const push = (song?: string) => {
+    const s = plain(song);
+    if (!s || seen.has(s)) return;
+    seen.add(s);
+    songs.push(s);
+  };
+  const nameCore = name.replace(/\s+/g, "");
+
+  const harvest = (html: string, requireArtistMatch: boolean) => {
     const rowRe =
       /<div class="ellipsis rank01">[\s\S]*?<a[^>]*>([^<]+)<\/a>[\s\S]*?<div class="ellipsis rank02">[\s\S]*?<a[^>]*>([^<]+)<\/a>/g;
     for (const match of html.matchAll(rowRe)) {
       const song = plain(match[1]);
       const artist = plain(match[2]);
       if (!song || !artist) continue;
-      if (!artist.includes(name) && !name.includes(artist)) continue;
-      songs.push(song);
-      if (songs.length >= 3) break;
+      const artistCore = artist.replace(/\s+/g, "");
+      if (
+        requireArtistMatch &&
+        !artistCore.includes(nameCore) &&
+        !nameCore.includes(artistCore) &&
+        !artist.includes(name) &&
+        !name.includes(artist)
+      ) {
+        continue;
+      }
+      push(song);
+      if (songs.length >= 5) break;
     }
-    return songs;
+  };
+
+  try {
+    const chartHtml = await fetchText("https://www.melon.com/chart/index.htm", {
+      headers: { Referer: "https://www.melon.com/" },
+      next: { revalidate: 3600 },
+    });
+    harvest(chartHtml, true);
   } catch {
-    return [];
+    // soft-fail to search
   }
+
+  if (songs.length < 3) {
+    try {
+      const searchHtml = await fetchText(
+        `https://www.melon.com/search/song/index.htm?q=${encodeURIComponent(name)}`,
+        {
+          headers: { Referer: "https://www.melon.com/" },
+          next: { revalidate: 3600 },
+        },
+      );
+      // Search page: song title then artist in nearby anchors
+      const searchRe =
+        /<a[^>]*href="[^"]*songId=\d+[^"]*"[^>]*>([^<]{2,80})<\/a>[\s\S]{0,400}?<a[^>]*href="[^"]*artistId=\d+[^"]*"[^>]*>([^<]{1,60})<\/a>/gi;
+      for (const match of searchHtml.matchAll(searchRe)) {
+        const song = plain(match[1]);
+        const artist = plain(match[2]);
+        if (!song || !artist) continue;
+        const artistCore = artist.replace(/\s+/g, "");
+        if (
+          !artistCore.includes(nameCore) &&
+          !nameCore.includes(artistCore) &&
+          !artist.includes(name) &&
+          !name.includes(artist)
+        ) {
+          continue;
+        }
+        push(song);
+        if (songs.length >= 5) break;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return songs.slice(0, 5);
 }
 
 function linksFromDocs(docs: CrawlDoc[], sourceLabel: string): CategoryInfoLink[] {
   return docs
-    .filter((doc) => doc.title.trim().length >= 4)
+    .filter((doc) => doc.title.trim().length >= 4 && isSafeOutboundUrl(doc.url))
     .slice(0, 5)
     .map((doc) => ({
       title: doc.title.slice(0, 90),
@@ -332,11 +388,61 @@ function linksFromDocs(docs: CrawlDoc[], sourceLabel: string): CategoryInfoLink[
     }));
 }
 
+function isSafeOutboundUrl(href: string): boolean {
+  try {
+    const url = new URL(href);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+    if (!url.hostname.includes(".")) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Drop links whose claimed source/title disagrees with the destination host.
+ * Prevents “보조금24” titles pointing at unrelated commercial sites.
+ */
+function sanitizeRelatedLinks(links: CategoryInfoLink[], entityName: string): CategoryInfoLink[] {
+  const needle = entityName.replace(/\s+/g, "").replace(/^\[[^\]]+\]/, "");
+  const out: CategoryInfoLink[] = [];
+  const seen = new Set<string>();
+  for (const link of links) {
+    if (!link.href || seen.has(link.href)) continue;
+    if (!isSafeOutboundUrl(link.href)) continue;
+    let host = "";
+    try {
+      host = new URL(link.href).hostname.toLowerCase();
+    } catch {
+      continue;
+    }
+    const title = `${link.title} ${link.source ?? ""}`;
+    const claimsGov = /보조금\s*24|정부24|gov\.kr/i.test(title);
+    const claimsWelfare = /복지로|bokjiro/i.test(title);
+    if (claimsGov && !/(^|\.)gov\.kr$/i.test(host) && !host.endsWith(".go.kr")) continue;
+    if (claimsWelfare && !/bokjiro\.go\.kr$/i.test(host) && !host.endsWith(".go.kr")) continue;
+    // Official grant cards must mention the entity (or a clear grant token).
+    if (claimsGov || claimsWelfare) {
+      const compactTitle = link.title.replace(/\s+/g, "");
+      const tokens = needle.match(/[가-힣A-Za-z0-9]{2,}/g) ?? [];
+      const overlap = tokens.some((t) => compactTitle.includes(t));
+      if (!overlap && needle.length >= 2 && !compactTitle.includes(needle.slice(0, Math.min(4, needle.length)))) {
+        continue;
+      }
+    }
+    seen.add(link.href);
+    out.push(link);
+    if (out.length >= 5) break;
+  }
+  return out;
+}
+
 function mergeLinks(primary: CategoryInfoLink[], secondary: CategoryInfoLink[]): CategoryInfoLink[] {
   const seen = new Set<string>();
   const out: CategoryInfoLink[] = [];
   for (const link of [...primary, ...secondary]) {
     if (!link.href || seen.has(link.href)) continue;
+    if (!isSafeOutboundUrl(link.href)) continue;
     seen.add(link.href);
     out.push(link);
     if (out.length >= 5) break;
@@ -354,26 +460,37 @@ function formatGrantList(...parts: Array<string | undefined>): string | undefine
   const items: string[] = [];
   for (const chunk of chunks) {
     const pieces = chunk
-      .split(/(?:\r?\n+|;\s*|·\s*|(?<=[.。])\s+(?=[가-힣A-Za-z0-9])|\/\s+(?=[가-힣]))/)
-      .map((piece) => piece.replace(/^[\s\-•·\*◦○●\d.)]+/, "").trim())
+      .split(
+        /(?:\r?\n+|;\s*|·\s*|(?<=[.。!?])\s+(?=[가-힣A-Za-z0-9①-⑮])|\/\s+(?=[가-힣])|(?<=[가-힣])\s*[-–—]\s+(?=[가-힣])|(?=\d+[.)]\s)|(?=[①-⑮]))/,
+      )
+      .map((piece) =>
+        piece
+          .replace(/^[\s\-•·\*◦○●①-⑮\d.)]+/, "")
+          .replace(/\s+/g, " ")
+          .trim(),
+      )
       .filter((piece) => piece.length >= 2);
     if (pieces.length > 1) {
       items.push(...pieces);
     } else {
-      items.push(chunk);
+      // Long single blob — try comma/conjunction splits for readability.
+      const soft = chunk
+        .split(/(?<=다)\s+|,\s+(?=[가-힣])/)
+        .map((piece) => piece.trim())
+        .filter((piece) => piece.length >= 8);
+      if (soft.length > 1) items.push(...soft);
+      else items.push(chunk);
     }
   }
 
   const unique: string[] = [];
   const seen = new Set<string>();
   for (const item of items) {
-    // Drop mid-sentence truncations like ending with "및" / dangling connectors.
     const cleaned = item
       .replace(/\s+/g, " ")
       .replace(/(?:및|와|과|또는|등)\s*$/u, "")
       .trim();
     if (cleaned.length < 4) continue;
-    // Skip fragments that look cut mid-word / mid-clause (no terminal punctuation and very short).
     if (cleaned.length < 12 && !/[.。!?)]$/.test(cleaned) && /(?:의|을|를|이|가|은|는)$/u.test(cleaned)) {
       continue;
     }
@@ -381,10 +498,10 @@ function formatGrantList(...parts: Array<string | undefined>): string | undefine
     if (seen.has(key)) continue;
     seen.add(key);
     unique.push(cleaned);
-    if (unique.length >= 8) break;
+    if (unique.length >= 10) break;
   }
   if (!unique.length) return chunks.join(" · ").slice(0, 280);
-  if (unique.length === 1) return unique[0];
+  if (unique.length === 1) return `· ${unique[0]}`;
   return unique.map((item, index) => `${index + 1}. ${item}`).join("\n");
 }
 
@@ -573,10 +690,32 @@ export async function enrichCategoryInfoPayload(
           chips = [...chips, { label: "최근 히트곡", items: hitSongs }];
         }
       }
-      if (base.channel === "music" && hitSongs[0]) {
-        rows = fillUpdatingRows(rows, [
-          { label: "멜론 차트", value: `실시간 차트 노출 · ${hitSongs[0]}`, emphasize: true },
-        ]);
+      if (base.channel === "music") {
+        if (hitSongs.length) {
+          rows = fillUpdatingRows(rows, [
+            {
+              label: "멜론 차트",
+              value: `멜론 수집 · ${hitSongs.slice(0, 3).join(" · ")}`,
+              emphasize: true,
+            },
+          ]);
+        } else {
+          rows = fillUpdatingRows(rows, [
+            {
+              label: "멜론 차트",
+              value: "멜론 검색으로 확인",
+              emphasize: true,
+            },
+          ]);
+          rows = rows.map((row) =>
+            row.label === "멜론 차트"
+              ? {
+                  ...row,
+                  href: `https://www.melon.com/search/total/index.htm?q=${encodeURIComponent(name)}`,
+                }
+              : row,
+          );
+        }
       }
       break;
     }
@@ -615,7 +754,7 @@ export async function enrichCategoryInfoPayload(
           chips = [
             ...chips.filter((chip) => !/영상|조회/.test(chip.label)),
             {
-              label: "최근 화제 영상 TOP",
+              label: "최근 높은 조회수 영상 TOP 5",
               items: youtubeProfile.recentVideoTitles.slice(0, 5),
             },
           ];
@@ -771,32 +910,27 @@ export async function enrichCategoryInfoPayload(
           },
         ]);
       }
-      if (housingPublic?.landNaverUrl) {
-        rows = rows.map((row) =>
-          /네이버페이 부동산/.test(row.label)
-            ? { ...row, href: housingPublic.landNaverUrl, value: "네이버페이 부동산에서 보기" }
-            : row,
-        );
-      }
+      // 네이버페이 부동산 row removed — drop legacy cached rows always.
+      rows = rows.filter((row) => !/네이버페이 부동산/.test(row.label));
       if (housingPublic?.trendPoints && housingPublic.trendPoints.length >= 2) {
         sparkline = {
           title: "매매가 추이 (국토부 실거래 · 중위)",
-          unit: "만원",
+          unit: "억원",
           points: housingPublic.trendPoints,
         };
       }
       const housingCharts: NonNullable<CategoryInfoPayload["sparklines"]> = [];
       if (housingPublic?.trendPoints && housingPublic.trendPoints.length >= 2) {
         housingCharts.push({
-          title: "매매가 (1개월~10년 샘플)",
-          unit: "만원",
+          title: "매매가 추이",
+          unit: "억원",
           points: housingPublic.trendPoints,
         });
       }
       if (housingPublic?.jeonseTrendPoints && housingPublic.jeonseTrendPoints.length >= 2) {
         housingCharts.push({
           title: "전세 보증금 추이",
-          unit: "만원",
+          unit: "억원",
           points: housingPublic.jeonseTrendPoints,
         });
       }
@@ -850,18 +984,21 @@ export async function enrichCategoryInfoPayload(
         rows = fillUpdatingRows(rows, [
           { label: "작가", value: bookFacts.author, emphasize: true },
           { label: "출판사", value: bookFacts.publisher },
+          {
+            label: /서점|판매처/,
+            value: `${bookFacts.source}에서 보기`,
+            emphasize: true,
+          },
         ]);
         if (bookFacts.url) {
           rows = rows.map((row) =>
-            row.label === "작가" || row.label === "출판사"
-              ? {
-                  ...row,
-                  href: row.href || bookFacts.url,
-                }
+            /서점|판매처|작가|출판사/.test(row.label)
+              ? { ...row, href: row.href || bookFacts.url }
               : row,
           );
         }
-        if (bookFacts.synopsis) synopsis = synopsis || bookFacts.synopsis;
+        // Synopsis belongs in the table path for books — avoid duplicating hero synopsis.
+        synopsis = undefined;
       } else {
         const author = extractAuthor(corpus, name);
         const publisher = firstMatch(corpus, [
@@ -870,7 +1007,6 @@ export async function enrichCategoryInfoPayload(
         if (author) rows = upsertRow(rows, "작가", author, true);
         if (publisher) rows = upsertRow(rows, "출판사", publisher);
       }
-      if (crawledSynopsis) synopsis = synopsis || crawledSynopsis;
       break;
     }
     case "exhibition":
@@ -1047,9 +1183,12 @@ export async function enrichCategoryInfoPayload(
     });
   }
 
-  const links = mergeLinks(
-    specializedLinks,
-    mergeLinks(officialGrantLinks, mergeLinks(crawledLinks, baseLinks)),
+  const links = sanitizeRelatedLinks(
+    mergeLinks(
+      specializedLinks,
+      mergeLinks(officialGrantLinks, mergeLinks(crawledLinks, baseLinks)),
+    ),
+    name,
   );
   if (!synopsis && publicGrant?.summary) {
     synopsis = publicGrant.summary;

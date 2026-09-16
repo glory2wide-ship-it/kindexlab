@@ -7,6 +7,7 @@ import {
   fetchAptRents,
   fetchAptTrades,
   filterAptDeals,
+  bestEffortAptDeals,
   formatManwon,
   monthlyJeonseMids,
   monthlyRentMids,
@@ -90,6 +91,15 @@ function housingTrendMonthsBack(): number[] {
   return [...new Set([...near, ...yearly])].sort((a, b) => a - b);
 }
 
+/** How many LAWD codes to query for a given months-back offset. */
+function lawdSliceForOffset(lawds: readonly string[], back: number): readonly string[] {
+  if (!lawds.length) return [];
+  // Near-term: cover the whole region so suburban apts are not missed.
+  if (back <= 11) return lawds;
+  // Yearly anchors: still sample multiple districts (was slice(0,1) → charts empty).
+  return lawds.slice(0, Math.min(3, lawds.length));
+}
+
 async function naverSaleOfferFallback(
   name: string,
 ): Promise<{ text?: string; url?: string } | undefined> {
@@ -146,10 +156,9 @@ export async function summarizeHousingPublicData(
   const allRents: AptRentDeal[] = [];
 
   if (hasDataGoKrKey()) {
-    // One lawd for deep history; second lawd only for the latest 2 months (평수별).
     for (const back of monthsBack) {
       const ymd = dealYmdMonthsBack(back);
-      const lawdSlice = back <= 1 ? lawds.slice(0, 2) : lawds.slice(0, 1);
+      const lawdSlice = lawdSliceForOffset(lawds, back);
       for (const lawd of lawdSlice) {
         const [trades, rents] = await Promise.all([
           fetchAptTrades(lawd, ymd, { numOfRows: back <= 1 ? 100 : 60 }),
@@ -163,8 +172,12 @@ export async function summarizeHousingPublicData(
 
   const matchedTrades = filterAptDeals(allTrades, name);
   const matchedRents = filterAptDeals(allRents, name);
-  const useTrades = matchedTrades.length ? matchedTrades : regionForApartment(name) ? [] : allTrades;
-  const useRents = matchedRents.length ? matchedRents : regionForApartment(name) ? [] : allRents;
+  const useTrades = matchedTrades.length
+    ? matchedTrades
+    : bestEffortAptDeals(allTrades, name);
+  const useRents = matchedRents.length
+    ? matchedRents
+    : bestEffortAptDeals(allRents, name);
 
   const recentTradePool = (matchedTrades.length ? matchedTrades : useTrades).filter((d) => {
     const ymd = `${d.dealYear}${String(d.dealMonth).padStart(2, "0")}`;
