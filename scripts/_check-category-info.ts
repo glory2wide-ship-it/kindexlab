@@ -76,6 +76,8 @@ for (const row of cases) {
   assert.ok(payload.links.length >= 3, `${row.slug} needs ≥3 news links`);
   assert.ok(payload.rows.length >= 1, `${row.slug} needs rows or status`);
   assert.ok(payload.channelLabel.length > 0);
+  const labels = payload.rows.map((r) => r.label);
+  assert.equal(labels.length, new Set(labels).size, `${row.slug} duplicate row labels`);
 }
 
 console.log(`category-info OK (${cases.length} channels)`);

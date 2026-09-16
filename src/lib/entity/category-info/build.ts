@@ -23,16 +23,27 @@ import type { RankingEntity } from "@/lib/types";
 const UPDATING = "실시간 정보 업데이트 중";
 
 function nonemptyRows(rows: CategoryInfoRow[]): CategoryInfoRow[] {
-  return rows.filter((row) => row.value.trim().length > 0);
+  const seen = new Set<string>();
+  const out: CategoryInfoRow[] = [];
+  for (const row of rows) {
+    if (!row.value.trim()) continue;
+    if (seen.has(row.label)) continue;
+    seen.add(row.label);
+    out.push(row);
+  }
+  return out;
 }
 
 function nonemptyChips(chips: CategoryInfoChipGroup[]): CategoryInfoChipGroup[] {
-  return chips
-    .map((chip) => ({
-      ...chip,
-      items: chip.items.map((item) => item.trim()).filter(Boolean),
-    }))
-    .filter((chip) => chip.items.length > 0);
+  const seen = new Set<string>();
+  const out: CategoryInfoChipGroup[] = [];
+  for (const chip of chips) {
+    const items = chip.items.map((item) => item.trim()).filter(Boolean);
+    if (!items.length || seen.has(chip.label)) continue;
+    seen.add(chip.label);
+    out.push({ ...chip, items });
+  }
+  return out;
 }
 
 function fromDetailFacts(entity: RankingEntity): {
