@@ -34,18 +34,49 @@ function absUrl(href: string): string | undefined {
 
 type Hit = { title: string; url: string; snippet?: string; publisher?: string };
 
+function cleanTitle(raw?: string): string | undefined {
+  const text = plain(raw);
+  if (!text) return undefined;
+  return text
+    .replace(/\s*새\s*창\s*열림\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function pushHit(out: Hit[], seen: Set<string>, hit: Hit, limit: number): void {
   if (out.length >= limit) return;
-  if (!hit.title || hit.title.length < 2 || !usableUrl(hit.url) || seen.has(hit.url)) return;
-  // Skip Naver chrome / search-self links.
+  const title = cleanTitle(hit.title);
+  if (!title || title.length < 10 || title.length > 120) return;
+  if (!usableUrl(hit.url) || seen.has(hit.url)) return;
+  const junkTitle =
+    /^(다운로드|로그인|회원가입|더보기|이전|다음|NAVER|네이버|검색|메뉴|홈|쇼핑|어학사전|뉴스|이미지|동영상|지식iN|지도|책|학술정보|Entertain)$/i.test(
+      title,
+    ) || /^(광고|Sponsored)/i.test(title);
+  if (junkTitle) return;
   try {
     const host = new URL(hit.url).hostname.toLowerCase();
-    if (host === "search.naver.com" || host === "nid.naver.com") return;
+    if (
+      host === "search.naver.com" ||
+      host === "nid.naver.com" ||
+      host === "www.naver.com" ||
+      host === "naver.com" ||
+      host === "dict.naver.com" ||
+      host === "search.shopping.naver.com" ||
+      host.endsWith(".naver.net") ||
+      host.startsWith("help.") ||
+      host.startsWith("advertising.")
+    ) {
+      return;
+    }
+    // Bare blog hub without post id is usually chrome.
+    if (/^blog\.naver\.com$/i.test(host) && !/blog\.naver\.com\/[^/]+\/\d+/.test(hit.url)) {
+      return;
+    }
   } catch {
     return;
   }
   seen.add(hit.url);
-  out.push(hit);
+  out.push({ ...hit, title });
 }
 
 /** Parse blog/web result cards from Naver HTML (markup varies; keep regex tolerant). */
@@ -53,36 +84,43 @@ function parseNaverSearchHtml(html: string, limit: number, kind: "blog" | "webkr
   const out: Hit[] = [];
   const seen = new Set<string>();
 
-  // Anchor + nearby title/snippet blocks.
-  const anchorRe =
-    /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  // Prefer structured title/link pairs in embedded JSON first (cleaner than raw anchors).
+  const jsonTitleRe =
+    /"title"\s*:\s*"((?:\\.|[^"\\]){8,120})"[\s\S]{0,280}?"(?:link|url|originallink|pcUrl|mobileUrl)"\s*:\s*"(https?:\\\/\\\/[^"\\]+|https?:\/\/[^"\\]+)"/gi;
   let match: RegExpExecArray | null;
-  while ((match = anchorRe.exec(html)) && out.length < limit * 3) {
+  while ((match = jsonTitleRe.exec(html)) && out.length < limit) {
+    const title = cleanTitle(
+      match[1]
+        ?.replace(/\\u([\dA-Fa-f]{4})/g, (_, h) => String.fromCharCode(Number.parseInt(h, 16)))
+        .replace(/\\"/g, '"'),
+    );
+    const rawUrl = (match[2] ?? "").replace(/\\\//g, "/");
+    const url = absUrl(rawUrl);
+    if (title && url) pushHit(out, seen, { title, url }, limit);
+  }
+
+  // Fallback: result-looking anchors with blog/web hosts.
+  const anchorRe = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  while ((match = anchorRe.exec(html)) && out.length < limit) {
     const href = absUrl(match[1] ?? "");
-    const title = plain(match[2]);
-    if (!href || !title || title.length < 4 || title.length > 120) continue;
-    // Prefer result-looking hosts for blog vs web.
+    const title = cleanTitle(match[2]);
+    if (!href || !title) continue;
     try {
       const host = new URL(href).hostname.toLowerCase();
-      if (kind === "blog" && !/(blog\.naver|tistory|post\.naver|blog\.)/.test(host)) {
-        // still allow; Naver often wraps redirect URLs
+      if (kind === "blog") {
+        if (!/(blog\.naver|tistory|post\.naver|blogspot|brunch\.co\.kr)/.test(host)) continue;
+        if (/blog\.naver\.com/i.test(host) && !/blog\.naver\.com\/[^/]+\/\d+/.test(href)) continue;
+      } else if (
+        /(nid\.naver|search\.naver|www\.naver\.com|help\.naver|advertising|dict\.naver|shopping\.naver)/.test(
+          host,
+        )
+      ) {
+        continue;
       }
     } catch {
       continue;
     }
     pushHit(out, seen, { title, url: href }, limit);
-  }
-
-  // JSON-ish title/link pairs embedded in scripts (common on modern Naver SERP).
-  const jsonTitleRe =
-    /"title"\s*:\s*"((?:\\.|[^"\\]){4,120})"[\s\S]{0,240}?"(?:link|url|originallink)"\s*:\s*"(https?:\\\/\\\/[^"\\]+|https?:\/\/[^"\\]+)"/gi;
-  while ((match = jsonTitleRe.exec(html)) && out.length < limit) {
-    const title = plain(match[1]?.replace(/\\u([\dA-Fa-f]{4})/g, (_, h) =>
-      String.fromCharCode(Number.parseInt(h, 16)),
-    ).replace(/\\"/g, '"'));
-    const rawUrl = (match[2] ?? "").replace(/\\\//g, "/");
-    const url = absUrl(rawUrl);
-    if (title && url) pushHit(out, seen, { title, url }, limit);
   }
 
   return out.slice(0, limit);

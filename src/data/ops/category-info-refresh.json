@@ -1,10 +1,10 @@
 {
-  "updatedAt": "2026-09-16T13:36:00.000Z",
+  "updatedAt": "2026-09-16T14:09:40.621Z",
   "tiers": {
-    "live_signal": "2026-09-16T13:00:00.000Z",
+    "live_signal": "2026-09-16T14:09:37.477Z",
     "ticket_food": "2026-09-14T09:00:00+09:00",
     "media_catalog": "2026-09-14T09:00:00+09:00",
-    "entertainment_curated": "2026-09-14T09:00:00+09:00",
+    "entertainment_curated": "2026-09-16T14:09:40.621Z",
     "other_news": "2026-09-16T12:00:00.000Z"
   }
 }

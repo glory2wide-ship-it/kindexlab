@@ -148,11 +148,13 @@ export async function fetchNaverWebFallback(
   options?: { preferBlog?: boolean; preferOfficial?: boolean },
 ): Promise<ContextSource[]> {
   const crawled = await crawlNaverWebSearch(keyword, limit, options);
-  if (crawled.length >= Math.max(2, Math.ceil(limit / 2))) {
-    return crawled.slice(0, limit);
+  // Treat chrome-only / very thin crawls as failure so Open API can fill.
+  const usable = crawled.filter((item) => item.title.trim().length >= 12);
+  if (usable.length >= Math.max(2, Math.ceil(limit / 2))) {
+    return usable.slice(0, limit);
   }
 
   const api = await searchNaverOpenApi(keyword, limit, options);
-  if (!crawled.length) return api;
-  return mergeUnique(crawled, api, limit);
+  if (!usable.length) return api;
+  return mergeUnique(usable, api, limit);
 }
