@@ -62,6 +62,7 @@ function pushHit(out: Hit[], seen: Set<string>, hit: Hit, limit: number): void {
       host === "naver.com" ||
       host === "dict.naver.com" ||
       host === "search.shopping.naver.com" ||
+      host === "keep.naver.com" ||
       host.endsWith(".naver.net") ||
       host.startsWith("help.") ||
       host.startsWith("advertising.")
@@ -111,7 +112,7 @@ function parseNaverSearchHtml(html: string, limit: number, kind: "blog" | "webkr
         if (!/(blog\.naver|tistory|post\.naver|blogspot|brunch\.co\.kr)/.test(host)) continue;
         if (/blog\.naver\.com/i.test(host) && !/blog\.naver\.com\/[^/]+\/\d+/.test(href)) continue;
       } else if (
-        /(nid\.naver|search\.naver|www\.naver\.com|help\.naver|advertising|dict\.naver|shopping\.naver)/.test(
+        /(nid\.naver|search\.naver|www\.naver\.com|help\.naver|advertising|dict\.naver|shopping\.naver|keep\.naver)/.test(
           host,
         )
       ) {
