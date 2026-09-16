@@ -1,6 +1,7 @@
 import { formatKrw } from "@/lib/ops/gemini-usage";
 import { evaluateLiveFillStatus, evaluateWebHealth } from "@/lib/ops/admin-health";
 import { ADMIN_REFRESH_SCHEDULE } from "@/lib/ops/admin-schedule";
+import { snapshotDetailCollectApiCost } from "@/lib/ops/detail-collect-api-cost";
 import { loadOpsDigestsForDate, summarizeDay } from "@/lib/ops/ops-digest";
 import { getTrafficSnapshot } from "@/lib/analytics/traffic";
 import { buildCategoryInfoRefreshStatus } from "@/lib/entity/category-info/refresh-status";
@@ -25,20 +26,20 @@ export async function buildAdminDashboard(editionDate?: string) {
     getTrafficSnapshot(editionDate),
   ]);
   const categoryInfoRefresh = buildCategoryInfoRefreshStatus();
+  const detailCollectApiCost = snapshotDetailCollectApiCost(daily.editionDate);
 
   return {
     generatedAt,
     editionDate: daily.editionDate,
     schedule: ADMIN_REFRESH_SCHEDULE,
     categoryInfoRefresh,
+    detailCollectApiCost,
     daily: {
       ...daily,
       generationKrwLabel: formatKrw(daily.generationKrw),
       boardRefreshKrwLabel: formatKrw(daily.boardRefreshKrw),
       hasData: digests.length > 0,
-      /** Calendar day this cost board is for (KST). */
       dateLabel: daily.editionDate,
-      /** Latest digest write time, else this dashboard build. */
       updatedAt: latestDigestAt(digests) ?? generatedAt,
       byCategory: daily.byCategory.map((row) => ({
         ...row,

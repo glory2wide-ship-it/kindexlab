@@ -49,7 +49,7 @@ function firstMatch(text: string, patterns: RegExp[]): string | undefined {
   for (const pattern of patterns) {
     const hit = text.match(pattern);
     const value = hit?.[1]?.replace(/\s+/g, " ").trim();
-    if (value && value.length >= 2 && value.length <= 80) return value;
+    if (value && value.length >= 2 && value.length <= 280) return value;
   }
   return undefined;
 }
@@ -321,11 +321,14 @@ async function crawlMelonChartHits(name: string): Promise<string[]> {
 }
 
 function linksFromDocs(docs: CrawlDoc[], sourceLabel: string): CategoryInfoLink[] {
-  return docs.slice(0, 5).map((doc) => ({
-    title: doc.title.slice(0, 90),
-    href: doc.url,
-    source: doc.publisher || sourceLabel,
-  }));
+  return docs
+    .filter((doc) => doc.title.trim().length >= 4)
+    .slice(0, 5)
+    .map((doc) => ({
+      title: doc.title.slice(0, 90),
+      href: doc.url,
+      source: doc.publisher?.trim() || sourceLabel,
+    }));
 }
 
 function mergeLinks(primary: CategoryInfoLink[], secondary: CategoryInfoLink[]): CategoryInfoLink[] {
@@ -353,23 +356,24 @@ function formatGrantList(...parts: Array<string | undefined>): string | undefine
       .split(/(?:\r?\n+|;\s*|·\s*|(?<=[.。])\s+(?=[가-힣A-Za-z0-9])|\/\s+(?=[가-힣]))/)
       .map((piece) => piece.replace(/^[\s\-•·\*◦○●\d.)]+/, "").trim())
       .filter((piece) => piece.length >= 2);
-    if (pieces.length > 1) items.push(...pieces);
-    else items.push(chunk);
+    if (pieces.length > 1) {
+      items.push(...pieces);
+    } else {
+      items.push(chunk);
+    }
   }
 
   const unique: string[] = [];
   const seen = new Set<string>();
   for (const item of items) {
+    // Drop mid-sentence truncations like ending with "및" / dangling connectors.
     const cleaned = item
       .replace(/\s+/g, " ")
       .replace(/(?:및|와|과|또는|등)\s*$/u, "")
       .trim();
     if (cleaned.length < 4) continue;
-    if (
-      cleaned.length < 12 &&
-      !/[.。!?)]$/.test(cleaned) &&
-      /(?:의|을|를|이|가|은|는)$/u.test(cleaned)
-    ) {
+    // Skip fragments that look cut mid-word / mid-clause (no terminal punctuation and very short).
+    if (cleaned.length < 12 && !/[.。!?)]$/.test(cleaned) && /(?:의|을|를|이|가|은|는)$/u.test(cleaned)) {
       continue;
     }
     const key = cleaned.toLowerCase();
@@ -671,12 +675,28 @@ export async function enrichCategoryInfoPayload(
           /신청\s*기간[:\s]*([^\n.]{6,60})/,
           /(\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*[~～-]\s*\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2})/,
         ]);
-        const eligibility = firstMatch(corpus, [
-          /(?:신청\s*자격|지원\s*대상|자격\s*요건)[:\s]*([^\n.]{6,80})/,
+        const eligibilityRaw = firstMatch(corpus, [
+          /(?:신청\s*자격|지원\s*대상|자격\s*요건)[:\s]*([^\n]{8,220})/,
+        ]);
+        const prepRaw = firstMatch(corpus, [
+          /(?:준비\s*서류|제출\s*서류|준비\s*사항|신청\s*방법)[:\s]*([^\n]{8,220})/,
         ]);
         if (period) rows = fillUpdatingRows(rows, [{ label: "신청 기간", value: period }]);
+        const eligibility = formatGrantList(eligibilityRaw);
         if (eligibility) {
-          rows = fillUpdatingRows(rows, [{ label: /신청 자격|자격·조건/, value: eligibility }]);
+          rows = rows.map((row) =>
+            /신청 자격|자격·조건/.test(row.label) && isUpdating(row.value)
+              ? { ...row, value: eligibility, multiline: true }
+              : row,
+          );
+        }
+        const prep = formatGrantList(prepRaw);
+        if (prep) {
+          rows = rows.map((row) =>
+            row.label === "준비사항" && isUpdating(row.value)
+              ? { ...row, value: prep, multiline: true }
+              : row,
+          );
         }
       }
       break;
@@ -932,7 +952,7 @@ export async function enrichCategoryInfoPayload(
   }
 
   const crawledLinks = mergeLinks(
-    linksFromDocs(newsDocs, "뉴스 수집"),
+    linksFromDocs(newsDocs, "뉴스"),
     mergeLinks(
       linksFromDocs(
         youtubeDocs.map((doc) => ({
@@ -943,9 +963,16 @@ export async function enrichCategoryInfoPayload(
         })),
         "유튜브",
       ),
-      linksFromDocs(webDocs, "웹 수집"),
+      linksFromDocs(webDocs, "웹"),
     ),
   );
+
+  // Prefer real article titles + publishers; drop generic search placeholders when we have ≥3 news hits.
+  const realNewsCount = newsDocs.filter((doc) => doc.publisher && doc.title.length >= 8).length;
+  const baseLinks =
+    realNewsCount >= 3
+      ? base.links.filter((link) => !/네이버 뉴스|관련 최신 뉴스|관련 웹 검색/.test(`${link.source ?? ""} ${link.title}`))
+      : base.links;
 
   const officialGrantLinks: CategoryInfoLink[] = publicGrant?.url
     ? [
@@ -994,7 +1021,7 @@ export async function enrichCategoryInfoPayload(
 
   const links = mergeLinks(
     specializedLinks,
-    mergeLinks(officialGrantLinks, mergeLinks(crawledLinks, base.links)),
+    mergeLinks(officialGrantLinks, mergeLinks(crawledLinks, baseLinks)),
   );
   if (!synopsis && publicGrant?.summary) {
     synopsis = publicGrant.summary;

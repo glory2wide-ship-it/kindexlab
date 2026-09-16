@@ -1,4 +1,5 @@
 import { fetchJson } from "@/lib/ingestion/http";
+import { recordYoutubeApiUnits } from "@/lib/ops/detail-collect-api-cost";
 import { matchPoliticsYoutubeSeed } from "@/lib/politics/youtube-seeds";
 
 function youtubeApiKey(): string {
@@ -43,6 +44,7 @@ async function channelsByIds(
       `&id=${ids.map(encodeURIComponent).join(",")}` +
       `&key=${encodeURIComponent(key)}`,
   );
+  recordYoutubeApiUnits(1, 1);
   return (details.items ?? [])
     .map((item) => {
       const id = item.id?.trim();
@@ -74,6 +76,7 @@ async function recentVideoTitles(
         `&order=viewCount&maxResults=${Math.min(limit, 5)}` +
         `&regionCode=KR&relevanceLanguage=ko&key=${encodeURIComponent(key)}`,
     );
+    recordYoutubeApiUnits(100, 1);
     return (search.items ?? [])
       .map((item) => item.snippet?.title?.trim())
       .filter((title): title is string => Boolean(title))
@@ -106,6 +109,7 @@ export async function lookupYoutubeChannelProfile(
           `&q=${encodeURIComponent(q)}` +
           `&maxResults=5&regionCode=KR&relevanceLanguage=ko&key=${encodeURIComponent(key)}`,
       );
+      recordYoutubeApiUnits(100, 1);
       const needle = q.replace(/\s+/g, "");
       const ranked = [...(search.items ?? [])].sort((a, b) => {
         const aTitle = (a.snippet?.title ?? "").replace(/\s+/g, "");

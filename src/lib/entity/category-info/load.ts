@@ -2,8 +2,14 @@ import { unstable_cache } from "next/cache";
 import { buildCategoryInfoPayload } from "@/lib/entity/category-info/build";
 import { resolveCategoryInfoChannel } from "@/lib/entity/category-info/channel";
 import { enrichCategoryInfoPayload } from "@/lib/entity/category-info/enrich";
-import { categoryInfoRevalidateSec } from "@/lib/entity/category-info/refresh-policy";
-import { touchCategoryInfoRefreshTier } from "@/lib/entity/category-info/refresh-status";
+import {
+  categoryInfoRevalidateSec,
+  resolveCategoryInfoRefreshTier,
+} from "@/lib/entity/category-info/refresh-policy";
+import {
+  buildCategoryInfoRefreshStatus,
+  touchCategoryInfoRefreshTier,
+} from "@/lib/entity/category-info/refresh-status";
 import type { CategoryInfoPayload } from "@/lib/entity/category-info/types";
 import type { RankingEntity } from "@/lib/types";
 
@@ -12,7 +18,7 @@ export const CATEGORY_INFO_REVALIDATE_SEC = 3600;
 
 function cacheKey(entity: RankingEntity, channel: string): string[] {
   return [
-    "item-detail-category-info-v7-tiered-refresh",
+    "item-detail-category-info-v8-admin-tabs-copy",
     channel,
     entity.slug,
     entity.type,
@@ -22,19 +28,30 @@ function cacheKey(entity: RankingEntity, channel: string): string[] {
   ];
 }
 
+function withRefreshMeta(payload: CategoryInfoPayload): CategoryInfoPayload {
+  const tier = resolveCategoryInfoRefreshTier(payload.channel);
+  const status = buildCategoryInfoRefreshStatus().find((row) => row.id === tier.id);
+  return {
+    ...payload,
+    refreshLastAt: status?.lastUpdatedAt ?? payload.updatedAt,
+    refreshNextAt: status?.nextUpdateAt,
+    refreshCadenceLabel: status?.cadenceLabel ?? tier.cadenceLabel,
+  };
+}
+
 async function buildAndEnrich(entity: RankingEntity): Promise<CategoryInfoPayload> {
   const base = buildCategoryInfoPayload(entity);
   try {
     const enriched = await enrichCategoryInfoPayload(base);
     touchCategoryInfoRefreshTier(enriched.channel);
-    return enriched;
+    return withRefreshMeta(enriched);
   } catch {
-    return {
+    return withRefreshMeta({
       ...base,
       notice:
         base.notice ||
         "실시간 수집이 잠시 지연되어 기본 정보로 표시합니다. 잠시 후 다시 시도해 주세요.",
-    };
+    });
   }
 }
 

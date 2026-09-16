@@ -82,6 +82,12 @@ export type CategoryInfoBase = {
   entityName: string;
   entitySlug: string;
   updatedAt: string;
+  /** Last refresh timestamp for this channel tier (ISO). */
+  refreshLastAt?: string;
+  /** Next scheduled refresh timestamp (ISO). */
+  refreshNextAt?: string;
+  /** Human cadence label, e.g. 하루 1회. */
+  refreshCadenceLabel?: string;
   /** True when curated/API fields are thin and news fallback is primary. */
   sparse: boolean;
   statusMessage?: string;
