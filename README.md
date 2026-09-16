@@ -92,7 +92,8 @@ DATA_GO_KR_SERVICE_KEY=…   # Decoding 키
 npm run live:public-data
 ```
 
-Vercel / GitHub Actions에도 동일 Secrets 이름으로 등록하세요. 기업마당 data.go.kr(15157820)는 운영 심의승인·Swagger Base URL 확인 후 `MSS_BIZINFO_API_BASE`로 지정할 수 있습니다.
+Vercel / GitHub Actions에도 동일 Secrets 이름으로 등록하세요. 기업마당 OpenAPI는  
+`https://apis.data.go.kr/1421000/bizinfo/pblancBsnsService` 를 사용합니다 (필요 시 `MSS_BIZINFO_API_BASE`로 덮어쓰기).
 
 ```bash
 npm run briefing:generate
