@@ -1,5 +1,5 @@
 /**
- * Celebrity / 스타 board guards — keep person names, drop company·drama·noise.
+ * Celebrity / 스타 board guards — keep person names, drop company·drama·media noise.
  */
 
 import { namesOverlap, normalizeName } from "@/lib/ingestion/names";
@@ -11,6 +11,33 @@ const COMPANY_NOISE =
 const DRAMA_OR_TITLE_NOISE =
   /(이\s*온다|시즌|에피소드|드라마|영화|개봉|예고편|공식\s*티저|ost\b|뮤비|mv\b|대\s*페예노르트|대\s*레알|대\s*레즈|다저스|양키스|MLB|KBO|사관학교|육군|해군|공군|대학교|고등학교)/i;
 
+/** Press / broadcaster / portal brands are never celebrities. */
+const MEDIA_OUTLET_NOISE =
+  /(일보|신문|방송|뉴스|언론|미디어|통신사|기자단|연합뉴스|뉴시스|뉴스1|오마이뉴스|노컷뉴스|프레시안|한겨레|경향|매경|한경|이데일리|머니투데이|파이낸셜뉴스|서울경제|아시아경제|헤럴드경제|SBS\s*뉴스|MBC\s*뉴스|KBS\s*뉴스|JTBC\s*뉴스|YTN|채널A|TV조선)/i;
+
+const EXACT_MEDIA_OUTLETS = new Set(
+  [
+    "중앙일보",
+    "조선일보",
+    "동아일보",
+    "한겨레",
+    "경향신문",
+    "한국일보",
+    "서울신문",
+    "문화일보",
+    "세계일보",
+    "국민일보",
+    "매일경제",
+    "한국경제",
+    "머니투데이",
+    "이데일리",
+    "연합뉴스",
+    "뉴시스",
+    "뉴스1",
+    "오마이뉴스",
+  ].map((s) => s.replace(/\s+/g, "").toLowerCase()),
+);
+
 const NON_PERSON_TOKENS =
   /^(ppi|iphone|애플|바르셀로나|카페|도둑|방아쇠|사랑|이유|오늘|속보|종합|공개|부모|학대|구금)$/i;
 
@@ -18,7 +45,10 @@ const NON_PERSON_TOKENS =
 export function isLikelyCelebrityName(name: string): boolean {
   const cleaned = name.replace(/\s*\([^)]*\)\s*/g, " ").replace(/^\[[^\]]+\]\s*/, "").trim();
   if (!cleaned || cleaned.length > 24) return false;
+  const compact = cleaned.replace(/\s+/g, "").toLowerCase();
+  if (EXACT_MEDIA_OUTLETS.has(compact)) return false;
   if (COMPANY_NOISE.test(cleaned) || DRAMA_OR_TITLE_NOISE.test(cleaned)) return false;
+  if (MEDIA_OUTLET_NOISE.test(cleaned)) return false;
   if (NON_PERSON_TOKENS.test(cleaned.replace(/\s+/g, ""))) return false;
   if (/\d{2,}/.test(cleaned)) return false;
   // Sports matchup "A 대 B" is never a celebrity.

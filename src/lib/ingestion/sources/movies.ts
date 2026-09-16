@@ -207,6 +207,7 @@ function parseNaverMovieTitles(html: string): ChartRow[] {
         .replace(/\.{2,}$/, "")
         .trim();
       if (!title || title.length < 2 || title.length > 40 || skip.test(title)) continue;
+      if (!isLikelyMovieTitle(title)) continue;
       const key = normalizeName(title);
       if (!key || seen.has(key)) continue;
       seen.add(key);
@@ -319,6 +320,7 @@ export async function fetchNaverBoxOffice(): Promise<SourceResult> {
         .replace(/\s+/g, " ")
         .trim();
       if (!title || title.length < 2 || title.length > 40 || skip.test(title)) continue;
+      if (!isLikelyMovieTitle(title)) continue;
       const key = normalizeName(title);
       if (!key || seen.has(key)) continue;
       seen.add(key);
@@ -357,6 +359,7 @@ export async function fetchCgvMovieChart(): Promise<SourceResult> {
         .trim();
       if (!title || title.length < 2 || title.length > 40) continue;
       if (/예매율|지금\s*상영|무비차트|CGV|더보기/.test(title)) continue;
+      if (!isLikelyMovieTitle(title)) continue;
       const key = normalizeName(title);
       if (!key || seen.has(key)) continue;
       seen.add(key);
@@ -396,6 +399,7 @@ export async function fetchLotteMovieChart(): Promise<SourceResult> {
           .trim();
         if (!title || title.length < 2 || title.length > 40) continue;
         if (/롯데시네마|상영작|예매|더보기|영화\s*목록/.test(title)) continue;
+        if (!isLikelyMovieTitle(title)) continue;
         const key = normalizeName(title);
         if (!key || seen.has(key)) continue;
         seen.add(key);
@@ -438,6 +442,7 @@ export async function fetchOttViewershipRank(): Promise<SourceResult> {
         .trim();
       if (!title || title.length < 2 || title.length > 60) continue;
       if (/Netflix|Top\s*10|FlixPatrol|Movies|Shows|MORE/i.test(title)) continue;
+      if (!isLikelyMovieTitle(title)) continue;
       const key = normalizeName(title);
       if (!key || seen.has(key)) continue;
       seen.add(key);

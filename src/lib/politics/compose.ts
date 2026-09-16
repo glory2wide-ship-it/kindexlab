@@ -11,6 +11,7 @@ import {
   POLITICS_YOUTUBE_SEEDS,
 } from "@/lib/politics/youtube-seeds";
 import { namesOverlap, normalizeName } from "@/lib/ingestion/names";
+import { isLikelyPartyName, partyNamesEqual } from "@/lib/boards/party-name";
 import { changeFromScores, scoreFromRank, sparklineFromHistory, volumeFromRank } from "@/lib/ingestion/score";
 import { politicsYoutubeSeedRows } from "@/lib/ingestion/sources/youtube-politics";
 import type { ChartRow, IngestSnapshot, SourceResult } from "@/lib/ingestion/types";
@@ -62,9 +63,11 @@ function toEntity(
   previous: IngestSnapshot | undefined,
   size: number,
 ): RankingEntity {
-  const catalog = POLITICS_CATALOG.find(
-    (item) => item.type === type && namesOverlap(item.name, row.title),
-  );
+  const catalog = POLITICS_CATALOG.find((item) => {
+    if (item.type !== type) return false;
+    if (type === "party_support") return partyNamesEqual(item.name, row.title);
+    return namesOverlap(item.name, row.title);
+  });
   const title = catalog?.name ?? row.title;
   const slug = politicsSlug(type, title);
   // Mention counts were folded in linearly against a hard cap, so every board's
@@ -200,17 +203,24 @@ function rowsForType(sources: SourceResult[], type: PoliticsEntityType): ChartRo
 }
 
 function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRow[] {
-  const used = crawled.map((row) => row.title);
+  const filteredCrawl =
+    type === "party_support" ? crawled.filter((row) => isLikelyPartyName(row.title)) : crawled;
+  const used = filteredCrawl.map((row) => row.title);
   const extras = catalogByType(type)
-    .filter((entry) => !used.some((name) => namesOverlap(name, entry.name)))
+    .filter((entry) => {
+      if (type === "party_support") {
+        return !used.some((name) => partyNamesEqual(name, entry.name));
+      }
+      return !used.some((name) => namesOverlap(name, entry.name));
+    })
     .map((entry, index) => ({
-      rank: crawled.length + index + 1,
+      rank: filteredCrawl.length + index + 1,
       title: entry.name,
       subtitle: entry.nameEn,
       metric: Math.max(1, 8 - index),
       tags: [...entry.tags, type],
     }));
-  const withCatalog = [...crawled, ...extras];
+  const withCatalog = [...filteredCrawl, ...extras];
 
   // Party board: always surface PARTY_SUBJECTS + board seeds so thin news still paints a full live head.
   if (type === "party_support") {
@@ -220,9 +230,8 @@ function fillFromCatalog(type: PoliticsEntityType, crawled: ChartRow[]): ChartRo
       ...catalogByType("party_support").map((entry) => entry.name),
     ];
     for (const [index, name] of [...new Set(partyPads)].entries()) {
-      const exists = withCatalog.some(
-        (row) => namesOverlap(row.title, name) || namesOverlap(name, row.title),
-      );
+      if (!isLikelyPartyName(name)) continue;
+      const exists = withCatalog.some((row) => partyNamesEqual(row.title, name));
       if (exists) continue;
       withCatalog.push({
         rank: withCatalog.length + 1,

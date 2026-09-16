@@ -39,6 +39,28 @@ const EXACT_TV_NOISE = new Set(
     "방송의 날",
     "서리풀 뮤직페스티벌",
     "서리풀뮤직페스티벌",
+    // Buzz fragments / idol-news scraps — not Nielsen programme titles.
+    "깜짝",
+    "활짝",
+    "고고",
+    "옛말",
+    "화제성",
+    "본방",
+    "테이블",
+    "믿고 듣는",
+    "믿고듣는",
+    "과잉생산",
+    "역대급 작품",
+    "역대급작품",
+    "막장 드라마",
+    "막장드라마",
+    "숏폼 드라마",
+    "숏폼드라마",
+    "8부작 이하",
+    "8부작이하",
+    "한국 대표",
+    "한국대표",
+    "MJ",
   ].map((s) => s.replace(/\s+/g, "").toLowerCase()),
 );
 
@@ -68,6 +90,11 @@ export function isLikelyTvProgramName(name: string): boolean {
   if (NON_TV_PROGRAM.test(cleaned)) return false;
   if (HEADLINE_SHAPED.test(cleaned)) return false;
   if (SERVICE_EVENT_NOISE.test(cleaned)) return false;
+  // Single buzz syllables / interjections (깜짝, 활짝) are idol-news scraps.
+  const hangulOnly = cleaned.replace(/[^가-힣]/g, "");
+  if (hangulOnly.length > 0 && hangulOnly.length <= 2 && !BROADCASTER_CUE.test(cleaned)) {
+    return false;
+  }
   if (BROADCASTER_CUE.test(cleaned)) return true;
   if (/^[A-Za-z0-9][A-Za-z0-9\s\-_.\/]{0,28}$/.test(cleaned)) {
     if (LATIN_INDUSTRIAL.test(cleaned)) return false;

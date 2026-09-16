@@ -34,6 +34,8 @@ import type {
 import type { PostChannel } from "@/lib/posts/types";
 import { canonicalizeGameEsportsName, platformForGame } from "@/lib/boards/game-platforms";
 import { ensureCelebrityRanking, isLikelyCelebrityName } from "@/lib/boards/celebrity";
+import { isLikelyMovieTitle } from "@/lib/boards/movie-title";
+import { isLikelyPartyName, partyNamesEqual } from "@/lib/boards/party-name";
 import { passesKpopTrotBoardFilter } from "@/lib/boards/trot";
 import { isLikelyTvProgramName } from "@/lib/boards/tv-program";
 import {
@@ -186,8 +188,17 @@ function normalizeBoardRanking(def: BoardDefinition, rows: BoardRankEntry[]): Bo
   if (isCultureGrantBoard(def.slug)) return ensureCultureGrantRanking(rows);
   if (isTravelGrantBoard(def.slug)) return ensureTravelGrantRanking(rows);
   if (def.slug === "political-pundit-ranking") return ensurePunditRanking(rows);
+  if (def.slug === "party-support-chart") {
+    return ensurePartyBoardRanking(rows, def.seeds, rankLimitForChannel(def.channel));
+  }
+  if (def.slug === "boxoffice-expectation") {
+    return ensureMovieBoardRanking(rows, def.seeds, rankLimitForChannel(def.channel));
+  }
   if (def.slug === "star-reputation-index") {
     return ensureCelebrityRanking(rows, def.seeds, rankLimitForChannel(def.channel));
+  }
+  if (def.slug === "realtime-tv-ratings" || def.slug === "variety-hot-minute") {
+    return ensureTvBoardRanking(rows, def.seeds, rankLimitForChannel(def.channel));
   }
   if (def.slug === HOUSING_BOARD_SLUG) {
     return ensureHousingApartmentRanking(rows, rankLimitForChannel(def.channel));
@@ -196,6 +207,102 @@ function normalizeBoardRanking(def: BoardDefinition, rows: BoardRankEntry[]): Bo
     return ensureFoodRestaurantRanking(rows, def.seeds, def.slug);
   }
   return rows;
+}
+
+/** Drop politicians / news ledes from party board; pad with real party seeds. */
+function ensurePartyBoardRanking(
+  rows: BoardRankEntry[],
+  seeds: readonly string[],
+  limit: number,
+): BoardRankEntry[] {
+  const usable = rows.filter((row) => isLikelyPartyName(row.name));
+  const unique: BoardRankEntry[] = [];
+  const seen = new Set<string>();
+  for (const row of usable) {
+    const key = normalizeName(row.name);
+    if (!key || seen.has(key)) continue;
+    if (unique.some((item) => partyNamesEqual(item.name, row.name))) continue;
+    seen.add(key);
+    unique.push({ ...row, name: row.name.trim() });
+  }
+  for (const seed of seeds) {
+    if (unique.length >= limit) break;
+    if (!isLikelyPartyName(seed)) continue;
+    const key = normalizeName(seed);
+    if (!key || seen.has(key)) continue;
+    if (unique.some((item) => partyNamesEqual(item.name, seed))) continue;
+    seen.add(key);
+    unique.push({
+      rank: unique.length + 1,
+      name: seed,
+      score: Math.max(42, 92 - unique.length * 2.1),
+      changeRate: Number((Math.sin(unique.length * 1.3) * 1.8).toFixed(2)),
+      note: "정당 시드",
+    });
+  }
+  return unique.slice(0, limit).map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
+function ensureMovieBoardRanking(
+  rows: BoardRankEntry[],
+  seeds: readonly string[],
+  limit: number,
+): BoardRankEntry[] {
+  const usable = rows.filter((row) => isLikelyMovieTitle(row.name));
+  const unique: BoardRankEntry[] = [];
+  const seen = new Set<string>();
+  for (const row of usable) {
+    const key = normalizeName(row.name);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    unique.push({ ...row, name: row.name.trim() });
+  }
+  for (const seed of seeds) {
+    if (unique.length >= limit) break;
+    if (!isLikelyMovieTitle(seed)) continue;
+    const key = normalizeName(seed);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    unique.push({
+      rank: unique.length + 1,
+      name: seed,
+      score: Math.max(40, 88 - unique.length * 1.6),
+      changeRate: Number((Math.sin(unique.length * 1.4) * 2.4).toFixed(2)),
+      note: "영화 시드",
+    });
+  }
+  return unique.slice(0, limit).map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
+function ensureTvBoardRanking(
+  rows: BoardRankEntry[],
+  seeds: readonly string[],
+  limit: number,
+): BoardRankEntry[] {
+  const usable = rows.filter((row) => isLikelyTvProgramName(row.name));
+  const unique: BoardRankEntry[] = [];
+  const seen = new Set<string>();
+  for (const row of usable) {
+    const key = normalizeName(row.name);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    unique.push({ ...row, name: row.name.trim() });
+  }
+  for (const seed of seeds) {
+    if (unique.length >= limit) break;
+    if (!isLikelyTvProgramName(seed)) continue;
+    const key = normalizeName(seed);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    unique.push({
+      rank: unique.length + 1,
+      name: seed,
+      score: Math.max(40, 88 - unique.length * 1.5),
+      changeRate: Number((Math.sin(unique.length * 1.6) * 2.2).toFixed(2)),
+      note: "TV 시드",
+    });
+  }
+  return unique.slice(0, limit).map((row, index) => ({ ...row, rank: index + 1 }));
 }
 
 export function toHeatmapPayload(def: BoardDefinition, cached: CachedBoard): HeatmapBoardPayload {
@@ -533,25 +640,10 @@ export function buildHeatmapItems({
           if (matchPoliticsYoutubeSeed(item.name ?? "")?.influencer) return false;
           if (!isLikelyPoliticalPunditName(item.name ?? "")) return false;
         }
-        if (item.tags?.includes(selected.slug)) {
-          if (
-            selected.slug === "realtime-tv-ratings" ||
-            selected.slug === "variety-hot-minute"
-          ) {
-            return isLikelyTvProgramName(item.name ?? "");
+        const passesTypedGuards = (): boolean => {
+          if (selected.slug === "party-support-chart") {
+            return isLikelyPartyName(item.name ?? "");
           }
-          return passesKpopTrotBoardFilter(selected.slug, item.name);
-        }
-        if (item.slug?.startsWith(`${selected.slug}--`)) {
-          if (
-            selected.slug === "realtime-tv-ratings" ||
-            selected.slug === "variety-hot-minute"
-          ) {
-            return isLikelyTvProgramName(item.name ?? "");
-          }
-          return passesKpopTrotBoardFilter(selected.slug, item.name);
-        }
-        if (typeSet.size && typeSet.has(item.type)) {
           if (selected.slug === "star-reputation-index") {
             return isLikelyCelebrityName(item.name);
           }
@@ -561,7 +653,19 @@ export function buildHeatmapItems({
           ) {
             return isLikelyTvProgramName(item.name ?? "");
           }
+          if (selected.slug === "boxoffice-expectation") {
+            return isLikelyMovieTitle(item.name ?? "");
+          }
           return passesKpopTrotBoardFilter(selected.slug, item.name);
+        };
+        if (item.tags?.includes(selected.slug)) {
+          return passesTypedGuards();
+        }
+        if (item.slug?.startsWith(`${selected.slug}--`)) {
+          return passesTypedGuards();
+        }
+        if (typeSet.size && typeSet.has(item.type)) {
+          return passesTypedGuards();
         }
         return false;
       }).filter((item) =>

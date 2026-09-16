@@ -1,7 +1,8 @@
 import { catalogEntries, matchCatalog } from "@/lib/ingestion/catalog";
 import { isLikelyCelebrityName } from "@/lib/boards/celebrity";
-import { isLikelyTrotArtist } from "@/lib/boards/trot";
+import { isLikelyMovieTitle } from "@/lib/boards/movie-title";
 import { isLikelyTvProgramName } from "@/lib/boards/tv-program";
+import { isLikelyTrotArtist } from "@/lib/boards/trot";
 import { fetchJson, fetchText, nowIso } from "@/lib/ingestion/http";
 import { isAllowedKrEnEntityName, namesOverlap, normalizeName } from "@/lib/ingestion/names";
 import { parseNumber, parseRssItems } from "@/lib/ingestion/parse";
@@ -214,7 +215,9 @@ export function classifyBuzzType(name: string, tags: string[]): EntityType {
     // Trends often tags retail/corp under “방송” — only keep programme-shaped titles.
     return isLikelyTvProgramName(name) ? "tv_show" : "headline_news";
   }
-  if (/영화|박스오피스|개봉작|극장/.test(blob)) return "movie";
+  if (/영화|박스오피스|개봉작|극장/.test(blob)) {
+    return isLikelyMovieTitle(name) ? "movie" : "headline_news";
+  }
   if (/아이돌|K-?POP|걸그룹|보이그룹/.test(blob)) return "kpop";
   if (/트로트|미스터트롯|미스트롯|성인가요|가요무대|7080|트롯/.test(blob) || isLikelyTrotArtist(name)) {
     return "trot";

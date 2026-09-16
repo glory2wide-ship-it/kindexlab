@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CategoryBoardRail } from "@/components/boards/CategoryBoardRail";
 import { BoardDeskGrid } from "@/components/dashboard/BoardDeskGrid";
@@ -34,6 +35,16 @@ import { LANDING_HEATMAP_TIMEFRAME } from "@/lib/boards/landing-constants";
 import { getPostChannel } from "@/lib/posts/channels";
 import type { PostChannel } from "@/lib/posts/types";
 import type { MarketIndex, RankingEntity, RankingsPayload } from "@/lib/types";
+
+/** Board slug from `?board=` when it belongs to this channel's desk. */
+function boardSlugFromSearch(
+  params: URLSearchParams | null,
+  boards: HeatmapBoardPayload[],
+): string {
+  const raw = params?.get("board")?.trim() ?? "";
+  if (!raw) return "";
+  return boards.some((board) => board.slug === raw) ? raw : "";
+}
 
 const HeadlineNewsRanking = dynamic(
   () =>
@@ -130,11 +141,16 @@ export function ChannelMarketDesk({
   onBoardChange?: (slug: string) => void;
 }) {
   const boardHeatmap = usesBoardHeatmap(channel);
-  const [selectedSlug, setSelectedSlug] = useState(initialBoardSlug);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const urlBoardSlug = boardSlugFromSearch(searchParams, boards);
+  const bootBoardSlug = urlBoardSlug || initialBoardSlug;
+  const [selectedSlug, setSelectedSlug] = useState(bootBoardSlug);
   const [gender, setGender] = useState<HeatmapGender>("all");
   const [age, setAge] = useState<HeatmapAge>("all");
   const [region, setRegion] = useState<HeatmapRegion>(() =>
-    boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
+    boardUsesRegionFilter(bootBoardSlug) ? initialRegion : "all",
   );
   const [genre, setGenre] = useState<HeatmapTvGenre>("all");
   const liveItems = liveMarket.items;
@@ -156,25 +172,40 @@ export function ChannelMarketDesk({
   );
 
   const [items, setItems] = useState<RankingEntity[]>(() => {
-    const key = cacheKeyForBoard(initialBoardSlug);
+    const key = cacheKeyForBoard(bootBoardSlug);
     const cached =
       initialQuotedByBoard?.[key] ??
-      (initialItems?.length && !initialBoardSlug ? initialItems : undefined);
+      (initialItems?.length && !bootBoardSlug ? initialItems : undefined);
     if (cached?.length) return cached;
     return buildHeatmapItems({
       boards,
       liveItems,
-      board: initialBoardSlug || undefined,
+      board: bootBoardSlug || undefined,
       gender: "all",
       age: "all",
-      region: boardUsesRegionFilter(initialBoardSlug) ? initialRegion : "all",
+      region: boardUsesRegionFilter(bootBoardSlug) ? initialRegion : "all",
       genre: "all",
-      preferLive: preferLiveComposite(initialBoardSlug),
+      preferLive: preferLiveComposite(bootBoardSlug),
     });
   });
   const [flashNonce, setFlashNonce] = useState(0);
   const [headlineItems, setHeadlineItems] = useState<RankingEntity[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  /** Keep `?board=` in the URL so detail → back restores the submenu tab. */
+  const syncBoardToUrl = useCallback(
+    (slug: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (slug) params.set("board", slug);
+      else params.delete("board");
+      const query = params.toString();
+      const href = query ? `${pathname}?${query}` : pathname;
+      const current = searchParams.toString();
+      if (query === current) return;
+      router.replace(href, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   const applyLocal = useCallback(
     (
@@ -228,7 +259,7 @@ export function ChannelMarketDesk({
   );
 
   const onSelectBoard = useCallback(
-    (slug: string) => {
+    (slug: string, options?: { syncUrl?: boolean }) => {
       const nextAge = clampAgeForBoard(slug || undefined, age);
       const nextRegion = boardUsesRegionFilter(slug) ? region : "all";
       setSelectedSlug(slug);
@@ -241,10 +272,29 @@ export function ChannelMarketDesk({
       } else if (gender === "all" && nextAge === "all" && nextGenre === "all") {
         applyLocal(slug, gender, nextAge, nextRegion, nextGenre);
       }
+      if (options?.syncUrl !== false) syncBoardToUrl(slug);
       onBoardChange?.(slug);
     },
-    [age, region, genre, gender, channel, paintQuotedCache, applyLocal, onBoardChange],
+    [
+      age,
+      region,
+      genre,
+      gender,
+      channel,
+      paintQuotedCache,
+      applyLocal,
+      syncBoardToUrl,
+      onBoardChange,
+    ],
   );
+
+  // Browser back/forward (and deep links) restore the submenu from `?board=`.
+  useEffect(() => {
+    if (urlBoardSlug === selectedSlug) return;
+    onSelectBoard(urlBoardSlug, { syncUrl: false });
+    // Only react to URL changes — not to local tab clicks (those already updated state).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedSlug intentionally omitted
+  }, [urlBoardSlug]);
 
   const selectedDef = selectedSlug ? getBoard(selectedSlug) : undefined;
   const deskKind = selectedDef?.deskKind;

@@ -16,8 +16,11 @@ import {
   volumeFromRank,
 } from "@/lib/ingestion/score";
 import { entityTypeForBoardChannel, heatmapGroupForBoardSlug } from "@/lib/boards/entity-type";
+import { isLikelyCelebrityName } from "@/lib/boards/celebrity";
+import { isLikelyMovieTitle } from "@/lib/boards/movie-title";
 import { getBoard } from "@/lib/boards/registry";
 import { isLikelyTrotArtist } from "@/lib/boards/trot";
+import { isLikelyTvProgramName } from "@/lib/boards/tv-program";
 import { formatEntityIndexBlurb } from "@/lib/entity/index-blurb";
 import { topicParticle } from "@/lib/editorial/copy";
 import { classifyBuzzType, fetchNaverNewsBoost } from "@/lib/ingestion/sources/buzz";
@@ -635,7 +638,9 @@ export async function composeLiveSnapshot(
   const musicRows = takeTop(musicPrimary?.items ?? [], 50);
   const artists = artistRows(musicRows);
   const moviePrimary = pickPrimaryMovie(sources);
-  const movieRows = takeTop(moviePrimary?.items ?? [], 30);
+  const movieRows = takeTop(moviePrimary?.items ?? [], 30).filter((row) =>
+    isLikelyMovieTitle(row.title),
+  );
   const webtoonPrimary = pickPrimaryWebtoon(sources);
   const webtoonDaily = takeTop(byId("naver-webtoon-daily")?.items ?? webtoonPrimary?.items ?? [], 40);
   const webtoonWeekly = takeTop(byId("naver-webtoon-weekly")?.items ?? [], 50);
@@ -683,9 +688,14 @@ export async function composeLiveSnapshot(
 
   const terrestrial = byId("nielsen-terrestrial")?.items ?? [];
   const cable = byId("nielsen-cable")?.items ?? [];
-  const ratings = takeTop(terrestrial, 40);
+  const ratings = takeTop(
+    terrestrial.filter((row) => isLikelyTvProgramName(row.title)),
+    40,
+  );
   const shows = takeTop(
-    cable.filter((row) => !/뉴스|뉴스데스크|뉴스광장/.test(row.title)),
+    cable.filter(
+      (row) => !/뉴스|뉴스데스크|뉴스광장/.test(row.title) && isLikelyTvProgramName(row.title),
+    ),
     20,
   );
 
@@ -736,7 +746,11 @@ export async function composeLiveSnapshot(
       const guess = classifyBuzzType(row.title, row.tags ?? []);
       // Chart types are owned by their own source, so a news row landing on one
       // would double-count the same subject.
-      const fallback: EntityType = chartTypes.has(guess) ? "celebrity" : guess;
+      const fallback: EntityType = chartTypes.has(guess)
+        ? isLikelyCelebrityName(row.title)
+          ? "celebrity"
+          : "headline_news"
+        : guess;
       const promoted = promoteTrendRow(row, fallback);
       return toEntity(
         promoted.row,

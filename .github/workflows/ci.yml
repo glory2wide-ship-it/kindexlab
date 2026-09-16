@@ -26,3 +26,4 @@ jobs:
           TRENDS_REQUIRE_LIVE: "1"
       - run: npm run live:first
       - run: npm run live:gates
+      - run: npm run live:entity-guards
