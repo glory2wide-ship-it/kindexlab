@@ -32,7 +32,8 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    # GitHub-hosted hard max is 6h (360). Keep schedule at 04:00 KST.
+    timeout-minutes: 360
     permissions:
       contents: write
       issues: write
