@@ -126,9 +126,13 @@ export function ItemDetailCategoryInfoView({
       ) : null}
 
       {payload.rows.length > 0 ? (
-        <div className="mt-4 overflow-x-auto rounded-xl border border-line">
-          <table className="min-w-full text-left text-sm">
+        <div className="mt-4 overflow-hidden rounded-xl border border-line">
+          <table className="category-info-table min-w-full text-left text-sm">
             <caption className="sr-only">{payload.channelLabel} 상세 항목</caption>
+            <colgroup>
+              <col className="w-[28%]" />
+              <col className="w-[72%]" />
+            </colgroup>
             <thead className="bg-board text-xs text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">항목</th>
@@ -137,26 +141,28 @@ export function ItemDetailCategoryInfoView({
             </thead>
             <tbody>
               {payload.rows.map((row) => (
-                <tr key={`${row.label}-${row.value}`} className="border-t border-line">
+                <tr key={`${row.label}-${row.value.slice(0, 40)}`} className="border-t border-line">
                   <th
                     scope="row"
-                    className={`whitespace-nowrap px-3 py-2.5 align-top text-muted ${
+                    className={`px-3 py-2.5 text-muted ${
                       row.emphasize ? "font-semibold text-ink" : "font-medium"
                     }`}
                   >
                     {row.label}
                   </th>
                   <td
-                    className={`px-3 py-2.5 leading-snug text-ink ${
-                      row.emphasize ? "font-semibold" : ""
-                    }`}
+                    className={`px-3 py-2.5 leading-relaxed text-ink ${
+                      row.multiline || row.value.includes("\n")
+                        ? "whitespace-pre-line"
+                        : "leading-snug"
+                    } ${row.emphasize ? "font-semibold" : ""}`}
                   >
                     {row.href ? (
                       <a
                         href={row.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent underline decoration-line underline-offset-2 hover:opacity-80"
+                        className="break-words text-accent underline decoration-line underline-offset-2 hover:opacity-80"
                       >
                         {row.value}
                       </a>
@@ -178,7 +184,7 @@ export function ItemDetailCategoryInfoView({
             {chip.items.map((item) => (
               <li
                 key={item}
-                className="rounded-md border border-line bg-board px-2 py-1 text-xs font-semibold text-ink"
+                className="max-w-full break-words rounded-md border border-line bg-board px-2 py-1 text-xs font-semibold text-ink"
               >
                 {item}
               </li>
@@ -192,7 +198,7 @@ export function ItemDetailCategoryInfoView({
       ) : null}
 
       {payload.synopsis ? (
-        <p className="mt-4 text-sm leading-6 text-ink/90">{payload.synopsis}</p>
+        <p className="mt-4 break-words text-sm leading-6 text-ink/90">{payload.synopsis}</p>
       ) : null}
 
       <div className="mt-4 border-t border-line pt-4">
@@ -201,7 +207,7 @@ export function ItemDetailCategoryInfoView({
         </h3>
         <ul className="mt-2 space-y-2">
           {payload.links.map((link) => (
-            <li key={link.href} className="text-sm">
+            <li key={link.href} className="break-words text-sm">
               <a
                 href={link.href}
                 target="_blank"
@@ -219,7 +225,7 @@ export function ItemDetailCategoryInfoView({
       </div>
 
       {payload.notice ? (
-        <p className="mt-4 rounded-lg bg-board px-3 py-2 text-[11px] leading-5 text-muted">
+        <p className="mt-4 break-words rounded-lg bg-board px-3 py-2 text-[11px] leading-5 text-muted">
           주의: {payload.notice}
         </p>
       ) : null}

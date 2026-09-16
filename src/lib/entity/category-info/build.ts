@@ -29,7 +29,11 @@ function nonemptyRows(rows: CategoryInfoRow[]): CategoryInfoRow[] {
     if (!row.value.trim()) continue;
     if (seen.has(row.label)) continue;
     seen.add(row.label);
-    out.push(row);
+    const multiline = Boolean(row.multiline || row.value.includes("\n"));
+    const max = multiline ? 720 : 320;
+    const value =
+      row.value.length > max ? `${row.value.slice(0, max - 1).trimEnd()}…` : row.value;
+    out.push({ ...row, value, multiline: multiline || undefined });
   }
   return out;
 }

@@ -59,6 +59,8 @@ export type CategoryInfoRow = {
   value: string;
   href?: string;
   emphasize?: boolean;
+  /** Render value with newlines / bullet lists (gov subsidy etc.). */
+  multiline?: boolean;
 };
 
 export type CategoryInfoChipGroup = {

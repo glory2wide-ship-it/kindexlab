@@ -3,6 +3,7 @@ import { JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import { GlobalDesktopCategorySectionBar } from "@/components/layout/GlobalDesktopCategorySectionBar";
 import { GlobalStickyMobileCategoryBar } from "@/components/layout/GlobalStickyMobileCategoryBar";
+import { MobileCategorySwipeNav } from "@/components/layout/MobileCategorySwipeNav";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { ActiveChannelProvider } from "@/components/providers/ActiveChannelProvider";
@@ -163,6 +164,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <TrafficBeacon />
             <SiteHeader />
             <GlobalStickyMobileCategoryBar />
+            <MobileCategorySwipeNav />
             <GlobalDesktopCategorySectionBar />
             <main className="mx-auto w-full max-w-[72rem] px-4 py-4 max-md:pt-3">{children}</main>
             <SiteFooter />

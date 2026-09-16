@@ -499,3 +499,37 @@ nav[aria-label$="서브 메뉴"] {
     padding-bottom: 7.2px !important;
   }
 }
+
+/* Detail page: enlarge copy 10% (Tailwind rem utilities ignore parent font-size). */
+.detail-copy-110 {
+  zoom: 1.1;
+}
+
+@media (min-width: 768px) {
+  .detail-copy-110-desktop {
+    zoom: 1.1;
+  }
+}
+
+/* Category-info fact table: keep cell text inside the grid. */
+.category-info-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.category-info-table th,
+.category-info-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 0;
+  vertical-align: top;
+}
+
+.category-info-table th[scope="row"] {
+  width: 28%;
+  white-space: normal;
+}
+
+.category-info-table td {
+  width: 72%;
+}

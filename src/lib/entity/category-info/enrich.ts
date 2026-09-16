@@ -340,6 +340,69 @@ function mergeLinks(primary: CategoryInfoLink[], secondary: CategoryInfoLink[]):
   return out;
 }
 
+/** Split grant eligibility/prep into numbered lines; drop mid-clause truncations. */
+function formatGrantList(...parts: Array<string | undefined>): string | undefined {
+  const chunks = parts
+    .map((part) => plain(part))
+    .filter((part): part is string => Boolean(part));
+  if (!chunks.length) return undefined;
+
+  const items: string[] = [];
+  for (const chunk of chunks) {
+    const pieces = chunk
+      .split(/(?:\r?\n+|;\s*|·\s*|(?<=[.。])\s+(?=[가-힣A-Za-z0-9])|\/\s+(?=[가-힣]))/)
+      .map((piece) => piece.replace(/^[\s\-•·\*◦○●\d.)]+/, "").trim())
+      .filter((piece) => piece.length >= 2);
+    if (pieces.length > 1) items.push(...pieces);
+    else items.push(chunk);
+  }
+
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    const cleaned = item
+      .replace(/\s+/g, " ")
+      .replace(/(?:및|와|과|또는|등)\s*$/u, "")
+      .trim();
+    if (cleaned.length < 4) continue;
+    if (
+      cleaned.length < 12 &&
+      !/[.。!?)]$/.test(cleaned) &&
+      /(?:의|을|를|이|가|은|는)$/u.test(cleaned)
+    ) {
+      continue;
+    }
+    const key = cleaned.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(cleaned);
+    if (unique.length >= 8) break;
+  }
+  if (!unique.length) return chunks.join(" · ").slice(0, 280);
+  if (unique.length === 1) return unique[0];
+  return unique.map((item, index) => `${index + 1}. ${item}`).join("\n");
+}
+
+/** Soft cap so table cells never push past the card on narrow viewports. */
+function clampCellValue(value: string, multiline = false): string {
+  const trimmed = value.replace(/\u00a0/g, " ").trim();
+  if (!trimmed) return trimmed;
+  const max = multiline ? 720 : 320;
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max - 1).trimEnd()}…`;
+}
+
+function containRows(rows: CategoryInfoRow[]): CategoryInfoRow[] {
+  return rows.map((row) => {
+    const multiline = Boolean(row.multiline || row.value.includes("\n"));
+    return {
+      ...row,
+      multiline: multiline || undefined,
+      value: clampCellValue(row.value, multiline),
+    };
+  });
+}
+
 function applyGrantRecord(
   rows: CategoryInfoRow[],
   grant: PublicGrantRecord,
@@ -353,21 +416,27 @@ function applyGrantRecord(
   if (grant.deadline) {
     next = fillUpdatingRows(next, [{ label: "신청 기간", value: grant.deadline }]);
   }
-  if (grant.target || grant.criteria) {
-    next = fillUpdatingRows(next, [
-      {
-        label: /신청 자격|자격·조건/,
-        value: [grant.target, grant.criteria].filter(Boolean).join(" · ").slice(0, 160),
-      },
-    ]);
+  const eligibility = formatGrantList(grant.target, grant.criteria);
+  if (eligibility) {
+    next = next.map((row) =>
+      /신청 자격|자격·조건/.test(row.label) && isUpdating(row.value)
+        ? { ...row, value: eligibility, multiline: true }
+        : row,
+    );
+    if (!next.some((row) => /신청 자격|자격·조건/.test(row.label))) {
+      next = [{ label: "신청 자격·조건", value: eligibility, multiline: true }, ...next];
+    }
   }
-  if (grant.documents || grant.howToApply) {
-    next = fillUpdatingRows(next, [
-      {
-        label: "준비사항",
-        value: [grant.documents, grant.howToApply].filter(Boolean).join(" · ").slice(0, 160),
-      },
-    ]);
+  const prep = formatGrantList(grant.documents, grant.howToApply);
+  if (prep) {
+    next = next.map((row) =>
+      row.label === "준비사항" && isUpdating(row.value)
+        ? { ...row, value: prep, multiline: true }
+        : row,
+    );
+    if (!next.some((row) => row.label === "준비사항")) {
+      next = [...next, { label: "준비사항", value: prep, multiline: true }];
+    }
   }
   if (grant.url) {
     next = next.map((row) =>
@@ -385,7 +454,7 @@ function applyGrantRecord(
 
 /**
  * Live crawl enrichment for ItemDetailCategoryInfo.
- * Uses news retrieval + Naver web/blog Open API (+ Melon / YouTube / ticket·bookstore crawls)
+ * Uses news retrieval + Naver web/blog crawl→Open API fallback (+ Melon / YouTube / ticket·bookstore crawls)
  * and data.go.kr (보조금24·복지로·국토부 실거래) when DATA_GO_KR_SERVICE_KEY is set.
  * Never throws — returns the base payload on soft failures.
  */
@@ -952,7 +1021,7 @@ export async function enrichCategoryInfoPayload(
 
   return {
     ...base,
-    rows: dedupeRows(rows),
+    rows: containRows(dedupeRows(rows)),
     chips: dedupeChips(chips.filter((chip) => chip.items.length > 0)),
     synopsis,
     statusMessage,

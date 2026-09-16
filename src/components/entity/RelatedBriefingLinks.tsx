@@ -16,7 +16,7 @@ export async function RelatedBriefingLinks({ entity }: { entity: RankingEntity }
   const hubLabel = channelBriefingHubLabel(entity);
 
   return (
-    <section className="space-y-3 rounded-2xl border border-line bg-panel px-4 py-4">
+    <section className="detail-copy-110 space-y-3 rounded-2xl border border-line bg-panel px-4 py-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <h2 className="text-lg font-semibold">관련 투데이 브리핑</h2>
         <Link href={hubHref} className="text-xs font-medium text-accent hover:underline">

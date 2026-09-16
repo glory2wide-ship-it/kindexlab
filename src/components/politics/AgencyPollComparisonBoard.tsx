@@ -17,7 +17,7 @@ export function AgencyPollComparisonBoard({ snapshot }: { snapshot: PollBoardSna
         : "대통령 지지도 기관 비교";
 
   return (
-    <section id="agency-poll-board" className="index-gothic scroll-mt-36 space-y-3 font-sans">
+    <section id="agency-poll-board" className="detail-copy-110 index-gothic scroll-mt-36 space-y-3 font-sans">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold tracking-tight">{title}</h2>

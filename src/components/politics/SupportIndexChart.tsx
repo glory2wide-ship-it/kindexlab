@@ -90,7 +90,7 @@ export function SupportIndexChart({
       : "정치인 지지도";
 
   return (
-    <section className="space-y-4">
+    <section className="detail-copy-110 space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold tracking-tight">{title}</h2>

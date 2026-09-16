@@ -1,3 +1,4 @@
+import { crawlNaverWebSearch } from "@/lib/context/crawl-naver-search";
 import { fetchJson } from "@/lib/ingestion/http";
 import { decodeHtml, stripTags } from "@/lib/ingestion/parse";
 import type { ContextSource } from "@/lib/context/types";
@@ -69,18 +70,18 @@ async function searchNaver(
   }
 }
 
-/**
- * Tier 2 — Naver blog + web document search when news RSS is thin.
- * Blog posts are intentional UGC sources for Korean lifestyle/policy keywords.
- */
-export async function fetchNaverWebFallback(
+async function searchNaverOpenApi(
   keyword: string,
-  limit = 5,
+  limit: number,
   options?: { preferBlog?: boolean; preferOfficial?: boolean },
 ): Promise<ContextSource[]> {
   const preferBlog = Boolean(options?.preferBlog);
   const preferOfficial = Boolean(options?.preferOfficial);
-  const blogLimit = preferBlog ? Math.max(limit - 1, Math.ceil(limit * 0.75)) : preferOfficial ? 1 : Math.ceil(limit / 2);
+  const blogLimit = preferBlog
+    ? Math.max(limit - 1, Math.ceil(limit * 0.75))
+    : preferOfficial
+      ? 1
+      : Math.ceil(limit / 2);
   const webLimit = Math.max(1, limit - blogLimit);
   const [blogs, web] = await Promise.all([
     preferOfficial && !preferBlog
@@ -88,7 +89,11 @@ export async function fetchNaverWebFallback(
       : searchNaver("blog", keyword, blogLimit, "네이버 블로그"),
     searchNaver("webkr", keyword, preferOfficial ? limit : webLimit, "네이버 웹문서"),
   ]);
-  const ordered = preferBlog ? [...blogs, ...web] : preferOfficial ? [...web, ...blogs] : [...blogs, ...web];
+  const ordered = preferBlog
+    ? [...blogs, ...web]
+    : preferOfficial
+      ? [...web, ...blogs]
+      : [...blogs, ...web];
   const merged: ContextSource[] = [];
   const seen = new Set<string>();
   for (const source of ordered) {
@@ -105,7 +110,7 @@ export async function fetchNaverWebFallback(
       if (
         merged.length < Math.ceil(limit / 2) &&
         host &&
-        !/\.go\.kr|\.or\.kr|\.korea\.kr|visitkorea|tour\.go\.kr/.test(host) &&
+        !/\.go\.kr|\.or\.kr|\.korea\.kr|visitkorea|seoul\.go\.kr/.test(host) &&
         /blog\.naver|tistory|post\.naver/.test(host)
       ) {
         continue;
@@ -116,4 +121,38 @@ export async function fetchNaverWebFallback(
     if (merged.length >= limit) break;
   }
   return merged;
+}
+
+function mergeUnique(primary: ContextSource[], secondary: ContextSource[], limit: number): ContextSource[] {
+  const merged: ContextSource[] = [];
+  const seen = new Set<string>();
+  for (const source of [...primary, ...secondary]) {
+    if (seen.has(source.url)) continue;
+    seen.add(source.url);
+    merged.push(source);
+    if (merged.length >= limit) break;
+  }
+  return merged;
+}
+
+/**
+ * Tiered Naver web/blog collection:
+ * 1차 HTML crawl of search.naver.com (blog + webkr)
+ * 2차 Open API only when crawl is empty or thinner than half the requested limit
+ *
+ * Blog posts are intentional UGC sources for Korean lifestyle/policy keywords.
+ */
+export async function fetchNaverWebFallback(
+  keyword: string,
+  limit = 5,
+  options?: { preferBlog?: boolean; preferOfficial?: boolean },
+): Promise<ContextSource[]> {
+  const crawled = await crawlNaverWebSearch(keyword, limit, options);
+  if (crawled.length >= Math.max(2, Math.ceil(limit / 2))) {
+    return crawled.slice(0, limit);
+  }
+
+  const api = await searchNaverOpenApi(keyword, limit, options);
+  if (!crawled.length) return api;
+  return mergeUnique(crawled, api, limit);
 }
