@@ -10,9 +10,15 @@ import { PollDeskSection } from "@/components/politics/PollDeskSection";
 import { SupportIndexChart } from "@/components/politics/SupportIndexChart";
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
 import { isGeminiAnalysis } from "@/lib/analysis/quality";
+import { readAnalysis } from "@/lib/analysis/store";
 import { getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
 import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
-import { formatRate } from "@/lib/format";
+import {
+  breadcrumbJsonLd,
+  entitySeoDescription,
+  entitySeoTitle,
+  isIndexableEntityPage,
+} from "@/lib/seo/indexable-entity";
 import { SITE } from "@/lib/site";
 import { decodeRouteSlug, politicsDetailPath, rankingPath } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
@@ -60,14 +66,20 @@ export async function generateMetadata({
   const query = searchParams ? await searchParams : {};
   const entity = await loadEntity(id, typeof query.name === "string" ? query.name : undefined);
   if (!entity) return { title: "종목을 찾을 수 없습니다" };
+  const analysis = await readAnalysis(entity.slug);
+  const indexable = isIndexableEntityPage(entity, analysis);
+  const title = entitySeoTitle(entity);
+  const description = entitySeoDescription(entity);
   return {
-    title: `${entity.name} 지지도 · ${formatRate(entity.fluctuationRate)}`,
-    description: entity.summary,
+    title,
+    description,
     alternates: { canonical: politicsDetailPath(entity.slug) },
-    robots: { index: false, follow: true },
+    robots: { index: indexable, follow: true },
     openGraph: {
-      title: `${entity.name} 지지도 상세`,
-      description: entity.summary,
+      title,
+      description,
+      url: `${SITE.url}${politicsDetailPath(entity.slug)}`,
+      type: "article",
     },
   };
 }
@@ -98,9 +110,18 @@ export default async function PoliticsSupportDetailPage({
 
   const initialTimeframe = parseTimeframeParam(query.tf) ?? "5m";
   const kind = entity.type === "party_support" ? "party" : "politician";
+  const crumbs = breadcrumbJsonLd([
+    { name: "KinDex", url: SITE.url },
+    { name: "정치", url: `${SITE.url}/politics` },
+    { name: entity.name, url: `${SITE.url}${politicsDetailPath(entity.slug)}` },
+  ]);
 
   return (
     <div className="space-y-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(crumbs) }}
+      />
       <p className="text-sm text-muted">
         <Link href="/politics" className="hover:text-ink">
           정치 지수(INDEX)

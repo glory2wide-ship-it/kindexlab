@@ -13,6 +13,7 @@ import { SupportIndexChart } from "@/components/politics/SupportIndexChart";
 import { SetActiveChannel } from "@/components/providers/ActiveChannelProvider";
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
 import { isGeminiAnalysis } from "@/lib/analysis/quality";
+import { readAnalysis } from "@/lib/analysis/store";
 import { getAllSlugs, getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
 import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import { formatRate } from "@/lib/format";
@@ -22,7 +23,13 @@ import {
 } from "@/lib/market/kospi-quotes";
 import { resolveMarketChartInstrument } from "@/lib/market/naver-chart";
 import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
-import { channelFromLead } from "@/lib/posts/channels";
+import { channelFromLead, getPostChannel } from "@/lib/posts/channels";
+import {
+  breadcrumbJsonLd,
+  entitySeoDescription,
+  entitySeoTitle,
+  isIndexableEntityPage,
+} from "@/lib/seo/indexable-entity";
 import { SITE } from "@/lib/site";
 import { rankingPath, rankingUrl } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
@@ -93,18 +100,24 @@ export async function generateMetadata({
   const rate = isNaverStockMeasurement(entity.measurement)
     ? entity.measurement.changeRate
     : entity.fluctuationRate;
+  const analysis = await readAnalysis(entity.slug);
+  const indexable = isIndexableEntityPage(entity, analysis);
+  const title = isNaverStockMeasurement(entity.measurement)
+    ? `${entity.name} 시세 · ${formatRate(rate)}`
+    : entitySeoTitle(entity);
+  const description = isNaverStockMeasurement(entity.measurement)
+    ? `${entity.name} 시세와 차트.`
+    : entitySeoDescription(entity);
   return {
-    title: `${entity.name} · ${formatRate(rate)}`,
-    description: isNaverStockMeasurement(entity.measurement)
-      ? `${entity.name} 시세와 차트.`
-      : entity.summary,
+    title,
+    description,
     alternates: { canonical: rankingPath(entity.slug) },
-    robots: { index: false, follow: true },
+    robots: { index: indexable, follow: true },
     openGraph: {
-      title: isNaverStockMeasurement(entity.measurement)
-        ? `${entity.name} 시세`
-        : `${entity.name} 버즈 시세`,
-      description: entity.summary,
+      title,
+      description,
+      url: rankingUrl(SITE.url, entity.slug),
+      type: "article",
     },
   };
 }
@@ -128,29 +141,45 @@ export default async function RankingDetailPage({
     marketInstrument && (isNaverStockMeasurement(entity.measurement) || hydrateQuote),
   );
 
+  const channelId = entity.sourceChannel ?? channelFromLead(entity, entity.slug);
+  const channelMeta = getPostChannel(channelId);
+  const pageName = isMarketQuote ? `${entity.name} 시세` : entitySeoTitle(entity);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: isMarketQuote ? `${entity.name} 시세` : `${entity.name} 버즈 시세`,
+    name: pageName,
     url: rankingUrl(SITE.url, entity.slug),
-    description: entity.summary,
+    description: entitySeoDescription(entity),
     mainEntity: {
       "@type": schemaType(entity.type),
       name: entity.name,
       alternateName: entity.nameEn,
     },
   };
+  const crumbs = breadcrumbJsonLd([
+    { name: "KinDex", url: SITE.url },
+    { name: channelMeta.label, url: `${SITE.url}${channelMeta.href}` },
+    { name: entity.name, url: rankingUrl(SITE.url, entity.slug) },
+  ]);
 
   return (
     <div className="space-y-8">
-      <SetActiveChannel channel={entity.sourceChannel ?? channelFromLead(entity, entity.slug)} />
+      <SetActiveChannel channel={channelId} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(crumbs) }}
+      />
       <p className="text-sm text-muted">
         <Link href="/" className="hover:text-ink">
           지수(INDEX)
+        </Link>
+        <span className="mx-2">/</span>
+        <Link href={channelMeta.href} className="hover:text-ink">
+          {channelMeta.label}
         </Link>
         <span className="mx-2">/</span>
         {entity.name}

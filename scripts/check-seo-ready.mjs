@@ -91,6 +91,33 @@ async function main() {
   console.log(`  google-site-verification: ${home?.hasGoogleVerify ? "present" : "missing (set GOOGLE_SITE_VERIFICATION)"}`);
   console.log(`  naver-site-verification:  ${home?.hasNaverVerify ? "present" : "missing (set NAVER_SITE_VERIFICATION)"}`);
 
+  // Sitemap / robots sanity (live XML).
+  try {
+    const [sitemapRes, robotsRes] = await Promise.all([
+      fetch(`${base}/sitemap.xml`, { redirect: "follow" }),
+      fetch(`${base}/robots.txt`, { redirect: "follow" }),
+    ]);
+    const sitemapXml = await sitemapRes.text();
+    const robotsTxt = await robotsRes.text();
+    const urlCount = (sitemapXml.match(/<url>/g) || []).length;
+    const hasBoard = /\/board\//.test(sitemapXml);
+    const hasSearchDisallow = /Disallow:\s*\/search/i.test(robotsTxt);
+    console.log("\nCrawl endpoints:");
+    console.log(`  sitemap urls≈${urlCount}  board hubs=${hasBoard ? "yes" : "no"}`);
+    console.log(`  robots disallow /search: ${hasSearchDisallow ? "yes" : "no"}`);
+    if (sitemapRes.status !== 200 || urlCount < 30) {
+      console.error("Sitemap looks too thin or unreachable.");
+      failed = true;
+    }
+    if (!hasSearchDisallow) {
+      console.error("robots.txt should disallow /search.");
+      failed = true;
+    }
+  } catch (error) {
+    console.error("Sitemap/robots probe failed:", error);
+    failed = true;
+  }
+
   if (failed) {
     console.error("\nSEO readiness check failed.");
     process.exit(1);

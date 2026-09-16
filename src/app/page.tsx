@@ -11,7 +11,7 @@ import { loadFeaturedBriefings } from "@/lib/briefing/featured";
 import { loadUnifiedMarket } from "@/lib/boards/composite-desk";
 import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import { SITE, SITE_INDEX_HEADLINE, SITE_LANDING_HEADLINE } from "@/lib/site";
-import { rankingUrl } from "@/lib/slugs";
+import { breadcrumbJsonLd } from "@/lib/seo/indexable-entity";
 
 /**
  * Served from the ISR cache, rebuilt every 5 minutes.
@@ -65,26 +65,33 @@ async function HomeHeatmapSection() {
   const unified = await loadUnifiedMarket();
   const updatedAt = new Date().toISOString();
 
+  // Point ItemList at indexable category hubs — not /ranking/* detail URLs that
+  // may still be noindex when analysis quality is thin.
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: TITLE,
     description: DESCRIPTION,
     itemListOrder: "https://schema.org/ItemListOrderAscending",
-    numberOfItems: unified.items.length,
-    itemListElement: unified.items.map((item, index) => ({
+    numberOfItems: unified.desks.length,
+    itemListElement: unified.desks.map((desk, index) => ({
       "@type": "ListItem",
       position: index + 1,
-      url: rankingUrl(SITE.url, item.slug),
-      name: item.name,
+      url: `${SITE.url}${desk.href}`,
+      name: desk.label,
     })),
   };
+  const crumbs = breadcrumbJsonLd([{ name: "KinDex", url: SITE.url }]);
 
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(crumbs) }}
       />
       <UnifiedMarketBoard
         items={unified.items}

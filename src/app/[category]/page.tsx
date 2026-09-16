@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChannelBoardPageBody } from "@/components/dashboard/ChannelBoardPageBody";
 import { getPostChannel, isPostChannel, LIVE_INDEX_LABEL } from "@/lib/posts/channels";
+import { SITE } from "@/lib/site";
 
 /** ISR: matches the 3-minute live board refresh cadence. */
 export const revalidate = 300;
@@ -15,9 +16,14 @@ export async function generateMetadata({
   if (!isPostChannel(category)) return { title: LIVE_INDEX_LABEL };
   const meta = getPostChannel(category);
   return {
-    title: `${meta.label} ${LIVE_INDEX_LABEL}`,
-    description: `${meta.indexTitle}와 종합 브리핑, 투데이 인사이트를 한 페이지에서 봅니다. ${meta.description}`,
+    title: `${meta.label} 실시간 화제성 랭킹·지수`,
+    description: `${meta.label} 카테고리의 실시간 히트맵·하위 보드 랭킹과 투데이 브리핑을 KinDex에서 확인하세요. ${meta.description}`,
     alternates: { canonical: meta.href },
+    openGraph: {
+      title: `${meta.label} 실시간 화제성 랭킹·지수`,
+      description: meta.description,
+      url: `${SITE.url}${meta.href}`,
+    },
   };
 }
 

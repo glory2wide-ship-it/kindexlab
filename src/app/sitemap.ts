@@ -1,6 +1,8 @@
 import { listAnalysis } from "@/lib/analysis/store";
 import { getAllBriefingSlugs, listEditionDates } from "@/lib/api";
+import { BOARDS, boardPath, menuBoardsForChannel } from "@/lib/boards/registry";
 import { CHANNEL_SECTIONS, channelSectionHref, POST_CHANNELS } from "@/lib/posts/channels";
+import { entityNameLooksIndexable } from "@/lib/seo/indexable-entity";
 import { SITE } from "@/lib/site";
 import { decodeRouteSlug, rankingUrl } from "@/lib/slugs";
 import type { MetadataRoute } from "next";
@@ -32,23 +34,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   /**
-   * Ranking detail URLs, restricted to columns the chain grounded in reporting.
-   *
-   * Every live heatmap entity used to be listed here, which advertised a few
-   * hundred URLs whose 오늘의 분석 block is the deterministic template — one
-   * skeleton with the keyword swapped in. Submitting those in bulk is what a
-   * crawler reads as scaled low-value content, so the sitemap now carries only
-   * what `robots` on the detail page is willing to let be indexed. The set
-   * refills on its own as the pipeline grounds more keywords.
+   * Ranking detail URLs — only chain-grounded analyses whose keyword passes the
+   * indexability name gate. Sitemap comments historically claimed robots would
+   * allow these; meta robots now matches that policy (see isIndexableEntityPage).
    */
   const rankingEntries = new Map<string, { lastModified: Date; priority: number }>();
   for (const entry of analyses) {
     if (entry.provenance?.kind !== "chain") continue;
+    const keyword = (entry.keyword || "").trim();
+    if (!entityNameLooksIndexable(keyword)) continue;
     rankingEntries.set(decodeRouteSlug(entry.slug), {
       lastModified: toDate(entry.generatedAt ?? entry.article?.publishedAt, now),
-      priority: 0.9,
+      priority: 0.85,
     });
   }
+
+  /** Stable board hubs — clearer intent than thin entity scraps. */
+  const boardEntries = BOARDS.filter((board) =>
+    menuBoardsForChannel(board.channel).some((item) => item.slug === board.slug),
+  ).map((board) => ({
+    url: `${SITE.url}${boardPath(board.slug)}`,
+    lastModified: now,
+    changeFrequency: "hourly" as const,
+    priority: 0.88,
+  }));
+
   return [
     { url: SITE.url, lastModified: now, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE.url}/briefing`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
@@ -57,9 +67,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         url: `${SITE.url}${channelSectionHref(channel.id, section.id)}`,
         lastModified: now,
         changeFrequency: "hourly" as const,
-        priority: section.id === "board" ? 0.9 : 0.8,
+        priority: section.id === "board" ? 0.95 : 0.8,
       })),
     ),
+    ...boardEntries,
     {
       url: `${SITE.url}/briefing/archive`,
       lastModified: now,
