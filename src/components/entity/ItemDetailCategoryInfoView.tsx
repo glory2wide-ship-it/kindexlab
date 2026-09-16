@@ -1,4 +1,4 @@
-import type { CategoryInfoPayload } from "@/lib/entity/category-info/types";
+import type { CategoryInfoPayload, CategoryInfoSparkline } from "@/lib/entity/category-info/types";
 
 function formatUpdatedAt(iso: string): string {
   const date = new Date(iso);
@@ -11,6 +11,65 @@ function formatUpdatedAt(iso: string): string {
     minute: "2-digit",
     hour12: false,
   }).format(date);
+}
+
+function formatSparkValue(value: number): string {
+  if (value >= 10_000) {
+    const eok = value / 10_000;
+    return `${eok % 1 === 0 ? eok.toFixed(0) : eok.toFixed(1)}억`;
+  }
+  return `${Math.round(value).toLocaleString("ko-KR")}만`;
+}
+
+function CategoryInfoSparklineChart({ sparkline }: { sparkline: CategoryInfoSparkline }) {
+  const values = sparkline.points.map((p) => p.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = Math.max(max - min, 1);
+  const w = 280;
+  const h = 56;
+  const pad = 4;
+  const coords = sparkline.points.map((point, index) => {
+    const x =
+      sparkline.points.length === 1
+        ? w / 2
+        : pad + (index / (sparkline.points.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((point.value - min) / span) * (h - pad * 2);
+    return `${x},${y}`;
+  });
+  const polyline = coords.join(" ");
+
+  return (
+    <div className="mt-4 rounded-xl border border-line bg-board/50 px-3 py-3">
+      <p className="text-[11px] font-semibold tracking-wide text-soft">{sparkline.title}</p>
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="mt-2 h-14 w-full text-accent"
+        role="img"
+        aria-label={sparkline.title}
+      >
+        <polyline
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          points={polyline}
+        />
+        {sparkline.points.map((point, index) => {
+          const [x, y] = coords[index]!.split(",").map(Number);
+          return <circle key={point.label} cx={x} cy={y} r="2.5" fill="currentColor" />;
+        })}
+      </svg>
+      <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-muted">
+        {sparkline.points.map((point) => (
+          <li key={point.label}>
+            {point.label} {formatSparkValue(point.value)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 /**
@@ -127,6 +186,10 @@ export function ItemDetailCategoryInfoView({
           </ul>
         </div>
       ))}
+
+      {payload.sparkline && payload.sparkline.points.length >= 2 ? (
+        <CategoryInfoSparklineChart sparkline={payload.sparkline} />
+      ) : null}
 
       {payload.synopsis ? (
         <p className="mt-4 text-sm leading-6 text-ink/90">{payload.synopsis}</p>

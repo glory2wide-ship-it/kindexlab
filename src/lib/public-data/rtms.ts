@@ -100,6 +100,21 @@ export async function fetchAptRents(
     .filter((row): row is AptRentDeal => Boolean(row));
 }
 
+export function filterAptDeals<T extends { aptName: string }>(
+  deals: T[],
+  aptHint?: string,
+): T[] {
+  if (!aptHint) return deals;
+  const hint = aptHint.replace(/\s+/g, "");
+  if (!hint) return deals;
+  return deals.filter((d) => {
+    const apt = d.aptName.replace(/\s+/g, "");
+    if (!apt) return false;
+    if (apt === hint || apt.includes(hint)) return true;
+    return apt.length >= 4 && hint.includes(apt);
+  });
+}
+
 export function formatManwon(amount: number): string {
   if (amount >= 10_000) {
     const eok = Math.floor(amount / 10_000);
@@ -109,17 +124,65 @@ export function formatManwon(amount: number): string {
   return `${amount.toLocaleString("ko-KR")}만원`;
 }
 
+/** 전용㎡ → 대략 평 (1평 ≈ 3.3058㎡). */
+export function areaToPyeong(areaM2: number): number {
+  return areaM2 / 3.3058;
+}
+
+export function pyeongBandLabel(pyeong: number): string {
+  const band = Math.floor(pyeong / 10) * 10;
+  if (band < 10) return "10평 미만";
+  return `${band}평대`;
+}
+
+/** Mid trade price per pyeong band for the last ~2 months of deals. */
+export function summarizeTradesByPyeong(
+  deals: AptTradeDeal[],
+  aptHint?: string,
+): string | undefined {
+  const filtered = filterAptDeals(deals, aptHint).filter((d) => d.areaM2 && d.areaM2 > 0);
+  if (!filtered.length) return undefined;
+  const bands = new Map<string, number[]>();
+  for (const deal of filtered) {
+    const band = pyeongBandLabel(areaToPyeong(deal.areaM2!));
+    const list = bands.get(band) ?? [];
+    list.push(deal.amountManwon);
+    bands.set(band, list);
+  }
+  const parts = [...bands.entries()]
+    .map(([band, amounts]) => {
+      const sorted = [...amounts].sort((a, b) => a - b);
+      const mid = sorted[Math.floor(sorted.length / 2)]!;
+      return { band, mid, n: amounts.length, order: Number(band.replace(/\D/g, "")) || 0 };
+    })
+    .sort((a, b) => a.order - b.order)
+    .slice(0, 5)
+    .map((row) => `${row.band} 중위 ${formatManwon(row.mid)}(${row.n}건)`);
+  return parts.length ? parts.join(" · ") : undefined;
+}
+
+export function monthlyTradeMids(
+  deals: AptTradeDeal[],
+  aptHint?: string,
+): Array<{ label: string; value: number }> {
+  const filtered = filterAptDeals(deals, aptHint);
+  const byMonth = new Map<string, number[]>();
+  for (const deal of filtered) {
+    const label = `${deal.dealYear}.${String(deal.dealMonth).padStart(2, "0")}`;
+    const list = byMonth.get(label) ?? [];
+    list.push(deal.amountManwon);
+    byMonth.set(label, list);
+  }
+  return [...byMonth.entries()]
+    .map(([label, amounts]) => {
+      const sorted = [...amounts].sort((a, b) => a - b);
+      return { label, value: sorted[Math.floor(sorted.length / 2)]! };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export function summarizeTrades(deals: AptTradeDeal[], aptHint?: string): string | undefined {
-  const filtered = aptHint
-    ? deals.filter((d) => {
-        const apt = d.aptName.replace(/\s+/g, "");
-        const hint = aptHint.replace(/\s+/g, "");
-        if (!apt || !hint) return false;
-        if (apt === hint || apt.includes(hint)) return true;
-        // Avoid short-token false positives (e.g. "대치" inside a long complex name).
-        return apt.length >= 4 && hint.includes(apt);
-      })
-    : deals;
+  const filtered = filterAptDeals(deals, aptHint);
   if (!filtered.length) return undefined;
   const amounts = filtered.map((d) => d.amountManwon).sort((a, b) => a - b);
   const mid = amounts[Math.floor(amounts.length / 2)]!;
@@ -134,16 +197,7 @@ export function summarizeTrades(deals: AptTradeDeal[], aptHint?: string): string
 }
 
 export function summarizeRents(deals: AptRentDeal[], aptHint?: string): string | undefined {
-  const filtered = aptHint
-    ? deals.filter((d) => {
-        const apt = d.aptName.replace(/\s+/g, "");
-        const hint = aptHint.replace(/\s+/g, "");
-        if (!apt || !hint) return false;
-        if (apt === hint || apt.includes(hint)) return true;
-        // Avoid short-token false positives (e.g. "대치" inside a long complex name).
-        return apt.length >= 4 && hint.includes(apt);
-      })
-    : deals;
+  const filtered = filterAptDeals(deals, aptHint);
   if (!filtered.length) return undefined;
   const jeonse = filtered.filter((d) => d.monthlyRentManwon === 0);
   const monthly = filtered.filter((d) => d.monthlyRentManwon > 0);

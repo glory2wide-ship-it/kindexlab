@@ -147,18 +147,11 @@ function musicChartRows(entity: RankingEntity): CategoryInfoRow[] {
   rows.push({
     label: "멜론 차트",
     value: UPDATING,
-  });
-  rows.push({
-    label: "지니 차트",
-    value: UPDATING,
-  });
-  rows.push({
-    label: "애플 뮤직",
-    value: UPDATING,
+    emphasize: true,
   });
   rows.push({
     label: "출처",
-    value: "차트 순위는 각 플랫폼 공개 차트를 기준으로 수집·표시합니다.",
+    value: "음원 상세는 멜론 공개 차트를 우선 수집·표시합니다.",
   });
   return rows;
 }
@@ -166,16 +159,16 @@ function musicChartRows(entity: RankingEntity): CategoryInfoRow[] {
 function housingRows(entity: RankingEntity): CategoryInfoRow[] {
   return [
     { label: "단지/지역", value: entity.name, emphasize: true },
-    { label: "최근 2개월 실거래가(평수별)", value: UPDATING },
+    { label: "최근 2개월 실거래가(평수별)", value: UPDATING, emphasize: true },
     { label: "신규 분양가(평수별)", value: UPDATING },
     {
       label: "매매·전세·월세 추이",
-      value: "최근 1개월~10년 가격 변동 그래프는 준비 중입니다.",
+      value: UPDATING,
     },
     {
-      label: "수집 계획",
-      value:
-        "국토교통부 아파트 매매·전월세 실거래가 OpenAPI(data.go.kr) 연동 · 네이버페이 부동산은 보조 참고",
+      label: "네이버페이 부동산",
+      value: "검색으로 이동",
+      href: `https://new.land.naver.com/search?ms=37.5665,126.9780,12&a=APT:ABYG:JGC&e=RETAIL&article=false&keyword=${encodeURIComponent(entity.name)}`,
     },
   ];
 }
@@ -257,7 +250,6 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
     case "performance":
     case "exhibition":
     case "book":
-    case "food":
     case "weekend_outing":
     case "youtuber":
     case "politics_youtube": {
@@ -265,6 +257,16 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
       chips = nonemptyChips([...entertainment.chips, ...detail.chips]);
       synopsis = entertainment.synopsis || detail.synopsis;
       notice = detail.notice;
+      links = detail.links;
+      break;
+    }
+    case "food": {
+      rows = nonemptyRows([...entertainment.rows, ...detail.rows]);
+      chips = nonemptyChips([...entertainment.chips, ...detail.chips]);
+      synopsis = entertainment.synopsis || detail.synopsis;
+      notice =
+        detail.notice ||
+        "맛집 정보·영업시간은 변동될 수 있으며, 방문 전 공식 안내를 확인해 주세요. 광고·제휴 링크가 포함될 수 있습니다.";
       links = detail.links;
       break;
     }

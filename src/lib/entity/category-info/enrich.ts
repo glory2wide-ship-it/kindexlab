@@ -13,6 +13,7 @@ import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
 import { matchPublicGrant } from "@/lib/public-data/grants";
 import { summarizeHousingPublicData } from "@/lib/public-data/housing";
 import type { PublicGrantRecord } from "@/lib/public-data/types";
+import { lookupYoutubeChannelProfile } from "@/lib/public-data/youtube-channel";
 
 const UPDATING = "실시간 정보 업데이트 중";
 
@@ -105,6 +106,44 @@ function extractHousingSnippet(text: string): string | undefined {
     /((?:매매|전세|월세|분양)[^\n]{0,20}?(?:\d[\d,.]*)\s*(?:억|만원|만)[^\n]{0,30})/,
     /(실거래[^\n]{0,40}?(?:\d[\d,.]*)\s*(?:억|만원)[^\n]{0,20})/,
   ]);
+}
+
+function extractPlatform(text: string): string | undefined {
+  return firstMatch(text, [
+    /(?:연재|공개)\s*(?:플랫폼|처)?\s*[:\s]*(네이버웹툰|카카오웹툰|카카오페이지|레진코믹스|리디|다음웹툰)/,
+    /(네이버웹툰|카카오웹툰|카카오페이지|레진코믹스)/,
+  ]);
+}
+
+function extractAuthor(text: string, name: string): string | undefined {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return firstMatch(text, [
+    new RegExp(`${escaped}\\s*(?:작가|저자)?\\s*[:\\s]*([가-힣A-Za-z.\\s]{2,30})`),
+    /(?:작가|저자|지은이)\s*[:\s]*([가-힣A-Za-z.\s]{2,30})/,
+  ]);
+}
+
+function extractVenue(text: string): string | undefined {
+  return firstMatch(text, [
+    /(?:장소|개최\s*장소|전시장|공연장)\s*[:\s]*([가-힣A-Za-z0-9\s()]{2,40})/,
+    /([가-힣A-Za-z0-9]{2,20}(?:미술관|박물관|갤러리|아트센터|공연장|체육관|돔))/,
+  ]);
+}
+
+function extractFoodMeta(text: string): { address?: string; hours?: string; menu?: string } {
+  return {
+    address: firstMatch(text, [
+      /(?:주소|위치)\s*[:\s]*([가-힣A-Za-z0-9\s\-.]{6,60})/,
+      /(서울|경기|부산|대구|인천|광주|대전|울산|세종|강원|충북|충남|전북|전남|경북|경남|제주)[^\n]{4,50}/,
+    ]),
+    hours: firstMatch(text, [
+      /(?:영업\s*시간|운영\s*시간)\s*[:\s]*([^\n.]{4,40})/,
+      /(\d{1,2}\s*:\s*\d{2}\s*[~～-]\s*\d{1,2}\s*:\s*\d{2})/,
+    ]),
+    menu: firstMatch(text, [
+      /(?:대표\s*메뉴|추천\s*메뉴|시그니처)\s*[:\s]*([가-힣A-Za-z0-9\s,/·]{2,40})/,
+    ]),
+  };
 }
 
 function upsertRow(rows: CategoryInfoRow[], label: string, value: string, emphasize?: boolean): CategoryInfoRow[] {
@@ -356,20 +395,28 @@ export async function enrichCategoryInfoPayload(
     base.channel === "local_policy" ||
     base.channel === "startup";
   const wantsHousing = base.channel === "housing";
+  const wantsYoutube =
+    base.channel === "youtuber" || base.channel === "politics_youtube";
 
-  const [newsDocs, webDocs, publicGrant, housingPublic] = await Promise.all([
-    crawlNews(name),
-    crawlWeb(name, base.channel),
-    wantsGrant ? matchPublicGrant(name).catch(() => undefined) : Promise.resolve(undefined),
-    wantsHousing
-      ? summarizeHousingPublicData(name).catch(() => undefined)
-      : Promise.resolve(undefined),
-  ]);
+  const [newsDocs, webDocs, publicGrant, housingPublic, youtubeProfile] =
+    await Promise.all([
+      crawlNews(name),
+      crawlWeb(name, base.channel),
+      wantsGrant ? matchPublicGrant(name).catch(() => undefined) : Promise.resolve(undefined),
+      wantsHousing
+        ? summarizeHousingPublicData(name).catch(() => undefined)
+        : Promise.resolve(undefined),
+      wantsYoutube
+        ? lookupYoutubeChannelProfile(name).catch(() => undefined)
+        : Promise.resolve(undefined),
+    ]);
 
   const youtubeDocs =
-    base.channel === "youtuber" || base.channel === "politics_youtube"
+    wantsYoutube && !youtubeProfile?.recentVideoTitles.length
       ? await crawlYoutube(name)
-      : [];
+      : wantsYoutube
+        ? []
+        : [];
 
   const melonHits =
     base.channel === "music" || base.channel === "kpop" || base.channel === "trot"
@@ -393,6 +440,7 @@ export async function enrichCategoryInfoPayload(
   let synopsis = base.synopsis;
   let statusMessage = base.statusMessage;
   let sparse = base.sparse;
+  let sparkline = base.sparkline;
 
   const agency = extractAgency(corpus);
   const hitSongs = melonHits.length ? melonHits : extractHitSongs(corpus, name);
@@ -429,8 +477,7 @@ export async function enrichCategoryInfoPayload(
       break;
     }
     case "movie":
-    case "tv_ratings":
-    case "performance": {
+    case "tv_ratings": {
       if (cast.length) {
         const label = base.channel === "tv_ratings" ? "최근 출연자" : "출연";
         const existing = chips.find((chip) => /출연|캐스트|등장/.test(chip.label));
@@ -447,7 +494,29 @@ export async function enrichCategoryInfoPayload(
     }
     case "youtuber":
     case "politics_youtube": {
-      if (youtubeDocs[0]) {
+      if (youtubeProfile) {
+        rows = fillUpdatingRows(rows, [
+          { label: "유튜브 채널", value: youtubeProfile.title, emphasize: true },
+          { label: "채널 URL", value: youtubeProfile.url, emphasize: true },
+        ]);
+        if (youtubeProfile.subscriberLabel) {
+          rows = upsertRow(rows, "구독자 수", youtubeProfile.subscriberLabel, true);
+        }
+        rows = rows.map((row) =>
+          row.label === "채널 URL"
+            ? { ...row, value: youtubeProfile.url, href: youtubeProfile.url }
+            : row,
+        );
+        if (youtubeProfile.recentVideoTitles.length) {
+          chips = [
+            ...chips.filter((chip) => !/영상|조회/.test(chip.label)),
+            {
+              label: "최근 화제 영상 TOP",
+              items: youtubeProfile.recentVideoTitles.slice(0, 5),
+            },
+          ];
+        }
+      } else if (youtubeDocs[0]) {
         rows = fillUpdatingRows(rows, [
           {
             label: "유튜브 채널",
@@ -460,7 +529,6 @@ export async function enrichCategoryInfoPayload(
             emphasize: true,
           },
         ]);
-        // Force URL into href when possible
         rows = rows.map((row) =>
           row.label === "채널 URL"
             ? { ...row, value: youtubeDocs[0]!.url, href: youtubeDocs[0]!.url }
@@ -525,7 +593,15 @@ export async function enrichCategoryInfoPayload(
       break;
     }
     case "housing": {
-      if (housingPublic?.tradeSummary) {
+      if (housingPublic?.byPyeong) {
+        rows = fillUpdatingRows(rows, [
+          {
+            label: /실거래가\(평수별\)|실거래가/,
+            value: housingPublic.byPyeong,
+            emphasize: true,
+          },
+        ]);
+      } else if (housingPublic?.tradeSummary) {
         rows = fillUpdatingRows(rows, [
           { label: /실거래가/, value: housingPublic.tradeSummary, emphasize: true },
         ]);
@@ -534,10 +610,34 @@ export async function enrichCategoryInfoPayload(
           { label: /실거래가/, value: housing, emphasize: true },
         ]);
       }
-      if (housingPublic?.rentSummary) {
+      if (housingPublic?.saleOffer) {
+        rows = fillUpdatingRows(rows, [
+          { label: /분양가/, value: housingPublic.saleOffer },
+        ]);
+        if (housingPublic.saleOfferUrl) {
+          rows = rows.map((row) =>
+            /분양가/.test(row.label)
+              ? { ...row, href: housingPublic.saleOfferUrl }
+              : row,
+          );
+        }
+      }
+      if (housingPublic?.trendSummary) {
         rows = fillUpdatingRows(rows, [
           {
-            label: /매매·전세·월세|전세|월세/,
+            label: /매매·전세·월세 추이|추이/,
+            value: [
+              housingPublic.trendSummary,
+              housingPublic.rentSummary,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+          },
+        ]);
+      } else if (housingPublic?.rentSummary) {
+        rows = fillUpdatingRows(rows, [
+          {
+            label: /매매·전세·월세|전세|월세|추이/,
             value: housingPublic.rentSummary,
           },
         ]);
@@ -551,12 +651,77 @@ export async function enrichCategoryInfoPayload(
           },
         ]);
       }
+      if (housingPublic?.landNaverUrl) {
+        rows = rows.map((row) =>
+          /네이버페이 부동산/.test(row.label)
+            ? { ...row, href: housingPublic.landNaverUrl, value: "네이버페이 부동산에서 보기" }
+            : row,
+        );
+      }
+      if (housingPublic?.trendPoints && housingPublic.trendPoints.length >= 2) {
+        sparkline = {
+          title: "월별 중위 매매가 (국토부 실거래)",
+          unit: "만원",
+          points: housingPublic.trendPoints,
+        };
+      }
       break;
     }
-    case "webtoon":
-    case "book":
-    case "food":
-    case "exhibition": {
+    case "webtoon": {
+      const platform = extractPlatform(corpus);
+      const author = extractAuthor(corpus, name);
+      if (platform) rows = upsertRow(rows, "플랫폼", platform, true);
+      if (author) rows = upsertRow(rows, "작가", author);
+      if (crawledSynopsis) synopsis = synopsis || crawledSynopsis;
+      break;
+    }
+    case "book": {
+      const author = extractAuthor(corpus, name);
+      const publisher = firstMatch(corpus, [
+        /(?:출판사|펴낸곳)\s*[:\s]*([가-힣A-Za-z0-9\s]{2,30})/,
+      ]);
+      if (author) rows = upsertRow(rows, "작가", author, true);
+      if (publisher) rows = upsertRow(rows, "출판사", publisher);
+      if (crawledSynopsis) synopsis = synopsis || crawledSynopsis;
+      break;
+    }
+    case "exhibition":
+    case "performance": {
+      if (cast.length && base.channel === "performance") {
+        rows = fillUpdatingRows(rows, [{ label: /출연/, value: cast.join(" · ") }]);
+      }
+      const venue = extractVenue(corpus);
+      if (venue) rows = upsertRow(rows, base.channel === "exhibition" ? "행사장소" : "장소", venue);
+      const schedule = firstMatch(corpus, [
+        /(?:기간|일정|일시)\s*[:\s]*([^\n.]{6,50})/,
+        /(\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*[~～-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2})/,
+      ]);
+      if (schedule) {
+        rows = upsertRow(
+          rows,
+          base.channel === "exhibition" ? "행사시간" : "일정",
+          schedule,
+        );
+      }
+      const fee = firstMatch(corpus, [
+        /(?:입장료|티켓|관람료)\s*[:\s]*([^\n.]{2,40})/,
+      ]);
+      if (fee) {
+        rows = upsertRow(
+          rows,
+          base.channel === "exhibition" ? "입장료" : "티켓 가격",
+          fee,
+        );
+      }
+      if (crawledSynopsis) synopsis = synopsis || crawledSynopsis;
+      break;
+    }
+    case "food": {
+      const food = extractFoodMeta(corpus);
+      if (food.address) rows = upsertRow(rows, "주소", food.address, true);
+      if (food.hours) rows = upsertRow(rows, "영업시간", food.hours);
+      if (food.menu) rows = upsertRow(rows, "추천 메뉴", food.menu);
+      if (crawledSynopsis) synopsis = synopsis || crawledSynopsis;
       break;
     }
     default:
@@ -620,11 +785,12 @@ export async function enrichCategoryInfoPayload(
     synopsis,
     statusMessage,
     sparse,
+    sparkline,
     links: links.slice(0, 5),
     notice:
       base.notice ||
-      (publicGrant || housingPublic
-        ? "채널 맞춤 정보는 공공데이터포털(보조금24·복지로·국토부 실거래)과 공개 뉴스·웹 문서를 주기적으로 수집해 보완합니다. 공식 발표와 다를 수 있습니다."
+      (publicGrant || housingPublic || youtubeProfile
+        ? "채널 맞춤 정보는 공공데이터포털·YouTube Data API·공개 뉴스·웹 문서를 주기적으로 수집해 보완합니다. 공식 발표와 다를 수 있습니다."
         : "채널 맞춤 정보는 공개 뉴스·웹 문서를 주기적으로 수집해 보완합니다. 공식 발표와 다를 수 있습니다."),
     updatedAt: new Date().toISOString(),
   };

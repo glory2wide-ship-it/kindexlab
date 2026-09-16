@@ -66,6 +66,13 @@ export type CategoryInfoChipGroup = {
   items: string[];
 };
 
+export type CategoryInfoSparkline = {
+  title: string;
+  /** Display unit hint, e.g. "만원". */
+  unit?: string;
+  points: Array<{ label: string; value: number }>;
+};
+
 export type CategoryInfoBase = {
   category: CategoryInfoCategory;
   channel: CategoryInfoChannel;
@@ -81,6 +88,8 @@ export type CategoryInfoBase = {
   synopsis?: string;
   notice?: string;
   links: CategoryInfoLink[];
+  /** Optional mini trend (e.g. housing monthly mid prices). */
+  sparkline?: CategoryInfoSparkline;
 };
 
 export type CategoryInfoPayload = CategoryInfoBase;
