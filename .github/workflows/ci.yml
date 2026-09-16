@@ -27,3 +27,4 @@ jobs:
       - run: npm run live:first
       - run: npm run live:gates
       - run: npm run live:entity-guards
+      - run: npm run live:index-blurb
