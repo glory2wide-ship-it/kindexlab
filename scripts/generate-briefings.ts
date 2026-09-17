@@ -21,9 +21,12 @@ import { kstDateString } from "../src/lib/briefing/dates";
 import { runDailyBriefingJob } from "../src/lib/briefing/job";
 import {
   deliverGenerationReport,
+  persistGenerationReportForAdminSync,
   type GenerationReportRow,
 } from "../src/lib/ops/generation-report";
 import { resetGeminiUsage, snapshotGeminiUsage, formatKrw } from "../src/lib/ops/gemini-usage";
+import { existsSync, readdirSync } from "node:fs";
+import path from "node:path";
 
 function resolveOvernightBatch(): boolean {
   if (process.argv.includes("--no-batch")) return false;
@@ -33,6 +36,95 @@ function resolveOvernightBatch(): boolean {
     return true;
   }
   return geminiBatchEnabled();
+}
+
+function digestExists(editionDate: string): boolean {
+  const dir = path.join(process.cwd(), "src/data/ops/daily");
+  try {
+    return readdirSync(dir).some(
+      (name) => name.startsWith(`${editionDate}-briefings-`) && name.endsWith(".json"),
+    );
+  } catch {
+    return false;
+  }
+}
+
+function htmlReportExists(editionDate: string): boolean {
+  return existsSync(
+    path.join(process.cwd(), "artifacts", "generation-reports", `briefings-${editionDate}.html`),
+  );
+}
+
+type EarlyExitGuard = { disarm: () => void };
+
+/**
+ * Last-resort guard: if the event loop empties after a Gemini Batch wave
+ * without reaching writeReport (seen 2026-09-17 schedule on f989518), still
+ * emit digest+HTML so CI assert/email are not a silent blackout.
+ */
+function installEarlyExitDigestGuard(
+  editionDate: string,
+  useGeminiBatch: boolean,
+): EarlyExitGuard {
+  let armed = true;
+  const writeEmergency = (reason: string) => {
+    if (!armed) return;
+    armed = false;
+    if (digestExists(editionDate) && htmlReportExists(editionDate)) return;
+    try {
+      process.env.REQUIRE_OPS_DIGEST = process.env.REQUIRE_OPS_DIGEST ?? "1";
+      persistGenerationReportForAdminSync(
+        {
+          subject: `[KinDex] 브리핑 생성 보고 · ${editionDate}`,
+          editionDate,
+          pipeline: "daily-briefings",
+          generatedAt: new Date().toISOString(),
+          cost: snapshotGeminiUsage(),
+          sections: [
+            {
+              title: "일일 브리핑",
+              rows: [
+                {
+                  name: "daily-briefings",
+                  status: "fail",
+                  reason,
+                  meta: "emergency-exit-guard",
+                },
+              ],
+            },
+          ],
+          notes: [
+            `Emergency digest: ${reason}`,
+            `Gemini Batch=${useGeminiBatch}`,
+            `API 추정 ${formatKrw(snapshotGeminiUsage().estimatedKrw)}`,
+          ],
+        },
+        `briefings-${editionDate}`,
+      );
+      console.error(`[ops] emergency digest written (${reason})`);
+    } catch (error) {
+      console.error("[ops] emergency digest failed", error);
+    }
+    if (typeof process.exitCode !== "number" || process.exitCode === 0) {
+      process.exitCode = 1;
+    }
+  };
+
+  process.once("beforeExit", () => {
+    writeEmergency("process beforeExit without completed briefing report");
+  });
+  process.once("SIGINT", () => {
+    writeEmergency("SIGINT");
+  });
+  process.once("SIGTERM", () => {
+    writeEmergency("SIGTERM");
+  });
+
+  return {
+    disarm: () => {
+      armed = false;
+    },
+  };
 }
 
 function toRow(outcome: {
@@ -118,6 +210,8 @@ async function main() {
     `Generating ${editionDate} briefings (force=${force}, provider=${briefingProvider()}, ai=${briefingLlmConfigured()}, geminiBatch=${useGeminiBatch})…`,
   );
 
+  const exitGuard = installEarlyExitDigestGuard(editionDate, useGeminiBatch);
+
   let result: Awaited<ReturnType<typeof runDailyBriefingJob>> | null = null;
   let fatal: unknown = null;
 
@@ -184,6 +278,14 @@ async function main() {
       ? [`Job aborted: ${fatal instanceof Error ? fatal.message : String(fatal)}`]
       : undefined,
   });
+
+  if (!digestExists(editionDate) || !htmlReportExists(editionDate)) {
+    console.error(
+      `::error::Briefing report artifacts missing after writeReport edition=${editionDate} digest=${digestExists(editionDate)} html=${htmlReportExists(editionDate)}`,
+    );
+    process.exit(1);
+  }
+  exitGuard.disarm();
 
   if (fatal) {
     process.exit(1);

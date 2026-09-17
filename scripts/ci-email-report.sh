@@ -11,8 +11,31 @@ FROM="${REPORT_EMAIL_FROM:-}"
 
 if [ -z "$HTML_PATH" ] || [ ! -f "$HTML_PATH" ]; then
   echo "[report] missing html: ${HTML_PATH:-<empty>}"
-  echo "::error::Generation report HTML missing — cannot email ${TO}."
-  exit 1
+  # Soft warning — generation may have exited early; do not stack a hard
+  # failure annotation on top of the digest assert (seen 2026-09-17 mail).
+  echo "::warning::Generation report HTML missing — cannot email ${TO}."
+  if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
+    export GH_TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+    BODY_FILE="$(mktemp)"
+    {
+      echo "수신 예정: **${TO}**"
+      echo
+      echo "> ⚠️ HTML 리포트 파일이 없어 Gmail 발송을 건너뛰었습니다 (\`${HTML_PATH:-missing}\`)."
+      echo "> Daily briefings generate 단계가 digest/HTML을 남기지 않고 끝난 경우일 수 있습니다."
+      echo
+      echo "Actions 로그에서 generate / Assert briefing ops digest 단계를 확인해 주세요."
+    } > "$BODY_FILE"
+    if ISSUE_URL="$(gh issue create --title "$SUBJECT (HTML missing)" --body-file "$BODY_FILE" --label "generation-report" 2>/dev/null)"; then
+      :
+    else
+      ISSUE_URL="$(gh issue create --title "$SUBJECT (HTML missing)" --body-file "$BODY_FILE" || true)"
+    fi
+    rm -f "$BODY_FILE"
+    if [ -n "${ISSUE_URL:-}" ]; then
+      echo "[report] opened GitHub Issue for missing HTML: ${ISSUE_URL}"
+    fi
+  fi
+  exit 0
 fi
 
 export REPORT_HTML_PATH="$HTML_PATH"
@@ -87,7 +110,7 @@ PY
 fi
 
 # Fallback: GitHub Issue → notification email to repo watchers (owner).
-echo "::error::Gmail was NOT sent to ${TO}. Add GitHub Actions secrets RESEND_API_KEY or SMTP_USER+SMTP_PASS (Gmail app password). Falling back to a GitHub Issue."
+echo "::warning::Gmail was NOT sent to ${TO}. Add GitHub Actions secrets RESEND_API_KEY or SMTP_USER+SMTP_PASS (Gmail app password). Falling back to a GitHub Issue."
 if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
   export GH_TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
   BODY_FILE="$(mktemp)"
@@ -109,11 +132,11 @@ if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; t
   fi
   rm -f "$BODY_FILE"
   echo "[report] opened GitHub Issue for ${TO}: ${ISSUE_URL}"
-  # Non-zero so the Actions step surfaces as failed (workflows use continue-on-error
-  # after commit, so generation still publishes).
-  exit 1
+  # Exit 0 once the Issue is opened — generation already published; avoid a
+  # second GitHub "Run failed" mail that only means "no SMTP secret".
+  exit 0
 fi
 
 echo "[report] no mail transport configured for ${TO}, and GitHub issue fallback is unavailable"
-echo "::error::Add GitHub secrets SMTP_USER + SMTP_PASS (Gmail app password) or RESEND_API_KEY for direct email delivery."
-exit 1
+echo "::warning::Add GitHub secrets SMTP_USER + SMTP_PASS (Gmail app password) or RESEND_API_KEY for direct email delivery."
+exit 0
