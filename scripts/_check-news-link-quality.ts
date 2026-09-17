@@ -4,6 +4,8 @@
  */
 import assert from "node:assert/strict";
 import {
+  ensureQualityNewsLinks,
+  isNewsSearchFallbackUrl,
   isNonArticleMediaUrl,
   scoreNewsLinkQuality,
 } from "../src/lib/entity/category-info/news";
@@ -114,5 +116,42 @@ assert.equal(
 );
 
 assert.equal(isNonArticleMediaUrl("https://www.ggilbo.com/news/articleView.html?idxno=1180083"), false);
+
+// Never invent “추가 수집 중 · 뉴스 검색” when under-filled.
+const padded = ensureQualityNewsLinks(
+  "근로장려금",
+  [
+    {
+      title: "근로장려금 검색 결과",
+      href: "https://search.naver.com/search.naver?where=news&query=%EA%B7%BC%EB%A1%9C%EC%9E%A5%EB%A0%A4%EA%B8%88",
+      source: "뉴스 검색",
+    },
+  ],
+  { minPreferred: 2, maxSearchFallbacks: 1, channel: "gov_subsidy" },
+);
+assert.equal(padded.length, 0, "must not emit search fallbacks");
+assert.ok(
+  !padded.some((link) => isNewsSearchFallbackUrl(link.href) || /추가 수집 중/.test(link.title)),
+);
+
+const withReal = ensureQualityNewsLinks(
+  "근로장려금",
+  [
+    {
+      title: "근로장려금 최대 330만 원 지급…신청 안내",
+      href: "https://www.korea.kr/news/policyNewsView.do?newsId=148963769",
+      source: "정책브리핑",
+    },
+    {
+      title: "근로장려금 검색",
+      href: "https://search.naver.com/search.naver?where=news&query=근로장려금",
+      source: "뉴스 검색",
+    },
+  ],
+  { minPreferred: 2, maxSearchFallbacks: 1, channel: "gov_subsidy" },
+);
+assert.equal(withReal.length, 1);
+assert.equal(isNewsSearchFallbackUrl(withReal[0]!.href), false);
+assert.ok(!/추가 수집 중/.test(withReal[0]!.title));
 
 console.log("news-link-quality OK");

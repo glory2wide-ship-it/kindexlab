@@ -82,12 +82,16 @@ for (const row of cases) {
   const channel = resolveCategoryInfoChannel(row);
   const payload = buildCategoryInfoPayload(row);
   assert.equal(payload.channel, channel.channel, row.slug);
-  // Quality over count: allow thin packs; at most one search-URL fallback.
-  assert.ok(payload.links.length >= 1, `${row.slug} needs ≥1 related link slot`);
+  // Build may be thin before enrich; never invent Naver/Google search placeholders.
   const searchFallbacks = payload.links.filter((link) => isNewsSearchFallbackUrl(link.href));
+  assert.equal(
+    searchFallbacks.length,
+    0,
+    `${row.slug} must not pad with search fallback (got ${searchFallbacks.length})`,
+  );
   assert.ok(
-    searchFallbacks.length <= 1,
-    `${row.slug} must not pad with >1 search fallback (got ${searchFallbacks.length})`,
+    !payload.links.some((link) => /추가 수집 중/.test(link.title)),
+    `${row.slug} must not show “추가 수집 중” search placeholders`,
   );
   assert.ok(payload.rows.length >= 1, `${row.slug} needs rows or status`);
   assert.ok(payload.channelLabel.length > 0);

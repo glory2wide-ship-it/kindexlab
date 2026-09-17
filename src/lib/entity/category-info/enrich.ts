@@ -1,3 +1,4 @@
+import { crawlKeywordNewsRss } from "@/lib/context/crawl-news-rss";
 import { fetchNaverWebFallback } from "@/lib/context/fallback-naver";
 import { fetchYoutubeFallback } from "@/lib/context/fallback-youtube";
 import type { ContextSource } from "@/lib/context/types";
@@ -38,7 +39,11 @@ import type { RankingEntity } from "@/lib/types";
 import { fetchText } from "@/lib/ingestion/http";
 import { decodeHtml, stripTags } from "@/lib/ingestion/parse";
 import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
-import { publisherFromUrl } from "@/lib/news/unwrap";
+import {
+  isGoogleNewsUrl,
+  publisherFromUrl,
+  resolvePublisherUrl,
+} from "@/lib/news/unwrap";
 import { matchPunditProfileSeed } from "@/lib/politics/pundit-profiles";
 import {
   clearPublicDataRetry,
@@ -390,30 +395,110 @@ function applyMelonSongRows(
   };
 }
 
+/** Related-news lookback: evergreen topics (지원금·정책) go quiet for weeks. */
+const RELATED_NEWS_LOOKBACK_HOURS = 2160; // 90 days
+const RELATED_NEWS_RETRY_LOOKBACK_HOURS = 8760; // 1 year
+
+/**
+ * Fetch real press permalinks for 관련 참고 링크.
+ * Prefer Google News RSS → publisher unwrap; widen lookback / skip alias when thin.
+ * Never invent Naver search placeholders here — that is the visitor-facing bug.
+ */
 async function crawlNews(
   name: string,
   channel?: CategoryInfoChannel,
 ): Promise<CrawlDoc[]> {
+  const newsPrimary = isNewsPrimaryChannel(channel ?? "generic");
+  const limit = newsPrimary ? 10 : 6;
+  const cap = newsPrimary ? 8 : 5;
+  const query = newsQueryForChannel(name, channel);
+  const bare = name.replace(/^\[[^\]]+\]\s*/, "").trim() || name.trim();
+  const seen = new Set<string>();
+  const out: CrawlDoc[] = [];
+
+  const push = (doc: CrawlDoc) => {
+    if (!doc.url || !doc.title || seen.has(doc.url)) return;
+    if (isNonArticleMediaUrl(doc.url) || isNewsSearchFallbackUrl(doc.url)) return;
+    if (isGoogleNewsUrl(doc.url)) return;
+    seen.add(doc.url);
+    out.push(doc);
+  };
+
   try {
-    const query = newsQueryForChannel(name, channel);
+    // 1) Unwrapped publisher URLs — most reliable visitor-facing permalinks.
+    const rss = await crawlKeywordNewsRss(query, limit).catch(() => []);
+    for (const source of rss) {
+      push({
+        title: source.title,
+        url: source.url,
+        publisher: source.publisher,
+        snippet: source.snippet,
+        publishedAt: source.publishedAt,
+      });
+    }
+
+    // 2) Provider retrieval with a wide lookback (240h was dropping almost everything).
     const retrieval = await retrieveNewsForKeyword(query, {
-      limit: isNewsPrimaryChannel(channel ?? "generic") ? 10 : 6,
-      lookbackHours: 240,
+      limit: limit * 2,
+      lookbackHours: RELATED_NEWS_LOOKBACK_HOURS,
       trustedOnly: false,
+      allowMarketTape: true,
     });
-    return retrieval.docs
-      .filter((doc) => doc.link && doc.title)
-      .slice(0, isNewsPrimaryChannel(channel ?? "generic") ? 8 : 5)
-      .map((doc) => ({
+    for (const doc of retrieval.docs) {
+      if (!doc.link || !doc.title) continue;
+      const resolved = (await resolvePublisherUrl(doc.link).catch(() => doc.link)) ?? doc.link;
+      push({
         title: doc.title,
-        url: doc.link!,
-        publisher: doc.publisher,
+        url: resolved,
+        publisher: doc.publisher || publisherFromUrl(resolved),
         snippet: doc.snippet,
         publishedAt: doc.publishedAt,
-      }));
+      });
+      if (out.length >= cap) break;
+    }
+
+    // 3) Still thin → bare name + year lookback + soft alias filter.
+    if (out.length < 2) {
+      const retry = await retrieveNewsForKeyword(bare, {
+        limit: limit * 2,
+        lookbackHours: RELATED_NEWS_RETRY_LOOKBACK_HOURS,
+        trustedOnly: false,
+        skipAliasFilter: true,
+        allowMarketTape: true,
+      });
+      for (const doc of retry.docs) {
+        if (!doc.link || !doc.title) continue;
+        const resolved =
+          (await resolvePublisherUrl(doc.link).catch(() => doc.link)) ?? doc.link;
+        push({
+          title: doc.title,
+          url: resolved,
+          publisher: doc.publisher || publisherFromUrl(resolved),
+          snippet: doc.snippet,
+          publishedAt: doc.publishedAt,
+        });
+        if (out.length >= cap) break;
+      }
+    }
+
+    // 4) Last resort: bare-name RSS unwrap (no date gate).
+    if (out.length < 2 && bare !== query) {
+      const rssBare = await crawlKeywordNewsRss(bare, limit).catch(() => []);
+      for (const source of rssBare) {
+        push({
+          title: source.title,
+          url: source.url,
+          publisher: source.publisher,
+          snippet: source.snippet,
+          publishedAt: source.publishedAt,
+        });
+      }
+    }
   } catch {
-    return [];
+    /* soft — return whatever we collected */
   }
+
+  return out.slice(0, cap);
 }
 
 async function crawlWeb(name: string, channel: CategoryInfoChannel): Promise<CrawlDoc[]> {
@@ -576,16 +661,16 @@ function sanitizeRelatedLinks(
     .filter((link) => link.href && isSafeOutboundUrl(link.href))
     .filter((link) => !isIrrelevantNaverServiceLink(link))
     .map((link) => ({ link, score: scoreNewsLinkQuality(link, entityName, channel) }))
-    .filter((row) => row.score > 0 || isNewsSearchFallbackUrl(row.link.href))
+    .filter((row) => row.score > 0)
     .sort((a, b) => b.score - a.score);
 
   const out: CategoryInfoLink[] = [];
   const seen = new Set<string>();
   for (const { link, score } of scored) {
     if (seen.has(link.href)) continue;
-    // Keep search URLs only as candidates for ensureQualityNewsLinks — skip here if we already have reals.
-    if (isNewsSearchFallbackUrl(link.href) && out.length >= 1) continue;
-    if (!isNewsSearchFallbackUrl(link.href) && score < 2 && out.length >= 2) continue;
+    // Never keep search URLs — visitor slots are press permalinks only.
+    if (isNewsSearchFallbackUrl(link.href)) continue;
+    if (score < 2 && out.length >= 2) continue;
     seen.add(link.href);
     out.push(link);
     if (out.length >= 5) break;
@@ -1848,7 +1933,7 @@ export async function enrichCategoryInfoPayload(
       .sort((a, b) => Number(Boolean(b.publishedAt)) - Number(Boolean(a.publishedAt))),
     {
       minPreferred: isNewsPrimaryChannel(base.channel) ? NEWS_SLA_MIN_REAL : 2,
-      maxSearchFallbacks: isNewsPrimaryChannel(base.channel) ? 0 : 1,
+      maxSearchFallbacks: 0,
       channel: base.channel,
     },
   );
