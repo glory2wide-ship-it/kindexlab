@@ -4,7 +4,6 @@ import { ContentSlot } from "@/components/monetization/ContentSlot";
 import { FactTable } from "@/components/article/FactTable";
 import { FaqList } from "@/components/article/FaqList";
 import { SectionHeading } from "@/components/article/SectionHeading";
-import { TrendDisclaimer } from "@/components/article/TrendDisclaimer";
 import { SITE } from "@/lib/site";
 import { channelHref, channelSectionHref, getPostChannel, inferPostChannel } from "@/lib/posts/channels";
 import type { GeneratedPost } from "@/lib/posts/types";
@@ -186,8 +185,6 @@ export function GeneratedPostArticle({ post }: { post: GeneratedPost }) {
 
         <ContentSlot placement="footer" label={post.focusKeyword} adFormat="auto" />
       </div>
-
-      <TrendDisclaimer />
     </article>
   );
 }

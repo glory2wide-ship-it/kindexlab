@@ -1,9 +1,6 @@
 /**
- * Mandatory closing line for every KinDex editorial surface:
- * daily briefings, Update briefings, Update keyword / 오늘의 분석 articles.
- *
- * Never use this sentence as the sole body of「KinDex 데이터가 보여주는 특징」.
- * That section needs rank/trend interpretation; the disclaimer is a closing notice.
+ * Legacy closing line formerly appended to KinDex editorial surfaces.
+ * Kept only so existing copy can be detected and stripped — never re-injected.
  */
 export const TREND_ANALYSIS_DISCLAIMER =
   "본 글은 단순 트렌드 분석이며 투자 권유가 아닙니다.";
@@ -13,12 +10,15 @@ export function hasTrendDisclaimer(text: string | null | undefined): boolean {
   return text.includes(TREND_ANALYSIS_DISCLAIMER);
 }
 
-/** Remove the mandatory disclaimer so section bodies can be judged on real copy. */
+/** Remove the legacy disclaimer so section bodies can be judged on real copy. */
 export function stripTrendDisclaimer(text: string): string {
   return text
     .split(TREND_ANALYSIS_DISCLAIMER)
     .join(" ")
-    .replace(/\s+/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([.。])/g, "$1")
     .trim();
 }
 
@@ -28,31 +28,26 @@ export function isTrendDisclaimerOnly(text: string | null | undefined): boolean 
   return !stripTrendDisclaimer(text);
 }
 
-/** Append the disclaimer once when the body does not already carry it. */
+/** @deprecated Pass-through that strips — never appends the disclaimer. */
 export function withTrendDisclaimer(text: string): string {
-  const trimmed = text.trim();
-  if (!trimmed) return TREND_ANALYSIS_DISCLAIMER;
-  if (hasTrendDisclaimer(trimmed)) return trimmed;
-  return `${trimmed}\n\n${TREND_ANALYSIS_DISCLAIMER}`;
+  return stripTrendDisclaimer(text);
 }
 
-/** Last-paragraph helper for section-based articles. */
+/** Strip disclaimer sentences from paragraph lists (no re-injection). */
 export function ensureDisclaimerParagraph(paragraphs: string[]): string[] {
-  const joined = paragraphs.join("\n");
-  if (hasTrendDisclaimer(joined)) return paragraphs;
-  return [...paragraphs, TREND_ANALYSIS_DISCLAIMER];
+  return paragraphs
+    .map((paragraph) => stripTrendDisclaimer(paragraph))
+    .filter((paragraph) => paragraph.length > 0);
 }
 
-/** Ensure the disclaimer is the final paragraph of the last section. */
+/** Strip the legacy disclaimer from every section (no re-injection). */
 export function ensureSectionsDisclaimer<T extends { paragraphs: string[] }>(
   sections: T[],
 ): T[] {
-  if (!sections.length) return sections;
-  const text = sections.flatMap((section) => section.paragraphs).join("\n");
-  if (hasTrendDisclaimer(text)) return sections;
-  const last = sections[sections.length - 1]!;
-  return [
-    ...sections.slice(0, -1),
-    { ...last, paragraphs: ensureDisclaimerParagraph(last.paragraphs) },
-  ];
+  return sections
+    .map((section) => ({
+      ...section,
+      paragraphs: ensureDisclaimerParagraph(section.paragraphs),
+    }))
+    .filter((section) => section.paragraphs.length > 0);
 }

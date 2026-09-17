@@ -80,8 +80,9 @@ async function main() {
     disclaimerKindex?.paragraphs[0]?.slice(0, 160),
   );
   assert(
-    "DJ system bans disclaimer in ❺",
-    /면책 문구/.test(buildHybridAnalysisSystemPrompt("entertainment")),
+    "DJ system bans disclaimer in body",
+    /면책/.test(buildHybridAnalysisSystemPrompt("entertainment")) &&
+      /넣지 마세요/.test(buildHybridAnalysisSystemPrompt("entertainment")),
   );
   assert(
     "heading digits preserved (100만)",

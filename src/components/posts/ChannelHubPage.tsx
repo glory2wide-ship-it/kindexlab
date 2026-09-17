@@ -135,7 +135,7 @@ export async function PostsIndexWithChannels() {
         <h1 className="text-3xl font-semibold tracking-tight">이슈 칼럼</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted">
           지수(INDEX)는 오늘의 키워드를 고르는 트리거입니다. 본문은 그 키워드만으로 쓴 매거진 칼럼과
-          투데이 브리핑입니다. 투자 권유가 아닙니다.
+          투데이 브리핑입니다.
         </p>
       </header>
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

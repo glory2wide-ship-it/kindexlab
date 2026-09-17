@@ -1,5 +1,6 @@
 /**
- * Repair briefing ❺ sections that only contain the trend-analysis disclaimer.
+ * Repair briefing ❺ sections that only contain the legacy trend-analysis disclaimer.
+ * Replaces empty/disclaimer-only KinDex bodies with real copy and strips the disclaimer.
  *
  *   npx tsx scripts/repair-briefing-kindex-disclaimer.ts
  *   npx tsx scripts/repair-briefing-kindex-disclaimer.ts --slug=2026-09-10-entertainment-kpop-fandom-power
@@ -35,16 +36,46 @@ function patchArticle(article: BriefingArticle): { article: BriefingArticle; cha
   const kindexIndex = sections.findIndex((section) =>
     isKindexFeatureSectionHeading(section.heading ?? ""),
   );
-  if (kindexIndex < 0) return { article, changed: false };
+  if (kindexIndex < 0) {
+    const stripped = ensureSectionsDisclaimer(sections);
+    const hadDisclaimer =
+      JSON.stringify(sections).includes(TREND_ANALYSIS_DISCLAIMER) ||
+      Boolean(article.bodyMarkdown?.includes(TREND_ANALYSIS_DISCLAIMER)) ||
+      Boolean(article.bodyHtml?.includes(TREND_ANALYSIS_DISCLAIMER));
+    if (!hadDisclaimer) return { article, changed: false };
+    return {
+      changed: true,
+      article: {
+        ...article,
+        sections: stripped,
+        ...(article.bodyMarkdown
+          ? { bodyMarkdown: stripTrendDisclaimer(article.bodyMarkdown) }
+          : {}),
+        ...(article.bodyHtml ? { bodyHtml: stripTrendDisclaimer(article.bodyHtml) } : {}),
+      },
+    };
+  }
 
   const kindex = sections[kindexIndex]!;
   const body = (kindex.paragraphs ?? []).join(" ").trim();
   const withoutDisclaimer = stripTrendDisclaimer(body);
   if (!isUnusableKindexFeatureBody(body) && !isTrendDisclaimerOnly(body)) {
-    return { article, changed: false };
+    const stripped = ensureSectionsDisclaimer(sections);
+    const hadDisclaimer = JSON.stringify(sections).includes(TREND_ANALYSIS_DISCLAIMER);
+    if (!hadDisclaimer) return { article, changed: false };
+    return {
+      changed: true,
+      article: {
+        ...article,
+        sections: stripped,
+        ...(article.bodyMarkdown
+          ? { bodyMarkdown: stripTrendDisclaimer(article.bodyMarkdown) }
+          : {}),
+        ...(article.bodyHtml ? { bodyHtml: stripTrendDisclaimer(article.bodyHtml) } : {}),
+      },
+    };
   }
   if (withoutDisclaimer && !isUnusableKindexFeatureBody(withoutDisclaimer)) {
-    // Rare: real copy + disclaimer mashed into one paragraph — keep data, move disclaimer.
     const nextSections = ensureSectionsDisclaimer(
       sections.map((section, index) =>
         index === kindexIndex
@@ -96,30 +127,25 @@ function rewriteBodies(
     bodyHtml = replaceOnce(bodyHtml, oldBody, newParagraph);
   }
 
-  // If markdown/html still lack a real ❺ body (only heading + disclaimer), inject.
   const kindexHeading = /KinDex 데이터가 보여주는 특징/;
   if (bodyMarkdown && kindexHeading.test(bodyMarkdown) && isTrendDisclaimerOnly(oldBody)) {
     bodyMarkdown = bodyMarkdown.replace(
       /(##\s*[❺]?\s*KinDex 데이터가 보여주는 특징\s*\n+)본 글은 단순 트렌드 분석이며 투자 권유가 아닙니다\./,
-      `$1${newParagraph}\n\n${TREND_ANALYSIS_DISCLAIMER}`,
+      `$1${newParagraph}`,
     );
   }
   if (bodyHtml && kindexHeading.test(bodyHtml) && isTrendDisclaimerOnly(oldBody)) {
     bodyHtml = bodyHtml.replace(
       /(<h2>[^<]*KinDex 데이터가 보여주는 특징<\/h2>\s*<p>)본 글은 단순 트렌드 분석이며 투자 권유가 아닙니다\.(<\/p>)/,
-      `$1${newParagraph}$2<p>${TREND_ANALYSIS_DISCLAIMER}</p>`,
+      `$1${newParagraph}$2`,
     );
   }
 
-  // Guarantee disclaimer still appears somewhere in rendered bodies.
-  if (bodyMarkdown && !bodyMarkdown.includes(TREND_ANALYSIS_DISCLAIMER)) {
-    bodyMarkdown = `${bodyMarkdown.trim()}\n\n${TREND_ANALYSIS_DISCLAIMER}\n`;
+  if (bodyMarkdown.includes(TREND_ANALYSIS_DISCLAIMER)) {
+    bodyMarkdown = stripTrendDisclaimer(bodyMarkdown);
   }
-  if (bodyHtml && !bodyHtml.includes(TREND_ANALYSIS_DISCLAIMER)) {
-    bodyHtml = bodyHtml.replace(
-      /<\/article>\s*$/,
-      `<p>${TREND_ANALYSIS_DISCLAIMER}</p></article>`,
-    );
+  if (bodyHtml.includes(TREND_ANALYSIS_DISCLAIMER)) {
+    bodyHtml = stripTrendDisclaimer(bodyHtml);
   }
 
   return {

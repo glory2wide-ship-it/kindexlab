@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ContentSlot } from "@/components/monetization/ContentSlot";
 import { FactTable } from "@/components/article/FactTable";
 import { SectionHeading } from "@/components/article/SectionHeading";
-import { TrendDisclaimer } from "@/components/article/TrendDisclaimer";
 import { isLiveEdition } from "@/lib/briefing/dates";
 import { categoryLabel, heatmapHref } from "@/lib/briefing/metrics";
 import {
@@ -219,7 +218,6 @@ export function DailyBriefing({
         </Link>
         에서 이어 읽으면 됩니다.
       </p>
-      <TrendDisclaimer />
     </article>
   );
 }
