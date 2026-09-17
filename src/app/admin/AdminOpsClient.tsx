@@ -124,12 +124,19 @@ const TABS: Array<{ id: TabId; label: string }> = [
   { id: "detailCollect", label: "상세페이지 정보수집" },
 ];
 
+function tabFromSearch(): TabId {
+  if (typeof window === "undefined") return "traffic";
+  const raw = new URLSearchParams(window.location.search).get("tab");
+  if (raw && TABS.some((tab) => tab.id === raw)) return raw as TabId;
+  return "traffic";
+}
+
 export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) {
   const router = useRouter();
   const [data, setData] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const [activeTab, setActiveTab] = useState<TabId>("traffic");
+  const [activeTab, setActiveTab] = useState<TabId>(tabFromSearch);
   const [sectionUpdatedAt, setSectionUpdatedAt] = useState({
     daily: initial.daily.updatedAt,
     webHealth: initial.webHealth.updatedAt,
@@ -356,7 +363,13 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
               type="button"
               role="tab"
               aria-selected={isActive}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                setActiveTab(tab.id);
+                const url = new URL(window.location.href);
+                if (tab.id === "traffic") url.searchParams.delete("tab");
+                else url.searchParams.set("tab", tab.id);
+                window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+              }}
               className={
                 isActive
                   ? "rounded-md border border-accent bg-accent px-2.5 py-1.5 text-sm font-semibold text-black"
