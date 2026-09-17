@@ -514,6 +514,34 @@ nav[aria-label$="서브 메뉴"] {
   zoom: 1.1;
 }
 
+/* Desktop: legend under support graph + 일봉/주봉/월봉 (+20%). */
+@media (min-width: 768px) {
+  .support-chart-controls-120 {
+    zoom: 1.2;
+  }
+
+  /* Prior +10% notes × additional +10% for 조사 방식 / 관련 기사. */
+  .support-chart-notes-121 {
+    zoom: 1.21;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .support-chart-controls-120 {
+    zoom: 1;
+  }
+
+  /* Keep the previous +10% notes sizing on mobile. */
+  .support-chart-notes-121 {
+    zoom: 1.1;
+  }
+}
+
+/* KinDex 시가 label/value — 10% smaller than sibling metrics. */
+.detail-open-score-90 {
+  zoom: 0.9;
+}
+
 /* Hero metrics (rank / open / volume) — 20%; entity name stays outside. */
 .detail-metrics-120 {
   zoom: 1.2;

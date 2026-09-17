@@ -261,8 +261,8 @@ export function EntityHero({
           </dd>
         </div>
         <div>
-          <dt className="text-muted">KinDex 시가(오픈)</dt>
-          <dd className={`mt-0.5 font-sans text-lg tabular-nums md:mt-1 ${metricTone}`}>
+          <dt className="detail-open-score-90 text-muted">KinDex 시가</dt>
+          <dd className={`detail-open-score-90 mt-0.5 font-sans text-lg tabular-nums md:mt-1 ${metricTone}`}>
             {formatScore(entity.openScore)}
           </dd>
         </div>

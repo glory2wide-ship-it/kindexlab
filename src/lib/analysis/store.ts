@@ -87,6 +87,124 @@ export function isExpired(entry: CachedAnalysis, now = Date.now()): boolean {
   return new Date(entry.expiresAt).getTime() <= now;
 }
 
+/** Board prefix before `--` (live heatmap slug form). */
+export function analysisBoardPrefix(slug: string): string | null {
+  const idx = slug.indexOf("--");
+  return idx > 0 ? slug.slice(0, idx) : null;
+}
+
+/** Strip brackets / punctuation so `[보건복지부] 기초연금` ≈ `기초연금`. */
+export function normalizeAnalysisMatchKey(value: string): string {
+  return value
+    .replace(/\[[^\]]*]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, "")
+    .toLowerCase();
+}
+
+/**
+ * True when a cached column belongs to this entity even if the slug tail was
+ * renamed (e.g. `…--보건복지부-기초연금` → `…--기초연금`).
+ */
+export function analysisEntryMatchesEntity(
+  entry: Pick<CachedAnalysis, "slug" | "keyword" | "article">,
+  entitySlug: string,
+  entityName: string,
+): boolean {
+  if (entry.slug === entitySlug) return true;
+  const board = analysisBoardPrefix(entitySlug);
+  const entryBoard = analysisBoardPrefix(entry.slug);
+  if (!board || !entryBoard || board !== entryBoard) return false;
+
+  const name = entityName.trim();
+  if (name && entry.keyword === name) return true;
+
+  const nameKey = normalizeAnalysisMatchKey(name);
+  const keywordKey = normalizeAnalysisMatchKey(entry.keyword || "");
+  if (nameKey && keywordKey && (nameKey === keywordKey || keywordKey.endsWith(nameKey) || nameKey.endsWith(keywordKey))) {
+    return true;
+  }
+
+  const entityTail = normalizeAnalysisMatchKey(entitySlug.slice(board.length + 2));
+  const entryTail = normalizeAnalysisMatchKey(entry.slug.slice(entryBoard.length + 2));
+  if (
+    entityTail &&
+    entryTail &&
+    (entryTail === entityTail || entryTail.endsWith(entityTail) || entityTail.endsWith(entryTail))
+  ) {
+    if (nameKey && keywordKey && (keywordKey.includes(nameKey) || nameKey.includes(keywordKey))) {
+      return true;
+    }
+  }
+
+  const articleSlug = entry.article?.entitySlug;
+  if (articleSlug && articleSlug === entitySlug) return true;
+
+  return false;
+}
+
+/**
+ * Prefer the exact slug; if missing (slug rename), reuse the newest prior Gemini
+ * column for the same board + keyword/name. Detail pages must never blank out a
+ * previously generated 오늘의 분석 until a newer column replaces it.
+ */
+export async function readAnalysisForEntity(
+  entitySlug: string,
+  entityName?: string,
+): Promise<CachedAnalysis | undefined> {
+  const direct = await readAnalysis(entitySlug);
+  if (direct) return direct;
+
+  const name = entityName?.trim();
+  if (!name) return undefined;
+
+  await loadDisk();
+  let best: CachedAnalysis | undefined;
+  for (const entry of memory.values()) {
+    if (
+      !isPublicEditorialContent({
+        editionDate: entry.editionDate || entry.article?.editionDate,
+        generatedAt: entry.generatedAt,
+      })
+    ) {
+      continue;
+    }
+    if (!analysisEntryMatchesEntity(entry, entitySlug, name)) continue;
+    if (!best || (entry.generatedAt || "") > (best.generatedAt || "")) {
+      best = entry;
+    }
+  }
+  return best;
+}
+
+/**
+ * Remount an aliased historical column under the live entity slug so the next
+ * exact-slug read also hits (and overnight rewrite replaces in place).
+ */
+export function remountAnalysisForEntity(
+  entry: CachedAnalysis,
+  entitySlug: string,
+  entityName: string,
+): CachedAnalysis {
+  if (entry.slug === entitySlug && entry.article?.entitySlug === entitySlug) {
+    return entry;
+  }
+  return {
+    ...entry,
+    slug: entitySlug,
+    keyword: entityName || entry.keyword,
+    article: {
+      ...entry.article,
+      entitySlug,
+      id: entry.article.id?.includes(entitySlug)
+        ? entry.article.id
+        : `today-${entry.editionDate}-${entitySlug}`,
+      slug: entry.article.slug?.includes(entitySlug)
+        ? entry.article.slug
+        : `${entry.editionDate}-${entitySlug}-today`,
+    },
+  };
+}
+
 function supabaseConfig(): { url: string; key: string } | null {
   const url = process.env.SUPABASE_URL?.replace(/\/+$/, "");
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

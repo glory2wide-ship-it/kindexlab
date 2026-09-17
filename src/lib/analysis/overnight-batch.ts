@@ -9,7 +9,7 @@ import {
 import type { HeatmapAnalysisTarget } from "@/lib/analysis/heatmap-inventory";
 import { analysisLogger } from "@/lib/analysis/log";
 import { refreshAnalysis } from "@/lib/analysis/pipeline";
-import { readAnalysis } from "@/lib/analysis/store";
+import { readAnalysisForEntity } from "@/lib/analysis/store";
 import {
   isAnalysisReentry,
   mergeTopNMembership,
@@ -140,7 +140,7 @@ export async function runHeatmapAnalysisOvernight(
             boardSlug: target.boardSlug,
           };
 
-          const cached = await readAnalysis(target.entity.slug);
+          const cached = await readAnalysisForEntity(target.entity.slug, target.entity.name);
           const reentry = isAnalysisReentry(previousMembership, target.entity.slug);
           const decision = shouldRefreshAnalysis(cached, {
             force: options.force,

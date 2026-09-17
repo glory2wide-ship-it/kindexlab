@@ -83,8 +83,8 @@ export function BuzzChart({
               </p>
             </div>
           </div>
-          <div className="detail-chart-body-110 flex w-full min-w-0 flex-col items-stretch gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
-            <div className="flex w-fit gap-1 rounded-lg bg-board p-1">
+          <div className="detail-chart-body-110 flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-hidden md:w-auto md:gap-2 md:overflow-visible">
+            <div className="flex shrink-0 gap-0.5 rounded-lg bg-board p-0.5 md:gap-1 md:p-1">
               {(
                 [
                   { id: "line" as const, label: "라인" },
@@ -95,7 +95,7 @@ export function BuzzChart({
                   key={option.id}
                   type="button"
                   onClick={() => setChartStyle(option.id)}
-                  className={`rounded-md px-2.5 py-1.5 font-sans text-[11px] font-medium ${
+                  className={`rounded-md px-1.5 py-1 font-sans text-[12.65px] font-medium md:px-2.5 md:py-1.5 ${
                     chartStyle === option.id
                       ? "bg-ink text-board"
                       : "text-muted hover:bg-panel hover:text-ink"
@@ -105,13 +105,13 @@ export function BuzzChart({
                 </button>
               ))}
             </div>
-            <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-board px-2 py-1 [-ms-overflow-style:none] [scrollbar-width:none] md:flex-wrap [&::-webkit-scrollbar]:hidden">
+            <div className="flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-0.5 overflow-hidden rounded-lg bg-board px-1 py-0.5 md:flex-none md:gap-1 md:overflow-visible md:px-2 md:py-1">
               {TIMEFRAMES.map((option) => (
                 <button
                   key={option.id}
                   type="button"
                   onClick={() => setTimeframe(option.id)}
-                  className={`shrink-0 rounded-md px-2 py-1.5 font-sans text-[11px] font-medium md:px-3 ${
+                  className={`min-w-0 flex-1 rounded-md px-1 py-1 text-center font-sans text-[12.65px] font-medium md:flex-none md:px-3 md:py-1.5 ${
                     timeframe === option.id
                       ? "bg-ink text-board"
                       : "text-muted hover:bg-panel hover:text-ink"

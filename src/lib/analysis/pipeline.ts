@@ -18,6 +18,8 @@ import {
   analysisTtlHours,
   isExpired,
   readAnalysis,
+  readAnalysisForEntity,
+  remountAnalysisForEntity,
   writeAnalysis,
   type AnalysisProvenance,
   type CachedAnalysis,
@@ -262,7 +264,8 @@ function generateOnce(options: {
  * - First visitor click on a cold slug queues Gemini generation; the page stays
  *   empty until that (or overnight Batch) succeeds — never a template column.
  * - Cached Gemini columns stay valid for ANALYSIS_TTL_HOURS (default 48h / 2 days).
- * - After expiry, the stale Gemini column is served while a refresh runs.
+ * - After expiry (or slug rename), the last Gemini column is still served until a
+ *   newer column replaces it — the detail slot must not go blank.
  */
 export async function getOrCreateAnalysis(options: {
   entity: RankingEntity;
@@ -272,12 +275,34 @@ export async function getOrCreateAnalysis(options: {
   force?: boolean;
 }): Promise<AnalysisResult> {
   const editionDate = options.editionDate ?? kstDateString();
-  const cached = options.force ? undefined : await readAnalysis(options.entity.slug);
+  const exact = options.force ? undefined : await readAnalysis(options.entity.slug);
+  let cached =
+    exact &&
+    (isGeminiAnalysis(exact) || exact.provenance.model?.startsWith("import:"))
+      ? exact
+      : undefined;
+  let remountedAlias = false;
+
+  // Slug renames (e.g. …--보건복지부-기초연금 → …--기초연금) would otherwise
+  // blank the slot even though a prior Gemini column exists.
+  if (!cached) {
+    const aliased = await readAnalysisForEntity(options.entity.slug, options.entity.name);
+    if (aliased && isGeminiAnalysis(aliased)) {
+      const remounted = remountAnalysisForEntity(
+        aliased,
+        options.entity.slug,
+        options.entity.name,
+      );
+      remountedAlias = remounted.slug !== aliased.slug || aliased.slug !== options.entity.slug;
+      cached = remounted;
+      void writeAnalysis(remounted).catch(() => undefined);
+    }
+  }
 
   const serveCached = (entry: CachedAnalysis, cache: "hit" | "stale") => {
     const sanitized = sanitizeCachedAnalysisArticle(entry, options.entity);
-    if (sanitized !== entry) {
-      // Persist repair to Supabase/disk so the next request does not re-sanitize.
+    if (sanitized !== entry || remountedAlias) {
+      // Persist repair / alias remount so the next exact-slug read stays filled.
       void writeAnalysis(sanitized).catch(() => undefined);
     }
     return { entry: sanitized, cache };
@@ -290,7 +315,7 @@ export async function getOrCreateAnalysis(options: {
   }
 
   // Same name within the 2-day TTL: reuse Gemini columns only.
-  if (cached && isGeminiAnalysis(cached) && !isExpired(cached)) {
+  if (cached && isGeminiAnalysis(cached) && !isExpired(cached) && !remountedAlias) {
     return serveCached(cached, "hit");
   }
 
@@ -299,7 +324,7 @@ export async function getOrCreateAnalysis(options: {
     return serveCached(cached, "stale");
   }
 
-  // Miss or stale template cache — queue Gemini, leave the slot empty for readers.
+  // True miss (never generated) — queue Gemini, leave the slot empty for readers.
   void generateOnce({ ...options, editionDate }).catch(() => undefined);
   return { entry: null, cache: "miss" };
 }
@@ -317,7 +342,7 @@ export async function refreshAnalysis(options: {
   const editionDate = options.editionDate ?? kstDateString();
   const previous =
     options.previous === undefined
-      ? await readAnalysis(options.entity.slug)
+      ? await readAnalysisForEntity(options.entity.slug, options.entity.name)
       : options.previous;
   return generateOnce({
     ...options,

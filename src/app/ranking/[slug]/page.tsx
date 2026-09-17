@@ -18,7 +18,7 @@ import { SupportIndexChart } from "@/components/politics/SupportIndexChart";
 import { SetActiveChannel } from "@/components/providers/ActiveChannelProvider";
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
 import { isGeminiAnalysis } from "@/lib/analysis/quality";
-import { readAnalysis } from "@/lib/analysis/store";
+import { readAnalysisForEntity } from "@/lib/analysis/store";
 import { getAllSlugs, getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
 import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import { formatRate } from "@/lib/format";
@@ -106,7 +106,7 @@ export async function generateMetadata({
   const rate = isNaverStockMeasurement(entity.measurement)
     ? entity.measurement.changeRate
     : entity.fluctuationRate;
-  const analysis = await readAnalysis(entity.slug);
+  const analysis = await readAnalysisForEntity(entity.slug, entity.name);
   const indexable = isIndexableEntityPage(entity, analysis);
   const title = isNaverStockMeasurement(entity.measurement)
     ? `${entity.name} 시세 · ${formatRate(rate)}`

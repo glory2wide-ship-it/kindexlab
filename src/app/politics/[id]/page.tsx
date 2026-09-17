@@ -11,7 +11,7 @@ import { PollDeskSection } from "@/components/politics/PollDeskSection";
 import { SupportIndexChart } from "@/components/politics/SupportIndexChart";
 import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
 import { isGeminiAnalysis } from "@/lib/analysis/quality";
-import { readAnalysis } from "@/lib/analysis/store";
+import { readAnalysisForEntity } from "@/lib/analysis/store";
 import { getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
 import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import {
@@ -68,7 +68,7 @@ export async function generateMetadata({
   const query = searchParams ? await searchParams : {};
   const entity = await loadEntity(id, typeof query.name === "string" ? query.name : undefined);
   if (!entity) return { title: "종목을 찾을 수 없습니다" };
-  const analysis = await readAnalysis(entity.slug);
+  const analysis = await readAnalysisForEntity(entity.slug, entity.name);
   const indexable = isIndexableEntityPage(entity, analysis);
   const title = entitySeoTitle(entity);
   const description = entitySeoDescription(entity);
