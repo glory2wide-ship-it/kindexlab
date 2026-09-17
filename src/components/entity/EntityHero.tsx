@@ -254,28 +254,31 @@ export function EntityHero({
         {entity.nameEn ? <p className="mt-1 text-sm text-muted">{entity.nameEn}</p> : null}
       </div>
       <dl className="detail-metrics-120 mt-[1.125rem] grid grid-cols-3 gap-3 border-t border-line pt-3 text-sm md:mt-6 md:gap-4 md:pt-4">
-        <div>
+        <div className="min-w-0">
           <dt className="text-muted">현재 순위</dt>
-          <dd className={`mt-0.5 font-sans text-lg tabular-nums md:mt-1 ${metricTone}`}>
+          <dd
+            className={`mt-0.5 whitespace-nowrap font-sans text-lg tabular-nums md:mt-1 ${metricTone}`}
+          >
             {entity.rank}위
           </dd>
         </div>
-        <div>
-          {/* 10% smaller than sibling metric label/value (text-sm / text-lg). */}
-          <dt className="text-[0.7875rem] leading-snug text-muted">KinDex 시가</dt>
+        <div className="min-w-0">
+          <dt className="text-muted">KinDex 시가</dt>
           <dd
-            className={`mt-0.5 font-sans text-[1.0125rem] leading-snug tabular-nums md:mt-1 ${metricTone}`}
+            className={`mt-0.5 whitespace-nowrap font-sans text-lg tabular-nums md:mt-1 ${metricTone}`}
           >
             {formatScore(entity.openScore)}
           </dd>
         </div>
-        <div>
-          <dt className="text-muted">
+        <div className="min-w-0">
+          <dt className="truncate text-muted">
             {metricLabel(entity.type) === "거래량"
               ? "KinDex 거래량"
               : `KinDex ${metricLabel(entity.type)}`}
           </dt>
-          <dd className="mt-0.5 font-sans text-lg tabular-nums md:mt-1">{formatCompact(entity.volume)}</dd>
+          <dd className="mt-0.5 whitespace-nowrap font-sans text-lg tabular-nums md:mt-1">
+            {formatCompact(entity.volume)}
+          </dd>
         </div>
       </dl>
       {entity.measurement ? (

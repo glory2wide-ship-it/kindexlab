@@ -120,8 +120,27 @@ export function analysisEntryMatchesEntity(
 
   const nameKey = normalizeAnalysisMatchKey(name);
   const keywordKey = normalizeAnalysisMatchKey(entry.keyword || "");
-  if (nameKey && keywordKey && (nameKey === keywordKey || keywordKey.endsWith(nameKey) || nameKey.endsWith(keywordKey))) {
+  if (
+    nameKey &&
+    keywordKey &&
+    (nameKey === keywordKey ||
+      keywordKey.endsWith(nameKey) ||
+      nameKey.endsWith(keywordKey))
+  ) {
     return true;
+  }
+
+  // Parenthetical alias: `자산형성지원사업(청년내일저축계좌)` ↔ `청년내일저축계좌`
+  for (const part of name.match(/\(([^)]+)\)/g) ?? []) {
+    const inner = normalizeAnalysisMatchKey(part.slice(1, -1));
+    if (
+      inner &&
+      inner.length >= 4 &&
+      keywordKey &&
+      (inner === keywordKey || keywordKey.endsWith(inner) || inner.endsWith(keywordKey))
+    ) {
+      return true;
+    }
   }
 
   const entityTail = normalizeAnalysisMatchKey(entitySlug.slice(board.length + 2));
@@ -129,9 +148,19 @@ export function analysisEntryMatchesEntity(
   if (
     entityTail &&
     entryTail &&
-    (entryTail === entityTail || entryTail.endsWith(entityTail) || entityTail.endsWith(entryTail))
+    (entryTail === entityTail ||
+      entryTail.endsWith(entityTail) ||
+      entityTail.endsWith(entryTail))
   ) {
-    if (nameKey && keywordKey && (keywordKey.includes(nameKey) || nameKey.includes(keywordKey))) {
+    if (
+      nameKey &&
+      keywordKey &&
+      (keywordKey.includes(nameKey) || nameKey.includes(keywordKey))
+    ) {
+      return true;
+    }
+    // Agency-stripped slug rename with overlapping core tail (≥4 chars).
+    if (entityTail.length >= 4 && entryTail.length >= 4) {
       return true;
     }
   }
@@ -142,24 +171,37 @@ export function analysisEntryMatchesEntity(
   return false;
 }
 
+function isReusableAnalysisEntry(
+  entry: Pick<CachedAnalysis, "provenance"> | null | undefined,
+): boolean {
+  if (!entry?.provenance) return false;
+  if (entry.provenance.kind === "chain") return true;
+  return Boolean(entry.provenance.model?.startsWith("import:"));
+}
+
 /**
- * Prefer the exact slug; if missing (slug rename), reuse the newest prior Gemini
- * column for the same board + keyword/name. Detail pages must never blank out a
- * previously generated 오늘의 분석 until a newer column replaces it.
+ * Prefer the exact slug; if missing or only a template stub, reuse the newest
+ * prior Gemini/import column for the same board + keyword/name.
+ *
+ * Detail pages must never blank out a previously generated 오늘의 분석 until a
+ * newer column replaces it.
  */
 export async function readAnalysisForEntity(
   entitySlug: string,
   entityName?: string,
 ): Promise<CachedAnalysis | undefined> {
   const direct = await readAnalysis(entitySlug);
-  if (direct) return direct;
+  if (direct && isReusableAnalysisEntry(direct)) return direct;
 
   const name = entityName?.trim();
-  if (!name) return undefined;
+  if (!name) {
+    return direct && isReusableAnalysisEntry(direct) ? direct : undefined;
+  }
 
   await loadDisk();
   let best: CachedAnalysis | undefined;
   for (const entry of memory.values()) {
+    if (entry.slug === entitySlug) continue; // already considered (non-reusable)
     if (
       !isPublicEditorialContent({
         editionDate: entry.editionDate || entry.article?.editionDate,
@@ -168,6 +210,7 @@ export async function readAnalysisForEntity(
     ) {
       continue;
     }
+    if (!isReusableAnalysisEntry(entry)) continue;
     if (!analysisEntryMatchesEntity(entry, entitySlug, name)) continue;
     if (!best || (entry.generatedAt || "") > (best.generatedAt || "")) {
       best = entry;

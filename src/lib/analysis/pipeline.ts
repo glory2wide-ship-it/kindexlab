@@ -264,8 +264,9 @@ function generateOnce(options: {
  * - First visitor click on a cold slug queues Gemini generation; the page stays
  *   empty until that (or overnight Batch) succeeds — never a template column.
  * - Cached Gemini columns stay valid for ANALYSIS_TTL_HOURS (default 48h / 2 days).
- * - After expiry (or slug rename), the last Gemini column is still served until a
- *   newer column replaces it — the detail slot must not go blank.
+ * - HARD RULE: if this entity ever had a Gemini 오늘의 분석 (including under a
+ *   prior slug/name), that column is always served until a newer column replaces
+ *   it — the detail slot must not go blank after a rename or TTL expiry.
  */
 export async function getOrCreateAnalysis(options: {
   entity: RankingEntity;
