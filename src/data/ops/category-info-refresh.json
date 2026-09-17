@@ -1,52 +1,52 @@
 {
-  "updatedAt": "2026-09-17T05:52:54.961Z",
+  "updatedAt": "2026-09-17T07:47:22.219Z",
   "tiers": {
-    "live_signal": "2026-09-17T04:26:32.565Z",
-    "ticket_food": "2026-09-17T05:52:25.926Z",
-    "media_catalog": "2026-09-17T04:42:42.945Z",
-    "entertainment_curated": "2026-09-17T05:39:38.074Z",
-    "other_news": "2026-09-17T05:48:34.636Z"
+    "live_signal": "2026-09-17T07:44:06.378Z",
+    "ticket_food": "2026-09-17T07:46:42.643Z",
+    "media_catalog": "2026-09-17T07:44:09.894Z",
+    "entertainment_curated": "2026-09-17T07:44:45.985Z",
+    "other_news": "2026-09-17T07:44:22.053Z"
   },
   "runs": {
     "media_catalog": {
-      "ok": 2,
-      "fail": 0,
-      "skip": 0,
-      "fillRateAvg": 0.6666666666666666,
-      "usedFallback": 1,
-      "lastRunAt": "2026-09-17T04:42:42.945Z"
+      "ok": 229,
+      "fail": 9,
+      "skip": 4,
+      "fillRateAvg": 0.6460055096418729,
+      "usedFallback": 178,
+      "lastRunAt": "2026-09-17T07:47:15.818Z"
     },
     "entertainment_curated": {
-      "ok": 72,
-      "fail": 0,
-      "skip": 0,
-      "fillRateAvg": 0.4791666666666667,
-      "usedFallback": 2,
-      "lastRunAt": "2026-09-17T05:43:30.973Z"
+      "ok": 243,
+      "fail": 3,
+      "skip": 6,
+      "fillRateAvg": 0.6388888888888891,
+      "usedFallback": 80,
+      "lastRunAt": "2026-09-17T07:46:40.455Z"
     },
     "live_signal": {
-      "ok": 4,
-      "fail": 0,
-      "skip": 0,
-      "fillRateAvg": 0.8333333333333333,
-      "usedFallback": 0,
-      "lastRunAt": "2026-09-17T04:27:50.045Z"
+      "ok": 381,
+      "fail": 37,
+      "skip": 35,
+      "fillRateAvg": 0.5724797645327445,
+      "usedFallback": 102,
+      "lastRunAt": "2026-09-17T07:47:22.219Z"
     },
     "other_news": {
-      "ok": 7,
-      "fail": 0,
-      "skip": 0,
-      "fillRateAvg": 0,
-      "usedFallback": 0,
-      "lastRunAt": "2026-09-17T05:48:34.636Z"
+      "ok": 168,
+      "fail": 68,
+      "skip": 39,
+      "fillRateAvg": 0.44121212121212094,
+      "usedFallback": 5,
+      "lastRunAt": "2026-09-17T07:46:26.718Z"
     },
     "ticket_food": {
-      "ok": 43,
-      "fail": 24,
-      "skip": 0,
-      "fillRateAvg": 0.40796019900497527,
-      "usedFallback": 58,
-      "lastRunAt": "2026-09-17T05:52:54.961Z"
+      "ok": 121,
+      "fail": 38,
+      "skip": 3,
+      "fillRateAvg": 0.46090534979423897,
+      "usedFallback": 122,
+      "lastRunAt": "2026-09-17T07:46:43.931Z"
     }
   }
 }
