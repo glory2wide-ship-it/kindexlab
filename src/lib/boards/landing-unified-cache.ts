@@ -8,7 +8,7 @@ import type { RankingEntity } from "@/lib/types";
 import type { PostChannel } from "@/lib/posts/types";
 
 /** Bump when landing desk/heatmap contract changes (desk top-4, rank integrity). */
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 const MAX_AGE_MS = DEFAULT_TRENDS_REVALIDATE_SEC * 1000;
 const EXPECTED_TILES = 5 * LANDING_PER_CHANNEL_TOP;
 
@@ -27,6 +27,8 @@ export type LandingUnifiedCacheMarket = {
 type LandingUnifiedCacheFile = {
   version: number;
   savedAt: string;
+  /** Must match live ingest snapshot.updatedAt — rejects mock/stale builds. */
+  snapshotUpdatedAt?: string;
   market: LandingUnifiedCacheMarket;
 };
 
@@ -78,11 +80,21 @@ function isCompleteLandingMarket(market: LandingUnifiedCacheMarket): boolean {
   return true;
 }
 
+function readSnapshotUpdatedAt(): string | null {
+  try {
+    const raw = JSON.parse(readFileSync(snapshotPath(), "utf8")) as { updatedAt?: string };
+    return typeof raw?.updatedAt === "string" && raw.updatedAt ? raw.updatedAt : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Tiny precomputed landing board (≤20 tiles + 5 desks).
  * Avoids re-deriving the unified market from the multi-MB snapshot on cold isolates.
  */
 export function readLandingUnifiedCache(): LandingUnifiedCacheMarket | null {
+  const liveUpdatedAt = readSnapshotUpdatedAt();
   for (const file of cachePaths()) {
     if (!isFresh(file)) continue;
     try {
@@ -91,6 +103,10 @@ export function readLandingUnifiedCache(): LandingUnifiedCacheMarket | null {
       if (!parsed.market?.items?.length || !parsed.market.desks?.length) continue;
       // Reject truncated desk tops / clobbered ranks from older builders.
       if (!isCompleteLandingMarket(parsed.market)) continue;
+      // Require binding to the current live snapshot — mock/stale builds omit or mismatch.
+      if (!liveUpdatedAt || !parsed.snapshotUpdatedAt || parsed.snapshotUpdatedAt !== liveUpdatedAt) {
+        continue;
+      }
       return parsed.market;
     } catch {
       continue;
@@ -99,11 +115,18 @@ export function readLandingUnifiedCache(): LandingUnifiedCacheMarket | null {
   return null;
 }
 
-export function writeLandingUnifiedCache(market: LandingUnifiedCacheMarket): void {
+export function writeLandingUnifiedCache(
+  market: LandingUnifiedCacheMarket,
+  snapshotUpdatedAt?: string,
+): void {
   if (!isCompleteLandingMarket(market)) return;
+  const liveUpdatedAt = snapshotUpdatedAt || readSnapshotUpdatedAt();
+  // Never persist a board built without a live ingest clock (mock/fixture path).
+  if (!liveUpdatedAt) return;
   const payload: LandingUnifiedCacheFile = {
     version: CACHE_VERSION,
     savedAt: new Date().toISOString(),
+    snapshotUpdatedAt: liveUpdatedAt,
     market,
   };
   const body = JSON.stringify(payload);

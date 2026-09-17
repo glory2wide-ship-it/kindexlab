@@ -56,26 +56,20 @@ function isComparativeBodaSentence(sentence: string): boolean {
  */
 export function repairComparativeBodaCorruption(text: string): string {
   if (!text?.trim()) return text;
-  let out = text.replace(/보다\.\s+(?=[\uAC00-\uD7A3"'「『0-9])/gu, "보다 ");
+  let out = text;
 
   const isLegitVerbBefore = (before: string) =>
     /(살펴|짚어|지켜|알아|물어|여겨|비춰|되돌아|생각해|기대해|통해|대해|관해|위해|다고|라고|것으로)$/u.test(
       before,
     );
 
-  // Tight form: 일정봅니다. 조기 → 일정보다 조기
-  out = out.replace(
-    /([가-힣A-Za-z0-9%·]+)봅니다\.\s+(?=[\uAC00-\uD7A3"'「『0-9])/gu,
-    (full, before: string) => {
-      if (isLegitVerbBefore(before)) return full;
-      return `${before}보다 `;
-    },
-  );
+  // Tight form: 일정봅니다. 조기 → 일정보다 조기 ; 무엇봅니다. → 무엇보다
+  out = out.replace(/([가-힣A-Za-z0-9%·]+)봅니다\./gu, (full, before: string) => {
+    if (isLegitVerbBefore(before)) return full;
+    return `${before}보다`;
+  });
 
   // Spaced form: 추진된다면 봅니다. 많은 → 추진된다면 보다 많은
-  // (period inserted after 보다, then honorific rewrote 보다. → 봅니다.)
-  // Note: sentence-final verb "…으로 봅니다." / "…다고 봅니다." won't match
-  // because this pattern requires hangul after the period.
   out = out.replace(
     /([가-힣A-Za-z0-9%·]+)\s+봅니다\.\s+(?=[\uAC00-\uD7A3"'「『0-9])/gu,
     (full, before: string) => {
@@ -83,6 +77,10 @@ export function repairComparativeBodaCorruption(text: string): string {
       return `${before} 보다 `;
     },
   );
+
+  // Glue split comparative left with a period: "무엇보다. 중요해" → "무엇보다 중요해"
+  out = out.replace(/보다\.\s+(?=[\uAC00-\uD7A3"'「『0-9])/gu, "보다 ");
+
   return out;
 }
 

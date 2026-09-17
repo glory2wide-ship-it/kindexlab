@@ -660,27 +660,47 @@ function formatGrantList(...parts: Array<string | undefined>): string | undefine
 
   const items: string[] = [];
   for (const chunk of chunks) {
+    // Prefer author-provided numbered / bulleted lines as atomic items.
+    const explicitLines = chunk
+      .split(/\r?\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const looksNumbered =
+      explicitLines.length > 1 &&
+      explicitLines.filter((line) => /^(?:[0-9]+[.)]|[①-⑮]|[-•·◦○●])\s*/.test(line)).length >=
+        Math.ceil(explicitLines.length * 0.6);
+
+    if (looksNumbered) {
+      for (const line of explicitLines) {
+        const cleaned = line
+          .replace(/^(?:[0-9]+[.)]|[①-⑮]|[-•·◦○●])\s*/, "")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (cleaned.length >= 2 && !isGrantSpamValue(cleaned)) items.push(cleaned);
+      }
+      continue;
+    }
+
     const pieces = chunk
       .split(
-        /(?:\r?\n+|;\s*|·\s*|(?<=[.。!?])\s+(?=[가-힣A-Za-z0-9①-⑮])|\/\s+(?=[가-힣])|(?<=[가-힣])\s*[-–—]\s+(?=[가-힣])|(?=\d+[.)]\s)|(?=[①-⑮]))/,
+        // Never split on calendar fragments like "2020.12. 이전" — only list markers
+        // after a break, circled numbers, or hollow bullets.
+        /(?:\r?\n+|;\s*|·\s*|(?<=[가-힣A-Za-z)）])\s*(?=\d{1,2}[.)]\s)|(?=[①-⑮])|(?=\s*[○●◦]\s*))/,
       )
       .map((piece) =>
         piece
-          .replace(/^[\s\-•·\*◦○●①-⑮\d.)]+/, "")
+          .replace(/^[\s\-•·\*◦○●①-⑮]+/, "")
+          .replace(/^\d{1,2}[.)]\s*/, "")
           .replace(/\s+/g, " ")
           .trim(),
       )
       .filter((piece) => piece.length >= 2 && !isGrantSpamValue(piece));
     if (pieces.length > 1) {
       items.push(...pieces);
-    } else {
-      // Long single blob — try comma/conjunction splits for readability.
-      const soft = chunk
-        .split(/(?<=다)\s+|,\s+(?=[가-힣])/)
-        .map((piece) => piece.trim())
-        .filter((piece) => piece.length >= 8 && !isGrantSpamValue(piece));
-      if (soft.length > 1) items.push(...soft);
-      else if (!isGrantSpamValue(chunk)) items.push(chunk);
+    } else if (!isGrantSpamValue(chunk)) {
+      // Keep a single clause intact — never soft-split mid-sentence with
+      // "(?<=다)\s+" which renumbered eligibility vs prep out of order.
+      items.push(chunk);
     }
   }
 
@@ -691,12 +711,15 @@ function formatGrantList(...parts: Array<string | undefined>): string | undefine
       .replace(/\s+/g, " ")
       .replace(/(?:및|와|과|또는|등)\s*$/u, "")
       .trim();
-    if (cleaned.length < 4 || isGrantSpamValue(cleaned)) continue;
+    // Numbered doc labels can be short (신분증, 통장사본).
+    if (cleaned.length < 2 || isGrantSpamValue(cleaned)) continue;
     if (cleaned.length < 12 && !/[.。!?)]$/.test(cleaned) && /(?:의|을|를|이|가|은|는)$/u.test(cleaned)) {
       continue;
     }
     // Reject mis-captured "신청 기간 …" blobs in eligibility/prep.
     if (/^신청\s*기간/.test(cleaned) && cleaned.length < 60) continue;
+    // Keep support-benefit copy out of eligibility lists.
+    if (/^지원\s*내용/.test(cleaned)) continue;
     const key = cleaned.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
@@ -762,7 +785,7 @@ function applyGrantRecord(
   if (deadline) {
     next = fillUpdatingRows(next, [{ label: "신청 기간", value: deadline }]);
   }
-  const eligibility = formatGrantList(grant.target, grant.criteria, grant.content);
+  const eligibility = formatGrantList(grant.target, grant.criteria);
   if (eligibility) {
     next = next.map((row) =>
       /신청 자격|자격·조건/.test(row.label) && isUpdating(row.value)
@@ -773,15 +796,26 @@ function applyGrantRecord(
       next = [{ label: "신청 자격·조건", value: eligibility, multiline: true }, ...next];
     }
   }
-  const prep = formatGrantList(grant.documents, grant.howToApply);
-  if (prep) {
+  // 구비서류 → 준비사항. 신청방법은 labelled suffix so numbers stay document-aligned.
+  const prepDocs = formatGrantList(grant.documents);
+  const applyHow = sanitizeGrantField(plain(grant.howToApply));
+  let prepValue = prepDocs;
+  if (prepDocs && applyHow) {
+    const methodLine = applyHow.replace(/\s+/g, " ").trim();
+    if (methodLine && !prepDocs.includes(methodLine)) {
+      prepValue = `${prepDocs}\n· 신청 방법: ${methodLine}`;
+    }
+  } else if (!prepDocs && applyHow) {
+    prepValue = formatGrantList(applyHow);
+  }
+  if (prepValue) {
     next = next.map((row) =>
       row.label === "준비사항" && isUpdating(row.value)
-        ? { ...row, value: prep, multiline: true }
+        ? { ...row, value: prepValue!, multiline: true }
         : row,
     );
     if (!next.some((row) => row.label === "준비사항")) {
-      next = [...next, { label: "준비사항", value: prep, multiline: true }];
+      next = [...next, { label: "준비사항", value: prepValue, multiline: true }];
     }
   }
 

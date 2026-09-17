@@ -6,6 +6,7 @@
  */
 import type { CachedAnalysis } from "@/lib/analysis/store";
 import { stripRowQualifier } from "@/lib/boards/heatmap";
+import { repairComparativeBodaCorruption } from "@/lib/editorial/honorific";
 import {
   buildKindexFeatureParagraph,
   extractStoryBeatsFromSections,
@@ -57,7 +58,11 @@ export function sanitizeCachedAnalysisArticle(
 
   const sections = entry.article.sections.map((section) => {
     let heading = section.heading;
-    let paragraphs = section.paragraphs;
+    let paragraphs = section.paragraphs.map((paragraph) => {
+      const repaired = repairComparativeBodaCorruption(paragraph);
+      if (repaired !== paragraph) changed = true;
+      return repaired;
+    });
 
     const clean = scrubSectionHeadingNoise(heading);
     if (clean === GENERIC_GRANT_READER) {
@@ -82,14 +87,25 @@ export function sanitizeCachedAnalysisArticle(
       }
     }
 
-    return heading === section.heading && paragraphs === section.paragraphs
+    return heading === section.heading &&
+      paragraphs.length === section.paragraphs.length &&
+      paragraphs.every((p, i) => p === section.paragraphs[i])
       ? section
       : { ...section, heading, paragraphs };
   });
 
+  let excerpt = entry.article.excerpt;
+  if (excerpt) {
+    const repairedExcerpt = repairComparativeBodaCorruption(excerpt);
+    if (repairedExcerpt !== excerpt) {
+      excerpt = repairedExcerpt;
+      changed = true;
+    }
+  }
+
   if (!changed) return entry;
   return {
     ...entry,
-    article: { ...entry.article, sections },
+    article: { ...entry.article, excerpt, sections },
   };
 }

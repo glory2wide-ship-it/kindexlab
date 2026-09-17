@@ -65,7 +65,7 @@ export function TodayAnalysis({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <p className="font-sans text-[11px] font-semibold tracking-[0.14em] text-accent">오늘의 분석</p>
+      <p className="font-sans text-[13.2px] font-semibold tracking-[0.14em] text-accent">오늘의 분석</p>
       {topic ? (
         <p data-analysis-keyword={topic} className="mt-2 text-sm font-semibold text-ink">
           키워드 · {topic}
@@ -139,7 +139,7 @@ export function TodayAnalysis({
 
         <section>
           <SectionHeading as="h3">자주 묻는 질문</SectionHeading>
-          <FaqList items={article.faq ?? []} />
+          <FaqList items={article.faq ?? []} defaultOpen />
         </section>
 
         <ContentSlot placement="footer" label={article.focusKeyword} adFormat="auto" />

@@ -758,8 +758,8 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
               subtitle="채널 구분별 권장 주기·채움률·회차별 성공/실패/스킵. 실제 조회 캐시도 이 주기에 맞춰 재검증합니다."
               meta={`정책 기준 ${formatKst(data.generatedAt)} · 열람일 ${data.editionDate}`}
             >
-              {/* Mobile: stacked cards — wide 7-col table was unreadable. */}
-              <ul className="space-y-3 md:hidden">
+              {/* Same stacked cards on mobile and desktop (table was unreadable on both). */}
+              <ul className="space-y-3">
                 {categoryInfoRefresh.map((row) => (
                   <li
                     key={row.id}
@@ -776,7 +776,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                         {row.cadenceLabel}
                       </span>
                     </div>
-                    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm sm:grid-cols-3 md:grid-cols-4">
                       <div>
                         <dt className="text-[11px] text-muted">채움률</dt>
                         <dd className="mt-0.5 tabular-nums text-ink">
@@ -794,7 +794,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                           <span className="text-muted">{row.run?.skip ?? 0}</span>
                         </dd>
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-2 sm:col-span-1 md:col-span-1">
                         <dt className="text-[11px] text-muted">폴백</dt>
                         <dd className="mt-0.5 text-xs text-muted">
                           {row.fallbackLabel ??
@@ -828,67 +828,6 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                   </li>
                 ))}
               </ul>
-
-              <div className="hidden overflow-x-auto rounded-xl border border-line md:block">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-board text-xs text-muted">
-                    <tr>
-                      <th className="px-3 py-2 font-medium">구분</th>
-                      <th className="whitespace-nowrap px-3 py-2 font-medium">권장 주기</th>
-                      <th className="whitespace-nowrap px-3 py-2 font-medium">채움률</th>
-                      <th className="whitespace-nowrap px-3 py-2 font-medium">성공/실패/스킵</th>
-                      <th className="px-3 py-2 font-medium">폴백</th>
-                      <th className="px-3 py-2 font-medium">최신 업데이트</th>
-                      <th className="px-3 py-2 font-medium">다음 업데이트</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categoryInfoRefresh.map((row) => (
-                      <tr key={row.id} className="border-t border-line align-top">
-                        <td className="px-3 py-2.5">
-                          <div className="font-medium text-ink">{row.label}</div>
-                          <div className="mt-0.5 text-xs text-muted">{row.channelsLabel}</div>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-ink">
-                          {row.cadenceLabel}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-ink">
-                          {row.fillRateLabel ??
-                            `${Math.round((row.run?.fillRateAvg ?? 0) * 100)}%`}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 tabular-nums">
-                          <span className="text-emerald-700">{row.run?.ok ?? 0}</span>
-                          <span className="text-muted"> / </span>
-                          <span className="text-red-700">{row.run?.fail ?? 0}</span>
-                          <span className="text-muted"> / </span>
-                          <span className="text-muted">{row.run?.skip ?? 0}</span>
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-muted">
-                          {row.fallbackLabel ??
-                            ((row.run?.usedFallback ?? 0) > 0
-                              ? `폴백 ${row.run?.usedFallback}`
-                              : "폴백 없음")}
-                        </td>
-                        <td className="px-3 py-2.5 text-xs tabular-nums text-ink">
-                          {formatKst(row.lastUpdatedAt)}
-                        </td>
-                        <td className="px-3 py-2.5 text-xs tabular-nums">
-                          <span
-                            className={row.overdue ? "font-medium text-amber-800" : "text-ink"}
-                          >
-                            {formatKst(row.nextUpdateAt)}
-                          </span>
-                          {row.overdue ? (
-                            <span className="mt-0.5 block text-[11px] text-amber-700">
-                              갱신 지연
-                            </span>
-                          ) : null}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </Section>
 
             <Section

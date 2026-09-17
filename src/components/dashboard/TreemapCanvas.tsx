@@ -124,9 +124,20 @@ export function TreemapView({
   const visible = useMemo(() => pickHeatmapItems(safeItems, tileCap), [safeItems, tileCap]);
   const displayRankById = useMemo(() => {
     const ranks = new Map<string, number>();
+    if (showChannelTags) {
+      // Landing: badge = within-category 1~4 (not interleaved 1~20).
+      const perChannel = new Map<string, number>();
+      for (const item of visible) {
+        const channel = item.sourceChannel ?? "_";
+        const next = (perChannel.get(channel) ?? 0) + 1;
+        perChannel.set(channel, next);
+        ranks.set(item.id, next);
+      }
+      return ranks;
+    }
     visible.forEach((item, index) => ranks.set(item.id, index + 1));
     return ranks;
-  }, [visible]);
+  }, [visible, showChannelTags]);
 
   useEffect(() => {
     const element = wrapRef.current;

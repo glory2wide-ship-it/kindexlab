@@ -54,6 +54,9 @@ const DA_TITLE_WORDS = /^(힘들|다른|같은|이런|저런|그런|어떤|모�
  */
 const DA_NON_SENTENCE_ENDINGS = /^(보다|마다)$/;
 
+/** Syllables that form a connective when followed by bare "다" (보+다 → 보다). */
+const DA_CONNECTIVE_PREFIX = /^(보|마)$/u;
+
 /**
  * Inserts periods where Korean declarative clauses run into the next sentence
  * without terminal punctuation (e.g. "떠올랐다 이슈의" → "떠올랐다. 이슈의").
@@ -68,6 +71,12 @@ export function insertMissingKoreanPeriods(text: string): string {
     if (DA_TITLE_WORDS.test(word)) return match;
     if (DA_NON_SENTENCE_ENDINGS.test(end) || DA_NON_SENTENCE_ENDINGS.test(word)) {
       return match;
+    }
+    // Bare "다" after 보/마 is the particle 보다/마다 — never insert a period.
+    if (end === "다") {
+      const prev = source.slice(0, offset).match(/[\uAC00-\uD7A3]$/u)?.[0] ?? "";
+      if (DA_CONNECTIVE_PREFIX.test(prev)) return match;
+      if (/(보다|마다)$/u.test(word)) return match;
     }
     // Connective "다 보니/보면/…" — keep unpunctuated.
     const after = source.slice(offset + match.length);

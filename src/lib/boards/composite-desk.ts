@@ -2,7 +2,7 @@ import "server-only";
 
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
-import { getRankings } from "@/lib/providers/trends";
+import { getRankings, getTrendsSource } from "@/lib/providers/trends";
 import { buildHeatmapItems, type HeatmapBoardPayload } from "@/lib/boards/heatmap";
 import {
   loadChannelHeatmapPayloads,
@@ -96,11 +96,15 @@ async function resolveLiveMarket(market?: RankingsPayload): Promise<RankingsPayl
   const snapshot = loadHeatmapLivePayload();
   const snapCount = snapshot?.items?.length ?? 0;
   const marketCount = market?.items?.length ?? 0;
+  // Landing tops must track the ingest snapshot — never prefer a thinner caller
+  // seed/mock over a denser live tape (that previously froze wrong category 1~4).
   if (snapCount > 0 && snapCount >= marketCount) return snapshot;
-  if (marketCount > 0) return market;
   if (snapCount > 0) return snapshot;
+  if (marketCount > 0) return market;
   try {
     const rankings = await getRankings();
+    // Landing must not freeze fixture rankings when the live snapshot is absent.
+    if (getTrendsSource() === "mock") return undefined;
     return rankings?.items?.length ? rankings : undefined;
   } catch {
     return undefined;
@@ -280,7 +284,8 @@ async function buildUnifiedMarket(market?: RankingsPayload): Promise<UnifiedMark
       summarizeLandingGaps(marketPayload),
     );
   } else {
-    writeLandingUnifiedCache(marketPayload);
+    // Bind cache to live ingest clock only — skip write when built from mock/empty.
+    writeLandingUnifiedCache(marketPayload, resolved?.updatedAt);
   }
   return marketPayload;
 }
@@ -319,7 +324,7 @@ function summarizeLandingGaps(market: UnifiedMarket): Record<string, unknown> {
  */
 const cachedUnifiedMarket = unstable_cache(
   async () => buildUnifiedMarket(),
-  ["unified-market-v6-5m-per-channel-top4-desk4-parity"],
+  ["unified-market-v7-5m-per-channel-top4-snapshot-bound"],
   { revalidate: DEFAULT_TRENDS_REVALIDATE_SEC },
 );
 

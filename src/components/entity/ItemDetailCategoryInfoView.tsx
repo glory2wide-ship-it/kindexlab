@@ -295,8 +295,8 @@ export function ItemDetailCategoryInfoView({
       ) : null}
 
       <div className="mt-4 border-t border-line pt-4">
-        <h3 className="text-xs font-semibold tracking-wide text-soft">
-          관련 뉴스 · 이슈 링크
+        <h3 className="text-sm font-semibold tracking-wide text-soft">
+          관련 뉴스 · 이슈
         </h3>
         <ul className="mt-2 space-y-2.5">
           {payload.links.map((link) => {
