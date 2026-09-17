@@ -96,10 +96,31 @@ const softOfficial = evaluateTrendsHealth({
   rejectMock: false,
   minItems: 400,
 });
-assert(softOfficial.ok, `official down + melon up should warn not fail: ${JSON.stringify(softOfficial.issues)}`);
+assert(softOfficial.ok, `official down + melon up should stay OK: ${JSON.stringify(softOfficial.issues)}`);
 assert(
-  softOfficial.issues.some((i) => i.code === "critical_source_failed" && i.level === "warn"),
-  "should soft-warn on official music failure",
+  softOfficial.requiredFailedCount === 0,
+  "melon/HTML fallbacks cover the music desk — not a required failure",
+);
+assert(
+  !softOfficial.issues.some((i) => i.code === "critical_source_failed"),
+  "no soft-warn when Melon/Genie/Bugs still fill the music desk",
+);
+
+const appleOnlyDown = evaluateTrendsHealth({
+  snapshot: snap([
+    chart("apple-music", ["A"], false),
+    chart("circle", ["B"]),
+    chart("melon", ["C"], false),
+    chart("naver-movie", ["M"]),
+  ]),
+  rejectMock: false,
+  minItems: 400,
+});
+assert(appleOnlyDown.ok, `apple-music alone down should be OK when Circle is up`);
+assert(appleOnlyDown.requiredFailedCount === 0, "Circle covers music primary");
+assert(
+  !appleOnlyDown.issues.some((i) => i.code === "critical_source_failed"),
+  "no soft-warn for apple-music when Circle is healthy",
 );
 
 const allMusicDown = evaluateTrendsHealth({
@@ -161,6 +182,7 @@ console.log(
       melonPts,
       healthyOk: healthy.ok,
       softOfficialOk: softOfficial.ok,
+      appleOnlyDownOk: appleOnlyDown.ok,
       allMusicDownOk: allMusicDown.ok,
       movieSoftOk: movieSoft.ok,
       movieHardOk: movieHard.ok,
