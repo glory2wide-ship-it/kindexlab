@@ -39,6 +39,8 @@
         "live:index-blurb": "tsx scripts/_check-index-blurb-dedupe.ts",
     "live:category-info": "tsx scripts/_check-category-info.ts",
     "live:hit-songs": "tsx scripts/_check-hit-songs.ts",
+    "live:news-links": "tsx scripts/_check-news-link-quality.ts",
+    "category-info:warm": "tsx scripts/warm-category-info.ts",
     "live:public-data": "tsx --env-file=.env.local scripts/_check-public-data.ts",
     "live:first": "tsx scripts/_check-live-first-heatmap.ts",
         "live:completeness": "tsx scripts/_check-live-completeness.ts",

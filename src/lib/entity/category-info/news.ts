@@ -65,6 +65,14 @@ const CHANNEL_NEWS_SENSE: Partial<Record<CategoryInfoChannel, ChannelNewsSense>>
     onSense: /책|도서|베스트셀러|저자|출판|소설|에세이|서점/,
     requireOnSense: true,
   },
+  game: {
+    queryHint: "게임",
+    onSense:
+      /게임|모바일\s*게임|앱게임|스팀|Steam|닌텐도|플레이스테이션|Xbox|출시|업데이트|패치|쿠폰|뽑기|가챠|랭킹|매출|플레이/i,
+    offSense:
+      /아이돌|뉴진스|빌보드|트로트|웹툰|드라마\s*PDF|영어\s*문법|지식인\s*답변|교회|설교|연예\s*뉴스/,
+    requireOnSense: true,
+  },
   kpop: {
     queryHint: "아이돌",
     onSense: /아이돌|그룹|컴백|팬덤|앨범|뮤직|가수|케이팝|K-?POP/i,
@@ -137,6 +145,38 @@ const CHANNEL_NEWS_SENSE: Partial<Record<CategoryInfoChannel, ChannelNewsSense>>
   },
 };
 
+/** Latin tokens too short/common to prove entity overlap (e.g. GO in MONOPOLY GO!). */
+const WEAK_ENTITY_TOKENS = new Set([
+  "go",
+  "the",
+  "and",
+  "for",
+  "app",
+  "inc",
+  "ltd",
+  "co",
+  "of",
+  "to",
+  "in",
+  "on",
+  "vs",
+  "pdf",
+  "new",
+  "pro",
+]);
+
+function entityNameTokens(entityName: string): string[] {
+  const needle = entityName.replace(/\s+/g, "").replace(/^\[[^\]]+\]/, "");
+  const raw = needle.match(/[가-힣A-Za-z0-9]{2,}/g) ?? [];
+  return raw.filter((token) => {
+    if (/^[A-Za-z]+$/.test(token)) {
+      if (token.length < 3) return false;
+      if (WEAK_ENTITY_TOKENS.has(token.toLowerCase())) return false;
+    }
+    return token.length >= 2;
+  });
+}
+
 /** Search / crawl query with channel sense suffix (e.g. "나이트런 웹툰"). */
 export function newsQueryForChannel(
   name: string,
@@ -160,8 +200,11 @@ export function scoreNewsLinkQuality(
 ): number {
   if (!link.href || isNewsSearchFallbackUrl(link.href)) return 0;
   let host = "";
+  let path = "";
   try {
-    host = new URL(link.href).hostname.toLowerCase().replace(/^www\./, "");
+    const url = new URL(link.href);
+    host = url.hostname.toLowerCase().replace(/^www\./, "");
+    path = url.pathname.toLowerCase();
   } catch {
     return 0;
   }
@@ -175,18 +218,29 @@ export function scoreNewsLinkQuality(
   ) {
     return 0;
   }
+  // Knowledge-in profiles, random PDF dumps, translator landings — not entity news.
+  if (/kin\.naver\.com/i.test(host) && /\/profile\//.test(path)) return 0;
+  if (/papago\.naver\.com|dict\.naver\.com|mail\.naver\.com|pay\.naver\.com/i.test(host)) {
+    return 0;
+  }
   const title = `${link.title} ${link.source ?? ""}`;
   const compactTitle = title.replace(/\s+/g, "");
   const needle = entityName.replace(/\s+/g, "").replace(/^\[[^\]]+\]/, "");
-  const tokens = needle.match(/[가-힣A-Za-z0-9]{2,}/g) ?? [];
+  const tokens = entityNameTokens(entityName);
   let score = 1;
 
-  // Entity overlap in title
+  // Entity overlap in title (ignore weak tokens like "GO")
   const hasEntity =
-    (needle.length >= 2 && compactTitle.includes(needle)) ||
-    tokens.some((t) => t.length >= 2 && compactTitle.includes(t));
-  if (needle.length >= 2 && compactTitle.includes(needle)) score += 4;
-  else if (tokens.some((t) => compactTitle.includes(t))) score += 2;
+    (needle.length >= 3 && compactTitle.toLowerCase().includes(needle.toLowerCase())) ||
+    tokens.some((t) => t.length >= 2 && compactTitle.toLowerCase().includes(t.toLowerCase()));
+  if (needle.length >= 3 && compactTitle.toLowerCase().includes(needle.toLowerCase())) score += 4;
+  else if (tokens.some((t) => compactTitle.toLowerCase().includes(t.toLowerCase()))) score += 2;
+
+  // Without entity proof, unrelated press/blog links must not fill the slot.
+  if (!hasEntity) {
+    // Allow only strong official hosts that still need channel sense below.
+    score = Math.min(score, 1);
+  }
 
   // Channel sense — reject homonym / off-topic hits
   const sense = channel ? CHANNEL_NEWS_SENSE[channel] : undefined;
@@ -194,15 +248,14 @@ export function scoreNewsLinkQuality(
     const on = sense.onSense.test(title);
     const off = sense.offSense?.test(title) ?? false;
     if (off && !on) return 0;
-    if (sense.requireOnSense && hasEntity && !on) return 0;
+    if (sense.requireOnSense && !on) return 0;
     if (on) score += 3;
-    else if (sense.requireOnSense) score -= 2;
   }
 
   // Known press / official domains
   if (
     /\.(co\.kr|com|net|org)$/i.test(host) &&
-    !/blog\.|tistory\.|cafe\.|instagram\.|facebook\./i.test(host)
+    !/blog\.|tistory\.|cafe\.|instagram\.|facebook\.|kin\.naver/i.test(host)
   ) {
     score += 1;
   }
@@ -214,12 +267,20 @@ export function scoreNewsLinkQuality(
   ) {
     score += 2;
   }
-  // Platform hosts that prove on-sense for webtoon / book
+  // Platform hosts that prove on-sense for webtoon / book / game
   if (channel === "webtoon" && /comic\.naver\.|webtoon\.|page\.kakao\./i.test(host)) {
     score += 4;
   }
   if (channel === "book" && /kyobobook\.|yes24\.|aladin\.|npage\./i.test(host)) {
     score += 3;
+  }
+  if (
+    channel === "game" &&
+    /steampowered\.|store\.steampowered\.|playstation\.|xbox\.|nintendo\.|apps\.apple\.|play\.google\./i.test(
+      host,
+    )
+  ) {
+    score += 4;
   }
 
   // Claimed source vs host disagreement (보조금24-style)
@@ -228,9 +289,13 @@ export function scoreNewsLinkQuality(
   if (claimsGov && !/(^|\.)gov\.kr$/i.test(host) && !host.endsWith(".go.kr")) return 0;
   if (claimsWelfare && !/bokjiro\.go\.kr$/i.test(host) && !host.endsWith(".go.kr")) return 0;
 
-  // Thin / generic titles
+  // Thin / generic titles / URL chrome used as titles
   if (link.title.length < 8) score -= 1;
   if (/관련 뉴스|검색 결과|네이버 뉴스/.test(link.title)) score -= 2;
+  if (/\.go\.kr|\.co\.kr|\.com|\.org|›|PDF$/i.test(link.title) && !hasEntity) return 0;
+
+  // Final gate: real article slots need entity overlap (search fallbacks scored 0 already).
+  if (!hasEntity && score < 5) return 0;
 
   return Math.max(0, score);
 }

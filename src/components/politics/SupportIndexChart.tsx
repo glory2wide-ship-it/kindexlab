@@ -90,7 +90,7 @@ export function SupportIndexChart({
       : "정치인 지지도";
 
   return (
-    <section className="detail-copy-110 space-y-4">
+    <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
@@ -147,7 +147,7 @@ export function SupportIndexChart({
           {!error && !payload ? (
             <p className="px-3 py-10 text-center text-sm text-muted">시계열을 집계하는 중입니다.</p>
           ) : null}
-          <ul className="mt-2 flex flex-wrap gap-3 px-2 text-[11px] text-muted">
+          <ul className="support-chart-notes-110 mt-2 flex flex-wrap gap-3 px-2 text-[11px] text-muted">
             {SUPPORT_AGENCIES.map((agency) => (
               <li key={agency.id} className="flex items-center gap-1.5">
                 <span className="inline-block h-1.5 w-4 rounded-full" style={{ background: agency.color }} />
@@ -161,7 +161,7 @@ export function SupportIndexChart({
             </li>
           </ul>
         </div>
-        <aside className="rounded-xl border border-line bg-panel p-4 text-[12px] leading-6 text-muted">
+        <aside className="support-chart-notes-110 rounded-xl border border-line bg-panel p-4 text-[12px] leading-6 text-muted">
           <p className="text-xs font-semibold text-ink">조사 방식 안내</p>
           <p className="mt-2">
             <span className="text-ink">주기</span> · {POLL_METHOD_CARD.cadence}
@@ -182,7 +182,7 @@ export function SupportIndexChart({
         </aside>
       </div>
 
-      <div className="rounded-xl border border-line bg-panel">
+      <div className="support-chart-notes-110 rounded-xl border border-line bg-panel">
         <div className="border-b border-line px-4 py-3">
           <p className="text-xs font-semibold">관련 주요 기사 5건</p>
           <p className="text-[11px] text-muted">조선·연합·중앙·동아 등 주요 언론 보도를 자동 수집합니다.</p>

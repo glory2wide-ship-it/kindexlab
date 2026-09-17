@@ -509,6 +509,11 @@ nav[aria-label$="서브 메뉴"] {
   zoom: 1.1;
 }
 
+/* Party / politician support chart: notes under the chart (+10%). */
+.support-chart-notes-110 {
+  zoom: 1.1;
+}
+
 /* Hero metrics (rank / open / volume) — 20%; entity name stays outside. */
 .detail-metrics-120 {
   zoom: 1.2;

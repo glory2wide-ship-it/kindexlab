@@ -145,12 +145,14 @@ export async function resolveBoardOrKeywordEntity(
   const name = fallbackName?.trim();
   if (name) {
     const boardSlug = decoded.includes("--") ? decoded.split("--")[0] ?? "" : "";
+    // Prefer board-typed synthesis over celebrity when the URL has no board prefix
+    // but the name clearly belongs on the games heatmap (avoids star-channel news junk).
     const type: EntityType = decoded.startsWith("headline")
       ? "headline_news"
       : boardSlug
         ? entityTypeForBoardSlug(boardSlug) ??
           typeFromBoardChannel(getBoard(boardSlug)?.channel ?? "entertainment")
-        : "celebrity";
+        : guessKeywordEntityType(name, decoded);
     return synthesizeKeywordEntity(decoded, name, type);
   }
   if (decoded.includes("--")) {
@@ -162,4 +164,17 @@ export async function resolveBoardOrKeywordEntity(
     if (guess.length >= 2) return synthesizeKeywordEntity(decoded, guess, type);
   }
   return undefined;
+}
+
+/** Last-resort type guess when live tape miss synthesizes a keyword placeholder. */
+function guessKeywordEntityType(name: string, slug: string): EntityType {
+  const blob = `${name} ${slug}`;
+  if (
+    /game|게임|GO!|Saga|Match|Kart|Zelda|Roblox|Steam|모바일|닌텐도|플레이스테이션/i.test(
+      blob,
+    )
+  ) {
+    return "mobile_game";
+  }
+  return "celebrity";
 }

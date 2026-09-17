@@ -562,6 +562,11 @@ function isIrrelevantNaverServiceLink(link: { title?: string; href?: string; sou
   if (/papago\.naver\.com|dict\.naver\.com|pay\.naver\.com|mail\.naver\.com/i.test(blob)) {
     return true;
   }
+  if (/kin\.naver\.com\/profile/i.test(blob)) return true;
+  // URL-chrome titles ("host › path PDF") with no readable headline
+  if (/\.go\.kr|\.co\.kr|\.com|\.org/i.test(link.title ?? "") && /›|PDF/i.test(link.title ?? "")) {
+    return true;
+  }
   return false;
 }
 
