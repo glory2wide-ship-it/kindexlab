@@ -68,9 +68,17 @@ async function main() {
         const enriched = await enrichCategoryInfoPayload(base);
         touchCategoryInfoRefreshTier(enriched.channel);
         const fillRate = enriched.fillRate ?? 0;
+        const realLinks = (enriched.links ?? []).filter(
+          (link) => link.href && !/search\.(naver|daum)|google\.com\/search|news\.google\.com\/search/i.test(link.href),
+        ).length;
+        const visitorOk =
+          fillRate >= 0.5 ||
+          !enriched.sparse ||
+          (enriched.rows?.length ?? 0) >= 2 ||
+          realLinks >= 3;
         recordCategoryInfoRefreshRun({
           channel: enriched.channel,
-          status: fillRate >= 0.5 || !enriched.sparse ? "ok" : fillRate > 0 ? "skip" : "fail",
+          status: visitorOk ? "ok" : fillRate > 0 || realLinks > 0 ? "skip" : "fail",
           fillRate,
           usedFallback: enriched.usedFallback,
         });

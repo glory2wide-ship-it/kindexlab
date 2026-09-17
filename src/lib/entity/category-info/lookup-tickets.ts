@@ -262,7 +262,7 @@ async function lookupNolTicket(
       row,
       score: titleScore(row.goodsName ?? "", name),
     }))
-    .filter((item) => item.score >= 60)
+    .filter((item) => item.score >= 50)
     .sort((a, b) => b.score - a.score);
   const top = scored[0]?.row;
   if (!top?.goodsName) return undefined;
@@ -321,7 +321,7 @@ async function lookupTicketlink(
     }
     const scored = products
       .map((row) => ({ row, score: titleScore(row.title, name) }))
-      .filter((item) => item.score >= 60)
+      .filter((item) => item.score >= 50)
       .sort((a, b) => b.score - a.score);
     const top = scored[0]?.row;
     if (!top) return undefined;

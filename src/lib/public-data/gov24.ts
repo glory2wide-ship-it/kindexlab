@@ -138,19 +138,49 @@ export async function matchGov24Service(
 function keywordVariants(keyword: string): string[] {
   const q = keyword.trim();
   if (!q) return [];
-  const out = [q];
+  const out: string[] = [];
+  const push = (value: string) => {
+    const cleaned = value.replace(/\s+/g, " ").trim();
+    if (cleaned && !out.includes(cleaned)) out.push(cleaned);
+  };
+
+  push(q);
   // Drop bracket labels: "[복지부] 청년도약계좌" → "청년도약계좌"
-  const unbracket = q.replace(/^\[[^\]]+\]\s*/, "").trim();
-  if (unbracket && unbracket !== q) out.push(unbracket);
-  // Meaningful tokens (2+ chars)
-  const tokens = unbracket.split(/[\s_/·\-]+/).filter((t) => t.length >= 2);
-  for (const token of tokens) {
-    if (!out.includes(token)) out.push(token);
+  const unbracket = q.replace(/^\[[^\]]+\]\s*/g, "").trim();
+  push(unbracket);
+  // Drop org prefixes: "문화체육관광부 / 한국문화예술위원회 문화누리카드"
+  const noOrg = unbracket
+    .replace(
+      /^(?:[\w가-힣]+(?:부|청|원|공단|공사|위원회|처|청|시|도|군|구))(?:\s*[\/·,]\s*[\w가-힣]+(?:부|청|원|공단|공사|위원회|처))?\s+/u,
+      "",
+    )
+    .trim();
+  push(noOrg);
+  // Typo-tolerant: 문화체육관부 → 문화체육관광부 already stripped above; keep core token
+  const core = noOrg || unbracket;
+  // Meaningful tokens (2+ chars), prefer longer last token (사업명)
+  const tokens = core.split(/[\s_/·\-]+/).filter((t) => t.length >= 2);
+  if (tokens.length) {
+    push(tokens[tokens.length - 1]!);
+    for (const token of tokens) push(token);
   }
-  // Progressive prefixes for compound names (청년도약계좌 → 청년도약 → 청년)
-  if (unbracket.length >= 6) {
-    out.push(unbracket.slice(0, Math.min(6, unbracket.length)));
-    out.push(unbracket.slice(0, 4));
+  // Known alias map for frequent grant brands
+  const aliases: Record<string, string[]> = {
+    문화누리카드: ["문화누리", "문화누리카드"],
+    청년도약계좌: ["청년도약", "청년도약계좌"],
+    근로장려금: ["근로장려금", "장려금"],
+    에너지바우처: ["에너지바우처", "에너지 바우처"],
+    스포츠강좌이용권: ["스포츠강좌이용권", "스포츠강좌"],
+  };
+  for (const [key, list] of Object.entries(aliases)) {
+    if (core.includes(key) || unbracket.includes(key)) {
+      for (const alias of list) push(alias);
+    }
   }
-  return [...new Set(out)].slice(0, 5);
+  // Progressive prefixes for compound names
+  if (core.length >= 6) {
+    push(core.slice(0, Math.min(8, core.length)));
+    push(core.slice(0, 4));
+  }
+  return out.slice(0, 8);
 }

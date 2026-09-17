@@ -74,7 +74,7 @@ export async function buildAdminDashboard(editionDate?: string) {
       nextUpdateAt: row.nextUpdateAt,
       overdue: row.overdue,
       run: row.run,
-      fillRateLabel: `${Math.round(row.run.fillRateAvg * 100)}%`,
+      fillRateLabel: `방문자 채움 ${Math.round(row.run.fillRateAvg * 100)}%`,
       fallbackLabel:
         row.run.usedFallback > 0 ? `폴백 ${row.run.usedFallback}` : "폴백 없음",
     })),

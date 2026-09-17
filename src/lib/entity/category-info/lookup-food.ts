@@ -109,19 +109,32 @@ async function lookupKakaoPlace(name: string): Promise<FoodLookup | undefined> {
  * with Kakao Map deep-link as secondary.
  */
 export async function lookupFoodFacts(name: string): Promise<FoodLookup | undefined> {
-  const q = name.trim();
-  if (!q) return undefined;
-  const naver = await lookupNaverPlace(q);
-  if (naver?.address || naver?.hours || naver?.menu) return naver;
-  const kakao = await lookupKakaoPlace(q);
-  if (!kakao) return naver;
-  return {
-    ...kakao,
-    address: kakao.address || naver?.address,
-    hours: kakao.hours || naver?.hours,
-    menu: kakao.menu || naver?.menu,
-    phone: kakao.phone || naver?.phone,
-    url: naver?.url || kakao.url,
-    source: naver?.address ? "네이버" : kakao.source,
-  };
+  const raw = name.trim();
+  if (!raw) return undefined;
+  // "[서울] 을지로골목" → try full then unbracketed place name.
+  const unbracket = raw.replace(/^\[[^\]]+\]\s*/, "").trim();
+  const queries = [...new Set([raw, unbracket].filter(Boolean))];
+  let best: FoodLookup | undefined;
+  for (const q of queries) {
+    const naver = await lookupNaverPlace(q);
+    if (naver?.address || naver?.hours || naver?.menu) return naver;
+    if (naver && !best) best = naver;
+  }
+  for (const q of queries) {
+    const kakao = await lookupKakaoPlace(q);
+    if (!kakao) continue;
+    if (kakao.address || kakao.hours || kakao.phone) {
+      return {
+        ...kakao,
+        address: kakao.address || best?.address,
+        hours: kakao.hours || best?.hours,
+        menu: kakao.menu || best?.menu,
+        phone: kakao.phone || best?.phone,
+        url: best?.url || kakao.url,
+        source: best?.address ? "네이버" : kakao.source,
+      };
+    }
+    if (!best) best = kakao;
+  }
+  return best;
 }

@@ -14,6 +14,14 @@ import {
 import {
   requiredLabelsForChannel,
 } from "@/lib/entity/category-info/refresh-status";
+import { extractMissingCategoryFields } from "@/lib/entity/category-info/llm-extract";
+import {
+  isUpdatingValue,
+  meetsNewsSla,
+  NEWS_SLA_MIN_REAL,
+  realNewsLinks,
+} from "@/lib/entity/category-info/trust";
+import { isNewsPrimaryChannel } from "@/lib/entity/category-info/channel";
 import type { CategoryInfoChannel } from "@/lib/entity/category-info/types";
 import type {
   CategoryInfoLink,
@@ -66,7 +74,7 @@ function plain(raw?: string): string | undefined {
 }
 
 function isUpdating(value: string): boolean {
-  return !value.trim() || value.includes(UPDATING) || value.includes("확인 중") || value.includes("준비 중");
+  return isUpdatingValue(value);
 }
 
 /** Reject misparsed ticket times (dates, booking %, UI chrome). */
@@ -331,13 +339,13 @@ async function crawlNews(
   try {
     const query = newsQueryForChannel(name, channel);
     const retrieval = await retrieveNewsForKeyword(query, {
-      limit: 6,
+      limit: isNewsPrimaryChannel(channel ?? "generic") ? 10 : 6,
       lookbackHours: 240,
       trustedOnly: false,
     });
     return retrieval.docs
       .filter((doc) => doc.link && doc.title)
-      .slice(0, 5)
+      .slice(0, isNewsPrimaryChannel(channel ?? "generic") ? 8 : 5)
       .map((doc) => ({
         title: doc.title,
         url: doc.link!,
@@ -972,6 +980,36 @@ export async function enrichCategoryInfoPayload(
           .catch(() => [] as RankingEntity[])
       : Promise.resolve([] as RankingEntity[]),
   ]);
+
+  // Ticket / food lookup miss → Admin ledger (same soft retry path as grants).
+  if (wantsTickets) {
+    const ticketOk = Boolean(
+      ticketFacts?.venue || ticketFacts?.schedule || ticketFacts?.price || ticketFacts?.time,
+    );
+    if (!ticketOk) {
+      recordPublicDataFailure({
+        channel: base.channel,
+        entityName: name,
+        kind: "no_match",
+        reason: "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      });
+    } else {
+      clearPublicDataRetry(name, base.channel);
+    }
+  }
+  if (wantsFood) {
+    const foodOk = Boolean(foodFacts?.address || foodFacts?.hours || foodFacts?.menu);
+    if (!foodOk) {
+      recordPublicDataFailure({
+        channel: base.channel,
+        entityName: name,
+        kind: "no_match",
+        reason: "네이버·카카오 장소 정보 매칭 실패",
+      });
+    } else {
+      clearPublicDataRetry(name, base.channel);
+    }
+  }
 
   // Public API miss → Admin ledger + retry queue
   if (wantsGrant) {
@@ -1793,7 +1831,7 @@ export async function enrichCategoryInfoPayload(
     });
   }
 
-  const links = ensureQualityNewsLinks(
+  let links = ensureQualityNewsLinks(
     name,
     sanitizeRelatedLinks(
       mergeLinks(
@@ -1813,34 +1851,86 @@ export async function enrichCategoryInfoPayload(
       }))
       // Prefer dated news first so UI rarely misses 발행일.
       .sort((a, b) => Number(Boolean(b.publishedAt)) - Number(Boolean(a.publishedAt))),
-    { minPreferred: 2, maxSearchFallbacks: 1, channel: base.channel },
+    {
+      minPreferred: isNewsPrimaryChannel(base.channel) ? NEWS_SLA_MIN_REAL : 2,
+      maxSearchFallbacks: isNewsPrimaryChannel(base.channel) ? 0 : 1,
+      channel: base.channel,
+    },
   );
+
+  // Demote search fallbacks for news-primary when SLA is unmet — trust UX.
+  if (isNewsPrimaryChannel(base.channel) && !meetsNewsSla(links)) {
+    links = realNewsLinks(links);
+  }
+
   if (!synopsis && publicGrant?.summary) {
     synopsis = publicGrant.summary;
   }
-  const filledCount = rows.filter((row) => !isUpdating(row.value)).length;
+
+  // Gated LLM extract for still-empty required labels (catalogue miss).
   const required = requiredLabelsForChannel(base.channel);
-  const filledRequired = required.filter((label) =>
-    rows.some(
-      (row) =>
-        (row.label === label ||
-          new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(row.label)) &&
-        !isUpdating(row.value),
-    ),
+  const missingRequired = required.filter(
+    (label) =>
+      !label.startsWith("관련 뉴스") &&
+      !rows.some(
+        (row) =>
+          (row.label === label ||
+            new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(row.label)) &&
+          !isUpdating(row.value),
+      ),
   );
+  if (missingRequired.length > 0) {
+    try {
+      const extracted = await extractMissingCategoryFields({
+        entityName: name,
+        channel: base.channel,
+        missingLabels: missingRequired,
+        corpus,
+      });
+      if (extracted.length) {
+        rows = fillUpdatingRows(
+          rows,
+          extracted.map((row) => ({ label: row.label, value: row.value })),
+        );
+      }
+    } catch {
+      /* soft — leave UPDATING for trust filter */
+    }
+  }
+
+  const filledCount = rows.filter((row) => !isUpdating(row.value)).length;
+  const realLinkCount = realNewsLinks(links).length;
+  const filledRequired = isNewsPrimaryChannel(base.channel)
+    ? required.slice(0, realLinkCount)
+    : required.filter((label) =>
+        rows.some(
+          (row) =>
+            (row.label === label ||
+              new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(row.label)) &&
+            !isUpdating(row.value),
+        ),
+      );
   const fillRate =
-    required.length > 0 ? filledRequired.length / required.length : filledCount > 0 ? 1 : 0;
+    required.length > 0
+      ? filledRequired.length / required.length
+      : filledCount > 0
+        ? 1
+        : 0;
+  const visitorFillRate = fillRate;
   const usedFallback =
     links.some((link) => isNewsSearchFallbackUrl(link.href)) ||
     rows.some((row) => /추가 수집 중|검색으로 확인|확인 중/.test(row.value));
 
-  if (filledCount > 0 || links.filter((l) => !isNewsSearchFallbackUrl(l.href)).length >= 1 || synopsis) {
+  if (filledCount > 0 || realLinkCount >= 1 || synopsis) {
     sparse = false;
     if (statusMessage === UPDATING && filledCount > 0) {
       statusMessage = undefined;
     }
   }
-  if (sparse && links.length >= 2) {
+  if (isNewsPrimaryChannel(base.channel) && !meetsNewsSla(links) && filledCount === 0) {
+    sparse = true;
+    statusMessage = statusMessage || "관련 기사 추가 수집 중";
+  } else if (sparse && links.length >= 2) {
     statusMessage = statusMessage || UPDATING;
   }
 
@@ -1854,19 +1944,25 @@ export async function enrichCategoryInfoPayload(
     Boolean(youtubeProfile) ||
     Boolean(punditSeed);
 
+  // Persist visitor-visible rows only — placeholders never reach the detail UI.
+  const visitorRows = rows.filter((row) => !isUpdating(row.value));
+
   return {
     ...base,
-    rows: containRows(dedupeRows(rows)),
+    rows: containRows(dedupeRows(visitorRows)),
     chips: dedupeChips(chips.filter((chip) => chip.items.length > 0)),
     synopsis: entityNarrativeSummary(synopsis),
-    statusMessage,
-    sparse,
+    statusMessage: visitorRows.length > 0 ? undefined : statusMessage,
+    sparse: visitorRows.length === 0 && realLinkCount < NEWS_SLA_MIN_REAL,
     sparkline,
     sparklines: sparklines.length ? sparklines : undefined,
     links: links.slice(0, 5),
-    fillRate,
+    fillRate: visitorFillRate,
     usedFallback,
-    fillStats: { filled: filledRequired.length, required: required.length || filledCount },
+    fillStats: {
+      filled: filledRequired.length,
+      required: required.length || Math.max(filledCount, realLinkCount, 1),
+    },
     notice:
       base.notice ||
       (usedSpecialized

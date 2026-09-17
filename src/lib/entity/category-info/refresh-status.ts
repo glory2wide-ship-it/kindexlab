@@ -251,7 +251,7 @@ export function recordCategoryInfoRefreshRun(input: {
   }
 }
 
-/** Required labels for fill-rate (Excel-ish essentials). */
+/** Required labels for fill-rate (Excel-ish essentials + news SLA). */
 export function requiredLabelsForChannel(channel: CategoryInfoChannel): string[] {
   switch (channel) {
     case "music":
@@ -260,6 +260,8 @@ export function requiredLabelsForChannel(channel: CategoryInfoChannel): string[]
     case "trot":
     case "star":
       return ["소속사", "최근 히트곡"];
+    case "movie":
+      return ["감독", "개봉"];
     case "youtuber":
     case "politics_youtube":
       return ["유튜브 채널", "구독자 수", "채널 URL"];
@@ -274,12 +276,29 @@ export function requiredLabelsForChannel(channel: CategoryInfoChannel): string[]
     case "exhibition":
       return ["행사 장소", "행사 시간", "입장료"];
     case "food":
+    case "weekend_outing":
       return ["주소", "영업시간", "추천 메뉴"];
     case "gov_subsidy":
     case "travel_grant":
       return ["주관 기관 홈페이지", "신청 기간", "신청 자격·조건"];
     case "housing":
       return ["실거래가"];
+    // News-primary: visitor SLA = 실뉴스 3건 (tracked via fillRate in enrich).
+    case "game":
+    case "finance":
+    case "stock":
+    case "overseas_stock":
+    case "commodities_fx":
+    case "inflation":
+    case "startup":
+    case "health":
+    case "recipe":
+    case "car":
+    case "domestic_travel":
+    case "overseas_travel":
+    case "issue_keyword":
+    case "local_policy":
+      return ["관련 뉴스1", "관련 뉴스2", "관련 뉴스3"];
     default:
       return [];
   }

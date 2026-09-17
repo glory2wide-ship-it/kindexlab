@@ -33,7 +33,7 @@ export type EntertainmentFacts = {
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Last catalogue-wide review date — bump when editors refresh the pack. */
-export const ENTERTAINMENT_FACTS_CATALOGUE_CHECKED_AT = "2026-09-14T09:00:00+09:00";
+export const ENTERTAINMENT_FACTS_CATALOGUE_CHECKED_AT = "2026-09-17T16:00:00+09:00";
 
 export function entertainmentFactsAreStale(
   checkedAt: string,
@@ -575,6 +575,48 @@ const CATALOG: CatalogEntry[] = [
     chips: [{ label: "출연", items: ["이상윤", "주지훈", "김희원"] }],
     synopsis: "고속도로 위에서 벌어지는 생존 스릴러. 침묵의 재난과 인간 군상을 그린다.",
   },
+  {
+    title: "베테랑2",
+    aliases: ["베테랑 2", "Veteran 2"],
+    domain: "movie",
+    rows: [
+      { label: "감독", value: "류승완" },
+      { label: "개봉", value: "2024.09.13" },
+    ],
+    chips: [{ label: "출연", items: ["황정민", "정해인", "진선규"] }],
+    synopsis: "베테랑 형사가 새로운 사건과 맞서는 범죄 액션 속편.",
+  },
+  {
+    title: "탈주",
+    domain: "movie",
+    rows: [
+      { label: "감독", value: "이종필" },
+      { label: "개봉", value: "2024.07.03" },
+    ],
+    chips: [{ label: "출연", items: ["이제훈", "구교환"] }],
+    synopsis: "북한 군관을 소재로 한 탈주·추격 스릴러.",
+  },
+  {
+    title: "파일럿",
+    domain: "movie",
+    rows: [
+      { label: "감독", value: "김한규" },
+      { label: "개봉", value: "2024.07.31" },
+    ],
+    chips: [{ label: "출연", items: ["조정석", "이규형", "신승호"] }],
+    synopsis: "파일럿 꿈을 둘러싼 코미디 드라마.",
+  },
+  {
+    title: "인턴",
+    aliases: ["The Intern"],
+    domain: "movie",
+    rows: [
+      { label: "감독", value: "낸시 마이어스" },
+      { label: "개봉", value: "2015.09.24" },
+    ],
+    chips: [{ label: "출연", items: ["로버트 드니로", "앤 해서웨이"] }],
+    synopsis: "은퇴한 시니어 인턴과 스타트업 CEO의 세대 공감 코미디.",
+  },
 
   // —— Webtoons ——
   {
@@ -600,6 +642,59 @@ const CATALOG: CatalogEntry[] = [
     chips: [{ label: "주요 인물", items: ["박형석", "이수호", "조빈"] }],
     synopsis:
       "못생긴 고등학생 박형석이 완벽한 외모로 변신할 수 있는 능력을 얻으며 벌어지는 학원 액션.",
+  },
+  {
+    title: "쿠베라",
+    domain: "webtoon",
+    rows: [
+      { label: "플랫폼", value: "네이버 웹툰" },
+      { label: "작가", value: "카레곰" },
+    ],
+    chips: [{ label: "주요 인물", items: ["리지", "레즈니", "유타"] }],
+    synopsis: "신을 죽인 자의 피를 이은 소녀와 신의 세계를 그린 판타지 웹툰.",
+  },
+  {
+    title: "삼이는 재생한다",
+    aliases: ["삼이는재생한다"],
+    domain: "webtoon",
+    rows: [
+      { label: "플랫폼", value: "네이버 웹툰" },
+      { label: "작가", value: "이삼이" },
+    ],
+    chips: [{ label: "주요 인물", items: ["삼이"] }],
+    synopsis: "재생 능력을 둘러싼 성장·판타지 서사.",
+  },
+  {
+    title: "나이트런",
+    aliases: ["Night Run"],
+    domain: "webtoon",
+    rows: [
+      { label: "플랫폼", value: "네이버 웹툰" },
+      { label: "작가", value: "김성민" },
+    ],
+    chips: [{ label: "주요 인물", items: ["앤", "마틴", "다니엘"] }],
+    synopsis: "우주를 배경으로 한 메카·판타지 액션 장편.",
+  },
+  {
+    title: "최강전설 강해효",
+    aliases: ["강해효"],
+    domain: "webtoon",
+    rows: [
+      { label: "플랫폼", value: "네이버 웹툰" },
+      { label: "작가", value: "박현석" },
+    ],
+    chips: [{ label: "주요 인물", items: ["강해효"] }],
+    synopsis: "최강 전설을 쫓는 학원·액션 성장물.",
+  },
+  {
+    title: "히어로메이커",
+    domain: "webtoon",
+    rows: [
+      { label: "플랫폼", value: "네이버 웹툰" },
+      { label: "작가", value: "판타지 스튜디오" },
+    ],
+    chips: [{ label: "주요 인물", items: ["주인공"] }],
+    synopsis: "히어로 서사를 소재로 한 장편 웹툰.",
   },
   {
     title: "퀘스트지상주의",

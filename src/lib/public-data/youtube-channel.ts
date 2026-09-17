@@ -26,7 +26,49 @@ const ENTERTAINMENT_YOUTUBE_SEEDS: Array<{
   channelId: string;
   handle?: string;
 }> = [
-  // IDs must be UC… and verified via channels.list (not forHandle alone).
+  // Verified via youtube.com/@handle → channelId scrape (title/subs checked).
+  {
+    name: "숏박스",
+    aliases: ["SHOTBOX", "shotbox"],
+    channelId: "UC1B6SalAoiJD7eHfMUA9QrA",
+    handle: "@shortbox",
+  },
+  {
+    name: "딩고 프리스타일",
+    aliases: ["딩고뮤직", "dingo music", "딩고"],
+    channelId: "UCtCiO5t2voB14CmZKTkIzPQ",
+    handle: "@dingomusic",
+  },
+  {
+    name: "문명특급",
+    aliases: ["MMTG", "mmug"],
+    channelId: "UCSg8FOCttTmMkGT8DPwiqkA",
+    handle: "@mmug",
+  },
+  {
+    name: "채널십오야",
+    aliases: ["채널 십오야", "십오야", "디글"],
+    channelId: "UCWYzc_p0GgfCepIWDHGFmEg",
+    handle: "@tvnDENT",
+  },
+  {
+    name: "우왁굳",
+    aliases: ["우왁굳의게임방송"],
+    channelId: "UCBkyj16n2snkRg1BAzpovXQ",
+    handle: "@woowakgood",
+  },
+  {
+    name: "보겸",
+    aliases: ["보겸TV", "보겸s"],
+    channelId: "UCCJ2b2lJE7M77cSuSHLcMOQ",
+    handle: "@bokyemtv",
+  },
+  {
+    name: "워크맨",
+    aliases: ["Workman", "워크맨-Workman"],
+    channelId: "UCwx6n_4OcLgzAGdty0RWCoA",
+    handle: "@workman",
+  },
 ];
 
 function matchEntertainmentYoutubeSeed(

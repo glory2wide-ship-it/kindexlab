@@ -23,20 +23,29 @@ export async function matchPublicGrant(
   if (!hasDataGoKrKey()) return undefined;
   const q = keyword.trim();
   if (!q) return undefined;
+  // Normalize noisy agency prefixes / double spaces before matching.
+  const normalizedQuery = q
+    .replace(/\s+/g, " ")
+    .replace(/문화체육관부/g, "문화체육관광부")
+    .trim();
   const [gov, welfare, biz] = await Promise.all([
-    matchGov24Service(q),
-    matchWelfareService(q),
-    searchBizSupport(q, { limit: 5 }).then((rows) => rows[0]).catch(() => undefined),
+    matchGov24Service(normalizedQuery),
+    matchWelfareService(normalizedQuery),
+    searchBizSupport(normalizedQuery, { limit: 5 }).then((rows) => rows[0]).catch(() => undefined),
   ]);
   const candidates = [gov, welfare, biz].filter(Boolean) as PublicGrantRecord[];
   if (!candidates.length) return undefined;
-  const normalized = q.replace(/\s+/g, "").replace(/^\[[^\]]+\]/, "");
+  const normalized = normalizedQuery.replace(/\s+/g, "").replace(/^\[[^\]]+\]/, "");
+  const core = normalized
+    .replace(/^(?:[\w가-힣]+(?:부|청|원|공단|공사|위원회|처))+/u, "")
+    .replace(/한국문화예술위원회|문화체육관광부|국세청|금융위원회|중소벤처기업부/g, "");
   const richness = (row: PublicGrantRecord) => {
     let s = 0;
     const title = row.title.replace(/\s+/g, "");
-    if (title === normalized) s += 12;
+    if (title === normalized || title === core) s += 12;
     if (title.includes(normalized) || normalized.includes(title)) s += 6;
-    const tokens = normalized.match(/[가-힣A-Za-z0-9]{2,}/g) ?? [];
+    if (core && (title.includes(core) || core.includes(title))) s += 8;
+    const tokens = (core || normalized).match(/[가-힣A-Za-z0-9]{2,}/g) ?? [];
     for (const token of tokens) {
       if (title.includes(token)) s += Math.min(token.length, 4);
     }

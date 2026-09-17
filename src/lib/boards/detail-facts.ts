@@ -46,7 +46,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const THREE_DAY_MS = 3 * DAY_MS;
 
 /** Bump when editors refresh the daily / 3-day catalogue. */
-export const DETAIL_FACTS_DAILY_CHECKED_AT = "2026-09-14T09:00:00+09:00";
+export const DETAIL_FACTS_DAILY_CHECKED_AT = "2026-09-17T16:00:00+09:00";
 
 export function detailFactsAreStale(
   facts: Pick<DetailFacts, "checkedAt" | "refresh">,
@@ -104,6 +104,60 @@ function youtubeSearchUrl(name: string): string {
 
 const DAILY_CATALOG: DailyEntry[] = [
   {
+    title: "숏박스",
+    aliases: ["SHOTBOX"],
+    domain: "youtube",
+    rows: [
+      {
+        label: "채널 URL",
+        value: "숏박스",
+        href: "https://www.youtube.com/channel/UC1B6SalAoiJD7eHfMUA9QrA",
+      },
+      { label: "유튜브 채널", value: "숏박스" },
+    ],
+    links: newsLinks("숏박스", ["유튜브", "스케치"]),
+  },
+  {
+    title: "보겸",
+    aliases: ["보겸TV"],
+    domain: "youtube",
+    rows: [
+      {
+        label: "채널 URL",
+        value: "보겸TV",
+        href: "https://www.youtube.com/channel/UCCJ2b2lJE7M77cSuSHLcMOQ",
+      },
+      { label: "유튜브 채널", value: "보겸TV" },
+    ],
+    links: newsLinks("보겸", ["유튜브", "이슈"]),
+  },
+  {
+    title: "우왁굳",
+    domain: "youtube",
+    rows: [
+      {
+        label: "채널 URL",
+        value: "우왁굳",
+        href: "https://www.youtube.com/channel/UCBkyj16n2snkRg1BAzpovXQ",
+      },
+      { label: "유튜브 채널", value: "우왁굳" },
+    ],
+    links: newsLinks("우왁굳", ["유튜브", "방송"]),
+  },
+  {
+    title: "워크맨",
+    domain: "youtube",
+    rows: [
+      {
+        label: "채널 URL",
+        value: "워크맨",
+        href: "https://www.youtube.com/channel/UCwx6n_4OcLgzAGdty0RWCoA",
+      },
+      { label: "유튜브 채널", value: "워크맨" },
+    ],
+    links: newsLinks("워크맨", ["유튜브", "직장"]),
+  },
+  {
     title: "침착맨",
     aliases: ["침투부"],
     domain: "youtube",
@@ -128,30 +182,17 @@ const DAILY_CATALOG: DailyEntry[] = [
   },
   {
     title: "문명특급",
+    aliases: ["MMTG"],
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "문명특급", href: youtubeSearchUrl("문명특급") },
-      { label: "최근 이슈 영상", value: "문명특급 최신 인터뷰 (채널에서 확인)" },
+      {
+        label: "채널 URL",
+        value: "문명특급",
+        href: "https://www.youtube.com/channel/UCSg8FOCttTmMkGT8DPwiqkA",
+      },
+      { label: "유튜브 채널", value: "문명특급" },
     ],
     links: newsLinks("문명특급", ["유튜브", "인터뷰"]),
-  },
-  {
-    title: "워크맨",
-    domain: "youtube",
-    rows: [
-      { label: "채널 URL", value: "워크맨", href: youtubeSearchUrl("워크맨") },
-      { label: "최근 이슈 영상", value: "워크맨 직업체험 최신화 (채널에서 확인)" },
-    ],
-    links: newsLinks("워크맨", ["유튜브", "직장"]),
-  },
-  {
-    title: "보겸",
-    domain: "youtube",
-    rows: [
-      { label: "채널 URL", value: "보겸", href: youtubeSearchUrl("보겸") },
-      { label: "최근 이슈 영상", value: "보겸 TV 최신 업로드 (채널에서 확인)" },
-    ],
-    links: newsLinks("보겸", ["유튜브", "이슈"]),
   },
   {
     title: "쯔양",

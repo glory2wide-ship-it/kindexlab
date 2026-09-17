@@ -1,4 +1,5 @@
 import type { CategoryInfoPayload, CategoryInfoSparkline } from "@/lib/entity/category-info/types";
+import { toVisitorTrustView } from "@/lib/entity/category-info/trust";
 import {
   isRawYoutubeChannelDisplay,
   youtubeChannelLinkLabel,
@@ -41,7 +42,6 @@ function formatSparkEok(valueManwon: number): string {
 }
 
 function formatAxisTime(label: string): string {
-  // "2024.03" → "2024.3" / keep year.month
   const m = label.match(/^(\d{4})\.(\d{1,2})$/);
   if (!m) return label;
   return `${m[1]}.${Number(m[2])}`;
@@ -160,16 +160,24 @@ function CategoryInfoSparklineChart({ sparkline }: { sparkline: CategoryInfoSpar
 
 /**
  * Presentational card/table for Excel-driven channel packs.
- * Kept free of data loading so Suspense + skeleton can wrap the async parent.
+ * Placeholders ("실시간 정보 업데이트 중") are never shown to visitors.
  */
 export function ItemDetailCategoryInfoView({
   payload,
 }: {
   payload: CategoryInfoPayload;
 }) {
+  const trust = toVisitorTrustView(payload);
+  if (trust.hideSection) return null;
+
   const lastLabel =
     formatDateTime(payload.refreshLastAt) || formatDateTime(payload.updatedAt);
   const nextLabel = formatDateTime(payload.refreshNextAt);
+  const showSparseBadge = trust.thin || payload.sparse;
+  const statusMessage =
+    trust.rows.length === 0 && trust.links.length === 0
+      ? payload.statusMessage
+      : undefined;
 
   return (
     <section
@@ -185,9 +193,9 @@ export function ItemDetailCategoryInfoView({
           </h2>
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          {payload.sparse ? (
+          {showSparseBadge ? (
             <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-800 dark:text-amber-200">
-              업데이트 중
+              일부 확인 중
             </span>
           ) : null}
           {lastLabel || nextLabel ? (
@@ -209,13 +217,13 @@ export function ItemDetailCategoryInfoView({
         </div>
       </div>
 
-      {payload.statusMessage ? (
+      {statusMessage ? (
         <p className="mt-3 rounded-xl border border-line/80 bg-board/70 px-3 py-2 text-base text-ink/90">
-          {payload.statusMessage}
+          {statusMessage}
         </p>
       ) : null}
 
-      {payload.rows.length > 0 ? (
+      {trust.rows.length > 0 ? (
         <div className="mt-4 overflow-hidden rounded-xl border border-line">
           <table className="category-info-table min-w-full table-fixed text-left text-base">
             <caption className="sr-only">{payload.channelLabel} 상세 항목</caption>
@@ -230,43 +238,43 @@ export function ItemDetailCategoryInfoView({
               </tr>
             </thead>
             <tbody>
-              {payload.rows.map((row) => {
+              {trust.rows.map((row) => {
                 const isChannelUrl = /채널\s*URL|유튜브\s*채널/.test(row.label);
                 const displayValue =
                   isChannelUrl && (row.href || isRawYoutubeChannelDisplay(row.value))
                     ? youtubeChannelLinkLabel(payload.entityName, row.value)
                     : row.value;
                 return (
-                <tr key={`${row.label}-${row.value.slice(0, 40)}`} className="border-t border-line">
-                  <th
-                    scope="row"
-                    className={`px-3 py-3 align-top text-muted ${
-                      row.emphasize ? "font-semibold text-ink" : "font-medium"
-                    }`}
-                  >
-                    {row.label}
-                  </th>
-                  <td
-                    className={`px-3 py-3 align-top leading-relaxed text-ink break-words ${
-                      row.multiline || row.value.includes("\n")
-                        ? "whitespace-pre-line"
-                        : "leading-snug"
-                    } ${row.emphasize ? "font-semibold" : ""}`}
-                  >
-                    {row.href ? (
-                      <a
-                        href={row.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="break-words text-accent underline decoration-line underline-offset-2 hover:opacity-80"
-                      >
-                        {displayValue}
-                      </a>
-                    ) : (
-                      displayValue
-                    )}
-                  </td>
-                </tr>
+                  <tr key={`${row.label}-${row.value.slice(0, 40)}`} className="border-t border-line">
+                    <th
+                      scope="row"
+                      className={`px-3 py-3 align-top text-muted ${
+                        row.emphasize ? "font-semibold text-ink" : "font-medium"
+                      }`}
+                    >
+                      {row.label}
+                    </th>
+                    <td
+                      className={`px-3 py-3 align-top leading-relaxed text-ink break-words ${
+                        row.multiline || row.value.includes("\n")
+                          ? "whitespace-pre-line"
+                          : "leading-snug"
+                      } ${row.emphasize ? "font-semibold" : ""}`}
+                    >
+                      {row.href ? (
+                        <a
+                          href={row.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="break-words text-accent underline decoration-line underline-offset-2 hover:opacity-80"
+                        >
+                          {displayValue}
+                        </a>
+                      ) : (
+                        displayValue
+                      )}
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
@@ -305,34 +313,49 @@ export function ItemDetailCategoryInfoView({
         <p className="mt-4 break-words text-base leading-7 text-ink/90">{payload.synopsis}</p>
       ) : null}
 
-      <div className="mt-4 border-t border-line pt-4">
-        <h3 className="text-sm font-semibold tracking-wide text-soft">
-          관련 뉴스 · 이슈
-        </h3>
-        <ul className="mt-2 space-y-2.5">
-          {payload.links.map((link) => {
-            const published = formatDateOnly(link.publishedAt);
-            return (
-              <li key={link.href} className="break-words text-base leading-snug">
+      {trust.links.length > 0 || trust.searchFallback ? (
+        <div className="mt-4 border-t border-line pt-4">
+          <h3 className="text-sm font-semibold tracking-wide text-soft">
+            {trust.links.length >= 3 ? "관련 뉴스 · 이슈" : "관련 참고 링크"}
+          </h3>
+          <ul className="mt-2 space-y-2.5">
+            {trust.links.map((link) => {
+              const published = formatDateOnly(link.publishedAt);
+              return (
+                <li key={link.href} className="break-words text-base leading-snug">
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-accent underline decoration-line underline-offset-2 hover:opacity-80"
+                  >
+                    {link.title}
+                  </a>
+                  {link.source ? (
+                    <span className="ml-2 text-sm text-muted">{link.source}</span>
+                  ) : null}
+                  {published ? (
+                    <span className="ml-2 text-sm tabular-nums text-muted">{published}</span>
+                  ) : null}
+                </li>
+              );
+            })}
+            {trust.searchFallback ? (
+              <li className="break-words text-sm leading-snug text-muted">
                 <a
-                  href={link.href}
+                  href={trust.searchFallback.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-accent underline decoration-line underline-offset-2 hover:opacity-80"
+                  className="underline decoration-line underline-offset-2 hover:opacity-80"
                 >
-                  {link.title}
+                  {trust.searchFallback.title || "관련 뉴스 추가 검색"}
                 </a>
-                {link.source ? (
-                  <span className="ml-2 text-sm text-muted">{link.source}</span>
-                ) : null}
-                {published ? (
-                  <span className="ml-2 text-sm tabular-nums text-muted">{published}</span>
-                ) : null}
+                <span className="ml-2">검색 보조</span>
               </li>
-            );
-          })}
-        </ul>
-      </div>
+            ) : null}
+          </ul>
+        </div>
+      ) : null}
 
       {payload.notice ? (
         <p className="mt-4 break-words rounded-lg bg-board px-3 py-2 text-xs leading-5 text-muted">
