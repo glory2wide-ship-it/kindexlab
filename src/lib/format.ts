@@ -73,7 +73,8 @@ export function formatKst(iso: string): string {
 export const TYPE_LABEL: Record<string, string> = {
   kpop: "K-POP",
   trot: "트로트·가요",
-  celebrity: "셀럽",
+  /** Board menu is 스타 — never paint retired "셀럽" channel label. */
+  celebrity: "스타",
   tv_show: "방송",
   influencer: "인플루언서",
   music_chart: "음원",

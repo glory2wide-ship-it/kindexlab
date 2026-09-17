@@ -45,6 +45,13 @@ const NON_PERSON_TOKENS =
 const NON_PERSON_COMPOUND =
   /(복지|지원금|정책|대출|금리|공매도|펀드|예산|세금|연금|보험료|부동산|아파트|청약)$/;
 
+/**
+ * Incident / crime / disaster headlines Trends often dumps onto the 스타 board
+ * (e.g. "부산 추락사"). Never treat these as celebrity names.
+ */
+const INCIDENT_OR_NEWS_NOISE =
+  /(추락|추락사|사망|살해|살인|사건|사고|화재|참사|실종|폭행|체포|구속|폭발|붕괴|익사|교통사고|범죄|용의자|피의자|피해자|시신|부검|경찰|검찰)/;
+
 /** Hangul person-ish: 2–6 syllables, optional English stage name. */
 export function isLikelyCelebrityName(name: string): boolean {
   const cleaned = name.replace(/\s*\([^)]*\)\s*/g, " ").replace(/^\[[^\]]+\]\s*/, "").trim();
@@ -53,6 +60,7 @@ export function isLikelyCelebrityName(name: string): boolean {
   if (EXACT_MEDIA_OUTLETS.has(compact)) return false;
   if (COMPANY_NOISE.test(cleaned) || DRAMA_OR_TITLE_NOISE.test(cleaned)) return false;
   if (MEDIA_OUTLET_NOISE.test(cleaned)) return false;
+  if (INCIDENT_OR_NEWS_NOISE.test(cleaned)) return false;
   if (NON_PERSON_TOKENS.test(cleaned.replace(/\s+/g, ""))) return false;
   if (NON_PERSON_COMPOUND.test(cleaned.replace(/\s+/g, ""))) return false;
   if (/\d{2,}/.test(cleaned)) return false;

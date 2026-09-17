@@ -52,6 +52,8 @@ export type CategoryInfoLink = {
   title: string;
   href: string;
   source?: string;
+  /** Article publish time (ISO) when known — shown on detail 관련 뉴스. */
+  publishedAt?: string;
 };
 
 export type CategoryInfoRow = {

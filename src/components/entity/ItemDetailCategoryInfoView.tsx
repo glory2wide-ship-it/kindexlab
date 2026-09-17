@@ -12,6 +12,22 @@ function formatDateOnly(iso?: string): string {
   }).format(date);
 }
 
+/** KST date + time for refresh stamps (최근/다음 업데이트). */
+function formatDateTime(iso?: string): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
 /** Display values as 억원 (public RTMS points are in 만원). */
 function formatSparkEok(valueManwon: number): string {
   const eok = valueManwon / 10_000;
@@ -147,8 +163,9 @@ export function ItemDetailCategoryInfoView({
 }: {
   payload: CategoryInfoPayload;
 }) {
-  const lastLabel = formatDateOnly(payload.refreshLastAt) || formatDateOnly(payload.updatedAt);
-  const nextLabel = formatDateOnly(payload.refreshNextAt);
+  const lastLabel =
+    formatDateTime(payload.refreshLastAt) || formatDateTime(payload.updatedAt);
+  const nextLabel = formatDateTime(payload.refreshNextAt);
 
   return (
     <section
@@ -170,9 +187,9 @@ export function ItemDetailCategoryInfoView({
             </span>
           ) : null}
           {lastLabel || nextLabel ? (
-            <span className="category-info-refresh-120 max-w-[11rem] text-right leading-snug text-muted">
-              {lastLabel ? <span className="block">최근 {lastLabel}</span> : null}
-              {nextLabel ? <span className="block">다음 {nextLabel}</span> : null}
+            <span className="category-info-refresh-120 max-w-[18rem] text-right text-xs leading-snug text-muted sm:text-sm">
+              {lastLabel ? <span className="block">최근 업데이트 {lastLabel}</span> : null}
+              {nextLabel ? <span className="block">다음 업데이트 {nextLabel}</span> : null}
             </span>
           ) : null}
         </div>
@@ -272,21 +289,27 @@ export function ItemDetailCategoryInfoView({
           관련 뉴스 · 이슈 링크
         </h3>
         <ul className="mt-2 space-y-2.5">
-          {payload.links.map((link) => (
-            <li key={link.href} className="break-words text-base leading-snug">
-              <a
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-accent underline decoration-line underline-offset-2 hover:opacity-80"
-              >
-                {link.title}
-              </a>
-              {link.source ? (
-                <span className="ml-2 text-sm text-muted">{link.source}</span>
-              ) : null}
-            </li>
-          ))}
+          {payload.links.map((link) => {
+            const published = formatDateOnly(link.publishedAt);
+            return (
+              <li key={link.href} className="break-words text-base leading-snug">
+                <a
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-accent underline decoration-line underline-offset-2 hover:opacity-80"
+                >
+                  {link.title}
+                </a>
+                {link.source ? (
+                  <span className="ml-2 text-sm text-muted">{link.source}</span>
+                ) : null}
+                {published ? (
+                  <span className="ml-2 text-sm tabular-nums text-muted">{published}</span>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       </div>
 

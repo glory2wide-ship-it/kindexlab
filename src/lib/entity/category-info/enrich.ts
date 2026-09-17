@@ -27,6 +27,10 @@ import {
   clearPublicDataRetry,
   recordPublicDataFailure,
 } from "@/lib/public-data/fail-ledger";
+import {
+  isGrantServicePortalUrl,
+  resolveGrantOrgHomepage,
+} from "@/lib/context/official-url-seeds";
 import { matchPublicGrant } from "@/lib/public-data/grants";
 import { summarizeHousingPublicData } from "@/lib/public-data/housing";
 import { hasDataGoKrKey } from "@/lib/public-data/key";
@@ -41,6 +45,7 @@ type CrawlDoc = {
   url: string;
   publisher?: string;
   snippet?: string;
+  publishedAt?: string;
 };
 
 function plain(raw?: string): string | undefined {
@@ -237,6 +242,7 @@ async function crawlNews(name: string): Promise<CrawlDoc[]> {
         url: doc.link!,
         publisher: doc.publisher,
         snippet: doc.snippet,
+        publishedAt: doc.publishedAt,
       }));
   } catch {
     return [];
@@ -401,6 +407,7 @@ function linksFromDocs(docs: CrawlDoc[], sourceLabel: string): CategoryInfoLink[
       title: doc.title.slice(0, 90),
       href: doc.url,
       source: doc.publisher?.trim() || sourceLabel,
+      publishedAt: doc.publishedAt,
     }));
 }
 
@@ -531,6 +538,7 @@ function containRows(rows: CategoryInfoRow[]): CategoryInfoRow[] {
 function applyGrantRecord(
   rows: CategoryInfoRow[],
   grant: PublicGrantRecord,
+  entityName: string,
 ): CategoryInfoRow[] {
   let next = rows;
   if (grant.agency) {
@@ -563,17 +571,30 @@ function applyGrantRecord(
       next = [...next, { label: "준비사항", value: prep, multiline: true }];
     }
   }
-  if (grant.url) {
-    next = next.map((row) =>
-      /주관 기관/.test(row.label)
-        ? {
-            ...row,
-            href: grant.url,
-            value: isUpdating(row.value) ? grant.agency || grant.title : row.value,
-          }
-        : row,
-    );
-  }
+
+  // 주관 기관 홈페이지 must be the agency site (fsc.go.kr 등) — never 보조금24/복지로.
+  const agencyHome =
+    resolveGrantOrgHomepage(grant.agency) ||
+    resolveGrantOrgHomepage(entityName) ||
+    resolveGrantOrgHomepage(grant.title);
+  next = next.map((row) => {
+    if (!/주관 기관/.test(row.label)) return row;
+    if (agencyHome) {
+      return {
+        ...row,
+        href: agencyHome.href,
+        value: isUpdating(row.value)
+          ? agencyHome.label
+          : grant.agency || row.value,
+        emphasize: true,
+      };
+    }
+    // Strip mis-attached programme portal URLs left by older packs / detail facts.
+    if (row.href && isGrantServicePortalUrl(row.href)) {
+      return { ...row, href: undefined };
+    }
+    return row;
+  });
   return next;
 }
 
@@ -909,26 +930,41 @@ export async function enrichCategoryInfoPayload(
     case "gov_subsidy":
     case "travel_grant": {
       if (publicGrant) {
-        rows = applyGrantRecord(rows, publicGrant);
+        rows = applyGrantRecord(rows, publicGrant, name);
       }
-      const official = webDocs.find((doc) =>
-        /\.go\.kr|korea\.kr|gov|지원|복지|청$|재단|공사/i.test(
-          `${doc.url} ${doc.publisher ?? ""} ${doc.title}`,
-        ),
-      );
-      if (official && !publicGrant?.url) {
-        rows = fillUpdatingRows(rows, [
-          {
-            label: "주관 기관 홈페이지",
-            value: official.title.slice(0, 60),
-            emphasize: true,
-          },
-        ]);
-        rows = rows.map((row) =>
-          row.label.includes("주관 기관")
-            ? { ...row, href: official.url, value: row.value === UPDATING ? official.title.slice(0, 60) : row.value }
-            : row,
-        );
+      const agencyHome =
+        resolveGrantOrgHomepage(publicGrant?.agency) ||
+        resolveGrantOrgHomepage(name);
+      // Only attach a crawled official URL when it matches the known agency host.
+      if (!agencyHome) {
+        const official = webDocs.find((doc) => {
+          if (!isSafeOutboundUrl(doc.url) || isGrantServicePortalUrl(doc.url)) return false;
+          try {
+            const host = new URL(doc.url).hostname.toLowerCase();
+            return /\.go\.kr$|\.korea\.kr$/i.test(host);
+          } catch {
+            return false;
+          }
+        });
+        if (official) {
+          rows = fillUpdatingRows(rows, [
+            {
+              label: "주관 기관 홈페이지",
+              value: official.title.slice(0, 60),
+              emphasize: true,
+            },
+          ]);
+          rows = rows.map((row) =>
+            row.label.includes("주관 기관")
+              ? {
+                  ...row,
+                  href: official.url,
+                  value:
+                    row.value === UPDATING ? official.title.slice(0, 60) : row.value,
+                }
+              : row,
+          );
+        }
       }
       if (!publicGrant) {
         const period = firstMatch(corpus, [
@@ -963,7 +999,7 @@ export async function enrichCategoryInfoPayload(
     }
     case "startup": {
       if (publicGrant) {
-        rows = applyGrantRecord(rows, publicGrant);
+        rows = applyGrantRecord(rows, publicGrant, name);
         if (publicGrant.summary) {
           synopsis = synopsis || publicGrant.summary;
         }

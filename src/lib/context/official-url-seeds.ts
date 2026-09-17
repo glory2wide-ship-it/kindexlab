@@ -31,7 +31,8 @@ const YOUTUBE_CHANNEL_SEEDS: Record<string, { href: string; label: string }> = {
   },
 };
 
-const GRANT_ORG_HOMEPAGES: Record<string, { href: string; label: string }> = {
+/** Agency / org → official homepage. Used by grant detail packs (never 보조금24/복지로). */
+export const GRANT_ORG_HOMEPAGES: Record<string, { href: string; label: string }> = {
   한국관광공사: {
     href: "https://korean.visitkorea.or.kr/",
     label: "한국관광공사·대한민국 구석구석",
@@ -137,6 +138,50 @@ const GRANT_ORG_HOMEPAGES: Record<string, { href: string; label: string }> = {
     label: "한국문화정보원 공식",
   },
 };
+
+/**
+ * Resolve 주관 기관 홈페이지 from bracket label `[금융위원회] …` or agency name.
+ * Never returns 보조금24 / 복지로 / 기업마당 service URLs.
+ */
+export function resolveGrantOrgHomepage(
+  orgOrEntityName: string | undefined | null,
+): { href: string; label: string } | undefined {
+  if (!orgOrEntityName?.trim()) return undefined;
+  const raw = orgOrEntityName.trim();
+  const labeled = parseBracketLabel(raw);
+  const candidates = [
+    labeled?.org?.trim(),
+    raw.replace(/^\[[^\]]+\]\s*/, "").trim() === raw ? raw : labeled?.org,
+    raw,
+  ].filter((value): value is string => Boolean(value?.trim()));
+
+  for (const candidate of candidates) {
+    const exact = GRANT_ORG_HOMEPAGES[candidate];
+    if (exact) return exact;
+  }
+  for (const candidate of candidates) {
+    for (const [key, value] of Object.entries(GRANT_ORG_HOMEPAGES)) {
+      if (candidate.includes(key) || key.includes(candidate)) return value;
+    }
+  }
+  return undefined;
+}
+
+/** True for 보조금24 / 복지로 / 기업마당 programme pages — not agency homepages. */
+export function isGrantServicePortalUrl(href: string): boolean {
+  try {
+    const host = new URL(href).hostname.toLowerCase();
+    const path = new URL(href).pathname.toLowerCase();
+    if (host.includes("gov.kr") && (path.includes("rcvfvr") || path.includes("portal"))) {
+      return true;
+    }
+    if (host.includes("bokjiro.go.kr")) return true;
+    if (host.includes("bizinfo.go.kr")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 function youtubeSearchSource(keyword: string): ContextSource {
   const q = encodeURIComponent(keyword);

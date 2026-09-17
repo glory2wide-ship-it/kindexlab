@@ -149,21 +149,39 @@ async function channelHeatmapPool(
  * 5분봉 + 성별 전체 + 연령 전체 (no demographic skew), then keep 1위~4위.
  * Collapse touring-show clones (위키드 성남/부산…) so one franchise cannot
  * consume multiple of the four landing slots.
+ * Soft-pad without franchise collapse when still short so every desk always
+ * contributes LANDING_PER_CHANNEL_TOP tiles.
  */
 function landingTopForChannel(pool: RankingEntity[], channel: PostChannel): RankingEntity[] {
   const ranked = rankItemsForTimeframe(pool, LANDING_HEATMAP_TIMEFRAME);
   const picked: RankingEntity[] = [];
-  const seen = new Set<string>();
+  const seenFranchise = new Set<string>();
+  const seenIds = new Set<string>();
+
+  const franchiseKey = (item: RankingEntity) =>
+    channel === "culture" || channel === "entertainment"
+      ? cultureFranchiseKey(item.name)
+      : (item.name ?? "").replace(/\s+/g, "").toLowerCase();
+
   for (const item of ranked) {
-    const key =
-      channel === "culture" || channel === "entertainment"
-        ? cultureFranchiseKey(item.name)
-        : (item.name ?? "").replace(/\s+/g, "").toLowerCase();
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
+    const key = franchiseKey(item);
+    if (!key || seenFranchise.has(key) || seenIds.has(item.id)) continue;
+    seenFranchise.add(key);
+    seenIds.add(item.id);
     picked.push(item);
     if (picked.length >= LANDING_PER_CHANNEL_TOP) break;
   }
+
+  // Soft pad: allow additional titles if franchise collapse left us short.
+  if (picked.length < LANDING_PER_CHANNEL_TOP) {
+    for (const item of ranked) {
+      if (seenIds.has(item.id)) continue;
+      seenIds.add(item.id);
+      picked.push(item);
+      if (picked.length >= LANDING_PER_CHANNEL_TOP) break;
+    }
+  }
+
   return tagChannel(picked, channel);
 }
 
@@ -301,7 +319,7 @@ function summarizeLandingGaps(market: UnifiedMarket): Record<string, unknown> {
  */
 const cachedUnifiedMarket = unstable_cache(
   async () => buildUnifiedMarket(),
-  ["unified-market-v5-5m-per-channel-top4-desk4"],
+  ["unified-market-v6-5m-per-channel-top4-desk4-parity"],
   { revalidate: DEFAULT_TRENDS_REVALIDATE_SEC },
 );
 

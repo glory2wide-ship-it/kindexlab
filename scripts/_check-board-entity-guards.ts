@@ -37,9 +37,11 @@ function main() {
     expect(`politician badge ${person}`, politicianPartyName(person) === party);
   }
 
-  // Star: media outlets out.
+  // Star: media outlets + incident headlines out; person names in.
   expect("star rejects 중앙일보", !isLikelyCelebrityName("중앙일보"));
   expect("star rejects 조선일보", !isLikelyCelebrityName("조선일보"));
+  expect("star rejects 부산 추락사", !isLikelyCelebrityName("부산 추락사"));
+  expect("star rejects 강남 화재", !isLikelyCelebrityName("강남 화재"));
   expect("star accepts 아이유", isLikelyCelebrityName("아이유"));
 
   // TV: 깜짝 is idol-news scrap, not a programme; known shows keep channel chips.

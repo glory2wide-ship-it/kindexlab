@@ -8,7 +8,7 @@ import type { RankingEntity } from "@/lib/types";
 import type { PostChannel } from "@/lib/posts/types";
 
 /** Bump when landing desk/heatmap contract changes (desk top-4, rank integrity). */
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 const MAX_AGE_MS = DEFAULT_TRENDS_REVALIDATE_SEC * 1000;
 const EXPECTED_TILES = 5 * LANDING_PER_CHANNEL_TOP;
 
@@ -63,7 +63,19 @@ function isCompleteLandingMarket(market: LandingUnifiedCacheMarket): boolean {
   const ranks = market.items.map((item) => item.rank);
   if (new Set(ranks).size !== ranks.length) return false;
   if (!ranks.every((rank, index) => rank === index + 1)) return false;
-  return market.desks.every((desk) => desk.top.length === DESK_TOP_N);
+  for (const desk of market.desks) {
+    if (desk.top.length !== DESK_TOP_N) return false;
+  }
+  // Every category must contribute exactly LANDING_PER_CHANNEL_TOP tiles.
+  const byChannel = new Map<string, number>();
+  for (const item of market.items) {
+    const ch = item.sourceChannel ?? "";
+    byChannel.set(ch, (byChannel.get(ch) ?? 0) + 1);
+  }
+  for (const desk of market.desks) {
+    if ((byChannel.get(desk.channel) ?? 0) !== LANDING_PER_CHANNEL_TOP) return false;
+  }
+  return true;
 }
 
 /**

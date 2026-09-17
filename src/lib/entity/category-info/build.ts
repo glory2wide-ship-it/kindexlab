@@ -1,6 +1,7 @@
 import { resolveDetailFacts } from "@/lib/boards/detail-facts";
 import { resolveEntertainmentFacts } from "@/lib/boards/entertainment-facts";
 import { buildTvProgramProfile, tvProgramGenreLabel } from "@/lib/boards/tv-program-profile";
+import { resolveGrantOrgHomepage } from "@/lib/context/official-url-seeds";
 import { entityNarrativeSummary } from "@/lib/entity/index-blurb";
 import {
   isNewsPrimaryChannel,
@@ -177,15 +178,16 @@ function subsidyRows(entity: RankingEntity, links: CategoryInfoLink[]): {
   links: CategoryInfoLink[];
 } {
   const detail = fromDetailFacts(entity);
-  const home =
-    detail.links.find((l) => /홈페이지|신청|공식/.test(l.title)) ||
-    detail.rows.find((r) => r.href)?.href;
+  const agencyHome = resolveGrantOrgHomepage(entity.name);
+  // Never treat programme portal / unrelated detail-fact links as 주관 기관 홈페이지.
+  const homeHref = agencyHome?.href;
+  const homeLabel = agencyHome?.label;
   const rows: CategoryInfoRow[] = [
     { label: "지원 사업", value: entity.name, emphasize: true },
     {
       label: "주관 기관 홈페이지",
-      value: home && typeof home === "string" ? "공식 안내 바로가기" : UPDATING,
-      href: typeof home === "string" ? home : undefined,
+      value: homeLabel ?? UPDATING,
+      href: homeHref,
       emphasize: true,
     },
     { label: "신청 기간", value: UPDATING },
@@ -193,7 +195,7 @@ function subsidyRows(entity: RankingEntity, links: CategoryInfoLink[]): {
     { label: "준비사항", value: UPDATING },
   ];
   return {
-    rows: nonemptyRows([...detail.rows.filter((r) => !/순위|등락/.test(r.label)), ...rows]),
+    rows: nonemptyRows([...detail.rows.filter((r) => !/순위|등락|주관 기관/.test(r.label)), ...rows]),
     links: ensureQualityNewsLinks(entity.name, [...detail.links, ...links], {
       minPreferred: 2,
       maxSearchFallbacks: 1,

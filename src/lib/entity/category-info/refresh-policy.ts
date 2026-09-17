@@ -77,11 +77,11 @@ export const CATEGORY_INFO_REFRESH_TIERS: readonly CategoryInfoRefreshTier[] = [
   {
     id: "entertainment_curated",
     label: "소속사·히트곡·시놉시스(연예)",
-    cadenceLabel: "주 1회",
-    intervalMs: 7 * DAY,
-    revalidateSec: 7 * 24 * 3600,
+    cadenceLabel: "하루 1회",
+    intervalMs: DAY,
+    revalidateSec: 24 * 3600,
     channels: ["kpop", "trot", "star", "movie", "tv_ratings"],
-    reason: "큐레이션 팩(멤버·소속·시놉시스) 주 1회 보강 + 멜론/뉴스 최소 필드",
+    reason: "큐레이션 팩(멤버·소속·시놉시스) 일 1회 보강 + 멜론/뉴스 최소 필드",
   },
   {
     id: "other_news",

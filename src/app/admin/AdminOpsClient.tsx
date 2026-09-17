@@ -392,8 +392,8 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
         </div>
       </div>
 
-      {/* Tab body copy +10% (base 14px → ~15.4px) */}
-      <div role="tabpanel" className="text-[1.1em] leading-[1.55]">
+      {/* Tab body copy +10% again (1.1em → 1.21em) */}
+      <div role="tabpanel" className="text-[1.21em] leading-[1.55]">
         {activeTab === "traffic" ? (
           <Section
             title="방문자 현황"
@@ -764,7 +764,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                     <tr>
                       <th className="px-3 py-2 font-medium">구분</th>
                       <th className="whitespace-nowrap px-3 py-2 font-medium">권장 주기</th>
-                      <th className="px-3 py-2 font-medium">채움률</th>
+                      <th className="whitespace-nowrap px-3 py-2 font-medium">채움률</th>
                       <th className="whitespace-nowrap px-3 py-2 font-medium">성공/실패/스킵</th>
                       <th className="px-3 py-2 font-medium">폴백</th>
                       <th className="px-3 py-2 font-medium">최신 업데이트</th>
@@ -781,7 +781,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                         <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-ink">
                           {row.cadenceLabel}
                         </td>
-                        <td className="px-3 py-2.5 tabular-nums text-ink">
+                        <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-ink">
                           {row.fillRateLabel ?? `${Math.round((row.run?.fillRateAvg ?? 0) * 100)}%`}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2.5 tabular-nums">

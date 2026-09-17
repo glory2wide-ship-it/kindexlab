@@ -115,12 +115,11 @@ export function TreemapView({
 
   const tileCap = Math.max(
     1,
+    // Desktop + mobile share one tile set so ranks never diverge by viewport.
     maxItems ??
       (showChannelTags
         ? Math.max(safeItems.length, TREEMAP_MAX_ITEMS)
-        : isMobileViewport
-          ? MOBILE_TREEMAP_MAX_ITEMS
-          : TREEMAP_MAX_ITEMS),
+        : TREEMAP_MAX_ITEMS),
   );
   const visible = useMemo(() => pickHeatmapItems(safeItems, tileCap), [safeItems, tileCap]);
   const displayRankById = useMemo(() => {

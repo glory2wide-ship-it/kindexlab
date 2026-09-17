@@ -11,7 +11,6 @@ import { RankingTable } from "@/components/dashboard/RankingTable";
 import { TreemapView } from "@/components/dashboard/TreemapCanvas";
 import {
   TREEMAP_MAX_ITEMS,
-  MOBILE_TREEMAP_MAX_ITEMS,
   LIST_MAX_ITEMS,
   MOBILE_LIST_MAX_ITEMS,
 } from "@/components/dashboard/treemap-config";
@@ -215,6 +214,11 @@ export function MarketWorkspace({
   /** Heatmap tile set (may be >10). List is ranked from the same pool, capped at 10. */
   const rankedPool = useMemo(() => {
     try {
+      // Landing curated per-channel top-4: preserve server order — never re-rank
+      // by timeframe or demographics (that scrambled category 1~4 fill).
+      if (showChannelTags) {
+        return uniqueHeatmapTiles(filtered);
+      }
       if (isHeadlineFeed(filtered)) {
         return rankHeadlineFeed(filtered, { timeframe, gender, age });
       }
@@ -241,31 +245,39 @@ export function MarketWorkspace({
       fallback = fallback.filter((item) => entityMatchesTvGenre(item, genre));
     }
     return uniqueHeatmapTiles(fallback);
-  }, [filtered, timeframe, gender, age, region, showRegion, genre, showGenre, skipDemographicSkew]);
+  }, [
+    filtered,
+    timeframe,
+    gender,
+    age,
+    region,
+    showRegion,
+    genre,
+    showGenre,
+    skipDemographicSkew,
+    showChannelTags,
+  ]);
 
   const sortedItems = useMemo(() => {
     // Drama LIVE tab always paints through rank 20 (desktop + mobile).
     const dramaLiveCap = showGenre && genre === "drama" ? 20 : undefined;
-    const desktopCap = Math.max(
+    // Desktop + mobile share the same tile set so ranks never diverge by viewport.
+    const sharedCap = Math.max(
       1,
       Math.min(maxItems, dramaLiveCap ?? TREEMAP_MAX_ITEMS),
     );
-    // Landing curated set (showChannelTags): keep every per-channel top-4 tile on
-    // mobile too — the 15-cap was dropping whole categories after global re-rank.
+    // Landing curated set (showChannelTags): keep every per-channel top-4 tile.
     const cap = showChannelTags
-      ? Math.max(desktopCap, rankedPool.length)
-      : dramaLiveCap
-        ? desktopCap
-        : isMobileViewport
-          ? Math.max(1, Math.min(desktopCap, MOBILE_TREEMAP_MAX_ITEMS))
-          : desktopCap;
+      ? Math.max(sharedCap, rankedPool.length)
+      : sharedCap;
     return rankedPool.slice(0, cap).map((item, index) => ({ ...item, rank: index + 1 }));
-  }, [rankedPool, maxItems, isMobileViewport, showChannelTags, genre, showGenre]);
+  }, [rankedPool, maxItems, showChannelTags, genre, showGenre]);
 
   const listItems = useMemo(() => {
-    const listCap = isMobileViewport ? MOBILE_LIST_MAX_ITEMS : LIST_MAX_ITEMS;
+    // Same list depth on mobile/desktop — heatmap↔list rank identity.
+    const listCap = Math.max(LIST_MAX_ITEMS, MOBILE_LIST_MAX_ITEMS);
     return rankedPool.slice(0, listCap).map((item, index) => ({ ...item, rank: index + 1 }));
-  }, [rankedPool, isMobileViewport]);
+  }, [rankedPool]);
   const demoKey = filterKey(gender, age, region);
   const demoActive =
     gender !== "all" || age !== "all" || region !== "all" || (showGenre && genre !== "all");
