@@ -83,7 +83,8 @@ export function BuzzChart({
               </p>
             </div>
           </div>
-          <div className="detail-chart-body-110 flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-hidden md:w-auto md:gap-2 md:overflow-visible">
+          {/* +15% vs text-xs (12→13.8). Mobile: one row, no horizontal scrollbar. */}
+          <div className="flex w-full min-w-0 flex-nowrap items-center gap-0.5 overflow-hidden md:w-auto md:gap-2 md:overflow-visible">
             <div className="flex shrink-0 gap-0.5 rounded-lg bg-board p-0.5 md:gap-1 md:p-1">
               {(
                 [
@@ -95,7 +96,7 @@ export function BuzzChart({
                   key={option.id}
                   type="button"
                   onClick={() => setChartStyle(option.id)}
-                  className={`rounded-md px-1.5 py-1 font-sans text-[12.65px] font-medium md:px-2.5 md:py-1.5 ${
+                  className={`rounded-md px-1 py-1 font-sans text-[13.8px] font-medium leading-none md:px-2.5 md:py-1.5 ${
                     chartStyle === option.id
                       ? "bg-ink text-board"
                       : "text-muted hover:bg-panel hover:text-ink"
@@ -105,13 +106,13 @@ export function BuzzChart({
                 </button>
               ))}
             </div>
-            <div className="flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-0.5 overflow-hidden rounded-lg bg-board px-1 py-0.5 md:flex-none md:gap-1 md:overflow-visible md:px-2 md:py-1">
+            <div className="flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-0 overflow-hidden rounded-lg bg-board px-0.5 py-0.5 md:flex-none md:gap-1 md:overflow-visible md:px-2 md:py-1">
               {TIMEFRAMES.map((option) => (
                 <button
                   key={option.id}
                   type="button"
                   onClick={() => setTimeframe(option.id)}
-                  className={`min-w-0 flex-1 rounded-md px-1 py-1 text-center font-sans text-[12.65px] font-medium md:flex-none md:px-3 md:py-1.5 ${
+                  className={`min-w-0 flex-1 rounded-md px-0.5 py-1 text-center font-sans text-[13.8px] font-medium leading-none md:flex-none md:px-3 md:py-1.5 ${
                     timeframe === option.id
                       ? "bg-ink text-board"
                       : "text-muted hover:bg-panel hover:text-ink"

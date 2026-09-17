@@ -261,8 +261,11 @@ export function EntityHero({
           </dd>
         </div>
         <div>
-          <dt className="detail-open-score-90 text-muted">KinDex 시가</dt>
-          <dd className={`detail-open-score-90 mt-0.5 font-sans text-lg tabular-nums md:mt-1 ${metricTone}`}>
+          {/* 10% smaller than sibling metric label/value (text-sm / text-lg). */}
+          <dt className="text-[0.7875rem] leading-snug text-muted">KinDex 시가</dt>
+          <dd
+            className={`mt-0.5 font-sans text-[1.0125rem] leading-snug tabular-nums md:mt-1 ${metricTone}`}
+          >
             {formatScore(entity.openScore)}
           </dd>
         </div>
