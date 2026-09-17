@@ -22,6 +22,7 @@ import { runDailyBriefingJob } from "../src/lib/briefing/job";
 import {
   deliverGenerationReport,
   persistGenerationReportForAdminSync,
+  writeGenerationReportArtifacts,
   type GenerationReportRow,
 } from "../src/lib/ops/generation-report";
 import { resetGeminiUsage, snapshotGeminiUsage, formatKrw } from "../src/lib/ops/gemini-usage";
@@ -270,14 +271,57 @@ async function main() {
   console.log(JSON.stringify(summary, null, 2));
 
   // Always write digest/HTML — Assert + email steps depend on these artifacts.
+  // When the edition was already published, keep the existing success digest
+  // (do not prune/replace it with a skip stub — that broke commit-push on 72ff90a).
   process.env.REQUIRE_OPS_DIGEST = process.env.REQUIRE_OPS_DIGEST ?? "1";
-  await writeReport({
-    result,
-    useGeminiBatch,
-    notes: fatal
-      ? [`Job aborted: ${fatal instanceof Error ? fatal.message : String(fatal)}`]
-      : undefined,
-  });
+  if (result.skipped && digestExists(editionDate)) {
+    // Ensure HTML exists for the email step without touching ops digests.
+    const mainsSkip = result.outcomes.filter((item) => item.kind === "main");
+    const divesSkip = result.outcomes.filter((item) => item.kind === "deep-dive");
+    const artifacts = await writeGenerationReportArtifacts(
+      {
+        subject: `[KinDex] 브리핑·Update 키워드 생성 보고 · ${result.editionDate}`,
+        editionDate: result.editionDate,
+        pipeline: "daily-briefings",
+        generatedAt: new Date().toISOString(),
+        cost: snapshotGeminiUsage(),
+        sections: [
+          {
+            title: "일일 브리핑",
+            rows: mainsSkip.map((item) => ({
+              ...toRow(item),
+              status: "skip" as const,
+              reason: result.reason ?? "already-published",
+            })),
+          },
+          {
+            title: "Update 키워드",
+            rows: divesSkip.map((item) => ({
+              ...toRow(item),
+              status: "skip" as const,
+              reason: result.reason ?? "already-published",
+            })),
+          },
+        ],
+        notes: [
+          `Job skipped: ${result.reason ?? "already published"}`,
+          `Gemini Batch=${result.geminiBatch ?? useGeminiBatch}`,
+          `Kept existing ops digest for ${editionDate}`,
+          `API 추정 ${formatKrw(snapshotGeminiUsage().estimatedKrw)}`,
+        ],
+      },
+      `briefings-${result.editionDate}`,
+    );
+    console.log(`[report] wrote ${artifacts.htmlPath} (skipped; kept existing digest)`);
+  } else {
+    await writeReport({
+      result,
+      useGeminiBatch,
+      notes: fatal
+        ? [`Job aborted: ${fatal instanceof Error ? fatal.message : String(fatal)}`]
+        : undefined,
+    });
+  }
 
   if (!digestExists(editionDate) || !htmlReportExists(editionDate)) {
     console.error(

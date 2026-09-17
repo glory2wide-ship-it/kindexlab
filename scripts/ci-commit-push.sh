@@ -6,6 +6,9 @@
 #
 # Paths may be files or directories. Directory paths stage every tracked/untracked
 # file under them (via `git add -f`).
+#
+# Handles replacements that delete an older tracked file and add a new one
+# (e.g. ops digest prune on skip re-run) — `git show :deleted` is invalid.
 set -euo pipefail
 
 MESSAGE="${1:?commit message required}"
@@ -22,30 +25,67 @@ git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 # -f: overnight analysis cache under src/data/analysis/ is gitignored locally
 # but must still ship to production via this workflow.
 git add -f -- "${PATHS[@]}"
+# Also stage deletions of tracked files under these paths (digest prune).
+git add -u -- "${PATHS[@]}" 2>/dev/null || true
+
 if git diff --cached --quiet; then
   echo "No staged changes for: ${PATHS[*]}"
   exit 0
 fi
 
 STAGE_DIR="$(mktemp -d)"
-LIST_FILE="${STAGE_DIR}/.staged-files"
+ADD_LIST="${STAGE_DIR}/.staged-adds"
+DEL_LIST="${STAGE_DIR}/.staged-deletes"
 cleanup() { rm -rf "$STAGE_DIR"; }
 trap cleanup EXIT
 
-git diff --cached --name-only -z -- "${PATHS[@]}" >"${LIST_FILE}.raw" || true
-# Fallback: list every cached path when pathspec filtering yields nothing
-# (some git versions are picky about directory pathspecs after add).
-if [ ! -s "${LIST_FILE}.raw" ]; then
-  git diff --cached --name-only -z >"${LIST_FILE}.raw"
-fi
+: >"$ADD_LIST"
+: >"$DEL_LIST"
 
-: >"$LIST_FILE"
+# Added / copied / modified / renamed — extract blob from index.
 while IFS= read -r -d '' file; do
   [ -z "$file" ] && continue
+  if ! git cat-file -e ":${file}" 2>/dev/null; then
+    echo "warn: skip unreadable staged path ${file}"
+    continue
+  fi
   mkdir -p "$STAGE_DIR/$(dirname "$file")"
   git show ":${file}" >"${STAGE_DIR}/${file}"
-  printf '%s\0' "$file" >>"$LIST_FILE"
-done <"${LIST_FILE}.raw"
+  printf '%s\0' "$file" >>"$ADD_LIST"
+done < <(git diff --cached --diff-filter=ACMR --name-only -z -- "${PATHS[@]}" || true)
+
+# Fallback when pathspec filtering yields nothing.
+if [ ! -s "$ADD_LIST" ]; then
+  while IFS= read -r -d '' file; do
+    [ -z "$file" ] && continue
+    if ! git cat-file -e ":${file}" 2>/dev/null; then
+      continue
+    fi
+    mkdir -p "$STAGE_DIR/$(dirname "$file")"
+    git show ":${file}" >"${STAGE_DIR}/${file}"
+    printf '%s\0' "$file" >>"$ADD_LIST"
+  done < <(git diff --cached --diff-filter=ACMR --name-only -z || true)
+fi
+
+# Deleted — record path only (no blob).
+while IFS= read -r -d '' file; do
+  [ -z "$file" ] && continue
+  printf '%s\0' "$file" >>"$DEL_LIST"
+done < <(git diff --cached --diff-filter=D --name-only -z -- "${PATHS[@]}" || true)
+
+if [ ! -s "$ADD_LIST" ] && [ ! -s "$DEL_LIST" ]; then
+  # Last resort: any cached change under PATHS
+  while IFS= read -r -d '' file; do
+    [ -z "$file" ] && continue
+    if git cat-file -e ":${file}" 2>/dev/null; then
+      mkdir -p "$STAGE_DIR/$(dirname "$file")"
+      git show ":${file}" >"${STAGE_DIR}/${file}"
+      printf '%s\0' "$file" >>"$ADD_LIST"
+    else
+      printf '%s\0' "$file" >>"$DEL_LIST"
+    fi
+  done < <(git diff --cached --name-only -z || true)
+fi
 
 # Drop unrelated dirty files (AGENTS.md, caches) before we start resetting.
 git reset --hard HEAD
@@ -63,9 +103,18 @@ for attempt in 1 2 3 4 5 6 7 8 9 10; do
     [ -z "$file" ] && continue
     mkdir -p "$(dirname "$file")"
     cp "${STAGE_DIR}/${file}" "${file}"
-  done <"$LIST_FILE"
+  done <"$ADD_LIST"
+
+  while IFS= read -r -d '' file; do
+    [ -z "$file" ] && continue
+    if [ -e "$file" ] || [ -L "$file" ]; then
+      rm -f "$file"
+    fi
+  done <"$DEL_LIST"
 
   git add -f -- "${PATHS[@]}"
+  git add -u -- "${PATHS[@]}" 2>/dev/null || true
+
   if git diff --cached --quiet; then
     echo "Remote already has the same content for: ${PATHS[*]}"
     exit 0
