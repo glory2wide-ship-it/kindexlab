@@ -51,55 +51,16 @@ function toRow(outcome: {
   };
 }
 
-async function main() {
-  const force = process.argv.includes("--force");
-  const editionDate = process.argv.find((arg) => /^\d{4}-\d{2}-\d{2}$/.test(arg)) ?? kstDateString();
-  const useGeminiBatch = resolveOvernightBatch();
-  resetGeminiUsage(process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash");
-
-  if (useGeminiBatch && process.env.GEMINI_USE_BATCH !== "0") {
-    process.env.GEMINI_USE_BATCH = "1";
-  }
-
-  if (!briefingLlmConfigured()) {
-    console.error(
-      `Briefing LLM is not configured (provider=${briefingProvider()}). Set GEMINI_API_KEY — briefings will fall back to templates.`,
-    );
-  }
-
-  console.log(
-    `Generating ${editionDate} briefings (force=${force}, provider=${briefingProvider()}, ai=${briefingLlmConfigured()}, geminiBatch=${useGeminiBatch})…`,
-  );
-
-  const result = await runDailyBriefingJob({
-    persist: true,
-    force,
-    editionDate,
-    useGeminiBatch,
-    onChannel: (channel, count) => {
-      console.log(`  ${channel}: ${count} articles`);
-    },
-  });
-
+async function writeReport(options: {
+  result: Awaited<ReturnType<typeof runDailyBriefingJob>>;
+  useGeminiBatch: boolean;
+  notes?: string[];
+}): Promise<void> {
+  const { result, useGeminiBatch } = options;
   const mains = result.outcomes.filter((item) => item.kind === "main");
   const dives = result.outcomes.filter((item) => item.kind === "deep-dive");
-
-  const summary = {
-    skipped: result.skipped,
-    reason: result.reason ?? null,
-    editionDate: result.editionDate,
-    removed: result.removed,
-    persisted: result.persisted,
-    geminiBatch: result.geminiBatch ?? useGeminiBatch,
-    mainsOk: mains.filter((item) => item.status === "ok").length,
-    mainsFail: mains.filter((item) => item.status === "fail").length,
-    deepDivesOk: dives.filter((item) => item.status === "ok").length,
-    deepDivesFail: dives.filter((item) => item.status === "fail").length,
-    total: result.outcomes.length,
-  };
-  console.log(JSON.stringify(summary, null, 2));
-
   const notes = [
+    ...(options.notes ?? []),
     result.skipped ? `Job skipped: ${result.reason ?? "already published"}` : undefined,
     `Gemini Batch=${result.geminiBatch ?? useGeminiBatch}`,
     `API 추정 ${formatKrw(snapshotGeminiUsage().estimatedKrw)}`,
@@ -135,6 +96,110 @@ async function main() {
     `briefings-${result.editionDate}`,
   );
   console.log(`[report] ${delivery.detail}`);
+}
+
+async function main() {
+  const force = process.argv.includes("--force");
+  const editionDate = process.argv.find((arg) => /^\d{4}-\d{2}-\d{2}$/.test(arg)) ?? kstDateString();
+  const useGeminiBatch = resolveOvernightBatch();
+  resetGeminiUsage(process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash");
+
+  if (useGeminiBatch && process.env.GEMINI_USE_BATCH !== "0") {
+    process.env.GEMINI_USE_BATCH = "1";
+  }
+
+  if (!briefingLlmConfigured()) {
+    console.error(
+      `Briefing LLM is not configured (provider=${briefingProvider()}). Set GEMINI_API_KEY — briefings will fall back to templates.`,
+    );
+  }
+
+  console.log(
+    `Generating ${editionDate} briefings (force=${force}, provider=${briefingProvider()}, ai=${briefingLlmConfigured()}, geminiBatch=${useGeminiBatch})…`,
+  );
+
+  let result: Awaited<ReturnType<typeof runDailyBriefingJob>> | null = null;
+  let fatal: unknown = null;
+
+  try {
+    result = await runDailyBriefingJob({
+      persist: true,
+      force,
+      editionDate,
+      useGeminiBatch,
+      onChannel: (channel, count) => {
+        console.log(`  ${channel}: ${count} articles`);
+      },
+    });
+  } catch (error) {
+    fatal = error;
+    console.error(error);
+    // Minimal shell so CI still gets an ops digest + HTML even when the job aborts.
+    result = {
+      skipped: false,
+      reason: error instanceof Error ? error.message : "generate failed",
+      editionDate,
+      persisted: false,
+      removed: 0,
+      articles: [],
+      outcomes: [
+        {
+          name: "daily-briefings",
+          title: "daily-briefings",
+          kind: "main",
+          channel: "",
+          slug: `failed-${editionDate}`,
+          status: "fail",
+          reason: error instanceof Error ? error.message : "generate failed",
+        },
+      ],
+      geminiBatch: useGeminiBatch,
+    };
+  }
+
+  const mains = result.outcomes.filter((item) => item.kind === "main");
+  const dives = result.outcomes.filter((item) => item.kind === "deep-dive");
+
+  const summary = {
+    skipped: result.skipped,
+    reason: result.reason ?? null,
+    editionDate: result.editionDate,
+    removed: result.removed,
+    persisted: result.persisted,
+    geminiBatch: result.geminiBatch ?? useGeminiBatch,
+    mainsOk: mains.filter((item) => item.status === "ok").length,
+    mainsFail: mains.filter((item) => item.status === "fail").length,
+    deepDivesOk: dives.filter((item) => item.status === "ok").length,
+    deepDivesFail: dives.filter((item) => item.status === "fail").length,
+    total: result.outcomes.length,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+
+  // Always write digest/HTML — Assert + email steps depend on these artifacts.
+  process.env.REQUIRE_OPS_DIGEST = process.env.REQUIRE_OPS_DIGEST ?? "1";
+  await writeReport({
+    result,
+    useGeminiBatch,
+    notes: fatal
+      ? [`Job aborted: ${fatal instanceof Error ? fatal.message : String(fatal)}`]
+      : undefined,
+  });
+
+  if (fatal) {
+    process.exit(1);
+  }
+
+  // Incomplete overnight edition: do not pretend success (seen 2026-09-17).
+  if (!result.skipped) {
+    const mainsOk = summary.mainsOk;
+    const expectedMains = 5;
+    if (mainsOk < expectedMains || summary.total < 20) {
+      console.error(
+        `::error::Incomplete briefing edition edition=${result.editionDate} mainsOk=${mainsOk}/${expectedMains} total=${summary.total}`,
+      );
+      process.exit(1);
+    }
+  }
 }
 
 main().catch((error: unknown) => {

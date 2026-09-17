@@ -83,6 +83,11 @@ jobs:
           GEMINI_USE_BATCH: "true"
           GEMINI_BATCH_CONCURRENCY: "4"
           BRIEFING_OVERNIGHT_BATCH_SIZE: "12"
+          # Coalesce a full enrich wave before flush (RAG finish times vary).
+          GEMINI_BATCH_DEBOUNCE_MS: "8000"
+          GEMINI_BATCH_MAX_QUEUE: "12"
+          BRIEFING_ENRICH_TIMEOUT_MS: "1200000"
+          REQUIRE_OPS_DIGEST: "1"
           GEMINI_MAX_CONCURRENCY: "4"
           TRENDS_DATA_SOURCE: live
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}

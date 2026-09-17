@@ -4,6 +4,9 @@
  * When several articles await chatJson at once, requests coalesce into one
  * Batch API job (−50% vs sync). Sequential steps inside an article naturally
  * form waves (outlines → sections → repairs) via the debounce window.
+ *
+ * Mirrors Gemini batch-chat keepalive / drain hardening so overnight jobs
+ * cannot exit 0 with an empty event loop while siblings are still queued.
  */
 
 import {
@@ -30,19 +33,76 @@ function extractJsonPayload(raw: string): string {
   return raw.trim();
 }
 
+function defaultDebounceMs(): number {
+  return Number(process.env.OPENAI_BATCH_DEBOUNCE_MS ?? 8_000);
+}
+
+function maxQueueBeforeFlush(): number {
+  const parsed = Number.parseInt(process.env.OPENAI_BATCH_MAX_QUEUE ?? "", 10);
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  const overnight = Number.parseInt(process.env.BRIEFING_OVERNIGHT_BATCH_SIZE ?? "", 10);
+  if (Number.isFinite(overnight) && overnight > 0) return overnight;
+  return 12;
+}
+
 export class DebouncedOpenAiBatchChat {
   private queue: Pending[] = [];
   private timer: ReturnType<typeof setTimeout> | null = null;
   private flushing: Promise<void> | null = null;
   private seq = 0;
+  private keepAlive: ReturnType<typeof setInterval> | null = null;
+  private closed = false;
 
   constructor(
-    private readonly debounceMs = Number(process.env.OPENAI_BATCH_DEBOUNCE_MS ?? 2_500),
-  ) {}
+    private readonly debounceMs = defaultDebounceMs(),
+    private readonly maxQueue = maxQueueBeforeFlush(),
+  ) {
+    this.armKeepAlive();
+  }
+
+  private armKeepAlive(): void {
+    if (this.keepAlive) return;
+    this.keepAlive = setInterval(() => {
+      /* keepalive only */
+    }, 60_000);
+    this.keepAlive.ref?.();
+  }
+
+  private clearKeepAlive(): void {
+    if (!this.keepAlive) return;
+    clearInterval(this.keepAlive);
+    this.keepAlive = null;
+  }
+
+  private scheduleFlush(): void {
+    if (this.closed) return;
+    if (this.queue.length >= this.maxQueue) {
+      if (this.timer) {
+        clearTimeout(this.timer);
+        this.timer = null;
+      }
+      void this.flush().catch((error) => {
+        console.error("[openai-batch] flush failed", error);
+      });
+      return;
+    }
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      void this.flush().catch((error) => {
+        console.error("[openai-batch] flush failed", error);
+      });
+    }, this.debounceMs);
+    this.timer.ref?.();
+  }
 
   readonly chatJson: ChatJsonFn = async <T>(options: ChatOptions): Promise<T | null> => {
     // Anthropic (or non-openai forced) stays on the live path.
     if (options.provider === "anthropic") return chatJsonLive<T>(options);
+
+    if (this.closed) {
+      throw new Error("OpenAI batch transport closed");
+    }
 
     return new Promise<T | null>((resolve, reject) => {
       this.seq += 1;
@@ -52,10 +112,7 @@ export class DebouncedOpenAiBatchChat {
         resolve: (value) => resolve(value as T | null),
         reject,
       });
-      if (this.timer) clearTimeout(this.timer);
-      this.timer = setTimeout(() => {
-        void this.flush();
-      }, this.debounceMs);
+      this.scheduleFlush();
     });
   };
 
@@ -77,6 +134,27 @@ export class DebouncedOpenAiBatchChat {
       this.flushing = null;
     });
     await this.flushing;
+    if (this.queue.length) return this.flush();
+  }
+
+  async drain(): Promise<void> {
+    for (;;) {
+      await this.flush();
+      if (!this.queue.length && !this.flushing) return;
+    }
+  }
+
+  close(reason = "OpenAI batch transport closed"): void {
+    this.closed = true;
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    const leftover = this.queue.splice(0, this.queue.length);
+    for (const item of leftover) {
+      item.reject(new Error(reason));
+    }
+    this.clearKeepAlive();
   }
 
   private async flushItems(items: Pending[]): Promise<void> {
@@ -148,16 +226,22 @@ export class DebouncedOpenAiBatchChat {
 
 /**
  * Installs the Batch chat transport for the duration of `run`.
- * Always flushes remaining queued calls on exit.
+ * Always drains remaining queued calls on exit.
  */
 export async function withOpenAiBatchChat<T>(run: () => Promise<T>): Promise<T> {
   const transport = new DebouncedOpenAiBatchChat();
   setChatJsonOverride(transport.chatJson);
   try {
     const result = await run();
-    await transport.flush();
+    await transport.drain();
     return result;
   } finally {
     setChatJsonOverride(null);
+    try {
+      await transport.drain();
+    } catch {
+      /* drain best-effort on shutdown */
+    }
+    transport.close();
   }
 }

@@ -228,6 +228,54 @@ function briefingAiConcurrency(force?: boolean): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : BRIEFING_OVERNIGHT_BATCH_SIZE;
 }
 
+/** Soft wall per article so a hung RAG/fetch cannot stall the overnight edition forever. */
+const BRIEFING_ENRICH_TIMEOUT_MS = Number(
+  process.env.BRIEFING_ENRICH_TIMEOUT_MS ?? 20 * 60 * 1000,
+);
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  if (!Number.isFinite(ms) || ms <= 0) return promise;
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+    timer.ref?.();
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+async function enrichBriefingWithAiGuarded(
+  draft: BriefingArticle,
+  edition: BriefingArticle[],
+): Promise<BriefingArticle> {
+  const logger = analysisLogger(`briefing:${draft.slug}`);
+  try {
+    return await withTimeout(
+      enrichBriefingWithAi(draft, {
+        leadKeyword: enrichmentLeadKeyword(draft),
+        relatedKeywords: enrichmentRelatedKeywords(draft, edition),
+        categoryHint: enrichmentCategoryHint(draft),
+      }),
+      BRIEFING_ENRICH_TIMEOUT_MS,
+      `briefing-enrich:${draft.slug}`,
+    );
+  } catch (error) {
+    logger.warn("briefing-enrich-guard", {
+      reason: error instanceof Error ? error.message : "enrich failed",
+    });
+    return draft;
+  }
+}
+
 /**
  * Enriches every article in an edition (channel mains + submenu deep-dives) via Gemini.
  * Overnight callers pass `forceGeminiBatch: true` so Batch (−50%) is used even if the
@@ -241,6 +289,7 @@ export async function enrichChannelEditionWithAi(
 
   const force = Boolean(options?.forceGeminiBatch);
   const useBatch = briefingUsesGeminiBatch(force);
+  const batchLogger = analysisLogger("briefing:batch");
 
   const run = async () => {
     const enriched: BriefingArticle[] = [];
@@ -249,16 +298,28 @@ export async function enrichChannelEditionWithAi(
 
     for (let index = 0; index < articles.length; index += concurrency) {
       const batch = articles.slice(index, index + concurrency);
+      const wave = Math.floor(index / concurrency) + 1;
+      const waves = Math.ceil(articles.length / concurrency);
+      batchLogger.step("enrich-wave-start", {
+        wave,
+        waves,
+        size: batch.length,
+        from: index,
+        to: index + batch.length,
+      });
       const settled = await Promise.all(
-        batch.map((draft) =>
-          enrichBriefingWithAi(draft, {
-            leadKeyword: enrichmentLeadKeyword(draft),
-            relatedKeywords: enrichmentRelatedKeywords(draft, articles),
-            categoryHint: enrichmentCategoryHint(draft),
-          }),
-        ),
+        batch.map((draft) => enrichBriefingWithAiGuarded(draft, articles)),
       );
       enriched.push(...settled);
+      const ok = settled.filter((item) => Boolean(item.bodyHtml?.trim() || item.bodyMarkdown?.trim())).length;
+      batchLogger.step("enrich-wave-done", {
+        wave,
+        waves,
+        ok,
+        fail: settled.length - ok,
+        done: enriched.length,
+        total: articles.length,
+      });
       if (index + concurrency < articles.length && delayMs > 0) {
         await delay(delayMs);
       }
@@ -270,11 +331,12 @@ export async function enrichChannelEditionWithAi(
   if (useBatch) {
     const mains = articles.filter((item) => item.kind === "main").length;
     const dives = articles.filter((item) => item.kind === "deep-dive").length;
-    analysisLogger("briefing:batch").step("gemini-batch-mode", {
+    batchLogger.step("gemini-batch-mode", {
       articles: articles.length,
       mains,
       deepDives: dives,
       concurrency: briefingAiConcurrency(force),
+      enrichTimeoutMs: BRIEFING_ENRICH_TIMEOUT_MS,
     });
     return withGeminiBatchChat(run);
   }
