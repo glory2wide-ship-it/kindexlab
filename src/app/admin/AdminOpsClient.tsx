@@ -758,7 +758,78 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
               subtitle="채널 구분별 권장 주기·채움률·회차별 성공/실패/스킵. 실제 조회 캐시도 이 주기에 맞춰 재검증합니다."
               meta={`정책 기준 ${formatKst(data.generatedAt)} · 열람일 ${data.editionDate}`}
             >
-              <div className="overflow-x-auto rounded-xl border border-line">
+              {/* Mobile: stacked cards — wide 7-col table was unreadable. */}
+              <ul className="space-y-3 md:hidden">
+                {categoryInfoRefresh.map((row) => (
+                  <li
+                    key={row.id}
+                    className="rounded-xl border border-line bg-panel px-3.5 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium leading-snug text-ink">{row.label}</p>
+                        <p className="mt-0.5 text-xs leading-snug text-muted">
+                          {row.channelsLabel}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-md border border-line bg-board px-2 py-0.5 text-xs tabular-nums text-ink">
+                        {row.cadenceLabel}
+                      </span>
+                    </div>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                      <div>
+                        <dt className="text-[11px] text-muted">채움률</dt>
+                        <dd className="mt-0.5 tabular-nums text-ink">
+                          {row.fillRateLabel ??
+                            `${Math.round((row.run?.fillRateAvg ?? 0) * 100)}%`}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] text-muted">성공/실패/스킵</dt>
+                        <dd className="mt-0.5 tabular-nums">
+                          <span className="text-emerald-700">{row.run?.ok ?? 0}</span>
+                          <span className="text-muted"> / </span>
+                          <span className="text-red-700">{row.run?.fail ?? 0}</span>
+                          <span className="text-muted"> / </span>
+                          <span className="text-muted">{row.run?.skip ?? 0}</span>
+                        </dd>
+                      </div>
+                      <div className="col-span-2">
+                        <dt className="text-[11px] text-muted">폴백</dt>
+                        <dd className="mt-0.5 text-xs text-muted">
+                          {row.fallbackLabel ??
+                            ((row.run?.usedFallback ?? 0) > 0
+                              ? `폴백 ${row.run?.usedFallback}`
+                              : "폴백 없음")}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] text-muted">최신 업데이트</dt>
+                        <dd className="mt-0.5 text-xs tabular-nums text-ink">
+                          {formatKst(row.lastUpdatedAt)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] text-muted">다음 업데이트</dt>
+                        <dd
+                          className={`mt-0.5 text-xs tabular-nums ${
+                            row.overdue ? "font-medium text-amber-800" : "text-ink"
+                          }`}
+                        >
+                          {formatKst(row.nextUpdateAt)}
+                          {row.overdue ? (
+                            <span className="mt-0.5 block text-[11px] text-amber-700">
+                              갱신 지연
+                            </span>
+                          ) : null}
+                        </dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="hidden overflow-x-auto rounded-xl border border-line md:block">
                 <table className="min-w-full text-left text-sm">
                   <thead className="bg-board text-xs text-muted">
                     <tr>
@@ -782,7 +853,8 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                           {row.cadenceLabel}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-ink">
-                          {row.fillRateLabel ?? `${Math.round((row.run?.fillRateAvg ?? 0) * 100)}%`}
+                          {row.fillRateLabel ??
+                            `${Math.round((row.run?.fillRateAvg ?? 0) * 100)}%`}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2.5 tabular-nums">
                           <span className="text-emerald-700">{row.run?.ok ?? 0}</span>
@@ -801,11 +873,15 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                           {formatKst(row.lastUpdatedAt)}
                         </td>
                         <td className="px-3 py-2.5 text-xs tabular-nums">
-                          <span className={row.overdue ? "font-medium text-amber-800" : "text-ink"}>
+                          <span
+                            className={row.overdue ? "font-medium text-amber-800" : "text-ink"}
+                          >
                             {formatKst(row.nextUpdateAt)}
                           </span>
                           {row.overdue ? (
-                            <span className="mt-0.5 block text-[11px] text-amber-700">갱신 지연</span>
+                            <span className="mt-0.5 block text-[11px] text-amber-700">
+                              갱신 지연
+                            </span>
                           ) : null}
                         </td>
                       </tr>

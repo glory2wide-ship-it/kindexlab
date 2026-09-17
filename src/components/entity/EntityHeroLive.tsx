@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { EntityHero } from "@/components/entity/EntityHero";
 import {
   detailFactsAreStale,
+  detailFactsForHero,
   resolveDetailFacts,
 } from "@/lib/boards/detail-facts";
 import { entityNarrativeSummary } from "@/lib/entity/index-blurb";
@@ -90,7 +91,8 @@ function MarketQuotePendingHero({
           ? "국내 주식"
           : TYPE_LABEL[entity.type];
 
-  const detailFacts = resolveDetailFacts(entity);
+  const rawDetailFacts = resolveDetailFacts(entity);
+  const detailFacts = rawDetailFacts ? detailFactsForHero(rawDetailFacts) : undefined;
   const detailFactsStale = detailFacts ? detailFactsAreStale(detailFacts) : false;
   const refreshLabel =
     detailFacts?.refresh === "daily"
@@ -122,27 +124,29 @@ function MarketQuotePendingHero({
               {detailFactsStale ? " · 갱신 필요" : ` · ${refreshLabel}`}
             </p>
           </div>
-          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 md:gap-4">
-            {detailFacts.rows.map((row) => (
-              <div key={row.label}>
-                <dt className="text-muted">{row.label}</dt>
-                <dd className="mt-0.5 font-medium leading-snug text-ink md:mt-1">
-                  {row.href ? (
-                    <a
-                      href={row.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline decoration-line underline-offset-2 hover:text-accent"
-                    >
-                      {row.value}
-                    </a>
-                  ) : (
-                    row.value
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          {detailFacts.rows.length > 0 ? (
+            <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 md:gap-4">
+              {detailFacts.rows.map((row) => (
+                <div key={row.label}>
+                  <dt className="text-muted">{row.label}</dt>
+                  <dd className="mt-0.5 font-medium leading-snug text-ink md:mt-1">
+                    {row.href ? (
+                      <a
+                        href={row.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline decoration-line underline-offset-2 hover:text-accent"
+                      >
+                        {row.value}
+                      </a>
+                    ) : (
+                      row.value
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
           {detailFacts.links && detailFacts.links.length > 0 ? (
             <div>
               <p className="text-[11px] font-semibold tracking-wide text-soft">관련 링크</p>

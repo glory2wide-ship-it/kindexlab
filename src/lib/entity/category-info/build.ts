@@ -253,9 +253,42 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
     case "webtoon":
     case "performance":
     case "exhibition": {
-      rows = nonemptyRows([...entertainment.rows, ...detail.rows]);
-      chips = nonemptyChips([...entertainment.chips, ...detail.chips]);
-      synopsis = entertainment.synopsis || detail.synopsis;
+      // Skeleton only — do not seed hero "확인 중" placeholders into 맞춤 정보
+      // (enrich fills live rows; hero profile is pruned separately).
+      if (resolved.channel === "webtoon") {
+        rows = [
+          { label: "플랫폼", value: UPDATING, emphasize: true },
+          { label: "작가", value: UPDATING, emphasize: true },
+          { label: "주요 인물", value: UPDATING },
+          { label: "독자 반응", value: UPDATING },
+        ];
+      } else if (resolved.channel === "movie") {
+        rows = [
+          { label: "개봉/배급", value: UPDATING, emphasize: true },
+          { label: "출연", value: UPDATING },
+        ];
+      } else if (resolved.channel === "performance") {
+        rows = [
+          { label: "공연 장소", value: UPDATING, emphasize: true },
+          { label: "공연 일정", value: UPDATING },
+          { label: "공연 시간", value: UPDATING },
+          { label: "티켓 가격", value: UPDATING },
+        ];
+      } else if (resolved.channel === "exhibition") {
+        rows = [
+          { label: "행사 장소", value: UPDATING, emphasize: true },
+          { label: "행사 시간", value: UPDATING },
+          { label: "입장료", value: UPDATING },
+        ];
+      } else {
+        // kpop / star — prefer empty updating rows over "소속사 확인 중"
+        rows = [
+          { label: "소속사", value: UPDATING, emphasize: true },
+          { label: "직업", value: UPDATING },
+        ];
+      }
+      chips = [];
+      synopsis = undefined;
       notice = detail.notice;
       links = detail.links;
       break;
@@ -400,11 +433,28 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
       break;
     }
     default: {
-      rows = nonemptyRows([...detail.rows, ...entertainment.rows]);
-      chips = nonemptyChips([...detail.chips, ...entertainment.chips]);
-      synopsis = detail.synopsis || entertainment.synopsis;
-      notice = detail.notice;
-      links = detail.links;
+      // 주식·금융 등 issue_news 히어로 팩은 맞춤 정보와 뉴스/요약이 중복되므로
+      // 테이블은 enrich가 채울 스켈레톤만 둔다.
+      const marketNewsChannel =
+        resolved.channel === "stock" ||
+        resolved.channel === "overseas_stock" ||
+        resolved.channel === "finance" ||
+        resolved.channel === "commodities_fx" ||
+        resolved.channel === "inflation" ||
+        resolved.channel === "startup";
+      if (marketNewsChannel) {
+        rows = [{ label: "시장 이슈", value: UPDATING, emphasize: true }];
+        chips = [];
+        synopsis = undefined;
+        notice = detail.notice;
+        links = [];
+      } else {
+        rows = nonemptyRows([...detail.rows, ...entertainment.rows]);
+        chips = nonemptyChips([...detail.chips, ...entertainment.chips]);
+        synopsis = detail.synopsis || entertainment.synopsis;
+        notice = detail.notice;
+        links = detail.links;
+      }
       break;
     }
   }
@@ -419,7 +469,7 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
             includeWeb: includeWebBlog,
             includeBlog: includeWebBlog,
           }),
-      { minPreferred: 2, maxSearchFallbacks: 1 },
+      { minPreferred: 2, maxSearchFallbacks: 1, channel: resolved.channel },
     );
     if (rows.length === 0) {
       rows = [{ label: "상태", value: UPDATING, emphasize: true }];
@@ -433,7 +483,7 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
             includeWeb: includeWebBlog,
             includeBlog: includeWebBlog,
           }),
-      { minPreferred: 1, maxSearchFallbacks: 1 },
+      { minPreferred: 1, maxSearchFallbacks: 1, channel: resolved.channel },
     );
   }
 

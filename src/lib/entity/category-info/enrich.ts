@@ -8,6 +8,7 @@ import { lookupWebtoonFacts } from "@/lib/entity/category-info/lookup-webtoon";
 import {
   ensureQualityNewsLinks,
   isNewsSearchFallbackUrl,
+  newsQueryForChannel,
   scoreNewsLinkQuality,
 } from "@/lib/entity/category-info/news";
 import {
@@ -227,9 +228,13 @@ function fillUpdatingRows(
   return next;
 }
 
-async function crawlNews(name: string): Promise<CrawlDoc[]> {
+async function crawlNews(
+  name: string,
+  channel?: CategoryInfoChannel,
+): Promise<CrawlDoc[]> {
   try {
-    const retrieval = await retrieveNewsForKeyword(name, {
+    const query = newsQueryForChannel(name, channel);
+    const retrieval = await retrieveNewsForKeyword(query, {
       limit: 6,
       lookbackHours: 240,
       trustedOnly: false,
@@ -426,10 +431,14 @@ function isSafeOutboundUrl(href: string): boolean {
  * Drop links whose claimed source/title disagrees with the destination host,
  * and prefer title·entity·domain quality (보조금24 rules expanded to all channels).
  */
-function sanitizeRelatedLinks(links: CategoryInfoLink[], entityName: string): CategoryInfoLink[] {
+function sanitizeRelatedLinks(
+  links: CategoryInfoLink[],
+  entityName: string,
+  channel?: CategoryInfoChannel,
+): CategoryInfoLink[] {
   const scored = links
     .filter((link) => link.href && isSafeOutboundUrl(link.href))
-    .map((link) => ({ link, score: scoreNewsLinkQuality(link, entityName) }))
+    .map((link) => ({ link, score: scoreNewsLinkQuality(link, entityName, channel) }))
     .filter((row) => row.score > 0 || isNewsSearchFallbackUrl(row.link.href))
     .sort((a, b) => b.score - a.score);
 
@@ -637,7 +646,7 @@ export async function enrichCategoryInfoPayload(
     ticketFacts,
     foodFacts,
   ] = await Promise.all([
-    crawlNews(name),
+    crawlNews(name, base.channel),
     crawlWeb(name, base.channel),
     wantsGrant ? matchPublicGrant(name).catch(() => undefined) : Promise.resolve(undefined),
     wantsHousing
@@ -1374,8 +1383,9 @@ export async function enrichCategoryInfoPayload(
         mergeLinks(officialGrantLinks, mergeLinks(crawledLinks, baseLinks)),
       ),
       name,
+      base.channel,
     ),
-    { minPreferred: 2, maxSearchFallbacks: 1 },
+    { minPreferred: 2, maxSearchFallbacks: 1, channel: base.channel },
   );
   if (!synopsis && publicGrant?.summary) {
     synopsis = publicGrant.summary;

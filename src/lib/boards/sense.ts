@@ -496,6 +496,35 @@ const KEYWORD_OVERRIDES: Record<string, Partial<UnitSensePreset>> = {
       label: "castle-webtoon-vs-realty",
     },
   },
+  "realtime-webtoon-rank::나이트런": {
+    senseLabel: "웹툰 《나이트런》",
+    searchQualifiers: ["웹툰 나이트런", "나이트런 웹툰", "연재", "네이버웹툰"],
+    promptRules: [
+      "『나이트런』은 웹툰 작품명입니다. 야간 러닝·조깅·마라톤·군사 훈련 의미로 쓰지 마세요.",
+    ],
+    offSense: {
+      wrong: /야간\s*(러닝|조깅|런)|마라톤|조깅|야간\s*훈련|군사\s*훈련|나이트클럽/,
+      required: /웹툰|연재|회차|작가|만화|네이버|카카오|독자/,
+      label: "nightrun-webtoon-vs-running",
+    },
+  },
+  "realtime-webtoon-rank::재벌집 막내아들": {
+    senseLabel: "웹툰 《재벌집 막내아들》",
+    searchQualifiers: ["웹툰 재벌집 막내아들", "재벌집 막내아들 웹툰", "연재"],
+    promptRules: ["『재벌집 막내아들』은 웹툰·원작 드라마 작품입니다."],
+  },
+  "kospi-fomo-index::반도체": {
+    senseLabel: "주식 테마 반도체",
+    searchQualifiers: ["반도체 주식", "반도체 관련주", "주가", "시총"],
+    promptRules: [
+      "반도체는 주식·증시 테마입니다. 단순 산업 소개·전시회만으로 쓰지 마세요.",
+    ],
+    offSense: {
+      wrong: /반도체\s*전시회|반도체\s*박물관/,
+      required: /주식|주가|시총|증시|관련주|테마주|코스피|실적/,
+      label: "semi-stock-vs-exhibit",
+    },
+  },
 };
 
 /** Domains that should reject nature/season-dominated copy even without a unit offSense. */

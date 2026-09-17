@@ -528,6 +528,82 @@ function resolveDailyFacts(
   }
 }
 
+/** True when a fact value is still a placeholder (should not paint in 종목 프로필). */
+export function isUnresolvedFactValue(value: string): boolean {
+  const v = value.trim();
+  if (!v) return true;
+  return /확인\s*중|업데이트\s*중|준비\s*중|공지\s*기준|채널에서\s*확인|추가\s*수집\s*중/.test(
+    v,
+  );
+}
+
+/**
+ * Domains whose live facts live in ItemDetailCategoryInfo — hide thin/placeholder
+ * hero packs so 종목 프로필 and 맞춤 정보 do not repeat (or show "확인 중").
+ */
+const HERO_SUPPRESS_DOMAINS = new Set<DetailFacts["domain"]>([
+  "webtoon",
+  "movie",
+  "kpop",
+  "trot",
+  "music",
+  "star",
+  "performance",
+  "exhibition",
+  "issue_news",
+]);
+
+/**
+ * Prune unresolved placeholders and suppress domains owned by category-info.
+ * Returns undefined when the hero should omit the 종목 프로필 block entirely.
+ */
+export function detailFactsForHero(facts: DetailFacts): DetailFacts | undefined {
+  if (HERO_SUPPRESS_DOMAINS.has(facts.domain)) {
+    // Only keep curated rows that are actually filled (rare catalogue hits).
+    const rows = facts.rows.filter((row) => !isUnresolvedFactValue(row.value));
+    const chips = (facts.chips ?? [])
+      .map((chip) => ({
+        ...chip,
+        items: chip.items.filter((item) => item && !isUnresolvedFactValue(item)),
+      }))
+      .filter((chip) => chip.items.length > 0);
+    const synopsis =
+      facts.synopsis && !isUnresolvedFactValue(facts.synopsis) ? facts.synopsis : undefined;
+    // issue_news is almost always search-link fluff that duplicates 맞춤 정보.
+    if (facts.domain === "issue_news") return undefined;
+    // Entertainment: if nothing real remains, hide — category-info owns the pack.
+    if (!rows.length && !chips.length && !synopsis) return undefined;
+    return {
+      ...facts,
+      rows,
+      chips: chips.length ? chips : undefined,
+      links: undefined,
+      synopsis,
+    };
+  }
+
+  const rows = facts.rows.filter((row) => !isUnresolvedFactValue(row.value));
+  const chips = (facts.chips ?? [])
+    .map((chip) => ({
+      ...chip,
+      items: chip.items.filter((item) => item && !isUnresolvedFactValue(item)),
+    }))
+    .filter((chip) => chip.items.length > 0);
+  const synopsis =
+    facts.synopsis && !isUnresolvedFactValue(facts.synopsis) ? facts.synopsis : undefined;
+  const links = (facts.links ?? []).filter(
+    (link) => link.href && !/search\.naver\.com|news\.google\.com\/search/.test(link.href),
+  );
+  if (!rows.length && !chips.length && !synopsis && !links.length) return undefined;
+  return {
+    ...facts,
+    rows,
+    chips: chips.length ? chips : undefined,
+    links: links.length ? links : undefined,
+    synopsis,
+  };
+}
+
 /** EntityHero entry — daily board packs win over weekly entertainment when both match. */
 export function resolveDetailFacts(
   entity: Pick<RankingEntity, "name" | "type" | "slug" | "tags" | "summary" | "heatmapGroup">,

@@ -10,6 +10,7 @@ import {
 } from "@/lib/market/naver-finance-format";
 import {
   detailFactsAreStale,
+  detailFactsForHero,
   resolveDetailFacts,
 } from "@/lib/boards/detail-facts";
 import type { RankingEntity } from "@/lib/types";
@@ -224,7 +225,8 @@ export function EntityHero({
   entity: RankingEntity;
   kicker?: string;
 }) {
-  const detailFacts = resolveDetailFacts(entity);
+  const rawDetailFacts = resolveDetailFacts(entity);
+  const detailFacts = rawDetailFacts ? detailFactsForHero(rawDetailFacts) : undefined;
   const detailFactsStale = detailFacts ? detailFactsAreStale(detailFacts) : false;
   const refreshLabel =
     detailFacts?.refresh === "daily"
