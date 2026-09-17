@@ -1,0 +1,16 @@
+{
+  "days": {
+    "2026-09-17": {
+      "youtubeUnits": 1726,
+      "youtubeCalls": 142,
+      "openaiPromptTokens": 0,
+      "openaiCompletionTokens": 0,
+      "openaiCalls": 0,
+      "updatedAt": "2026-09-17T08:00:23.908Z",
+      "geminiPromptTokens": 173331,
+      "geminiCompletionTokens": 4839,
+      "geminiTotalTokens": 388364,
+      "geminiCalls": 445
+    }
+  }
+}

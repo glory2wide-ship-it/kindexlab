@@ -1,4 +1,5 @@
 import type { AnalysisLogger } from "@/lib/analysis/log";
+import { recordGeminiDetailCollectUsage } from "@/lib/ops/detail-collect-api-cost";
 import { recordGeminiUsage } from "@/lib/ops/gemini-usage";
 
 export type LlmProvider = "openai" | "anthropic" | "gemini";
@@ -492,6 +493,13 @@ async function chatJsonGemini<T>(options: ChatOptions): Promise<T | null> {
       completionTokens: json.usageMetadata?.candidatesTokenCount,
       totalTokens: json.usageMetadata?.totalTokenCount,
     });
+    if (options.step.startsWith("category-info")) {
+      recordGeminiDetailCollectUsage({
+        promptTokens: json.usageMetadata?.promptTokenCount,
+        completionTokens: json.usageMetadata?.candidatesTokenCount,
+        totalTokens: json.usageMetadata?.totalTokenCount,
+      });
+    }
     return parsed;
   } catch (error) {
     options.logger.warn(options.step, {

@@ -19,6 +19,21 @@ export type CategoryInfoRefreshRunStats = {
   lastRunAt?: string;
 };
 
+/** One warm / batch window persisted for Admin “갱신 기록”. */
+export type CategoryInfoRefreshHistoryEntry = {
+  id: string;
+  at: string;
+  source: "warm" | "manual" | "live";
+  label: string;
+  entityCount: number;
+  ok: number;
+  fail: number;
+  skip: number;
+  fillRateAvg: number;
+  usedFallback: number;
+  tiers: Partial<Record<CategoryInfoRefreshTierId, CategoryInfoRefreshRunStats>>;
+};
+
 export type CategoryInfoRefreshTierStatus = {
   id: CategoryInfoRefreshTierId;
   label: string;
@@ -37,10 +52,13 @@ type RefreshStateFile = {
   updatedAt: string;
   tiers: Partial<Record<CategoryInfoRefreshTierId, string>>;
   runs?: Partial<Record<CategoryInfoRefreshTierId, CategoryInfoRefreshRunStats>>;
+  /** Newest-first warm/batch snapshots (capped). */
+  history?: CategoryInfoRefreshHistoryEntry[];
 };
 
 const STATE_PATH = path.join(process.cwd(), "src/data/ops/category-info-refresh.json");
 const TOUCH_DEBOUNCE_MS = 5 * 60 * 1000;
+const MAX_HISTORY = 30;
 
 function emptyRun(): CategoryInfoRefreshRunStats {
   return { ok: 0, fail: 0, skip: 0, fillRateAvg: 0, usedFallback: 0 };
@@ -59,16 +77,17 @@ function defaultLastFor(id: CategoryInfoRefreshTierId): string {
 function readState(): RefreshStateFile {
   try {
     if (!existsSync(STATE_PATH)) {
-      return { updatedAt: new Date().toISOString(), tiers: {}, runs: {} };
+      return { updatedAt: new Date().toISOString(), tiers: {}, runs: {}, history: [] };
     }
     const raw = JSON.parse(readFileSync(STATE_PATH, "utf8")) as RefreshStateFile;
     return {
       updatedAt: raw.updatedAt || new Date().toISOString(),
       tiers: raw.tiers ?? {},
       runs: raw.runs ?? {},
+      history: Array.isArray(raw.history) ? raw.history : [],
     };
   } catch {
-    return { updatedAt: new Date().toISOString(), tiers: {}, runs: {} };
+    return { updatedAt: new Date().toISOString(), tiers: {}, runs: {}, history: [] };
   }
 }
 
@@ -249,6 +268,83 @@ export function recordCategoryInfoRefreshRun(input: {
   } catch {
     /* soft */
   }
+}
+
+/** Zero run counters for selected tiers before a warm batch (so history = this window). */
+export function resetCategoryInfoRefreshRuns(
+  tierIds: CategoryInfoRefreshTierId[],
+): void {
+  if (!tierIds.length) return;
+  const state = readState();
+  if (!state.runs) state.runs = {};
+  for (const id of tierIds) {
+    state.runs[id] = emptyRun();
+  }
+  state.updatedAt = new Date().toISOString();
+  writeState(state);
+}
+
+/**
+ * Snapshot current run counters into history after a warm/batch completes.
+ * Returns the entry that was prepended.
+ */
+export function snapshotCategoryInfoRefreshHistory(input: {
+  source?: CategoryInfoRefreshHistoryEntry["source"];
+  label?: string;
+  entityCount?: number;
+  tierIds?: CategoryInfoRefreshTierId[];
+}): CategoryInfoRefreshHistoryEntry {
+  const state = readState();
+  const tierIds =
+    input.tierIds ??
+    (CATEGORY_INFO_REFRESH_TIERS.map((tier) => tier.id) as CategoryInfoRefreshTierId[]);
+  const tiers: CategoryInfoRefreshHistoryEntry["tiers"] = {};
+  let ok = 0;
+  let fail = 0;
+  let skip = 0;
+  let usedFallback = 0;
+  let fillWeighted = 0;
+  let fillWeight = 0;
+  for (const id of tierIds) {
+    const run = state.runs?.[id] ?? emptyRun();
+    tiers[id] = { ...run };
+    ok += run.ok;
+    fail += run.fail;
+    skip += run.skip;
+    usedFallback += run.usedFallback;
+    const n = run.ok + run.fail + run.skip;
+    if (n > 0) {
+      fillWeighted += run.fillRateAvg * n;
+      fillWeight += n;
+    }
+  }
+  const at = new Date().toISOString();
+  const entry: CategoryInfoRefreshHistoryEntry = {
+    id: `warm-${at.replace(/[:.]/g, "-")}`,
+    at,
+    source: input.source ?? "warm",
+    label: input.label ?? "종목 상세 맞춤 정보 갱신",
+    entityCount: input.entityCount ?? ok + fail + skip,
+    ok,
+    fail,
+    skip,
+    fillRateAvg: fillWeight > 0 ? fillWeighted / fillWeight : 0,
+    usedFallback,
+    tiers,
+  };
+  const history = [entry, ...(state.history ?? [])].slice(0, MAX_HISTORY);
+  state.history = history;
+  state.updatedAt = at;
+  writeState(state);
+  return entry;
+}
+
+/** Newest-first warm/batch history for Admin. */
+export function listCategoryInfoRefreshHistory(
+  limit = 14,
+): CategoryInfoRefreshHistoryEntry[] {
+  const state = readState();
+  return (state.history ?? []).slice(0, limit);
 }
 
 /** Required labels for fill-rate (Excel-ish essentials + news SLA). */

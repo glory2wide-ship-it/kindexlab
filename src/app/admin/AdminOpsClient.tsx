@@ -189,6 +189,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                 daily: next.daily,
                 schedule: next.schedule,
                 categoryInfoRefresh: next.categoryInfoRefresh,
+                categoryInfoRefreshHistory: next.categoryInfoRefreshHistory,
                 detailCollectApiCost: next.detailCollectApiCost,
                 detailCollectApiCostHistory: next.detailCollectApiCostHistory,
                 publicDataFailLedger: next.publicDataFailLedger,
@@ -294,6 +295,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
     liveFill,
     schedule,
     categoryInfoRefresh,
+    categoryInfoRefreshHistory,
     detailCollectApiCost,
     detailCollectApiCostHistory,
     publicDataFailLedger,
@@ -830,9 +832,68 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
               </ul>
             </Section>
 
+            {(categoryInfoRefreshHistory?.length ?? 0) > 0 ? (
+              <Section
+                title="최근 맞춤 정보 갱신 기록"
+                subtitle="warm/배치 회차별 채움률·성공/실패/스킵. 가장 최근 전량 갱신이 맨 위에 표시됩니다."
+                meta={`${categoryInfoRefreshHistory.length}회 기록`}
+              >
+                <div className="overflow-x-auto rounded-xl border border-line">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="bg-board text-xs text-muted">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">시각</th>
+                        <th className="px-3 py-2 font-medium">작업</th>
+                        <th className="px-3 py-2 font-medium text-right">채움률</th>
+                        <th className="px-3 py-2 font-medium text-right">성공/실패/스킵</th>
+                        <th className="px-3 py-2 font-medium text-right">종목</th>
+                        <th className="px-3 py-2 font-medium">폴백</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {categoryInfoRefreshHistory.map((row) => (
+                        <tr key={row.id} className="border-t border-line align-top">
+                          <td className="px-3 py-2.5 text-xs tabular-nums text-ink">
+                            {formatKst(row.at)}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <p className="font-medium text-ink">{row.label}</p>
+                            <p className="mt-0.5 text-[11px] text-muted">
+                              {row.source}
+                              {row.tiers.length
+                                ? ` · ${row.tiers
+                                    .map((t) => `${t.id} ${t.fillRateLabel}`)
+                                    .join(", ")}`
+                                : ""}
+                            </p>
+                          </td>
+                          <td className="px-3 py-2.5 text-right tabular-nums text-ink">
+                            {row.fillRateLabel}
+                          </td>
+                          <td className="px-3 py-2.5 text-right tabular-nums">
+                            <span className="text-emerald-700">{row.ok}</span>
+                            <span className="text-muted"> / </span>
+                            <span className="text-red-700">{row.fail}</span>
+                            <span className="text-muted"> / </span>
+                            <span className="text-muted">{row.skip}</span>
+                          </td>
+                          <td className="px-3 py-2.5 text-right tabular-nums text-muted">
+                            {row.entityCount.toLocaleString("ko-KR")}
+                          </td>
+                          <td className="px-3 py-2.5 text-xs text-muted">
+                            {row.usedFallback > 0 ? `폴백 ${row.usedFallback}` : "없음"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Section>
+            ) : null}
+
             <Section
               title="정보수집 API 비용"
-              subtitle={`YouTube · OpenAI 추정 비용 (KST ${detailCollectApiCost.dayKst}).`}
+              subtitle={`YouTube · Gemini · OpenAI 추정 비용 (KST ${detailCollectApiCost.dayKst}). 합계 ${detailCollectApiCost.totalEstimatedKrwLabel ?? "₩0"}`}
               meta={`마지막 업데이트 ${formatKst(detailCollectApiCost.updatedAt)}`}
             >
               <div className="overflow-x-auto rounded-xl border border-line">
@@ -855,6 +916,15 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                       </td>
                     </tr>
                     <tr className="border-t border-line align-top">
+                      <td className="px-3 py-2.5 font-medium text-ink">Gemini API</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-ink">
+                        {detailCollectApiCost.gemini?.estimatedKrwLabel ?? "₩0"}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-muted">
+                        {detailCollectApiCost.gemini?.note ?? "맞춤 정보 Gemini 추출 호출 없음"}
+                      </td>
+                    </tr>
+                    <tr className="border-t border-line align-top">
                       <td className="px-3 py-2.5 font-medium text-ink">OpenAI API</td>
                       <td className="px-3 py-2.5 text-right tabular-nums text-ink">
                         {detailCollectApiCost.openai.estimatedKrwLabel}
@@ -862,6 +932,13 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                       <td className="px-3 py-2.5 text-xs text-muted">
                         {detailCollectApiCost.openai.note}
                       </td>
+                    </tr>
+                    <tr className="border-t border-line bg-board/40 align-top">
+                      <td className="px-3 py-2.5 font-semibold text-ink">합계</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-ink">
+                        {detailCollectApiCost.totalEstimatedKrwLabel ?? "₩0"}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-muted">당일 상세 정보수집 API 추정</td>
                     </tr>
                   </tbody>
                 </table>
@@ -874,7 +951,9 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                       <tr>
                         <th className="px-3 py-2 font-medium">날짜</th>
                         <th className="px-3 py-2 font-medium text-right">YouTube</th>
+                        <th className="px-3 py-2 font-medium text-right">Gemini</th>
                         <th className="px-3 py-2 font-medium text-right">OpenAI</th>
+                        <th className="px-3 py-2 font-medium text-right">합계</th>
                         <th className="px-3 py-2 font-medium">호출</th>
                       </tr>
                     </thead>
@@ -891,9 +970,17 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                             </button>
                           </td>
                           <td className="px-3 py-2.5 text-right tabular-nums">{row.youtubeKrwLabel}</td>
+                          <td className="px-3 py-2.5 text-right tabular-nums">
+                            {row.geminiKrwLabel ?? "₩0"}
+                          </td>
                           <td className="px-3 py-2.5 text-right tabular-nums">{row.openaiKrwLabel}</td>
+                          <td className="px-3 py-2.5 text-right tabular-nums font-medium">
+                            {row.totalKrwLabel ?? "₩0"}
+                          </td>
                           <td className="px-3 py-2.5 text-xs text-muted">
-                            YT {row.youtubeUnits.toLocaleString("ko-KR")}u · OA {row.openaiCalls}회
+                            YT {row.youtubeUnits.toLocaleString("ko-KR")}u · GM{" "}
+                            {(row.geminiCalls ?? 0).toLocaleString("ko-KR")}회 · OA {row.openaiCalls}
+                            회
                           </td>
                         </tr>
                       ))}

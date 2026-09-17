@@ -1,5 +1,5 @@
 /**
- * Detail-page info-collection API usage ledger (YouTube Data API + OpenAI).
+ * Detail-page info-collection API usage ledger (YouTube · OpenAI · Gemini).
  * Persisted under src/data/ops for /admin “상세페이지 정보수집”.
  */
 
@@ -25,6 +25,18 @@ export type DetailCollectApiCostSnapshot = {
     estimatedKrwLabel: string;
     note: string;
   };
+  gemini: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    calls: number;
+    estimatedKrw: number;
+    estimatedKrwLabel: string;
+    note: string;
+  };
+  /** Sum of YouTube + OpenAI + Gemini for the day. */
+  totalEstimatedKrw: number;
+  totalEstimatedKrwLabel: string;
   updatedAt: string;
 };
 
@@ -34,6 +46,10 @@ type DayBucket = {
   openaiPromptTokens: number;
   openaiCompletionTokens: number;
   openaiCalls: number;
+  geminiPromptTokens?: number;
+  geminiCompletionTokens?: number;
+  geminiTotalTokens?: number;
+  geminiCalls?: number;
   updatedAt: string;
 };
 
@@ -44,10 +60,13 @@ type StoreFile = {
 const STORE_PATH = path.join(process.cwd(), "src/data/ops/detail-collect-api-cost.json");
 
 /** Rough paid overage hint — free quota is 10,000 units/day. */
-const YOUTUBE_USD_PER_1000_UNITS = 0; // free within quota; keep 0 unless overage tooling exists
+const YOUTUBE_USD_PER_1000_UNITS = 0;
 /** GPT-4o-mini-ish list prices for any residual OpenAI detail calls. */
 const OPENAI_INPUT_PER_M = 0.15;
 const OPENAI_OUTPUT_PER_M = 0.6;
+/** Gemini Developer API Live (gemini-3.6-flash) — same as gemini-usage.ts. */
+const GEMINI_INPUT_PER_M = 1.5;
+const GEMINI_OUTPUT_PER_M = 7.5;
 
 function kstDay(now = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -65,6 +84,10 @@ function emptyBucket(): DayBucket {
     openaiPromptTokens: 0,
     openaiCompletionTokens: 0,
     openaiCalls: 0,
+    geminiPromptTokens: 0,
+    geminiCompletionTokens: 0,
+    geminiTotalTokens: 0,
+    geminiCalls: 0,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -82,10 +105,14 @@ function readStore(): StoreFile {
 function writeStore(store: StoreFile): void {
   try {
     mkdirSync(path.dirname(STORE_PATH), { recursive: true });
-    writeFileSync(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf8");
+    writeStoreAtomic(store);
   } catch {
     /* soft on read-only FS */
   }
+}
+
+function writeStoreAtomic(store: StoreFile): void {
+  writeFileSync(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf8");
 }
 
 function bucketForToday(store: StoreFile): { day: string; bucket: DayBucket } {
@@ -93,6 +120,32 @@ function bucketForToday(store: StoreFile): { day: string; bucket: DayBucket } {
   const bucket = store.days[day] ?? emptyBucket();
   store.days[day] = bucket;
   return { day, bucket };
+}
+
+function geminiBillableCompletion(input: {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}): number {
+  // Gemini 3 totalTokenCount often includes thinking beyond candidatesTokenCount.
+  // Bill the gap as output so Admin cost matches invoice more closely.
+  const prompt = input.promptTokens;
+  const completion = input.completionTokens;
+  const total = input.totalTokens;
+  if (total > prompt + completion) return Math.max(0, total - prompt);
+  if (!completion && total > prompt) return total - prompt;
+  return completion;
+}
+
+function geminiUsd(bucket: DayBucket): number {
+  const prompt = bucket.geminiPromptTokens ?? 0;
+  const total = bucket.geminiTotalTokens ?? 0;
+  const completion = geminiBillableCompletion({
+    promptTokens: prompt,
+    completionTokens: bucket.geminiCompletionTokens ?? 0,
+    totalTokens: total,
+  });
+  return (prompt / 1_000_000) * GEMINI_INPUT_PER_M + (completion / 1_000_000) * GEMINI_OUTPUT_PER_M;
 }
 
 /** Record YouTube Data API quota units (search≈100, channels.list≈1, etc.). */
@@ -127,6 +180,53 @@ export function recordOpenAiDetailCollectUsage(input: {
   writeStore(store);
 }
 
+/**
+ * Record Gemini tokens for 맞춤 정보 field extract (and related detail paths).
+ * Thinking tokens included via totalTokenCount when larger than prompt+candidates.
+ */
+export function recordGeminiDetailCollectUsage(input: {
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  totalTokens?: number | null;
+  calls?: number;
+}): void {
+  const prompt = Math.max(0, Number(input.promptTokens) || 0);
+  const completion = Math.max(0, Number(input.completionTokens) || 0);
+  const total = Math.max(0, Number(input.totalTokens) || prompt + completion);
+  if (!prompt && !completion && !total) return;
+  const store = readStore();
+  const { bucket } = bucketForToday(store);
+  bucket.geminiPromptTokens = (bucket.geminiPromptTokens ?? 0) + prompt;
+  bucket.geminiCompletionTokens = (bucket.geminiCompletionTokens ?? 0) + completion;
+  bucket.geminiTotalTokens = (bucket.geminiTotalTokens ?? 0) + total;
+  bucket.geminiCalls = (bucket.geminiCalls ?? 0) + Math.max(1, input.calls ?? 1);
+  bucket.updatedAt = new Date().toISOString();
+  writeStore(store);
+}
+
+/**
+ * Replace (not add) Gemini day totals — used when backfilling from a warm log.
+ */
+export function setGeminiDetailCollectUsageForDay(
+  dayKst: string,
+  input: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    calls: number;
+  },
+): void {
+  const store = readStore();
+  const bucket = store.days[dayKst] ?? emptyBucket();
+  bucket.geminiPromptTokens = Math.max(0, Math.round(input.promptTokens));
+  bucket.geminiCompletionTokens = Math.max(0, Math.round(input.completionTokens));
+  bucket.geminiTotalTokens = Math.max(0, Math.round(input.totalTokens));
+  bucket.geminiCalls = Math.max(0, Math.round(input.calls));
+  bucket.updatedAt = new Date().toISOString();
+  store.days[dayKst] = bucket;
+  writeStore(store);
+}
+
 export function snapshotDetailCollectApiCost(
   editionDate?: string,
 ): DetailCollectApiCostSnapshot {
@@ -138,8 +238,19 @@ export function snapshotDetailCollectApiCost(
   const openaiUsd =
     (bucket.openaiPromptTokens / 1_000_000) * OPENAI_INPUT_PER_M +
     (bucket.openaiCompletionTokens / 1_000_000) * OPENAI_OUTPUT_PER_M;
+  const geminiUsdValue = geminiUsd(bucket);
   const youtubeKrw = Math.round(youtubeUsd * rate);
   const openaiKrw = Math.round(openaiUsd * rate);
+  const geminiKrw = Math.round(geminiUsdValue * rate);
+  const geminiPrompt = bucket.geminiPromptTokens ?? 0;
+  const geminiCompletion = bucket.geminiCompletionTokens ?? 0;
+  const geminiTotal = bucket.geminiTotalTokens ?? 0;
+  const geminiCalls = bucket.geminiCalls ?? 0;
+  const billableOut = geminiBillableCompletion({
+    promptTokens: geminiPrompt,
+    completionTokens: geminiCompletion,
+    totalTokens: geminiTotal,
+  });
 
   return {
     dayKst: day,
@@ -162,8 +273,22 @@ export function snapshotDetailCollectApiCost(
       note:
         bucket.openaiCalls > 0
           ? `${day} ${bucket.openaiCalls}회 · 토큰 ${(bucket.openaiPromptTokens + bucket.openaiCompletionTokens).toLocaleString("ko-KR")}`
-          : "상세 정보수집 경로에서 OpenAI 미사용 (콘텐츠 생성은 Gemini)",
+          : "상세 정보수집 경로에서 OpenAI 미사용",
     },
+    gemini: {
+      promptTokens: geminiPrompt,
+      completionTokens: geminiCompletion,
+      totalTokens: geminiTotal,
+      calls: geminiCalls,
+      estimatedKrw: geminiKrw,
+      estimatedKrwLabel: formatKrw(geminiKrw),
+      note:
+        geminiCalls > 0
+          ? `${day} ${geminiCalls}회 · 입력 ${geminiPrompt.toLocaleString("ko-KR")} · 출력(사고포함) ${billableOut.toLocaleString("ko-KR")} · Live $1.50/$7.50 per 1M`
+          : `${day} 맞춤 정보 Gemini 추출 호출 없음`,
+    },
+    totalEstimatedKrw: youtubeKrw + openaiKrw + geminiKrw,
+    totalEstimatedKrwLabel: formatKrw(youtubeKrw + openaiKrw + geminiKrw),
     updatedAt: bucket.updatedAt || new Date().toISOString(),
   };
 }
@@ -181,8 +306,11 @@ export function listDetailCollectApiCostHistory(limit = 14): Array<{
   dayKst: string;
   youtubeKrwLabel: string;
   openaiKrwLabel: string;
+  geminiKrwLabel: string;
+  totalKrwLabel: string;
   youtubeUnits: number;
   openaiCalls: number;
+  geminiCalls: number;
   updatedAt: string;
 }> {
   const store = readStore();
@@ -195,12 +323,19 @@ export function listDetailCollectApiCostHistory(limit = 14): Array<{
       const openaiUsd =
         (bucket.openaiPromptTokens / 1_000_000) * OPENAI_INPUT_PER_M +
         (bucket.openaiCompletionTokens / 1_000_000) * OPENAI_OUTPUT_PER_M;
+      const geminiUsdValue = geminiUsd(bucket);
+      const youtubeKrw = Math.round(youtubeUsd * rate);
+      const openaiKrw = Math.round(openaiUsd * rate);
+      const geminiKrw = Math.round(geminiUsdValue * rate);
       return {
         dayKst: day,
-        youtubeKrwLabel: formatKrw(Math.round(youtubeUsd * rate)),
-        openaiKrwLabel: formatKrw(Math.round(openaiUsd * rate)),
+        youtubeKrwLabel: formatKrw(youtubeKrw),
+        openaiKrwLabel: formatKrw(openaiKrw),
+        geminiKrwLabel: formatKrw(geminiKrw),
+        totalKrwLabel: formatKrw(youtubeKrw + openaiKrw + geminiKrw),
         youtubeUnits: bucket.youtubeUnits,
         openaiCalls: bucket.openaiCalls,
+        geminiCalls: bucket.geminiCalls ?? 0,
         updatedAt: bucket.updatedAt,
       };
     });

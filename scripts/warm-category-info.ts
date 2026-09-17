@@ -12,6 +12,8 @@ import {
   buildCategoryInfoRefreshStatus,
   touchCategoryInfoRefreshTier,
   recordCategoryInfoRefreshRun,
+  resetCategoryInfoRefreshRuns,
+  snapshotCategoryInfoRefreshHistory,
 } from "../src/lib/entity/category-info/refresh-status";
 import {
   resolveCategoryInfoRefreshTier,
@@ -44,6 +46,9 @@ async function main() {
     return;
   }
 
+  // This warm window's ok/fail/skip/fillRate become the Admin "최근 갱신 기록".
+  resetCategoryInfoRefreshRuns([...overdue]);
+
   const payload = await getRankings();
   const targets = payload.items.filter((entity) => {
     const channel = resolveCategoryInfoChannel(entity).channel;
@@ -69,7 +74,9 @@ async function main() {
         touchCategoryInfoRefreshTier(enriched.channel);
         const fillRate = enriched.fillRate ?? 0;
         const realLinks = (enriched.links ?? []).filter(
-          (link) => link.href && !/search\.(naver|daum)|google\.com\/search|news\.google\.com\/search/i.test(link.href),
+          (link) =>
+            link.href &&
+            !/search\.(naver|daum)|google\.com\/search|news\.google\.com\/search/i.test(link.href),
         ).length;
         const visitorOk =
           fillRate >= 0.5 ||
@@ -103,7 +110,15 @@ async function main() {
   }
 
   await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
-  console.log(`done ok=${ok} fail=${fail}`);
+  const history = snapshotCategoryInfoRefreshHistory({
+    source: "warm",
+    label: ALL ? "전 종목 맞춤 정보 갱신" : "기한 도래 티어 맞춤 정보 갱신",
+    entityCount: slice.length,
+    tierIds: [...overdue],
+  });
+  console.log(
+    `done ok=${ok} fail=${fail} history=${history.id} fill=${(history.fillRateAvg * 100).toFixed(1)}%`,
+  );
   const after = buildCategoryInfoRefreshStatus();
   for (const row of after) {
     console.log(

@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-17T07:47:22.219Z",
+  "updatedAt": "2026-09-17T08:00:23.906Z",
   "tiers": {
     "live_signal": "2026-09-17T07:44:06.378Z",
     "ticket_food": "2026-09-17T07:46:42.643Z",
@@ -48,5 +48,61 @@
       "usedFallback": 122,
       "lastRunAt": "2026-09-17T07:46:43.931Z"
     }
-  }
+  },
+  "history": [
+    {
+      "id": "warm-2026-09-17T08-00-23-906Z",
+      "at": "2026-09-17T08:00:23.906Z",
+      "source": "warm",
+      "label": "전 종목 맞춤 정보 갱신",
+      "entityCount": 1221,
+      "ok": 1142,
+      "fail": 155,
+      "skip": 87,
+      "fillRateAvg": 0.5582851637764932,
+      "usedFallback": 487,
+      "tiers": {
+        "live_signal": {
+          "ok": 381,
+          "fail": 37,
+          "skip": 35,
+          "fillRateAvg": 0.5724797645327445,
+          "usedFallback": 102,
+          "lastRunAt": "2026-09-17T07:47:22.219Z"
+        },
+        "ticket_food": {
+          "ok": 121,
+          "fail": 38,
+          "skip": 3,
+          "fillRateAvg": 0.46090534979423897,
+          "usedFallback": 122,
+          "lastRunAt": "2026-09-17T07:46:43.931Z"
+        },
+        "media_catalog": {
+          "ok": 229,
+          "fail": 9,
+          "skip": 4,
+          "fillRateAvg": 0.6460055096418729,
+          "usedFallback": 178,
+          "lastRunAt": "2026-09-17T07:47:15.818Z"
+        },
+        "entertainment_curated": {
+          "ok": 243,
+          "fail": 3,
+          "skip": 6,
+          "fillRateAvg": 0.6388888888888891,
+          "usedFallback": 80,
+          "lastRunAt": "2026-09-17T07:46:40.455Z"
+        },
+        "other_news": {
+          "ok": 168,
+          "fail": 68,
+          "skip": 39,
+          "fillRateAvg": 0.44121212121212094,
+          "usedFallback": 5,
+          "lastRunAt": "2026-09-17T07:46:26.718Z"
+        }
+      }
+    }
+  ]
 }

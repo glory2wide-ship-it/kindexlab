@@ -61,6 +61,27 @@ export type AdminDashboardPayload = {
     fillRateLabel: string;
     fallbackLabel: string;
   }>;
+  /** Newest-first warm/batch snapshots for 상세페이지 정보수집. */
+  categoryInfoRefreshHistory: Array<{
+    id: string;
+    at: string;
+    source: string;
+    label: string;
+    entityCount: number;
+    ok: number;
+    fail: number;
+    skip: number;
+    fillRateAvg: number;
+    fillRateLabel: string;
+    usedFallback: number;
+    tiers: Array<{
+      id: string;
+      ok: number;
+      fail: number;
+      skip: number;
+      fillRateLabel: string;
+    }>;
+  }>;
   detailCollectApiCost: {
     dayKst: string;
     youtube: {
@@ -78,14 +99,28 @@ export type AdminDashboardPayload = {
       estimatedKrwLabel: string;
       note: string;
     };
+    gemini: {
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+      calls: number;
+      estimatedKrw: number;
+      estimatedKrwLabel: string;
+      note: string;
+    };
+    totalEstimatedKrw: number;
+    totalEstimatedKrwLabel: string;
     updatedAt: string;
   };
   detailCollectApiCostHistory: Array<{
     dayKst: string;
     youtubeKrwLabel: string;
     openaiKrwLabel: string;
+    geminiKrwLabel: string;
+    totalKrwLabel: string;
     youtubeUnits: number;
     openaiCalls: number;
+    geminiCalls: number;
     updatedAt: string;
   }>;
   publicDataFailLedger: {

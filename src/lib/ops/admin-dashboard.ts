@@ -7,9 +7,10 @@ import {
 } from "@/lib/ops/detail-collect-api-cost";
 import { listOpsEditionDates, loadOpsDigestsForDate, summarizeDay } from "@/lib/ops/ops-digest";
 import { getTrafficSnapshot, listTrafficDays } from "@/lib/analytics/traffic";
-import { buildCategoryInfoRefreshStatus } from "@/lib/entity/category-info/refresh-status";
+import { buildCategoryInfoRefreshStatus, listCategoryInfoRefreshHistory } from "@/lib/entity/category-info/refresh-status";
 import { snapshotPublicDataFailLedger } from "@/lib/public-data/fail-ledger";
 import { kstDateString } from "@/lib/briefing/dates";
+import { CATEGORY_INFO_REFRESH_TIERS } from "@/lib/entity/category-info/refresh-policy";
 
 export { ADMIN_REFRESH_SCHEDULE } from "@/lib/ops/admin-schedule";
 
@@ -48,6 +49,29 @@ export async function buildAdminDashboard(editionDate?: string) {
     listTrafficDays(40),
   ]);
   const categoryInfoRefresh = buildCategoryInfoRefreshStatus();
+  const categoryInfoRefreshHistory = listCategoryInfoRefreshHistory(14).map((entry) => ({
+    id: entry.id,
+    at: entry.at,
+    source: entry.source,
+    label: entry.label,
+    entityCount: entry.entityCount,
+    ok: entry.ok,
+    fail: entry.fail,
+    skip: entry.skip,
+    fillRateAvg: entry.fillRateAvg,
+    fillRateLabel: `방문자 채움 ${Math.round(entry.fillRateAvg * 100)}%`,
+    usedFallback: entry.usedFallback,
+    tiers: CATEGORY_INFO_REFRESH_TIERS.filter((tier) => entry.tiers[tier.id]).map((tier) => {
+      const run = entry.tiers[tier.id]!;
+      return {
+        id: tier.id,
+        ok: run.ok,
+        fail: run.fail,
+        skip: run.skip,
+        fillRateLabel: `${Math.round(run.fillRateAvg * 100)}%`,
+      };
+    }),
+  }));
   const detailCollectApiCost = snapshotDetailCollectApiCost(targetDay);
   const detailCollectApiCostHistory = listDetailCollectApiCostHistory(14);
   const publicDataFailLedger = snapshotPublicDataFailLedger(30);
@@ -78,6 +102,7 @@ export async function buildAdminDashboard(editionDate?: string) {
       fallbackLabel:
         row.run.usedFallback > 0 ? `폴백 ${row.run.usedFallback}` : "폴백 없음",
     })),
+    categoryInfoRefreshHistory,
     detailCollectApiCost,
     detailCollectApiCostHistory,
     publicDataFailLedger,
