@@ -1,4 +1,5 @@
 import { MARKET_TAPE } from "@/lib/editorial/rules";
+import { isNonArticleMediaUrl } from "@/lib/entity/category-info/news";
 import { nowIso } from "@/lib/ingestion/http";
 import { normalizeName } from "@/lib/ingestion/names";
 import { activeMarket } from "@/lib/market/config";
@@ -86,6 +87,10 @@ export async function retrieveNewsForKeyword(
   for (const doc of collected) {
     const blob = `${doc.title} ${doc.snippet ?? ""}`;
 
+    if (doc.link && isNonArticleMediaUrl(doc.link)) {
+      stats.droppedOffTopic += 1;
+      continue;
+    }
     if (doc.publishedAt && new Date(doc.publishedAt).getTime() < cutoff) {
       stats.droppedStale += 1;
       continue;

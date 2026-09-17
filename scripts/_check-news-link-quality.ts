@@ -3,7 +3,10 @@
  *   npx tsx scripts/_check-news-link-quality.ts
  */
 import assert from "node:assert/strict";
-import { scoreNewsLinkQuality } from "../src/lib/entity/category-info/news";
+import {
+  isNonArticleMediaUrl,
+  scoreNewsLinkQuality,
+} from "../src/lib/entity/category-info/news";
 
 const mono = "MONOPOLY GO!";
 
@@ -74,5 +77,42 @@ assert.equal(
   0,
   "reject idol blog on Candy Crush",
 );
+
+assert.equal(
+  scoreNewsLinkQuality(
+    {
+      title: "근로장려금 신청 안내 클립",
+      href: "https://m.naver.com/shorts?serviceType=MOMENT&mediaType=VOD&seedMediaId=ABC",
+      source: "네이버",
+    },
+    "[국세청] 근로장려금",
+    "gov_subsidy",
+  ),
+  0,
+  "reject Naver MOMENT/VOD shorts as related news",
+);
+
+assert.equal(
+  scoreNewsLinkQuality(
+    {
+      title: "근로장려금 관련 영상",
+      href: "https://tv.naver.com/v/12345",
+      source: "네이버TV",
+    },
+    "근로장려금",
+    "gov_subsidy",
+  ),
+  0,
+  "reject tv.naver.com clips",
+);
+
+assert.equal(
+  isNonArticleMediaUrl(
+    "https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EA%B7%BC%EB%A1%9C%EC%9E%A5%EB%A0%A4%EA%B8%88%22%7D",
+  ),
+  true,
+);
+
+assert.equal(isNonArticleMediaUrl("https://www.ggilbo.com/news/articleView.html?idxno=1180083"), false);
 
 console.log("news-link-quality OK");

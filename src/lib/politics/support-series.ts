@@ -1,4 +1,5 @@
 import { kstDateString } from "@/lib/briefing/dates";
+import { isNonArticleMediaUrl } from "@/lib/entity/category-info/news";
 import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
 import type { NewsDoc } from "@/lib/news/types";
 
@@ -309,7 +310,7 @@ export async function fetchSupportRelatedNews(subject: string): Promise<SupportR
       skipAliasFilter: true,
     });
     return preferPublisher(retrieval.docs)
-      .filter((doc) => doc.link)
+      .filter((doc) => doc.link && !isNonArticleMediaUrl(doc.link))
       .slice(0, 5)
       .map((doc) => ({
         title: doc.title,

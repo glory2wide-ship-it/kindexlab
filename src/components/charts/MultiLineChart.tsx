@@ -12,16 +12,19 @@ export interface ChartLine {
 export function MultiLineChart({
   labels,
   lines,
+  axisFontSize = 10,
 }: {
   labels: string[];
   lines: ChartLine[];
+  /** Axis tick label size (default 10). Support charts pass 12 (+20%). */
+  axisFontSize?: number;
 }) {
   const width = 760;
   const height = 320;
-  const padLeft = 44;
+  const padLeft = axisFontSize > 10 ? 52 : 44;
   const padRight = 16;
   const padTop = 18;
-  const padBottom = 36;
+  const padBottom = axisFontSize > 10 ? 40 : 36;
   const numbers = lines.flatMap((line) => line.values.filter((value): value is number => value != null));
   if (labels.length < 2 || numbers.length < 2) {
     return <p className="py-16 text-center text-sm text-muted">표시할 시계열 포인트가 없습니다.</p>;
@@ -49,7 +52,13 @@ export function MultiLineChart({
             stroke="currentColor"
             strokeOpacity={0.12}
           />
-          <text x={padLeft - 8} y={y(tick) + 3} textAnchor="end" fill="currentColor" fontSize="10">
+          <text
+            x={padLeft - 8}
+            y={y(tick) + 3}
+            textAnchor="end"
+            fill="currentColor"
+            fontSize={axisFontSize}
+          >
             {tick.toFixed(1)}
           </text>
         </g>
@@ -88,7 +97,7 @@ export function MultiLineChart({
           y={height - 10}
           textAnchor="middle"
           fill="currentColor"
-          fontSize="10"
+          fontSize={axisFontSize}
         >
           {labels[index]}
         </text>

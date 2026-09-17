@@ -31,6 +31,50 @@ export function isNewsSearchFallbackUrl(href: string): boolean {
 }
 
 /**
+ * Hard reject video/clip/shorts landings — never “관련 뉴스” permalinks.
+ * Naver MOMENT/VOD clips and TV/clip hosts pollute subsidy/politics packs.
+ */
+export function isNonArticleMediaUrl(href: string): boolean {
+  try {
+    const url = new URL(href);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "").replace(/^m\./, "");
+    const path = url.pathname.toLowerCase();
+    const search = url.search.toLowerCase();
+    const blob = `${host}${path}${search}`;
+
+    // Naver shorts / MOMENT / VOD clip surfaces
+    if (host === "naver.com" || host.endsWith(".naver.com")) {
+      if (/\/shorts\/?/.test(path)) return true;
+      if (/mediatype=vod|servicetype=moment|seedmediaid=|recid=/.test(search)) return true;
+      if (host === "tv.naver.com" || host === "clip.naver.com" || host === "tvcast.naver.com") {
+        return true;
+      }
+      if (/\/(clip|video|vod|moment)\b/.test(path)) return true;
+    }
+
+    // Other short-video / clip aggregators that are not press articles
+    if (
+      host === "youtube.com" ||
+      host === "youtu.be" ||
+      host === "m.youtube.com" ||
+      host.endsWith(".youtube.com")
+    ) {
+      if (/\/shorts\//.test(path) || /[?&]v=/.test(search) || host === "youtu.be") {
+        // Allow only explicit news-desk channels later; for 관련 뉴스 reject all YT.
+        return true;
+      }
+    }
+    if (/tiktok\.com|instagram\.com\/reel|facebook\.com\/reel|daum\.net\/tvpot/i.test(blob)) {
+      return true;
+    }
+
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Channel-scoped sense for related-news retrieval.
  * Homonyms (나이트런=웹툰 vs 야간러닝, 반도체=테마주 vs 일반 산업 잡보) need
  * on-sense markers; bare entity-name overlap is not enough.
@@ -199,6 +243,7 @@ export function scoreNewsLinkQuality(
   channel?: CategoryInfoChannel,
 ): number {
   if (!link.href || isNewsSearchFallbackUrl(link.href)) return 0;
+  if (isNonArticleMediaUrl(link.href)) return 0;
   let host = "";
   let path = "";
   try {
@@ -221,6 +266,10 @@ export function scoreNewsLinkQuality(
   // Knowledge-in profiles, random PDF dumps, translator landings — not entity news.
   if (/kin\.naver\.com/i.test(host) && /\/profile\//.test(path)) return 0;
   if (/papago\.naver\.com|dict\.naver\.com|mail\.naver\.com|pay\.naver\.com/i.test(host)) {
+    return 0;
+  }
+  // Clip/shorts titles even when host was rewritten
+  if (/네이버\s*클립|네이버\s*쇼츠|MOMENT|짧은\s*영상|숏폼\s*클립/i.test(`${link.title} ${link.source ?? ""}`)) {
     return 0;
   }
   const title = `${link.title} ${link.source ?? ""}`;
@@ -334,6 +383,7 @@ export function ensureQualityNewsLinks(
   const channel = options?.channel;
   const scored = links
     .filter((link) => link.href)
+    .filter((link) => !isNonArticleMediaUrl(link.href))
     .map((link) => ({ link, score: scoreNewsLinkQuality(link, name, channel) }))
     .sort((a, b) => b.score - a.score);
 

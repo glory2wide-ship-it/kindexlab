@@ -13,6 +13,7 @@ import {
 import {
   ensureQualityNewsLinks,
   isNewsSearchFallbackUrl,
+  isNonArticleMediaUrl,
   newsQueryForChannel,
   scoreNewsLinkQuality,
 } from "@/lib/entity/category-info/news";
@@ -514,6 +515,7 @@ function isSafeOutboundUrl(href: string): boolean {
     const url = new URL(href);
     if (url.protocol !== "http:" && url.protocol !== "https:") return false;
     if (!url.hostname.includes(".")) return false;
+    if (isNonArticleMediaUrl(href)) return false;
     const host = url.hostname.toLowerCase().replace(/^www\./, "");
     // Naver product/tool landing pages — never entity-related outbound links.
     if (
@@ -526,7 +528,10 @@ function isSafeOutboundUrl(href: string): boolean {
       host === "papago.naver.com" ||
       host === "map.naver.com" ||
       host === "nid.naver.com" ||
-      host === "landing.naver.com"
+      host === "landing.naver.com" ||
+      host === "tv.naver.com" ||
+      host === "clip.naver.com" ||
+      host === "tvcast.naver.com"
     ) {
       return false;
     }
@@ -541,12 +546,16 @@ function isSafeOutboundUrl(href: string): boolean {
 
 /** Drop off-topic Naver service titles even if the URL slipped through. */
 function isIrrelevantNaverServiceLink(link: { title?: string; href?: string; source?: string }): boolean {
+  if (link.href && isNonArticleMediaUrl(link.href)) return true;
   const blob = `${link.title ?? ""} ${link.source ?? ""} ${link.href ?? ""}`;
   if (/네이버\s*메이트|Naver\s*Mate|mate\.naver\.com/i.test(blob)) return true;
   if (/papago\.naver\.com|dict\.naver\.com|pay\.naver\.com|mail\.naver\.com/i.test(blob)) {
     return true;
   }
   if (/kin\.naver\.com\/profile/i.test(blob)) return true;
+  if (/네이버\s*클립|네이버\s*쇼츠|tv\.naver|clip\.naver|MOMENT|mediaType=VOD/i.test(blob)) {
+    return true;
+  }
   // URL-chrome titles ("host › path PDF") with no readable headline
   if (/\.go\.kr|\.co\.kr|\.com|\.org/i.test(link.title ?? "") && /›|PDF/i.test(link.title ?? "")) {
     return true;

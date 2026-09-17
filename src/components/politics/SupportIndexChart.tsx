@@ -40,6 +40,15 @@ export function SupportIndexChart({
   const [bar, setBar] = useState<SupportBar>("1w");
   const [payload, setPayload] = useState<SupportChartPayload | null>(null);
   const [error, setError] = useState("");
+  const [desktop, setDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const apply = () => setDesktop(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
 
   const load = useCallback(
     async (nextSubject: string, nextBar: SupportBar) => {
@@ -95,9 +104,6 @@ export function SupportIndexChart({
         <div>
           <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
         </div>
-        <p className="text-[12px] text-muted">
-          한국갤럽 · 리얼미터 · NBS 전국지표조사 최근 6개월. 굵은 선은 기간 내 단순 평균 통합 지수입니다.
-        </p>
       </div>
 
       {lockedSubject ? null : (
@@ -143,11 +149,19 @@ export function SupportIndexChart({
         <div className="rounded-xl border border-line bg-panel px-3 py-3">
           {error ? <p className="px-3 py-10 text-center text-sm text-muted">{error}</p> : null}
           {!error && payload ? (
-            <MultiLineChart labels={payload.series.map((row) => row.t)} lines={lines} />
+            <MultiLineChart
+              labels={payload.series.map((row) => row.t)}
+              lines={lines}
+              axisFontSize={desktop ? 12 : 10}
+            />
           ) : null}
           {!error && !payload ? (
             <p className="px-3 py-10 text-center text-sm text-muted">시계열을 집계하는 중입니다.</p>
           ) : null}
+          {/* Caption moved under the graph (was beside the title). */}
+          <p className="mt-3 px-2 text-[12px] leading-5 text-muted">
+            한국갤럽 · 리얼미터 · NBS 전국지표조사 최근 6개월. 굵은 선은 기간 내 단순 평균 통합 지수입니다.
+          </p>
           {/* Desktop: legend under graph +20% (11→13.2). */}
           <ul className="mt-2 flex flex-wrap gap-3 px-2 text-[11px] text-muted md:text-[13.2px] md:leading-5">
             {SUPPORT_AGENCIES.map((agency) => (
@@ -163,7 +177,7 @@ export function SupportIndexChart({
             </li>
           </ul>
         </div>
-        {/* Desktop: 조사 방식 안내 +10%. */}
+        {/* Desktop: 조사 방식 안내 +10% (12→13.2). */}
         <aside className="rounded-xl border border-line bg-panel p-4 text-[12px] leading-6 text-muted md:text-[13.2px] md:leading-[1.65]">
           <p className="text-xs font-semibold text-ink md:text-[13.2px]">조사 방식 안내</p>
           <p className="mt-2">
@@ -185,11 +199,11 @@ export function SupportIndexChart({
         </aside>
       </div>
 
-      {/* Desktop: 관련 주요 기사 5건 box +10%. */}
+      {/* Desktop: 관련 주요 기사 5건 box +5% (12→12.6, 14→14.7, 11→11.55). */}
       <div className="rounded-xl border border-line bg-panel">
         <div className="border-b border-line px-4 py-3">
-          <p className="text-xs font-semibold md:text-[13.2px]">관련 주요 기사 5건</p>
-          <p className="text-[11px] text-muted md:text-[12.1px]">
+          <p className="text-xs font-semibold md:text-[12.6px]">관련 주요 기사 5건</p>
+          <p className="text-[11px] text-muted md:text-[11.55px]">
             조선·연합·중앙·동아 등 주요 언론 보도를 자동 수집합니다.
           </p>
         </div>
@@ -203,14 +217,14 @@ export function SupportIndexChart({
                   rel="noopener noreferrer"
                   className="flex items-start gap-3 px-4 py-3 hover:bg-board/50"
                 >
-                  <span className="w-5 shrink-0 font-sans text-xs tabular-nums text-accent md:text-[13.2px]">
+                  <span className="w-5 shrink-0 font-sans text-xs tabular-nums text-accent md:text-[12.6px]">
                     {index + 1}
                   </span>
                   <span>
-                    <span className="block text-sm font-medium leading-6 md:text-[15.4px] md:leading-7">
+                    <span className="block text-sm font-medium leading-6 md:text-[14.7px] md:leading-7">
                       {story.title}
                     </span>
-                    <span className="mt-0.5 block text-[11px] text-muted md:text-[12.1px]">
+                    <span className="mt-0.5 block text-[11px] text-muted md:text-[11.55px]">
                       {story.publisher} · {formatWhen(story.publishedAt)}
                     </span>
                   </span>
@@ -218,7 +232,7 @@ export function SupportIndexChart({
               </li>
             ))
           ) : (
-            <li className="px-4 py-6 text-sm text-muted md:text-[15.4px]">
+            <li className="px-4 py-6 text-sm text-muted md:text-[14.7px]">
               관련 기사를 모으는 중이거나, 오늘 수집분이 없습니다.
             </li>
           )}
