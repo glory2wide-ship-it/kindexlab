@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { uniqueHeatmapTiles } from "@/lib/boards/unique-tiles";
 import { TYPE_LABEL, formatRate } from "@/lib/format";
 import { heatFill, heatText } from "@/lib/heatmap";
-import { formatHeatmapRank } from "@/lib/boards/limits";
+import { formatHeatmapRank, heatmapShowsRankBadge } from "@/lib/boards/limits";
 import { heatmapTileLabel } from "@/lib/heatmap-display-name";
 import { heatmapRankPrefixChips } from "@/lib/heatmap-rank-chip";
 import type { HeatmapTvGenre } from "@/lib/boards/tv-genre";
@@ -122,22 +122,25 @@ export function TreemapView({
         : TREEMAP_MAX_ITEMS),
   );
   const visible = useMemo(() => pickHeatmapItems(safeItems, tileCap), [safeItems, tileCap]);
+  /** Paint-order ranks 1…N (landing unified map = interleaved 1~20, not per-channel 1~4). */
   const displayRankById = useMemo(() => {
     const ranks = new Map<string, number>();
-    if (showChannelTags) {
-      // Landing: badge = within-category 1~4 (not interleaved 1~20).
-      const perChannel = new Map<string, number>();
-      for (const item of visible) {
-        const channel = item.sourceChannel ?? "_";
-        const next = (perChannel.get(channel) ?? 0) + 1;
-        perChannel.set(channel, next);
-        ranks.set(item.id, next);
-      }
-      return ranks;
-    }
-    visible.forEach((item, index) => ranks.set(item.id, index + 1));
-    return ranks;
-  }, [visible, showChannelTags]);
+    visible.forEach((item, index) => {
+      const preferred =
+        Number.isFinite(item.rank) && item.rank > 0 ? Math.round(item.rank) : index + 1;
+      ranks.set(item.id, preferred);
+    });
+    // Guarantee unique sequential badges when the feed already carries 1…N.
+    const values = [...ranks.values()];
+    const sequential =
+      values.length > 0 &&
+      new Set(values).size === values.length &&
+      values.every((rank, index) => rank === index + 1);
+    if (sequential) return ranks;
+    const rebuilt = new Map<string, number>();
+    visible.forEach((item, index) => rebuilt.set(item.id, index + 1));
+    return rebuilt;
+  }, [visible]);
 
   useEffect(() => {
     const element = wrapRef.current;
@@ -230,6 +233,7 @@ export function TreemapView({
           const priceLabel = heatmapPriceLabel(entity);
           const rank = displayRankById.get(entity.id) ?? leaf.rank ?? entity.rank;
           const rankBadge = formatHeatmapRank(rank);
+          const showRankNumber = heatmapShowsRankBadge(rank);
           /** Hide ±% in the name block — rate moves next to the rank badge. */
           const omitRate = true;
           /** Show ±% beside/below the rank when the header has room.
@@ -255,7 +259,6 @@ export function TreemapView({
           const baseRankSize = w >= 120 && h >= 56 ? 16.5 : 13.5;
           /** Rank badge: −10% vs prior; mobile keeps additional −30% dampen. */
           const rankSize = (isMobileViewport ? baseRankSize * 0.7 : baseRankSize) * 0.9;
-          const showRank = w >= 36 && h >= 20;
           const channelTag =
             showChannelTags && entity.sourceChannel
               ? CHANNEL_SHORT_LABEL[entity.sourceChannel as PostChannel]
@@ -272,6 +275,12 @@ export function TreemapView({
           /** Channel + genre / platform / region chips immediately before the rank. */
           const showPrefixChips = prefixChips.length > 0 && w >= 52 && h >= 22;
           const prefixChipLabel = prefixChips.join(" ");
+          /** Header row when any chip/rate/badge needs paint space. */
+          const showRankHeader =
+            w >= 36 &&
+            h >= 20 &&
+            (showRankNumber || showHeaderRate || showChannelTag || showPrefixChips);
+          const showRank = showRankHeader;
           const displayTitle = isHeadline
             ? summarizeHeadlineTitle(entity.name)
             : (label?.name ?? tile.title);
@@ -309,7 +318,7 @@ export function TreemapView({
               href={href}
               prefetch={false}
               className="cursor-pointer"
-              aria-label={`${channelTag ? `${channelTag} ` : ""}${showPrefixChips ? `${prefixChipLabel} ` : ""}${group} ${rankBadge} ${tile.title}${priceLabel ? ` ${priceLabel}` : ""}${showHeaderRate ? ` ${rate}` : ""}`}
+              aria-label={`${channelTag ? `${channelTag} ` : ""}${showPrefixChips ? `${prefixChipLabel} ` : ""}${group}${showRankNumber ? ` ${rankBadge}` : ""} ${tile.title}${priceLabel ? ` ${priceLabel}` : ""}${showHeaderRate ? ` ${rate}` : ""}`}
               data-heatmap-rank={rank}
               onPointerDown={() => {
                 router.prefetch(href);
@@ -377,12 +386,14 @@ export function TreemapView({
                             </span>
                           ))
                         : null}
-                      <span
-                        className="shrink-0 font-sans font-normal tabular-nums leading-none"
-                        style={{ fontSize: rankSize }}
-                      >
-                        {rankBadge}
-                      </span>
+                      {showRankNumber ? (
+                        <span
+                          className="shrink-0 font-sans font-normal tabular-nums leading-none"
+                          style={{ fontSize: rankSize }}
+                        >
+                          {rankBadge}
+                        </span>
+                      ) : null}
                     </div>
                   </foreignObject>
                 ) : null}

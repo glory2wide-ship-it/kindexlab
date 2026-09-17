@@ -151,3 +151,14 @@ export function formatHeatmapRank(rank: number): string {
   const safe = Number.isFinite(rank) && rank > 0 ? Math.round(rank) : 1;
   return String(safe);
 }
+
+/**
+ * Heatmap tile rank-number badge ceiling.
+ * Ranks 1–15 show the numeric badge; 16위 and below paint without it.
+ */
+export const HEATMAP_RANK_BADGE_MAX = 15;
+
+export function heatmapShowsRankBadge(rank: number): boolean {
+  const safe = Number.isFinite(rank) && rank > 0 ? Math.round(rank) : 0;
+  return safe >= 1 && safe <= HEATMAP_RANK_BADGE_MAX;
+}
