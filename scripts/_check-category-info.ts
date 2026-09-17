@@ -7,6 +7,8 @@ import {
   buildCategoryInfoPayload,
   resolveCategoryInfoChannel,
 } from "../src/lib/entity/category-info";
+import { isNewsSearchFallbackUrl } from "../src/lib/entity/category-info/news";
+import { isNewsPrimaryChannel } from "../src/lib/entity/category-info/channel";
 import type { RankingEntity } from "../src/lib/types";
 
 function entity(partial: Partial<RankingEntity> & Pick<RankingEntity, "name" | "slug" | "type">): RankingEntity {
@@ -67,17 +69,37 @@ const cases: RankingEntity[] = [
     heatmapGroup: "정당 지지도",
     sourceChannel: "politics",
   }),
+  entity({
+    name: "유시민",
+    slug: "political-pundit-ranking--유시민",
+    type: "political_pundit",
+    heatmapGroup: "정치평론가",
+    sourceChannel: "politics",
+  }),
 ];
 
 for (const row of cases) {
   const channel = resolveCategoryInfoChannel(row);
   const payload = buildCategoryInfoPayload(row);
   assert.equal(payload.channel, channel.channel, row.slug);
-  assert.ok(payload.links.length >= 3, `${row.slug} needs ≥3 news links`);
+  // Quality over count: allow thin packs; at most one search-URL fallback.
+  assert.ok(payload.links.length >= 1, `${row.slug} needs ≥1 related link slot`);
+  const searchFallbacks = payload.links.filter((link) => isNewsSearchFallbackUrl(link.href));
+  assert.ok(
+    searchFallbacks.length <= 1,
+    `${row.slug} must not pad with >1 search fallback (got ${searchFallbacks.length})`,
+  );
   assert.ok(payload.rows.length >= 1, `${row.slug} needs rows or status`);
   assert.ok(payload.channelLabel.length > 0);
   const labels = payload.rows.map((r) => r.label);
   assert.equal(labels.length, new Set(labels).size, `${row.slug} duplicate row labels`);
+  if (row.type === "political_pundit") {
+    assert.equal(isNewsPrimaryChannel(payload.channel), false, "pundit must not be news-primary");
+    assert.ok(
+      payload.rows.some((r) => /방송 출연|유튜브|SNS/.test(r.label)),
+      "pundit rows should include 방송/유튜브/SNS",
+    );
+  }
 }
 
 console.log(`category-info OK (${cases.length} channels)`);
