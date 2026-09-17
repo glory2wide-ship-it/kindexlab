@@ -514,6 +514,21 @@ nav[aria-label$="서브 메뉴"] {
   zoom: 1.2;
 }
 
+/* Channel / rank kicker above entity name — 20%. */
+.detail-kicker-120 {
+  zoom: 1.2;
+}
+
+/* Section titles: 히트맵 채널 맞춤 정보, 종목 차트 분석 — 20%. */
+.detail-section-title-120 {
+  zoom: 1.2;
+}
+
+/* Chart box body (scores, panes, disclaimer) — 10%. */
+.detail-chart-body-110 {
+  zoom: 1.1;
+}
+
 /* 종목 프로필 block inside hero — 10%. */
 .detail-profile-110 {
   zoom: 1.1;

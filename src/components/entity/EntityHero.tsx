@@ -83,7 +83,7 @@ function MarketQuoteHero({
 
   return (
     <section className="rounded-2xl border border-line bg-panel p-[18px] md:p-8">
-      <p className="text-xs text-muted">{kicker ?? boardHint}</p>
+      <p className="detail-kicker-120 text-xs text-muted">{kicker ?? boardHint}</p>
       <div className="mt-1.5 flex flex-wrap items-end justify-between gap-3 md:mt-2 md:gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{entity.name}</h1>
@@ -230,7 +230,7 @@ export function EntityHero({
 
   return (
     <section className="rounded-2xl border border-line bg-panel p-[18px] md:p-8">
-      <p className="text-xs text-muted">
+      <p className="detail-kicker-120 text-xs text-muted">
         {kicker ?? `${TYPE_LABEL[entity.type]} · 전일 ${entity.previousRank}위`}
       </p>
       <div className="mt-1.5 md:mt-2">
@@ -240,11 +240,31 @@ export function EntityHero({
       <dl className="detail-metrics-120 mt-[1.125rem] grid grid-cols-3 gap-3 border-t border-line pt-3 text-sm md:mt-6 md:gap-4 md:pt-4">
         <div>
           <dt className="text-muted">현재 순위</dt>
-          <dd className="mt-0.5 font-sans text-lg tabular-nums md:mt-1">{entity.rank}위</dd>
+          <dd
+            className={`mt-0.5 font-sans text-lg tabular-nums md:mt-1 ${
+              entity.rank < entity.previousRank
+                ? "text-up"
+                : entity.rank > entity.previousRank
+                  ? "text-down"
+                  : ""
+            }`}
+          >
+            {entity.rank}위
+          </dd>
         </div>
         <div>
           <dt className="text-muted">KinDex 시가(오픈)</dt>
-          <dd className="mt-0.5 font-sans text-lg tabular-nums md:mt-1">{formatScore(entity.openScore)}</dd>
+          <dd
+            className={`mt-0.5 font-sans text-lg tabular-nums md:mt-1 ${
+              entity.buzzScore > entity.openScore
+                ? "text-up"
+                : entity.buzzScore < entity.openScore
+                  ? "text-down"
+                  : ""
+            }`}
+          >
+            {formatScore(entity.openScore)}
+          </dd>
         </div>
         <div>
           <dt className="text-muted">

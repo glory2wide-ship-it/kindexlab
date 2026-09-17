@@ -174,7 +174,7 @@ export function ItemDetailCategoryInfoView({
     >
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p className="text-[13px] text-muted">히트맵 채널 맞춤 정보</p>
+          <p className="detail-section-title-120 text-[13px] text-muted">히트맵 채널 맞춤 정보</p>
           <h2 className="mt-1 text-xl font-semibold tracking-tight text-ink md:text-2xl">
             {payload.channelLabel}
             <span className="ml-2 text-base font-medium text-soft">· {payload.entityName}</span>

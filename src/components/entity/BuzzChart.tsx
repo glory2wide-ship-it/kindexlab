@@ -67,12 +67,14 @@ export function BuzzChart({
   ];
 
   return (
-    <section id="chart" className="detail-copy-110 scroll-mt-28 space-y-4 md:scroll-mt-24">
+    <section id="chart" className="scroll-mt-28 space-y-4 md:scroll-mt-24">
       <div className="overflow-hidden rounded-2xl border border-line bg-panel">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line px-5 py-4 md:px-7">
           <div>
-            <p className="text-xs text-muted">종목 차트 분석 · {timeframeLabel(timeframe)}</p>
-            <div className="mt-1 flex flex-wrap items-baseline gap-3">
+            <p className="detail-section-title-120 text-xs text-muted">
+              종목 차트 분석 · {timeframeLabel(timeframe)}
+            </p>
+            <div className="detail-chart-body-110 mt-1 flex flex-wrap items-baseline gap-3">
               <h2 className="font-sans text-2xl font-semibold tabular-nums tracking-tight">
                 {formatScore(score)}
               </h2>
@@ -81,7 +83,7 @@ export function BuzzChart({
               </p>
             </div>
           </div>
-          <div className="flex w-full min-w-0 flex-col items-stretch gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
+          <div className="detail-chart-body-110 flex w-full min-w-0 flex-col items-stretch gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
             <div className="flex w-fit gap-1 rounded-lg bg-board p-1">
               {(
                 [
@@ -122,7 +124,7 @@ export function BuzzChart({
           </div>
         </div>
 
-        <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="detail-chart-body-110 grid gap-0 lg:grid-cols-[minmax(0,1fr)_240px]">
           <div className="px-3 py-3 md:px-5">
             <TradingViewChart
               candles={candles}
@@ -148,11 +150,17 @@ export function BuzzChart({
             ))}
           </dl>
         </div>
-        <p className="border-t border-line px-5 py-3 text-[11px] leading-5 text-muted max-md:leading-4 md:px-7">
-          TradingView Lightweight Charts 기반 · 라인은 종가 곡선(그라데이션·현재가 점), 캔들은
-          미국식(상승 초록 / 하락 빨강)입니다. 차트를 좌우로 끌어 이전 시간대도 볼 수 있습니다.
-          거래량 수치는 우측 시세란을 참고하세요. 실측 시세 이력은 아닙니다.
-        </p>
+        <div className="detail-chart-body-110 grid gap-2 border-t border-line px-5 py-3 text-[11px] leading-5 text-muted max-md:leading-4 sm:grid-cols-3 md:gap-3 md:px-7">
+          <p>
+            TradingView Lightweight Charts 기반 · 라인은 종가 곡선(그라데이션·현재가 점), 캔들은
+            미국식(상승 초록 / 하락 빨강)입니다.
+          </p>
+          <p>
+            차트를 좌우로 끌어 이전 시간대도 볼 수 있습니다. 거래량 수치는 우측 시세란을
+            참고하세요.
+          </p>
+          <p>실측 시세 이력은 아닙니다.</p>
+        </div>
       </div>
     </section>
   );

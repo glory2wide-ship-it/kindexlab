@@ -96,7 +96,7 @@ function MarketQuotePendingHero({
 
   return (
     <section className="rounded-2xl border border-line bg-panel p-[18px] md:p-8">
-      <p className="text-xs text-muted">{kicker ?? boardHint}</p>
+      <p className="detail-kicker-120 text-xs text-muted">{kicker ?? boardHint}</p>
       <div className="mt-1.5 flex flex-wrap items-end justify-between gap-3 md:mt-2 md:gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{entity.name}</h1>

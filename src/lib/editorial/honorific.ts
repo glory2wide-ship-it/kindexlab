@@ -40,6 +40,53 @@ export function isAlreadyHonorificSentence(sentence: string): boolean {
 }
 
 /**
+ * Comparative particle 보다 (…보다 …) must never be rewritten to 봅니다.
+ * Verb senses like "…으로 보다" / "…라고 보다" are allowed through.
+ */
+function isComparativeBodaSentence(sentence: string): boolean {
+  if (!/보다[.!?…]*$/u.test(sentence)) return false;
+  if (/(으로|라고|다고|게|로)\s*보다[.!?…]*$/u.test(sentence)) return false;
+  if (/(으로|라고|다고|게)보다[.!?…]*$/u.test(sentence)) return false;
+  return true;
+}
+
+/**
+ * Repair mid-clause "보다." breaks and corrupted "X봅니다." that came from
+ * comparative 보다 + honorific rewrite (일정봅니다. → 일정보다 ).
+ */
+export function repairComparativeBodaCorruption(text: string): string {
+  if (!text?.trim()) return text;
+  let out = text.replace(/보다\.\s+(?=[\uAC00-\uD7A3"'「『0-9])/gu, "보다 ");
+
+  const isLegitVerbBefore = (before: string) =>
+    /(살펴|짚어|지켜|알아|물어|여겨|비춰|되돌아|생각해|기대해|통해|대해|관해|위해|다고|라고|것으로)$/u.test(
+      before,
+    );
+
+  // Tight form: 일정봅니다. 조기 → 일정보다 조기
+  out = out.replace(
+    /([가-힣A-Za-z0-9%·]+)봅니다\.\s+(?=[\uAC00-\uD7A3"'「『0-9])/gu,
+    (full, before: string) => {
+      if (isLegitVerbBefore(before)) return full;
+      return `${before}보다 `;
+    },
+  );
+
+  // Spaced form: 추진된다면 봅니다. 많은 → 추진된다면 보다 많은
+  // (period inserted after 보다, then honorific rewrote 보다. → 봅니다.)
+  // Note: sentence-final verb "…으로 봅니다." / "…다고 봅니다." won't match
+  // because this pattern requires hangul after the period.
+  out = out.replace(
+    /([가-힣A-Za-z0-9%·]+)\s+봅니다\.\s+(?=[\uAC00-\uD7A3"'「『0-9])/gu,
+    (full, before: string) => {
+      if (isLegitVerbBefore(before)) return full;
+      return `${before} 보다 `;
+    },
+  );
+  return out;
+}
+
+/**
  * Convert one declarative sentence ending to 합니다체.
  * Operates only on the final …다 / …라 cluster.
  */
@@ -47,6 +94,8 @@ export function toHonorificSentence(sentence: string): string {
   const trimmed = sentence.trim();
   if (!trimmed) return sentence;
   if (isAlreadyHonorificSentence(trimmed)) return trimmed;
+  // Comparative 보다 — leave untouched (never map 보→봅니다).
+  if (isComparativeBodaSentence(trimmed)) return trimmed;
 
   const match = trimmed.match(/^(.*?)([가-힣]{1,8})다([.!?…]*)$/u);
   if (!match) {
@@ -63,7 +112,8 @@ export function toHonorificSentence(sentence: string): string {
   const batchim = jongseong(last);
 
   // Fixed phrase / lemma rewrites on the full pre-다 stem.
-  const stem = `${tail}`;
+  // Note: bare "보"→"봅니다" is intentionally omitted — comparative 보다 is guarded
+  // above; verb "본다" uses the ㄴ-batchim path (본→봅+니다).
   const phraseMap: Record<string, string> = {
     아니: "아닙니다",
     이: "입니다",
@@ -95,7 +145,6 @@ export function toHonorificSentence(sentence: string): string {
     필요하: "필요합니다",
     요구된: "요구됩니다",
     보인: "보입니다",
-    보: "봅니다",
     힌: "힙니다",
     긴: "깁니다",
     린: "립니다",
@@ -172,7 +221,8 @@ export function splitKoreanSentences(text: string): string[] {
 
 export function toHonorificProse(text: string): string {
   if (!text?.trim()) return text;
-  return splitKoreanSentences(text)
+  const repaired = repairComparativeBodaCorruption(text);
+  return splitKoreanSentences(repaired)
     .map((part) => {
       const leading = part.match(/^\s*/)?.[0] ?? "";
       const trailing = part.match(/\s*$/)?.[0] ?? "";

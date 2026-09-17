@@ -161,8 +161,18 @@ export function scoreNewsLinkQuality(
   if (!link.href || isNewsSearchFallbackUrl(link.href)) return 0;
   let host = "";
   try {
-    host = new URL(link.href).hostname.toLowerCase();
+    host = new URL(link.href).hostname.toLowerCase().replace(/^www\./, "");
   } catch {
+    return 0;
+  }
+  // Off-topic Naver product landings (메이트·페이·파파고 등)
+  if (
+    host === "mate.naver.com" ||
+    host.endsWith(".mate.naver.com") ||
+    /mate\.naver\.com|네이버\s*메이트|Naver\s*Mate/i.test(
+      `${link.title} ${link.source ?? ""} ${link.href}`,
+    )
+  ) {
     return 0;
   }
   const title = `${link.title} ${link.source ?? ""}`;

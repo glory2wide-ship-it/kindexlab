@@ -5,6 +5,7 @@ import {
   scrubSectionHeadingNoise,
   stripNumberedHeadingPrefix,
 } from "@/lib/editorial/tense-rules";
+import { repairComparativeBodaCorruption } from "@/lib/editorial/honorific";
 import type { PostFaq, PostLink, PostTable } from "@/lib/posts/types";
 
 export interface SeoSection {
@@ -47,6 +48,13 @@ export function countKoreanWords(text: string): number {
 const DA_TITLE_WORDS = /^(힘들|다른|같은|이런|저런|그런|어떤|모든|새로운|중요한|다양한|구체적인)다$/;
 
 /**
+ * Particles / connectives ending in 다 that must never get a sentence break.
+ * Comparative 보다 was being split ("일정보다 조기" → "일정보다. 조기") and then
+ * honorific rewrote it to "일정봅니다." — keep these intact.
+ */
+const DA_NON_SENTENCE_ENDINGS = /^(보다|마다)$/;
+
+/**
  * Inserts periods where Korean declarative clauses run into the next sentence
  * without terminal punctuation (e.g. "떠올랐다 이슈의" → "떠올랐다. 이슈의").
  */
@@ -58,6 +66,9 @@ export function insertMissingKoreanPeriods(text: string): string {
     const before = source.slice(0, offset + end.length);
     const word = before.match(/[\uAC00-\uD7A3]+$/)?.[0] ?? end;
     if (DA_TITLE_WORDS.test(word)) return match;
+    if (DA_NON_SENTENCE_ENDINGS.test(end) || DA_NON_SENTENCE_ENDINGS.test(word)) {
+      return match;
+    }
     // Connective "다 보니/보면/…" — keep unpunctuated.
     const after = source.slice(offset + match.length);
     if (/^(보니|보면|못해|싶다|시피|해도|하여|보니까)/.test(after)) return match;
@@ -71,7 +82,8 @@ export function insertMissingKoreanPeriods(text: string): string {
 
 /** Ensures every sentence ends with terminal punctuation. */
 export function ensureSentencePunctuation(text: string): string {
-  const withBreaks = insertMissingKoreanPeriods(text.replace(/\s+/g, " ").trim());
+  const cleaned = repairComparativeBodaCorruption(text.replace(/\s+/g, " ").trim());
+  const withBreaks = insertMissingKoreanPeriods(cleaned);
   return withBreaks
     .split(/(?<=[.!?…])\s+/)
     .map((sentence) => {

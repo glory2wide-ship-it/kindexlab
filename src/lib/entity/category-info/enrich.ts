@@ -513,6 +513,14 @@ async function crawlMelonChartHits(name: string): Promise<string[]> {
 function linksFromDocs(docs: CrawlDoc[], sourceLabel: string): CategoryInfoLink[] {
   return docs
     .filter((doc) => isSafeOutboundUrl(doc.url))
+    .filter(
+      (doc) =>
+        !isIrrelevantNaverServiceLink({
+          title: doc.title,
+          href: doc.url,
+          source: doc.publisher,
+        }),
+    )
     .slice(0, 5)
     .map((doc) => ({
       title: displayLinkTitle(doc.title, doc.url),
@@ -530,10 +538,39 @@ function isSafeOutboundUrl(href: string): boolean {
     const url = new URL(href);
     if (url.protocol !== "http:" && url.protocol !== "https:") return false;
     if (!url.hostname.includes(".")) return false;
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    // Naver product/tool landing pages — never entity-related outbound links.
+    if (
+      host === "mate.naver.com" ||
+      host.endsWith(".mate.naver.com") ||
+      host === "shopping.naver.com" ||
+      host === "pay.naver.com" ||
+      host === "mail.naver.com" ||
+      host === "dict.naver.com" ||
+      host === "papago.naver.com" ||
+      host === "map.naver.com" ||
+      host === "nid.naver.com" ||
+      host === "landing.naver.com"
+    ) {
+      return false;
+    }
+    if (/네이버\s*메이트|Naver\s*Mate/i.test(`${url.pathname}${url.search}`)) {
+      return false;
+    }
     return true;
   } catch {
     return false;
   }
+}
+
+/** Drop off-topic Naver service titles even if the URL slipped through. */
+function isIrrelevantNaverServiceLink(link: { title?: string; href?: string; source?: string }): boolean {
+  const blob = `${link.title ?? ""} ${link.source ?? ""} ${link.href ?? ""}`;
+  if (/네이버\s*메이트|Naver\s*Mate|mate\.naver\.com/i.test(blob)) return true;
+  if (/papago\.naver\.com|dict\.naver\.com|pay\.naver\.com|mail\.naver\.com/i.test(blob)) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -547,6 +584,7 @@ function sanitizeRelatedLinks(
 ): CategoryInfoLink[] {
   const scored = links
     .filter((link) => link.href && isSafeOutboundUrl(link.href))
+    .filter((link) => !isIrrelevantNaverServiceLink(link))
     .map((link) => ({ link, score: scoreNewsLinkQuality(link, entityName, channel) }))
     .filter((row) => row.score > 0 || isNewsSearchFallbackUrl(row.link.href))
     .sort((a, b) => b.score - a.score);
@@ -571,6 +609,7 @@ function mergeLinks(primary: CategoryInfoLink[], secondary: CategoryInfoLink[]):
   const out: CategoryInfoLink[] = [];
   for (const link of [...primary, ...secondary]) {
     if (!link.href || !isSafeOutboundUrl(link.href)) continue;
+    if (isIrrelevantNaverServiceLink(link)) continue;
     if (seenHref.has(link.href)) continue;
     const titleKey = link.title
       .replace(/\s+/g, "")
@@ -681,8 +720,27 @@ function clampCellValue(value: string, multiline = false): string {
 function containRows(rows: CategoryInfoRow[]): CategoryInfoRow[] {
   return rows.map((row) => {
     const multiline = Boolean(row.multiline || row.value.includes("\n"));
+    const href =
+      row.href &&
+      isSafeOutboundUrl(row.href) &&
+      !isIrrelevantNaverServiceLink({ title: row.value, href: row.href })
+        ? row.href
+        : undefined;
+    // Drop cells whose only content is an off-topic Naver service URL/title.
+    if (
+      isIrrelevantNaverServiceLink({ title: row.value, href: row.href }) &&
+      /mate\.naver|네이버\s*메이트|바로가기/i.test(row.value)
+    ) {
+      return {
+        ...row,
+        href: undefined,
+        value: "추가 수집 중",
+        multiline: multiline || undefined,
+      };
+    }
     return {
       ...row,
+      href,
       multiline: multiline || undefined,
       value: clampCellValue(row.value, multiline),
     };
