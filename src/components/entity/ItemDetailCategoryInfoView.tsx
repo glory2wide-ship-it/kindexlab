@@ -187,9 +187,19 @@ export function ItemDetailCategoryInfoView({
             </span>
           ) : null}
           {lastLabel || nextLabel ? (
-            <span className="category-info-refresh-120 max-w-[18rem] text-right text-xs leading-snug text-muted sm:text-sm">
-              {lastLabel ? <span className="block">최근 업데이트 {lastLabel}</span> : null}
-              {nextLabel ? <span className="block">다음 업데이트 {nextLabel}</span> : null}
+            <span className="category-info-refresh-120 grid max-w-[22rem] grid-cols-[7.5rem_minmax(0,1fr)] gap-x-1 text-left text-xs leading-snug text-muted sm:text-sm">
+              {lastLabel ? (
+                <>
+                  <span className="whitespace-nowrap">최근 업데이트</span>
+                  <span className="tabular-nums">{lastLabel}</span>
+                </>
+              ) : null}
+              {nextLabel ? (
+                <>
+                  <span className="whitespace-nowrap">다음 업데이트</span>
+                  <span className="tabular-nums">{nextLabel}</span>
+                </>
+              ) : null}
             </span>
           ) : null}
         </div>

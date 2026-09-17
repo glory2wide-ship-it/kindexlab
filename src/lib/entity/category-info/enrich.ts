@@ -23,6 +23,7 @@ import type {
 import { fetchText } from "@/lib/ingestion/http";
 import { decodeHtml, stripTags } from "@/lib/ingestion/parse";
 import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
+import { publisherFromUrl } from "@/lib/news/unwrap";
 import { matchPunditProfileSeed } from "@/lib/politics/pundit-profiles";
 import {
   clearPublicDataRetry,
@@ -38,6 +39,7 @@ import { hasDataGoKrKey } from "@/lib/public-data/key";
 import type { PublicGrantRecord } from "@/lib/public-data/types";
 import { lookupYoutubeChannelProfile } from "@/lib/public-data/youtube-channel";
 import { entityNarrativeSummary } from "@/lib/entity/index-blurb";
+import { readAnalysis } from "@/lib/analysis/store";
 
 const UPDATING = "실시간 정보 업데이트 중";
 
@@ -64,6 +66,86 @@ function corpusOf(docs: CrawlDoc[]): string {
     .map((doc) => `${doc.title} ${doc.snippet ?? ""}`)
     .join(" \n ")
     .slice(0, 12_000);
+}
+
+/** Infer ISO publish time from absolute/relative Korean or English date text. */
+function inferPublishedAt(...blobs: Array<string | undefined>): string | undefined {
+  for (const blob of blobs) {
+    if (!blob?.trim()) continue;
+    const absolute = new Date(blob);
+    if (!Number.isNaN(absolute.getTime()) && absolute.getFullYear() >= 2000) {
+      return absolute.toISOString();
+    }
+    if (/방금|조금\s*전/.test(blob)) return new Date().toISOString();
+    const ko = blob.match(/(\d+)\s*(초|분|시간|일|주|개월|달)\s*전/);
+    if (ko?.[1] && ko[2]) {
+      const amount = Number.parseInt(ko[1], 10);
+      const unitMs: Record<string, number> = {
+        초: 1_000,
+        분: 60_000,
+        시간: 3_600_000,
+        일: 86_400_000,
+        주: 604_800_000,
+        개월: 2_592_000_000,
+        달: 2_592_000_000,
+      };
+      const step = unitMs[ko[2]];
+      if (step) return new Date(Date.now() - amount * step).toISOString();
+    }
+    const en = blob.match(/(\d+)\s*(minute|hour|day|week|month)s?\s*ago/i);
+    if (en?.[1] && en[2]) {
+      const amount = Number.parseInt(en[1], 10);
+      const unitMs: Record<string, number> = {
+        minute: 60_000,
+        hour: 3_600_000,
+        day: 86_400_000,
+        week: 604_800_000,
+        month: 2_592_000_000,
+      };
+      const step = unitMs[en[2].toLowerCase()];
+      if (step) return new Date(Date.now() - amount * step).toISOString();
+    }
+    const compact = blob.match(
+      /(\d{4})\s*[.년/-]\s*(\d{1,2})\s*[.월/-]\s*(\d{1,2})/,
+    );
+    if (compact) {
+      const y = Number(compact[1]);
+      const m = Number(compact[2]);
+      const d = Number(compact[3]);
+      const date = new Date(Date.UTC(y, m - 1, d, 3, 0, 0));
+      if (!Number.isNaN(date.getTime())) return date.toISOString();
+    }
+  }
+  return undefined;
+}
+
+/** Drop “네이버” branding from link sources; keep destination host when possible. */
+function cleanLinkSource(source: string | undefined, href: string): string | undefined {
+  const host = publisherFromUrl(href);
+  if (!source?.trim()) return host || undefined;
+  let cleaned = source
+    .replace(/네이버\s*뉴스\s*검색/g, "뉴스 검색")
+    .replace(/네이버\s*웹문서/g, host || "웹문서")
+    .replace(/네이버\s*블로그/g, "블로그")
+    .replace(/네이버/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  if (!cleaned || cleaned === "웹" || cleaned === "웹문서") {
+    return host || cleaned || undefined;
+  }
+  return cleaned;
+}
+
+function displayLinkTitle(title: string, href: string): string {
+  const trimmed = title.replace(/\s+/g, " ").trim();
+  const looksLikeUrl =
+    !trimmed ||
+    /^https?:\/\//i.test(trimmed) ||
+    trimmed === href ||
+    /^www\./i.test(trimmed);
+  if (!looksLikeUrl && trimmed.length >= 4) return trimmed.slice(0, 90);
+  const host = publisherFromUrl(href);
+  return host ? `${host} 문서` : "관련 웹문서";
 }
 
 function firstMatch(text: string, patterns: RegExp[]): string | undefined {
@@ -406,14 +488,17 @@ async function crawlMelonChartHits(name: string): Promise<string[]> {
 
 function linksFromDocs(docs: CrawlDoc[], sourceLabel: string): CategoryInfoLink[] {
   return docs
-    .filter((doc) => doc.title.trim().length >= 4 && isSafeOutboundUrl(doc.url))
+    .filter((doc) => isSafeOutboundUrl(doc.url))
     .slice(0, 5)
     .map((doc) => ({
-      title: doc.title.slice(0, 90),
+      title: displayLinkTitle(doc.title, doc.url),
       href: doc.url,
-      source: doc.publisher?.trim() || sourceLabel,
-      publishedAt: doc.publishedAt,
-    }));
+      source: cleanLinkSource(doc.publisher?.trim() || sourceLabel, doc.url),
+      publishedAt:
+        doc.publishedAt ||
+        inferPublishedAt(doc.snippet, doc.title, doc.publisher),
+    }))
+    .filter((link) => link.title.trim().length >= 4);
 }
 
 function isSafeOutboundUrl(href: string): boolean {
@@ -608,6 +693,42 @@ function applyGrantRecord(
 }
 
 /**
+ * Reuse article-generation collected sources/facts so sparse category packs
+ * can fill without a second full crawl when overnight analysis already ran.
+ */
+async function loadAnalysisContextDocs(entitySlug: string): Promise<CrawlDoc[]> {
+  if (!entitySlug) return [];
+  try {
+    const entry = await readAnalysis(entitySlug);
+    if (!entry) return [];
+    const out: CrawlDoc[] = [];
+    for (const source of entry.article?.sources ?? []) {
+      if (!source.url || !source.title) continue;
+      out.push({
+        title: source.title,
+        url: source.url,
+        publisher: source.publisher,
+        publishedAt: source.publishedAt,
+        snippet: source.title,
+      });
+    }
+    for (const fact of entry.provenance?.facts ?? []) {
+      const text = plain(fact);
+      if (!text || text.length < 24) continue;
+      out.push({
+        title: `${entry.keyword || entitySlug} 분석 수집 사실`,
+        url: `analysis://${entitySlug}`,
+        publisher: "분석 수집",
+        snippet: text.slice(0, 400),
+      });
+    }
+    return out.slice(0, 8);
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Live crawl enrichment for ItemDetailCategoryInfo.
  * Uses news retrieval + Naver web/blog crawl→Open API fallback (+ Melon / YouTube / ticket·bookstore crawls)
  * and data.go.kr (보조금24·복지로·국토부 실거래) when DATA_GO_KR_SERVICE_KEY is set.
@@ -632,6 +753,28 @@ export async function enrichCategoryInfoPayload(
   const wantsTickets =
     base.channel === "performance" || base.channel === "exhibition";
   const wantsFood = base.channel === "food";
+  const wantsMelon =
+    base.channel === "music" || base.channel === "kpop" || base.channel === "trot";
+  // Skip expensive web crawl when specialized lookups cover the channel, unless grant/housing need snippets.
+  const wantsWebCrawl =
+    wantsGrant ||
+    wantsHousing ||
+    wantsFood ||
+    base.channel === "recipe" ||
+    base.channel === "domestic_travel" ||
+    base.channel === "overseas_travel" ||
+    base.channel === "weekend_outing" ||
+    base.channel === "health" ||
+    base.channel === "car" ||
+    base.channel === "star" ||
+    base.channel === "kpop" ||
+    base.channel === "movie" ||
+    base.channel === "tv_ratings" ||
+    base.channel === "performance" ||
+    base.channel === "exhibition" ||
+    base.channel === "webtoon" ||
+    base.channel === "book" ||
+    base.sparse;
   const punditSeed =
     base.channel === "political_pundit" ? matchPunditProfileSeed(name) : undefined;
 
@@ -645,9 +788,13 @@ export async function enrichCategoryInfoPayload(
     bookFacts,
     ticketFacts,
     foodFacts,
+    melonHits,
+    analysisDocs,
   ] = await Promise.all([
     crawlNews(name, base.channel),
-    crawlWeb(name, base.channel),
+    wantsWebCrawl
+      ? crawlWeb(name, base.channel)
+      : Promise.resolve([] as CrawlDoc[]),
     wantsGrant ? matchPublicGrant(name).catch(() => undefined) : Promise.resolve(undefined),
     wantsHousing
       ? summarizeHousingPublicData(name).catch(() => undefined)
@@ -666,6 +813,8 @@ export async function enrichCategoryInfoPayload(
         ).catch(() => undefined)
       : Promise.resolve(undefined),
     wantsFood ? lookupFoodFacts(name).catch(() => undefined) : Promise.resolve(undefined),
+    wantsMelon ? crawlMelonChartHits(name) : Promise.resolve([] as string[]),
+    loadAnalysisContextDocs(base.entitySlug),
   ]);
 
   // Public API miss → Admin ledger + retry queue
@@ -708,20 +857,29 @@ export async function enrichCategoryInfoPayload(
     }
   }
 
-  const youtubeDocs =
-    wantsYoutube && !youtubeProfile?.recentVideoTitles.length
-      ? await crawlYoutube(name)
-      : wantsYoutube
-        ? []
-        : [];
+  // Grant detail page crawl (only when API match is thin) — parallel with optional youtube docs.
+  const grantPageNeed =
+    wantsGrant &&
+    (!publicGrant ||
+      !publicGrant.deadline ||
+      !publicGrant.target ||
+      !publicGrant.documents ||
+      !publicGrant.howToApply);
+  const grantPageUrl =
+    publicGrant?.url && isSafeOutboundUrl(publicGrant.url) ? publicGrant.url : undefined;
 
-  const melonHits =
-    base.channel === "music" || base.channel === "kpop" || base.channel === "trot"
-      ? await crawlMelonChartHits(name)
-      : [];
+  const [youtubeDocs, grantPageText] = await Promise.all([
+    wantsYoutube && !youtubeProfile?.recentVideoTitles.length
+      ? crawlYoutube(name)
+      : Promise.resolve([] as ContextSource[]),
+    grantPageNeed && grantPageUrl
+      ? fetchText(grantPageUrl, { next: { revalidate: 3600 } }).catch(() => "")
+      : Promise.resolve(""),
+  ]);
 
   const docs: CrawlDoc[] = [
     ...newsDocs,
+    ...analysisDocs,
     ...webDocs,
     ...youtubeDocs.map((doc) => ({
       title: doc.title,
@@ -730,6 +888,14 @@ export async function enrichCategoryInfoPayload(
       snippet: doc.snippet,
     })),
   ];
+  if (grantPageText) {
+    docs.push({
+      title: publicGrant?.title || `${name} 공고`,
+      url: grantPageUrl || "",
+      publisher: publicGrant?.agency,
+      snippet: plain(grantPageText)?.slice(0, 4_000),
+    });
+  }
   const corpus = corpusOf(docs);
 
   let rows = [...base.rows];
@@ -975,34 +1141,45 @@ export async function enrichCategoryInfoPayload(
           );
         }
       }
-      if (!publicGrant) {
-        const period = firstMatch(corpus, [
-          /신청\s*기간[:\s]*([^\n.]{6,60})/,
-          /(\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*[~～-]\s*\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2})/,
-        ]);
-        const eligibilityRaw = firstMatch(corpus, [
-          /(?:신청\s*자격|지원\s*대상|자격\s*요건)[:\s]*([^\n]{8,220})/,
-        ]);
-        const prepRaw = firstMatch(corpus, [
-          /(?:준비\s*서류|제출\s*서류|준비\s*사항|신청\s*방법)[:\s]*([^\n]{8,220})/,
-        ]);
-        if (period) rows = fillUpdatingRows(rows, [{ label: "신청 기간", value: period }]);
-        const eligibility = formatGrantList(eligibilityRaw);
-        if (eligibility) {
-          rows = rows.map((row) =>
-            /신청 자격|자격·조건/.test(row.label) && isUpdating(row.value)
-              ? { ...row, value: eligibility, multiline: true }
-              : row,
-          );
+      // Fill remaining gaps from API+crawl corpus even when a thin publicGrant matched.
+      const period = firstMatch(corpus, [
+        /신청\s*기간[:\s]*([^\n.]{6,80})/,
+        /접수\s*기간[:\s]*([^\n.]{6,80})/,
+        /(\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*[~～-]\s*\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2})/,
+      ]);
+      const eligibilityRaw = firstMatch(corpus, [
+        /(?:신청\s*자격|지원\s*대상|자격\s*요건|대상자)[:\s]*([^\n]{8,280})/,
+      ]);
+      const prepRaw = firstMatch(corpus, [
+        /(?:준비\s*서류|제출\s*서류|준비\s*사항|신청\s*방법|구비\s*서류)[:\s]*([^\n]{8,280})/,
+      ]);
+      if (period) {
+        rows = fillUpdatingRows(rows, [{ label: "신청 기간", value: period }]);
+      }
+      const eligibility = formatGrantList(eligibilityRaw);
+      if (eligibility) {
+        rows = rows.map((row) =>
+          /신청 자격|자격·조건/.test(row.label) && isUpdating(row.value)
+            ? { ...row, value: eligibility, multiline: true }
+            : row,
+        );
+        if (!rows.some((row) => /신청 자격|자격·조건/.test(row.label))) {
+          rows = [{ label: "신청 자격·조건", value: eligibility, multiline: true }, ...rows];
         }
-        const prep = formatGrantList(prepRaw);
-        if (prep) {
-          rows = rows.map((row) =>
-            row.label === "준비사항" && isUpdating(row.value)
-              ? { ...row, value: prep, multiline: true }
-              : row,
-          );
+      }
+      const prep = formatGrantList(prepRaw);
+      if (prep) {
+        rows = rows.map((row) =>
+          row.label === "준비사항" && isUpdating(row.value)
+            ? { ...row, value: prep, multiline: true }
+            : row,
+        );
+        if (!rows.some((row) => row.label === "준비사항")) {
+          rows = [...rows, { label: "준비사항", value: prep, multiline: true }];
         }
+      }
+      if (publicGrant?.summary || crawledSynopsis) {
+        synopsis = synopsis || publicGrant?.summary || crawledSynopsis;
       }
       break;
     }
@@ -1034,9 +1211,14 @@ export async function enrichCategoryInfoPayload(
         ]);
       }
       if (housingPublic?.saleOffer) {
-        rows = fillUpdatingRows(rows, [
-          { label: /분양가/, value: housingPublic.saleOffer },
-        ]);
+        const saleText = housingPublic.saleOffer
+          .replace(/네이버(?:페이)?/g, "")
+          .replace(/\s{2,}/g, " ")
+          .replace(/·\s*·/g, "·")
+          .trim();
+        if (saleText) {
+          rows = fillUpdatingRows(rows, [{ label: /분양가/, value: saleText }]);
+        }
         if (housingPublic.saleOfferUrl) {
           rows = rows.map((row) =>
             /분양가/.test(row.label)
@@ -1045,6 +1227,19 @@ export async function enrichCategoryInfoPayload(
           );
         }
       }
+      // Never reintroduce 네이버 branding in housing cells (legacy cache + crawls).
+      rows = rows.map((row) =>
+        /분양가|실거래|추이|단지/.test(row.label)
+          ? {
+              ...row,
+              value: row.value
+                .replace(/네이버(?:페이)?(?:\s*부동산)?/g, "")
+                .replace(/\s{2,}/g, " ")
+                .trim(),
+            }
+          : row,
+      );
+      rows = rows.filter((row) => !/네이버페이 부동산/.test(row.label));
       if (housingPublic?.trendSummary) {
         rows = fillUpdatingRows(rows, [
           {
@@ -1074,8 +1269,6 @@ export async function enrichCategoryInfoPayload(
           },
         ]);
       }
-      // 네이버페이 부동산 row removed — drop legacy cached rows always.
-      rows = rows.filter((row) => !/네이버페이 부동산/.test(row.label));
       if (housingPublic?.trendPoints && housingPublic.trendPoints.length >= 2) {
         sparkline = {
           title: "매매가 추이 (국토부 실거래 · 중위)",
@@ -1310,16 +1503,19 @@ export async function enrichCategoryInfoPayload(
   const crawledLinks = mergeLinks(
     linksFromDocs(newsDocs, "뉴스"),
     mergeLinks(
-      linksFromDocs(
-        youtubeDocs.map((doc) => ({
-          title: doc.title,
-          url: doc.url,
-          publisher: doc.publisher,
-          snippet: doc.snippet,
-        })),
-        "유튜브",
+      linksFromDocs(analysisDocs.filter((doc) => !doc.url.startsWith("analysis:")), "분석"),
+      mergeLinks(
+        linksFromDocs(
+          youtubeDocs.map((doc) => ({
+            title: doc.title,
+            url: doc.url,
+            publisher: doc.publisher,
+            snippet: doc.snippet,
+          })),
+          "유튜브",
+        ),
+        linksFromDocs(webDocs, "웹"),
       ),
-      linksFromDocs(webDocs, "웹"),
     ),
   );
 
@@ -1384,7 +1580,17 @@ export async function enrichCategoryInfoPayload(
       ),
       name,
       base.channel,
-    ),
+    )
+      .map((link) => ({
+        ...link,
+        title: displayLinkTitle(link.title, link.href),
+        source: cleanLinkSource(link.source, link.href),
+        publishedAt:
+          link.publishedAt ||
+          inferPublishedAt(link.title, link.source),
+      }))
+      // Prefer dated news first so UI rarely misses 발행일.
+      .sort((a, b) => Number(Boolean(b.publishedAt)) - Number(Boolean(a.publishedAt))),
     { minPreferred: 2, maxSearchFallbacks: 1, channel: base.channel },
   );
   if (!synopsis && publicGrant?.summary) {

@@ -2,6 +2,7 @@ import { crawlNaverWebSearch } from "@/lib/context/crawl-naver-search";
 import { fetchJson } from "@/lib/ingestion/http";
 import { decodeHtml, stripTags } from "@/lib/ingestion/parse";
 import type { ContextSource } from "@/lib/context/types";
+import { publisherFromUrl } from "@/lib/news/unwrap";
 
 function configured(): boolean {
   return Boolean(process.env.NAVER_CLIENT_ID && process.env.NAVER_CLIENT_SECRET);
@@ -31,6 +32,14 @@ function usableUrl(link: string | undefined): link is string {
   }
 }
 
+/** Prefer destination host over the literal “네이버 웹문서/블로그” label. */
+function publisherFromHost(url: string): string | undefined {
+  const host = publisherFromUrl(url);
+  if (!host) return undefined;
+  if (/blog\.naver\.com/i.test(host)) return "블로그";
+  return host;
+}
+
 async function searchNaver(
   endpoint: "blog" | "webkr",
   keyword: string,
@@ -58,7 +67,7 @@ async function searchNaver(
       out.push({
         title,
         url: item.link,
-        publisher: item.bloggername?.trim() || publisher,
+        publisher: item.bloggername?.trim() || publisherFromHost(item.link) || publisher,
         snippet: plain(item.description)?.slice(0, 320),
         tier: "web",
       });
@@ -86,8 +95,8 @@ async function searchNaverOpenApi(
   const [blogs, web] = await Promise.all([
     preferOfficial && !preferBlog
       ? Promise.resolve([] as ContextSource[])
-      : searchNaver("blog", keyword, blogLimit, "네이버 블로그"),
-    searchNaver("webkr", keyword, preferOfficial ? limit : webLimit, "네이버 웹문서"),
+      : searchNaver("blog", keyword, blogLimit, "블로그"),
+    searchNaver("webkr", keyword, preferOfficial ? limit : webLimit, "웹문서"),
   ]);
   const ordered = preferBlog
     ? [...blogs, ...web]

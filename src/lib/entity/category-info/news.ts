@@ -297,7 +297,7 @@ export function ensureQualityNewsLinks(
             ? `${name} 추가 수집 중 · 뉴스 검색`
             : `${name} 관련 뉴스 추가 수집 중`,
         href: naverNewsUrl(searchQuery),
-        source: "네이버 뉴스 검색",
+        source: "뉴스 검색",
       } satisfies CategoryInfoLink);
     if (!out.some((l) => l.href === fallback.href)) {
       out.push({
@@ -312,7 +312,14 @@ export function ensureQualityNewsLinks(
     }
   }
   // Prefer quality 2 over forced 3 — cap soft at 5, do not pad.
-  return out.slice(0, Math.max(out.length, 0));
+  return out.map((link) => ({
+    ...link,
+    source: link.source
+      ?.replace(/네이버\s*뉴스\s*검색/g, "뉴스 검색")
+      .replace(/네이버/g, "")
+      .replace(/\s{2,}/g, " ")
+      .trim() || undefined,
+  }));
 }
 
 /** @deprecated Prefer ensureQualityNewsLinks — kept for call-site compatibility. */

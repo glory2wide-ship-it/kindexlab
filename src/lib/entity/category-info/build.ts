@@ -1,3 +1,4 @@
+import { isUnresolvedFactValue } from "@/lib/boards/detail-facts";
 import { resolveDetailFacts } from "@/lib/boards/detail-facts";
 import { resolveEntertainmentFacts } from "@/lib/boards/entertainment-facts";
 import { buildTvProgramProfile, tvProgramGenreLabel } from "@/lib/boards/tv-program-profile";
@@ -22,6 +23,17 @@ import { matchPunditProfileSeed } from "@/lib/politics/pundit-profiles";
 import type { RankingEntity } from "@/lib/types";
 
 const UPDATING = "실시간 정보 업데이트 중";
+
+/** Keep curated pack rows/chips that are actually filled (not “확인 중”). */
+function curatedEntertainmentRows(entity: RankingEntity): CategoryInfoRow[] {
+  return fromEntertainment(entity).rows.filter((row) => !isUnresolvedFactValue(row.value));
+}
+
+function curatedEntertainmentChips(entity: RankingEntity): CategoryInfoChipGroup[] {
+  return fromEntertainment(entity).chips.filter(
+    (chip) => chip.items.length > 0 && chip.items.some((item) => !isUnresolvedFactValue(item)),
+  );
+}
 
 function nonemptyRows(rows: CategoryInfoRow[]): CategoryInfoRow[] {
   const seen = new Set<string>();
@@ -105,6 +117,17 @@ function fromTv(entity: RankingEntity): {
 } {
   const profile = buildTvProgramProfile(entity);
   if (!profile) return { rows: [], chips: [] };
+  const observed = profile.nielsenObservedAt
+    ? new Intl.DateTimeFormat("ko-KR", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(new Date(profile.nielsenObservedAt))
+    : undefined;
   const rows: CategoryInfoRow[] = [
     { label: "방송 채널", value: profile.channel, emphasize: true },
     { label: "최근 본방송", value: profile.lastBroadcast },
@@ -121,19 +144,32 @@ function fromTv(entity: RankingEntity): {
   if (entity.measurement) {
     rows.push({
       label: "닐슨코리아 발표",
-      value: `${entity.measurement.label} ${formatCompact(entity.measurement.value)}${entity.measurement.unit}${
+      value: [
+        entity.measurement.label,
+        `${formatCompact(entity.measurement.value)}${entity.measurement.unit}`,
+        observed ? `(${observed})` : undefined,
         entity.measurement.changeRate !== undefined
-          ? ` · 직전 대비 ${formatRate(entity.measurement.changeRate)}`
-          : ""
-      }`,
+          ? `직전 대비 ${formatRate(entity.measurement.changeRate)}`
+          : undefined,
+      ]
+        .filter(Boolean)
+        .join(" · "),
       emphasize: true,
     });
   }
+  const chips: CategoryInfoChipGroup[] = [];
+  if (profile.hosts?.length) {
+    chips.push({ label: "호스트", items: profile.hosts.slice(0, 8) });
+  }
+  if (profile.guests?.length) {
+    chips.push({ label: "게스트", items: profile.guests.slice(0, 8) });
+  }
+  if (!chips.length && profile.cast.length) {
+    chips.push({ label: "최근 출연자", items: profile.cast.slice(0, 8) });
+  }
   return {
     rows,
-    chips: profile.cast.length
-      ? [{ label: "최근 출연자", items: profile.cast.slice(0, 8) }]
-      : [],
+    chips,
     synopsis: entityNarrativeSummary(profile.plotSummary),
   };
 }
@@ -165,7 +201,10 @@ function housingRows(entity: RankingEntity): CategoryInfoRow[] {
   return [
     { label: "단지/지역", value: entity.name, emphasize: true },
     { label: "최근 2개월 실거래가(평수별)", value: UPDATING, emphasize: true },
-    { label: "신규 분양가(평수별)", value: UPDATING },
+    {
+      label: "신규 분양가(평수별)",
+      value: UPDATING,
+    },
     {
       label: "매매·전세·월세 추이",
       value: UPDATING,
@@ -253,8 +292,9 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
     case "webtoon":
     case "performance":
     case "exhibition": {
-      // Skeleton only — do not seed hero "확인 중" placeholders into 맞춤 정보
-      // (enrich fills live rows; hero profile is pruned separately).
+      // Skeleton + filled curation only (never “확인 중” placeholders).
+      const curatedRows = curatedEntertainmentRows(entity);
+      const curatedChips = curatedEntertainmentChips(entity);
       if (resolved.channel === "webtoon") {
         rows = [
           { label: "플랫폼", value: UPDATING, emphasize: true },
@@ -281,14 +321,25 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
           { label: "입장료", value: UPDATING },
         ];
       } else {
-        // kpop / star — prefer empty updating rows over "소속사 확인 중"
+        // kpop / star
         rows = [
           { label: "소속사", value: UPDATING, emphasize: true },
           { label: "직업", value: UPDATING },
         ];
       }
-      chips = [];
-      synopsis = undefined;
+      // Overlay curated pack values onto matching labels; keep chips (멤버/출연작품).
+      for (const curated of curatedRows) {
+        rows = rows.map((row) =>
+          row.label === curated.label || new RegExp(curated.label).test(row.label)
+            ? { ...row, value: curated.value, href: curated.href ?? row.href, emphasize: row.emphasize || curated.emphasize }
+            : row,
+        );
+        if (!rows.some((row) => row.label === curated.label || new RegExp(curated.label).test(row.label))) {
+          rows = [...rows, curated];
+        }
+      }
+      chips = curatedChips;
+      synopsis = fromEntertainment(entity).synopsis;
       notice = detail.notice;
       links = detail.links;
       break;

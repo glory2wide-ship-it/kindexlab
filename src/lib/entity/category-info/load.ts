@@ -19,7 +19,7 @@ export const CATEGORY_INFO_REVALIDATE_SEC = 3600;
 
 function cacheKey(entity: RankingEntity, channel: string): string[] {
   return [
-    "item-detail-category-info-v12-quality-news-pundit",
+    "item-detail-category-info-v13-curation-yt-housing-dates",
     channel,
     entity.slug,
     entity.type,

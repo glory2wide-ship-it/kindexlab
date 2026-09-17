@@ -31,7 +31,8 @@ export const PUNDIT_PROFILE_SEEDS: PunditProfileSeed[] = [
   {
     name: "전원책",
     role: "시사평론가",
-    youtubeChannelId: "",
+    youtubeChannelId: "UCepZn-yku0hP4WGp1htXg-g",
+    youtubeUrl: "https://www.youtube.com/channel/UCepZn-yku0hP4WGp1htXg-g",
     sns: [],
   },
   {
@@ -42,8 +43,10 @@ export const PUNDIT_PROFILE_SEEDS: PunditProfileSeed[] = [
   },
   {
     name: "황희두",
-    aliases: ["황희두TV"],
+    aliases: ["황희두TV", "알리미 황희두"],
     role: "시사평론가",
+    youtubeChannelId: "UCfjrVFRB_mTNU8iFtD7yAnA",
+    youtubeUrl: "https://www.youtube.com/channel/UCfjrVFRB_mTNU8iFtD7yAnA",
     sns: [],
   },
   {

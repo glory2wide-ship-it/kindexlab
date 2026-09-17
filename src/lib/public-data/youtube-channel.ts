@@ -24,6 +24,7 @@ const ENTERTAINMENT_YOUTUBE_SEEDS: Array<{
   name: string;
   aliases?: string[];
   channelId: string;
+  handle?: string;
 }> = [
   // IDs must be UC… and verified via channels.list (not forHandle alone).
 ];
@@ -69,6 +70,7 @@ async function channelsByIds(
     title: string;
     customUrl?: string;
     subscriberCount?: number;
+    uploadsPlaylistId?: string;
   }>
 > {
   if (!ids.length) return [];
@@ -77,9 +79,10 @@ async function channelsByIds(
       id?: string;
       snippet?: { title?: string; customUrl?: string };
       statistics?: { subscriberCount?: string; hiddenSubscriberCount?: boolean };
+      contentDetails?: { relatedPlaylists?: { uploads?: string } };
     }[];
   }>(
-    `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics` +
+    `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails` +
       `&id=${ids.map(encodeURIComponent).join(",")}` +
       `&key=${encodeURIComponent(key)}`,
   );
@@ -96,29 +99,62 @@ async function channelsByIds(
         title,
         customUrl: item.snippet?.customUrl?.trim(),
         subscriberCount: !hidden && Number.isFinite(raw) ? raw : undefined,
+        uploadsPlaylistId: item.contentDetails?.relatedPlaylists?.uploads?.trim(),
       };
     })
     .filter((row): row is NonNullable<typeof row> => Boolean(row));
 }
 
+/** Resolve UC… via forHandle (1 unit) — avoids search.list quota (100 units). */
+async function channelIdByHandle(
+  key: string,
+  handle: string,
+): Promise<string | undefined> {
+  const cleaned = handle.replace(/^@/, "").trim();
+  if (!cleaned) return undefined;
+  try {
+    const details = await fetchJson<{
+      items?: { id?: string; snippet?: { title?: string } }[];
+      error?: { message?: string };
+    }>(
+      `https://www.googleapis.com/youtube/v3/channels?part=snippet` +
+        `&forHandle=${encodeURIComponent(cleaned)}` +
+        `&key=${encodeURIComponent(key)}`,
+    );
+    recordYoutubeApiUnits(1, 1);
+    if (details.error) return undefined;
+    return details.items?.[0]?.id?.trim();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Recent titles via uploads playlist (playlistItems = 1 unit) instead of search.list (100).
+ */
 async function recentVideoTitles(
   key: string,
   channelId: string,
+  uploadsPlaylistId: string | undefined,
   limit: number,
 ): Promise<string[]> {
+  const playlistId = uploadsPlaylistId || `UU${channelId.slice(2)}`;
   try {
-    const search = await fetchJson<{
-      items?: { snippet?: { title?: string } }[];
+    const list = await fetchJson<{
+      items?: { snippet?: { title?: string; resourceId?: { kind?: string } } }[];
     }>(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video` +
-        `&channelId=${encodeURIComponent(channelId)}` +
-        `&order=viewCount&maxResults=${Math.min(limit, 5)}` +
-        `&regionCode=KR&relevanceLanguage=ko&key=${encodeURIComponent(key)}`,
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet` +
+        `&playlistId=${encodeURIComponent(playlistId)}` +
+        `&maxResults=${Math.min(limit, 5)}` +
+        `&key=${encodeURIComponent(key)}`,
     );
-    recordYoutubeApiUnits(100, 1);
-    return (search.items ?? [])
+    recordYoutubeApiUnits(1, 1);
+    return (list.items ?? [])
       .map((item) => item.snippet?.title?.trim())
-      .filter((title): title is string => Boolean(title))
+      .filter(
+        (title): title is string =>
+          typeof title === "string" && title.length > 0 && !/^Private video$/i.test(title),
+      )
       .slice(0, limit);
   } catch {
     return [];
@@ -134,6 +170,7 @@ function channelPublicUrl(channelId: string): string {
  * Resolve a YouTube channel (seed ID or name search) + subscriber stats + top videos.
  * Soft-fails to undefined when YOUTUBE_API_KEY is missing.
  * Prefer board-level UC seeds (politics / pundit / entertainment) over search quota.
+ * Prefer forHandle (1u) over search.list (100u) when seed has a handle.
  */
 export async function lookupYoutubeChannelProfile(
   name: string,
@@ -159,10 +196,26 @@ export async function lookupYoutubeChannelProfile(
 
     let channelId = seededId;
 
+    // Handle resolution before expensive search.list (quota-safe path).
     if (!channelId) {
+      const handle =
+        politics?.handle ||
+        entertainment?.handle ||
+        (() => {
+          const m = pundit?.youtubeUrl?.match(/youtube\.com\/@([^/?#]+)/i);
+          return m?.[1] ? `@${m[1]}` : undefined;
+        })();
+      if (handle) {
+        channelId = await channelIdByHandle(key, handle);
+      }
+    }
+
+    if (!channelId) {
+      // Last resort — search burns 100 units/day; skip when quota is known-tight.
+      if (process.env.YOUTUBE_SKIP_SEARCH === "1") return undefined;
       const search = await fetchJson<{
         items?: { id?: { channelId?: string }; snippet?: { channelId?: string; title?: string } }[];
-        error?: { message?: string };
+        error?: { message?: string; errors?: { reason?: string }[] };
       }>(
         `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel` +
           `&q=${encodeURIComponent(q)}` +
@@ -183,10 +236,7 @@ export async function lookupYoutubeChannelProfile(
     }
     if (!channelId) return undefined;
 
-    const [channels, videos] = await Promise.all([
-      channelsByIds(key, [channelId]),
-      recentVideoTitles(key, channelId, 5),
-    ]);
+    const channels = await channelsByIds(key, [channelId]);
     const channel = channels[0];
     if (!channel) return undefined;
     if (
@@ -201,6 +251,13 @@ export async function lookupYoutubeChannelProfile(
     if ((channel.subscriberCount ?? 0) < 1000 && !politics && !pundit && !seededId) {
       return undefined;
     }
+
+    const videos = await recentVideoTitles(
+      key,
+      channel.id,
+      channel.uploadsPlaylistId,
+      5,
+    );
 
     return {
       channelId: channel.id,

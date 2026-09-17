@@ -148,13 +148,24 @@ async function crawlNaverWhere(
     if (/캡차|자동입력|blocked|access denied/i.test(html) && html.length < 20_000) {
       return [];
     }
-    return parseNaverSearchHtml(html, limit, where).map((hit) => ({
-      title: hit.title,
-      url: hit.url,
-      publisher: hit.publisher || publisher,
-      snippet: hit.snippet?.slice(0, 320),
-      tier: "web" as const,
-    }));
+    return parseNaverSearchHtml(html, limit, where).map((hit) => {
+      let hostPublisher = publisher;
+      try {
+        const host = new URL(hit.url).hostname.replace(/^www\./, "");
+        if (host) {
+          hostPublisher = /blog\.naver\.com/i.test(host) ? "블로그" : host;
+        }
+      } catch {
+        /* keep fallback label */
+      }
+      return {
+        title: hit.title,
+        url: hit.url,
+        publisher: hit.publisher || hostPublisher,
+        snippet: hit.snippet?.slice(0, 320),
+        tier: "web" as const,
+      };
+    });
   } catch {
     return [];
   }
@@ -181,8 +192,8 @@ export async function crawlNaverWebSearch(
   const [blogs, web] = await Promise.all([
     preferOfficial && !preferBlog
       ? Promise.resolve([] as ContextSource[])
-      : crawlNaverWhere("blog", keyword, blogLimit, "네이버 블로그"),
-    crawlNaverWhere("webkr", keyword, preferOfficial ? limit : webLimit, "네이버 웹문서"),
+      : crawlNaverWhere("blog", keyword, blogLimit, "블로그"),
+    crawlNaverWhere("webkr", keyword, preferOfficial ? limit : webLimit, "웹문서"),
   ]);
 
   const ordered = preferBlog

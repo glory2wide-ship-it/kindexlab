@@ -27,7 +27,13 @@ export const naverNewsProvider: NewsProvider = {
       `&display=${Math.min(Math.max(limit * 3, 10), 100)}&sort=date`;
 
     const data = await fetchJson<{
-      items?: { title?: string; description?: string; link?: string; pubDate?: string }[];
+      items?: {
+        title?: string;
+        description?: string;
+        link?: string;
+        originallink?: string;
+        pubDate?: string;
+      }[];
     }>(url, {
       headers: {
         "X-Naver-Client-Id": process.env.NAVER_CLIENT_ID ?? "",
@@ -39,10 +45,18 @@ export const naverNewsProvider: NewsProvider = {
     return (data.items ?? []).flatMap((item): RawNewsDoc[] => {
       const title = plain(item.title);
       if (!title) return [];
+      const link = item.originallink || item.link;
+      let publisher: string | undefined;
+      try {
+        if (link) publisher = new URL(link).hostname.replace(/^www\./, "");
+      } catch {
+        publisher = undefined;
+      }
       return [
         {
           title,
-          link: item.link,
+          link,
+          publisher,
           publishedAt: toIso(item.pubDate),
           snippet: plain(item.description),
           source: "naver-news",

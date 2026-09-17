@@ -265,11 +265,15 @@ export function EntityHero({
           <dd className="mt-0.5 font-sans text-lg tabular-nums md:mt-1">{entity.rank}위</dd>
         </div>
         <div>
-          <dt className="text-muted">시가(오픈)</dt>
+          <dt className="text-muted">KinDex 시가(오픈)</dt>
           <dd className="mt-0.5 font-sans text-lg tabular-nums md:mt-1">{formatScore(entity.openScore)}</dd>
         </div>
         <div>
-          <dt className="text-muted">{metricLabel(entity.type)}</dt>
+          <dt className="text-muted">
+            {metricLabel(entity.type) === "거래량"
+              ? "KinDex 거래량"
+              : `KinDex ${metricLabel(entity.type)}`}
+          </dt>
           <dd className="mt-0.5 font-sans text-lg tabular-nums md:mt-1">{formatCompact(entity.volume)}</dd>
         </div>
       </dl>

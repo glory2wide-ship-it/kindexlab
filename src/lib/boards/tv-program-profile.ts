@@ -16,9 +16,15 @@ export type TvProgramProfile = {
   lastBroadcast: string;
   /** Rerun / encore slot when known. */
   rerunTime?: string;
+  /** Fixed hosts / MCs (variety). */
+  hosts?: string[];
+  /** Episode guests when known. */
+  guests?: string[];
   cast: string[];
   plotSummary: string;
   genre?: TvGenreSegment;
+  /** Nielsen (or OTT) measurement stamp when available. */
+  nielsenObservedAt?: string;
 };
 
 const PROFILES: TvProgramProfile[] = [
@@ -83,6 +89,7 @@ const PROFILES: TvProgramProfile[] = [
     channel: "MBC",
     lastBroadcast: "금 오후 11:10",
     rerunTime: "토 오후 5:00 (재방송)",
+    hosts: ["전현무", "박나래", "키", "코드 쿤스트"],
     cast: ["전현무", "박나래", "키", "코드 쿤스트"],
     plotSummary:
       "혼자 사는 연예인들의 일상과 취향을 관찰하며 공감과 웃음을 전하는 라이프스타일 예능.",
@@ -93,6 +100,7 @@ const PROFILES: TvProgramProfile[] = [
     channel: "SBS",
     lastBroadcast: "일 오후 9:00",
     rerunTime: "월 오전 11:00 (재방송)",
+    hosts: ["신동엽", "서장훈", "탁재훈"],
     cast: ["신동엽", "서장훈", "탁재훈"],
     plotSummary:
       "아직 결혼하지 않은 아들들의 일상을 어머니와 함께 지켜보며 세대 공감을 그리는 토크·관찰 예능.",
@@ -103,6 +111,7 @@ const PROFILES: TvProgramProfile[] = [
     channel: "SBS",
     lastBroadcast: "일 오후 6:15",
     rerunTime: "월 오후 1:00 (재방송)",
+    hosts: ["유재석", "김종국", "지석진", "하하", "양세찬", "전소민"],
     cast: ["유재석", "김종국", "지석진", "하하", "양세찬", "전소민"],
     plotSummary:
       "미션과 추리, 레이스를 결합한 야외 버라이어티. 멤버들의 케미와 게스트 대결이 핵심 재미.",
@@ -113,6 +122,7 @@ const PROFILES: TvProgramProfile[] = [
     channel: "tvN",
     lastBroadcast: "수 오후 8:40",
     rerunTime: "목 오후 3:00 (재방송)",
+    hosts: ["유재석", "조세호"],
     cast: ["유재석", "조세호"],
     plotSummary:
       "거리 인터뷰와 스튜디오 토크를 오가며 평범한 이웃과 유명 인사의 이야기를 풀어내는 토크 예능.",
@@ -122,6 +132,7 @@ const PROFILES: TvProgramProfile[] = [
     title: "나는 솔로",
     channel: "SBS Plus",
     lastBroadcast: "수 오후 10:30",
+    hosts: ["데프콘", "송해나"],
     cast: ["데프콘", "송해나"],
     plotSummary: "돌싱·미혼 출연자들이 짧은 만남 속에서 인연을 찾아가는 데이팅 리얼리티.",
     genre: "variety",
@@ -131,6 +142,7 @@ const PROFILES: TvProgramProfile[] = [
     channel: "KBS2",
     lastBroadcast: "일 오후 6:25",
     rerunTime: "월 오후 12:00 (재방송)",
+    hosts: ["김종민", "연정훈", "문세윤", "딘딘", "나인우"],
     cast: ["김종민", "연정훈", "문세윤", "딘딘", "나인우"],
     plotSummary:
       "전국을 돌며 미션과 숙박을 소화하는 여행 버라이어티. 멤버 간의 티키타카가 장기 흥행 비결.",
@@ -140,6 +152,7 @@ const PROFILES: TvProgramProfile[] = [
     title: "솔로지옥",
     channel: "Netflix",
     lastBroadcast: "시즌 단위 공개 (OTT)",
+    hosts: ["홍진경", "규현", "한해", "이미주"],
     cast: ["홍진경", "규현", "한해", "이미주"],
     plotSummary:
       "지옥섬과 천국 리조트를 오가며 연인을 선택하는 데이팅 서바이벌. 직진 화법이 화제.",
@@ -251,7 +264,14 @@ export function lookupTvProgramProfile(name: string): TvProgramProfile | undefin
 export function buildTvProgramProfile(
   entity: Pick<
     RankingEntity,
-    "name" | "nameEn" | "type" | "slug" | "tags" | "summary" | "heatmapGroup"
+    | "name"
+    | "nameEn"
+    | "type"
+    | "slug"
+    | "tags"
+    | "summary"
+    | "heatmapGroup"
+    | "measurement"
   >,
 ): TvProgramProfile | undefined {
   const slug = entity.slug ?? "";
@@ -277,11 +297,22 @@ export function buildTvProgramProfile(
     catalog?.genre ||
     inferTvGenre(entity.name, { tags: entity.tags, nameEn: entity.nameEn });
 
+  const nielsenObservedAt = entity.measurement?.observedAt;
+
   if (catalog) {
+    const hosts =
+      catalog.hosts?.length
+        ? catalog.hosts
+        : catalog.genre === "variety" || catalog.genre === "ott"
+          ? catalog.cast
+          : undefined;
     return {
       ...catalog,
       channel,
       genre,
+      hosts,
+      guests: catalog.guests,
+      nielsenObservedAt,
       plotSummary:
         catalog.plotSummary ||
         entityNarrativeSummary(entity) ||
@@ -296,6 +327,7 @@ export function buildTvProgramProfile(
       genre === "ott" ? "OTT 공개 일정 (플랫폼 공지 기준)" : "최근 본방송 시각 집계 중",
     rerunTime: genre === "ott" ? undefined : "재방송 시각 집계 중",
     cast: [],
+    nielsenObservedAt,
     plotSummary:
       entityNarrativeSummary(entity) ||
       `${entity.name}의 핵심 줄거리와 회차 하이라이트는 방송사·OTT 공식 소개를 기준으로 요약됩니다.`,

@@ -62,7 +62,7 @@ export type HousingPublicSummary = {
   rentSummary?: string;
   /** 평수 밴드별 중위 매매가 (최근 2개월 묶음). */
   byPyeong?: string;
-  /** 신규 분양가 — 공공 API에 없어 네이버 웹 스니펫/검색 링크로 보조. */
+  /** 신규 분양가 — 공공 API에 없어 웹 스니펫·국토부 링크로 보조(출처 명시). */
   saleOffer?: string;
   saleOfferUrl?: string;
   /** 월별 중위 매매가 (스파크라인용, 만원). */
@@ -100,7 +100,7 @@ function lawdSliceForOffset(lawds: readonly string[], back: number): readonly st
   return lawds.slice(0, Math.min(3, lawds.length));
 }
 
-async function naverSaleOfferFallback(
+async function webSaleOfferFallback(
   name: string,
 ): Promise<{ text?: string; url?: string } | undefined> {
   try {
@@ -113,13 +113,35 @@ async function naverSaleOfferFallback(
         /((?:분양가|공급가|최고가|최저가)[^\n]{0,24}?(?:\d[\d,.]*)\s*(?:억|만원)[^\n]{0,20})/,
       );
       if (hit?.[1]) {
-        return { text: hit[1].replace(/\s+/g, " ").trim().slice(0, 120), url: source.url };
+        const host = (() => {
+          try {
+            return new URL(source.url).hostname.replace(/^www\./, "");
+          } catch {
+            return "웹 공개 자료";
+          }
+        })();
+        return {
+          text: `${hit[1].replace(/\s+/g, " ").trim().slice(0, 100)} (출처: ${host})`,
+          url: source.url,
+        };
       }
     }
     if (sources[0]) {
+      const host = (() => {
+        try {
+          return new URL(sources[0]!.url).hostname.replace(/^www\./, "");
+        } catch {
+          return "웹 공개 자료";
+        }
+      })();
+      const title = sources[0]!.title
+        .replace(/네이버/g, "")
+        .replace(/\s{2,}/g, " ")
+        .trim()
+        .slice(0, 40);
       return {
-        text: `네이버·웹 검색 참고 · ${sources[0].title.slice(0, 40)}`,
-        url: sources[0].url,
+        text: `웹 공개 자료 참고 · ${title || host} (출처: ${host})`,
+        url: sources[0]!.url,
       };
     }
   } catch {
@@ -130,7 +152,7 @@ async function naverSaleOfferFallback(
 
 /**
  * Pull recent 매매·전월세 for an apartment (or region hotspot) via MOLIT RTMS,
- * with Naver web as 2차 보조 for 분양가 / deep-link.
+ * with web snippets as 2차 보조 for 분양가 (출처 호스트 명시 · “네이버” 문구 미사용).
  */
 export async function summarizeHousingPublicData(
   aptOrRegionName: string,
@@ -202,7 +224,7 @@ export async function summarizeHousingPublicData(
       ? `매매 ${trendPoints[0]!.label} ${formatManwon(trendPoints[0]!.value)} → ${trendPoints.at(-1)!.label} ${formatManwon(trendPoints.at(-1)!.value)}`
       : undefined;
 
-  const sale = await naverSaleOfferFallback(name);
+  const sale = await webSaleOfferFallback(name);
   const landUrl = landNaverSearchUrl(name);
 
   if (
