@@ -150,16 +150,14 @@ export function BuzzChart({
             ))}
           </dl>
         </div>
-        <div className="detail-chart-body-110 grid gap-2 border-t border-line px-5 py-3 text-[11px] leading-5 text-muted max-md:leading-4 sm:grid-cols-3 md:gap-3 md:px-7">
-          <p>
-            TradingView Lightweight Charts 기반 · 라인은 종가 곡선(그라데이션·현재가 점), 캔들은
-            미국식(상승 초록 / 하락 빨강)입니다.
-          </p>
-          <p>
-            차트를 좌우로 끌어 이전 시간대도 볼 수 있습니다. 거래량 수치는 우측 시세란을
-            참고하세요.
-          </p>
-          <p>실측 시세 이력은 아닙니다.</p>
+        <div className="detail-chart-body-110 border-t border-line px-5 py-3 md:px-7">
+          <div className="rounded-lg border border-line bg-board/70 px-3.5 py-2.5 text-[11px] leading-5 text-muted max-md:leading-4">
+            <p>
+              TradingView Lightweight Charts 기반 · 라인은 종가 곡선(그라데이션·현재가 점), 캔들은
+              미국식(상승 초록 / 하락 빨강)입니다. 차트를 좌우로 끌어 이전 시간대도 볼 수 있습니다.
+              거래량 수치는 우측 시세란을 참고하세요. 실측 시세 이력은 아닙니다.
+            </p>
+          </div>
         </div>
       </div>
     </section>

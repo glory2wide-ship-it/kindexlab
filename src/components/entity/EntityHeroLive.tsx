@@ -7,6 +7,7 @@ import {
   resolveDetailFacts,
 } from "@/lib/boards/detail-facts";
 import { entityNarrativeSummary } from "@/lib/entity/index-blurb";
+import { youtubeChannelLinkLabel } from "@/lib/entity/youtube-link-label";
 import { TYPE_LABEL } from "@/lib/format";
 import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
 import type { RankingEntity } from "@/lib/types";
@@ -125,7 +126,9 @@ function MarketQuotePendingHero({
                         rel="noopener noreferrer"
                         className="underline decoration-line underline-offset-2 hover:text-accent"
                       >
-                        {row.value}
+                        {/채널\s*URL|유튜브\s*채널/.test(row.label)
+                          ? youtubeChannelLinkLabel(entity.name, row.value)
+                          : row.value}
                       </a>
                     ) : (
                       row.value

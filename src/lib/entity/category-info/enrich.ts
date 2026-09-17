@@ -1155,14 +1155,22 @@ export async function enrichCategoryInfoPayload(
       if (youtubeProfile) {
         rows = fillUpdatingRows(rows, [
           { label: "유튜브 채널", value: youtubeProfile.title, emphasize: true },
-          { label: "채널 URL", value: youtubeProfile.url, emphasize: true },
+          {
+            label: "채널 URL",
+            value: youtubeProfile.title || name,
+            emphasize: true,
+          },
         ]);
         if (youtubeProfile.subscriberLabel) {
           rows = upsertRow(rows, "구독자 수", youtubeProfile.subscriberLabel, true);
         }
         rows = rows.map((row) =>
           row.label === "채널 URL"
-            ? { ...row, value: youtubeProfile.url, href: youtubeProfile.url }
+            ? {
+                ...row,
+                value: youtubeProfile.title || name,
+                href: youtubeProfile.url,
+              }
             : row,
         );
         if (youtubeProfile.recentVideoTitles.length) {
@@ -1186,13 +1194,17 @@ export async function enrichCategoryInfoPayload(
           },
           {
             label: "채널 URL",
-            value: preferUc,
+            value: youtubeDocs[0].publisher || name,
             emphasize: true,
           },
         ]);
         rows = rows.map((row) =>
           row.label === "채널 URL"
-            ? { ...row, value: preferUc, href: preferUc }
+            ? {
+                ...row,
+                value: youtubeDocs[0]!.publisher || name,
+                href: preferUc,
+              }
             : row,
         );
         chips = [

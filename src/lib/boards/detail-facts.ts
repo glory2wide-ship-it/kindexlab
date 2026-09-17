@@ -108,7 +108,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     aliases: ["침투부"],
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "유튜브에서 채널 확인", href: youtubeSearchUrl("침착맨") },
+      { label: "채널 URL", value: "침착맨", href: youtubeSearchUrl("침착맨") },
       { label: "최근 이슈 영상", value: "침착맨 최신 업로드 (채널에서 확인)" },
     ],
     links: [
@@ -121,7 +121,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "피식대학",
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "유튜브에서 채널 확인", href: youtubeSearchUrl("피식대학") },
+      { label: "채널 URL", value: "피식대학", href: youtubeSearchUrl("피식대학") },
       { label: "최근 이슈 영상", value: "피식대학 최신 스케치 (채널에서 확인)" },
     ],
     links: newsLinks("피식대학", ["유튜브", "스케치"]),
@@ -130,7 +130,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "문명특급",
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "유튜브에서 채널 확인", href: youtubeSearchUrl("문명특급") },
+      { label: "채널 URL", value: "문명특급", href: youtubeSearchUrl("문명특급") },
       { label: "최근 이슈 영상", value: "문명특급 최신 인터뷰 (채널에서 확인)" },
     ],
     links: newsLinks("문명특급", ["유튜브", "인터뷰"]),
@@ -139,7 +139,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "워크맨",
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "유튜브에서 채널 확인", href: youtubeSearchUrl("워크맨") },
+      { label: "채널 URL", value: "워크맨", href: youtubeSearchUrl("워크맨") },
       { label: "최근 이슈 영상", value: "워크맨 직업체험 최신화 (채널에서 확인)" },
     ],
     links: newsLinks("워크맨", ["유튜브", "직장"]),
@@ -148,7 +148,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "보겸",
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "유튜브에서 채널 확인", href: youtubeSearchUrl("보겸") },
+      { label: "채널 URL", value: "보겸", href: youtubeSearchUrl("보겸") },
       { label: "최근 이슈 영상", value: "보겸 TV 최신 업로드 (채널에서 확인)" },
     ],
     links: newsLinks("보겸", ["유튜브", "이슈"]),
@@ -157,7 +157,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     title: "쯔양",
     domain: "youtube",
     rows: [
-      { label: "채널 URL", value: "유튜브에서 채널 확인", href: youtubeSearchUrl("쯔양") },
+      { label: "채널 URL", value: "쯔양", href: youtubeSearchUrl("쯔양") },
       { label: "최근 이슈 영상", value: "쯔양 먹방 최신화 (채널에서 확인)" },
     ],
     links: newsLinks("쯔양", ["먹방", "유튜브"]),
@@ -169,7 +169,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     rows: [
       {
         label: "채널 URL",
-        value: "youtube.com/channel/UCAAvO0ehWox1bbym3rXKBZw",
+        value: "김어준의 겸손은 힘들다 뉴스공장",
         href: "https://www.youtube.com/channel/UCAAvO0ehWox1bbym3rXKBZw",
       },
       { label: "최근 이슈 영상", value: "뉴스공장 최신 방송분 (채널에서 확인)" },
@@ -182,7 +182,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     rows: [
       {
         label: "채널 URL",
-        value: "유튜브 검색 · 매불쇼",
+        value: "매불쇼",
         href: "https://www.youtube.com/results?search_query=%EB%A7%A4%EB%B6%88%EC%87%BC",
       },
       { label: "최근 이슈 영상", value: "매불쇼 최신 회차 (채널에서 확인)" },
@@ -195,7 +195,7 @@ const DAILY_CATALOG: DailyEntry[] = [
     rows: [
       {
         label: "채널 URL",
-        value: "유튜브 검색 · 신의한수",
+        value: "신의한수",
         href: "https://www.youtube.com/results?search_query=%EC%8B%A0%EC%9D%98%ED%95%9C%EC%88%98",
       },
       { label: "최근 이슈 영상", value: "신의한수 최신 이슈 영상 (채널에서 확인)" },
@@ -389,7 +389,7 @@ function youtubeFallback(name: string): DetailFacts {
     rows: [
       {
         label: "채널 URL",
-        value: hasId ? `youtube.com/channel/${seed!.channelId}` : "유튜브에서 채널 확인",
+        value: name,
         href,
       },
       { label: "최근 이슈 영상", value: `${name} 최신 업로드·화제 영상 (채널에서 확인)` },
@@ -400,7 +400,7 @@ function youtubeFallback(name: string): DetailFacts {
       { title: `${name} 화제 영상 이슈`, href: naverNewsUrl(`${name} 유튜브`) },
       { title: `${name} 최신 클립`, href: naverNewsUrl(`${name} 영상`) },
     ],
-    synopsis: `${name} 채널 URL과 최근 이슈 영상 정보는 관련 채널에서 확인하세요.`,
+    synopsis: `${name} 채널과 최근 이슈 영상 정보는 관련 채널에서 확인하세요.`,
   };
 }
 

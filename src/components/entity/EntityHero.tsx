@@ -3,6 +3,11 @@ import {
   entityNarrativeSummary,
   isEntityIndexBlurbText,
 } from "@/lib/entity/index-blurb";
+import { entityMetricTone } from "@/lib/entity/metric-tone";
+import {
+  isRawYoutubeChannelDisplay,
+  youtubeChannelLinkLabel,
+} from "@/lib/entity/youtube-link-label";
 import { TYPE_LABEL, formatCompact, formatRate, formatScore, metricLabel } from "@/lib/format";
 import {
   formatNaverMeasurement,
@@ -132,8 +137,10 @@ function MarketQuoteHero({
 
 function DetailFactsBlock({
   detailFacts,
+  entityName,
 }: {
   detailFacts: NonNullable<ReturnType<typeof resolveDetailFacts>>;
+  entityName: string;
 }) {
   const synopsis = entityNarrativeSummary(detailFacts.synopsis);
   const showSynopsis = Boolean(synopsis) && !isEntityIndexBlurbText(synopsis);
@@ -143,25 +150,32 @@ function DetailFactsBlock({
         <p className="text-[11px] font-semibold tracking-wide text-soft">종목 프로필</p>
       </div>
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 md:gap-4">
-        {detailFacts.rows.map((row) => (
-          <div key={row.label}>
-            <dt className="text-muted">{row.label}</dt>
-            <dd className="mt-0.5 font-medium leading-snug text-ink md:mt-1">
-              {row.href ? (
-                <a
-                  href={row.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline decoration-line underline-offset-2 hover:text-accent"
-                >
-                  {row.value}
-                </a>
-              ) : (
-                row.value
-              )}
-            </dd>
-          </div>
-        ))}
+        {detailFacts.rows.map((row) => {
+          const isChannelUrl = /채널\s*URL|유튜브\s*채널/.test(row.label);
+          const displayValue =
+            isChannelUrl && (row.href || isRawYoutubeChannelDisplay(row.value))
+              ? youtubeChannelLinkLabel(entityName, row.value)
+              : row.value;
+          return (
+            <div key={row.label}>
+              <dt className="text-muted">{row.label}</dt>
+              <dd className="mt-0.5 font-medium leading-snug text-ink md:mt-1">
+                {row.href ? (
+                  <a
+                    href={row.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline decoration-line underline-offset-2 hover:text-accent"
+                  >
+                    {displayValue}
+                  </a>
+                ) : (
+                  displayValue
+                )}
+              </dd>
+            </div>
+          );
+        })}
       </dl>
       {detailFacts.chips
         ?.filter((chip) => chip.items.length > 0)
@@ -223,10 +237,12 @@ export function EntityHero({
   if (stockQuote) {
     return (
       <MarketQuoteHero entity={entity} quote={stockQuote} kicker={kicker}>
-        {detailFacts ? <DetailFactsBlock detailFacts={detailFacts} /> : null}
+        {detailFacts ? <DetailFactsBlock detailFacts={detailFacts} entityName={entity.name} /> : null}
       </MarketQuoteHero>
     );
   }
+
+  const metricTone = entityMetricTone(entity);
 
   return (
     <section className="rounded-2xl border border-line bg-panel p-[18px] md:p-8">
@@ -240,29 +256,13 @@ export function EntityHero({
       <dl className="detail-metrics-120 mt-[1.125rem] grid grid-cols-3 gap-3 border-t border-line pt-3 text-sm md:mt-6 md:gap-4 md:pt-4">
         <div>
           <dt className="text-muted">현재 순위</dt>
-          <dd
-            className={`mt-0.5 font-sans text-lg tabular-nums md:mt-1 ${
-              entity.rank < entity.previousRank
-                ? "text-up"
-                : entity.rank > entity.previousRank
-                  ? "text-down"
-                  : ""
-            }`}
-          >
+          <dd className={`mt-0.5 font-sans text-lg tabular-nums md:mt-1 ${metricTone}`}>
             {entity.rank}위
           </dd>
         </div>
         <div>
           <dt className="text-muted">KinDex 시가(오픈)</dt>
-          <dd
-            className={`mt-0.5 font-sans text-lg tabular-nums md:mt-1 ${
-              entity.buzzScore > entity.openScore
-                ? "text-up"
-                : entity.buzzScore < entity.openScore
-                  ? "text-down"
-                  : ""
-            }`}
-          >
+          <dd className={`mt-0.5 font-sans text-lg tabular-nums md:mt-1 ${metricTone}`}>
             {formatScore(entity.openScore)}
           </dd>
         </div>
@@ -301,7 +301,7 @@ export function EntityHero({
         </div>
       ) : null}
       
-      {detailFacts ? <DetailFactsBlock detailFacts={detailFacts} /> : null}
+      {detailFacts ? <DetailFactsBlock detailFacts={detailFacts} entityName={entity.name} /> : null}
     </section>
   );
 }

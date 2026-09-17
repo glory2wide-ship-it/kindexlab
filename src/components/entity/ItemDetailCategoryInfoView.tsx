@@ -1,4 +1,8 @@
 import type { CategoryInfoPayload, CategoryInfoSparkline } from "@/lib/entity/category-info/types";
+import {
+  isRawYoutubeChannelDisplay,
+  youtubeChannelLinkLabel,
+} from "@/lib/entity/youtube-link-label";
 
 function formatDateOnly(iso?: string): string {
   if (!iso) return "";
@@ -226,7 +230,13 @@ export function ItemDetailCategoryInfoView({
               </tr>
             </thead>
             <tbody>
-              {payload.rows.map((row) => (
+              {payload.rows.map((row) => {
+                const isChannelUrl = /채널\s*URL|유튜브\s*채널/.test(row.label);
+                const displayValue =
+                  isChannelUrl && (row.href || isRawYoutubeChannelDisplay(row.value))
+                    ? youtubeChannelLinkLabel(payload.entityName, row.value)
+                    : row.value;
+                return (
                 <tr key={`${row.label}-${row.value.slice(0, 40)}`} className="border-t border-line">
                   <th
                     scope="row"
@@ -250,14 +260,15 @@ export function ItemDetailCategoryInfoView({
                         rel="noopener noreferrer"
                         className="break-words text-accent underline decoration-line underline-offset-2 hover:opacity-80"
                       >
-                        {row.value}
+                        {displayValue}
                       </a>
                     ) : (
-                      row.value
+                      displayValue
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

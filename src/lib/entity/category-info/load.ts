@@ -19,7 +19,7 @@ export const CATEGORY_INFO_REVALIDATE_SEC = 3600;
 
 function cacheKey(entity: RankingEntity, channel: string): string[] {
   return [
-    "item-detail-category-info-v17-grant-list-no-date-split",
+    "item-detail-category-info-v18-youtube-channel-name-link",
     channel,
     entity.slug,
     entity.type,

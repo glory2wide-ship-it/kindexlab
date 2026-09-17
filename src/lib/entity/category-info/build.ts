@@ -451,7 +451,7 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
         },
         {
           label: "채널 URL",
-          value: ytUrl ? ytUrl.replace(/^https?:\/\//, "") : UPDATING,
+          value: seed?.name || entity.name,
           href: ytUrl,
         },
         {

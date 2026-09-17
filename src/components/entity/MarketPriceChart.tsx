@@ -235,11 +235,15 @@ export function MarketPriceChart({
             ))}
           </dl>
         </div>
-        <p className="border-t border-line px-5 py-3 text-[11px] leading-5 text-muted max-md:leading-4 md:px-7">
-          TradingView Lightweight Charts · 실제 시세(단위: {unit}). 차트를 좌우로 끌어
-          이전 시간대도 확인할 수 있습니다. 분봉은 국내 주식은 분 단위 체결을 집계하고, 해외
-          주식·원자재·환율은 제공 범위에 따라 일봉으로 대체될 수 있습니다.
-        </p>
+        <div className="border-t border-line px-5 py-3 md:px-7">
+          <div className="rounded-lg border border-line bg-board/70 px-3.5 py-2.5 text-[11px] leading-5 text-muted max-md:leading-4">
+            <p>
+              TradingView Lightweight Charts · 실제 시세(단위: {unit}). 차트를 좌우로 끌어 이전
+              시간대도 확인할 수 있습니다. 분봉은 국내 주식은 분 단위 체결을 집계하고, 해외
+              주식·원자재·환율은 제공 범위에 따라 일봉으로 대체될 수 있습니다.
+            </p>
+          </div>
+        </div>
       </div>
     </section>
   );
