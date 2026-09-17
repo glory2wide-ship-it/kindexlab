@@ -51,7 +51,9 @@ const cache = readFileSync(path.join(root, "src/lib/boards/landing-unified-cache
 if (!cache.includes("isCompleteLandingMarket")) {
   failures.push("landing-unified-cache must reject incomplete / rank-clobbered markets");
 }
-if (!/CACHE_VERSION = 3/.test(cache)) {
+const cacheVersionMatch = cache.match(/CACHE_VERSION\s*=\s*(\d+)/);
+const cacheVersion = cacheVersionMatch ? Number(cacheVersionMatch[1]) : NaN;
+if (!Number.isFinite(cacheVersion) || cacheVersion < 3) {
   failures.push("landing-unified CACHE_VERSION must be ≥3 after desk top-4 contract");
 }
 
