@@ -351,7 +351,7 @@ export function scoreNewsLinkQuality(
 
 /**
  * Related-news placeholders. Prefer empty here — enrich fills real article URLs.
- * At most one Naver search fallback is attached later via ensureQualityNewsLinks.
+ * Search-page fallbacks are never invented (visitor must see press permalinks).
  */
 export function buildRelatedNewsLinks(
   name: string,
@@ -365,44 +365,41 @@ export function buildRelatedNewsLinks(
 }
 
 /**
- * Keep real article links; allow at most one search fallback.
- * Prefer 1–2 quality press URLs over padding to 3 with search pages.
- * When under-filled, label the fallback as “추가 수집 중”.
+ * Keep real article permalinks only.
+ * Never invent Naver/Google search pages labeled “추가 수집 중 · 뉴스 검색” —
+ * enrich.crawlNews must supply press URLs; empty is better than a fake search slot.
  */
 export function ensureQualityNewsLinks(
   name: string,
   links: CategoryInfoLink[],
   options?: {
+    /** @deprecated Ignored — search fallbacks are never emitted. */
     maxSearchFallbacks?: number;
     minPreferred?: number;
     channel?: CategoryInfoChannel;
   },
 ): CategoryInfoLink[] {
-  const maxSearch = options?.maxSearchFallbacks ?? 1;
-  const minPreferred = options?.minPreferred ?? 1;
+  void options?.maxSearchFallbacks;
+  void options?.minPreferred;
   const channel = options?.channel;
   const scored = links
     .filter((link) => link.href)
     .filter((link) => !isNonArticleMediaUrl(link.href))
+    .filter((link) => !isNewsSearchFallbackUrl(link.href))
     .map((link) => ({ link, score: scoreNewsLinkQuality(link, name, channel) }))
     .sort((a, b) => b.score - a.score);
 
   const real: CategoryInfoLink[] = [];
-  const search: CategoryInfoLink[] = [];
   const seen = new Set<string>();
   for (const { link, score } of scored) {
     if (seen.has(link.href)) continue;
     seen.add(link.href);
-    if (isNewsSearchFallbackUrl(link.href) || score === 0) {
-      if (isNewsSearchFallbackUrl(link.href)) search.push(link);
-      continue;
-    }
+    if (score === 0) continue;
     if (score >= 2) real.push(link);
   }
   // Also keep lower-score real permalinks if we are thin
   if (real.length < 2) {
     for (const { link, score } of scored) {
-      if (seen.has(`kept:${link.href}`)) continue;
       if (isNewsSearchFallbackUrl(link.href) || score === 0) continue;
       if (real.some((r) => r.href === link.href)) continue;
       real.push(link);
@@ -423,32 +420,7 @@ export function ensureQualityNewsLinks(
     if (key.length >= 8) seenTitles.add(key);
     deduped.push(link);
   }
-  const needFallback = deduped.length < minPreferred && maxSearch > 0;
-  if (needFallback || (deduped.length === 0 && maxSearch > 0)) {
-    const searchQuery = newsQueryForChannel(name, channel);
-    const fallback =
-      search[0] ??
-      ({
-        title:
-          deduped.length > 0
-            ? `${name} 추가 수집 중 · 뉴스 검색`
-            : `${name} 관련 뉴스 추가 수집 중`,
-        href: naverNewsUrl(searchQuery),
-        source: "뉴스 검색",
-      } satisfies CategoryInfoLink);
-    if (!deduped.some((l) => l.href === fallback.href)) {
-      deduped.push({
-        ...fallback,
-        title: fallback.title.includes("추가 수집")
-          ? fallback.title
-          : `${name} 추가 수집 중 · 뉴스 검색`,
-        href: isNewsSearchFallbackUrl(fallback.href)
-          ? naverNewsUrl(searchQuery)
-          : fallback.href,
-      });
-    }
-  }
-  // Prefer quality 2 over forced 3 — cap soft at 5, do not pad.
+  // Prefer quality 2 over forced 3 — cap soft at 5, never pad with search URLs.
   return deduped.map((link) => ({
     ...link,
     source: link.source
@@ -466,7 +438,7 @@ export function ensureMinNewsLinks(
   min = 2,
 ): CategoryInfoLink[] {
   return ensureQualityNewsLinks(name, links, {
-    maxSearchFallbacks: 1,
+    maxSearchFallbacks: 0,
     minPreferred: Math.min(min, 2),
   });
 }

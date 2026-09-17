@@ -256,7 +256,7 @@ function subsidyRows(entity: RankingEntity, links: CategoryInfoLink[]): {
     rows: nonemptyRows([...detail.rows.filter((r) => !/순위|등락|주관 기관/.test(r.label)), ...rows]),
     links: ensureQualityNewsLinks(entity.name, [...detail.links, ...links], {
       minPreferred: 2,
-      maxSearchFallbacks: 1,
+      maxSearchFallbacks: 0,
     }),
   };
 }
@@ -549,7 +549,7 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
             includeWeb: includeWebBlog,
             includeBlog: includeWebBlog,
           }),
-      { minPreferred: 2, maxSearchFallbacks: 1, channel: resolved.channel },
+      { minPreferred: 2, maxSearchFallbacks: 0, channel: resolved.channel },
     );
     if (rows.length === 0) {
       rows = [{ label: "상태", value: UPDATING, emphasize: true }];
@@ -563,7 +563,7 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
             includeWeb: includeWebBlog,
             includeBlog: includeWebBlog,
           }),
-      { minPreferred: 1, maxSearchFallbacks: 1, channel: resolved.channel },
+      { minPreferred: 1, maxSearchFallbacks: 0, channel: resolved.channel },
     );
   }
 
