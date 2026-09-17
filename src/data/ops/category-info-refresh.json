@@ -1,55 +1,109 @@
 {
-  "updatedAt": "2026-09-17T08:20:00.967Z",
+  "updatedAt": "2026-09-17T10:37:15.199Z",
   "tiers": {
-    "live_signal": "2026-09-17T08:20:00.966Z",
-    "ticket_food": "2026-09-17T07:46:42.643Z",
-    "media_catalog": "2026-09-17T07:44:09.894Z",
-    "entertainment_curated": "2026-09-17T07:44:45.985Z",
-    "other_news": "2026-09-17T07:44:22.053Z"
+    "live_signal": "2026-09-17T10:37:15.199Z",
+    "ticket_food": "2026-09-17T10:34:49.205Z",
+    "media_catalog": "2026-09-17T10:34:27.811Z",
+    "entertainment_curated": "2026-09-17T10:34:05.191Z",
+    "other_news": "2026-09-17T10:31:35.972Z"
   },
   "runs": {
     "media_catalog": {
-      "ok": 229,
-      "fail": 9,
-      "skip": 4,
-      "fillRateAvg": 0.6460055096418729,
-      "usedFallback": 178,
-      "lastRunAt": "2026-09-17T07:47:15.818Z"
+      "ok": 404,
+      "fail": 25,
+      "skip": 8,
+      "fillRateAvg": 0.6216628527841341,
+      "usedFallback": 184,
+      "lastRunAt": "2026-09-17T10:34:27.811Z"
     },
     "entertainment_curated": {
-      "ok": 243,
+      "ok": 382,
       "fail": 3,
       "skip": 6,
-      "fillRateAvg": 0.6388888888888891,
+      "fillRateAvg": 0.6202046035805628,
       "usedFallback": 80,
-      "lastRunAt": "2026-09-17T07:46:40.455Z"
+      "lastRunAt": "2026-09-17T10:34:55.903Z"
     },
     "live_signal": {
-      "ok": 385,
-      "fail": 37,
-      "skip": 35,
-      "fillRateAvg": 0.5696571845368342,
-      "usedFallback": 105,
-      "lastRunAt": "2026-09-17T08:20:00.967Z"
+      "ok": 806,
+      "fail": 44,
+      "skip": 53,
+      "fillRateAvg": 0.6352897748246589,
+      "usedFallback": 151,
+      "lastRunAt": "2026-09-17T10:37:15.199Z"
     },
     "other_news": {
-      "ok": 168,
-      "fail": 68,
-      "skip": 39,
-      "fillRateAvg": 0.44121212121212094,
+      "ok": 311,
+      "fail": 101,
+      "skip": 61,
+      "fillRateAvg": 0.513742071881607,
       "usedFallback": 5,
-      "lastRunAt": "2026-09-17T07:46:26.718Z"
+      "lastRunAt": "2026-09-17T10:34:52.710Z"
     },
     "ticket_food": {
-      "ok": 121,
-      "fail": 38,
-      "skip": 3,
-      "fillRateAvg": 0.46090534979423897,
+      "ok": 183,
+      "fail": 40,
+      "skip": 5,
+      "fillRateAvg": 0.4809941520467835,
       "usedFallback": 122,
-      "lastRunAt": "2026-09-17T07:46:43.931Z"
+      "lastRunAt": "2026-09-17T10:37:02.452Z"
     }
   },
   "history": [
+    {
+      "id": "warm-2026-09-17T10-37-02-452Z",
+      "at": "2026-09-17T10:37:02.452Z",
+      "source": "warm",
+      "label": "전 종목 맞춤 정보 갱신",
+      "entityCount": 1077,
+      "ok": 2085,
+      "fail": 213,
+      "skip": 133,
+      "fillRateAvg": 0.5921431509666806,
+      "usedFallback": 542,
+      "tiers": {
+        "live_signal": {
+          "ok": 805,
+          "fail": 44,
+          "skip": 53,
+          "fillRateAvg": 0.6348854397634889,
+          "usedFallback": 151,
+          "lastRunAt": "2026-09-17T10:34:45.636Z"
+        },
+        "ticket_food": {
+          "ok": 183,
+          "fail": 40,
+          "skip": 5,
+          "fillRateAvg": 0.4809941520467835,
+          "usedFallback": 122,
+          "lastRunAt": "2026-09-17T10:37:02.452Z"
+        },
+        "media_catalog": {
+          "ok": 404,
+          "fail": 25,
+          "skip": 8,
+          "fillRateAvg": 0.6216628527841341,
+          "usedFallback": 184,
+          "lastRunAt": "2026-09-17T10:34:27.811Z"
+        },
+        "entertainment_curated": {
+          "ok": 382,
+          "fail": 3,
+          "skip": 6,
+          "fillRateAvg": 0.6202046035805628,
+          "usedFallback": 80,
+          "lastRunAt": "2026-09-17T10:34:55.903Z"
+        },
+        "other_news": {
+          "ok": 311,
+          "fail": 101,
+          "skip": 61,
+          "fillRateAvg": 0.513742071881607,
+          "usedFallback": 5,
+          "lastRunAt": "2026-09-17T10:34:52.710Z"
+        }
+      }
+    },
     {
       "id": "warm-2026-09-17T08-00-23-906Z",
       "at": "2026-09-17T08:00:23.906Z",

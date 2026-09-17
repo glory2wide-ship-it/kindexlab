@@ -1,14 +1,50 @@
 {
-  "updatedAt": "2026-09-17T08:03:21.666Z",
+  "updatedAt": "2026-09-17T10:37:02.450Z",
   "failures": [
+    {
+      "id": "gov_subsidy:[과학기술정보통신부] 디지털배움터:no_match",
+      "channel": "gov_subsidy",
+      "entityName": "[과학기술정보통신부] 디지털배움터",
+      "kind": "no_match",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "at": "2026-09-17T10:31:43.618Z",
+      "retries": 0
+    },
+    {
+      "id": "travel_grant:[제주] 2026년 2차 도내 여행업계 중심 제주 상품 홍보마케팅 지원 공고:no_match",
+      "channel": "travel_grant",
+      "entityName": "[제주] 2026년 2차 도내 여행업계 중심 제주 상품 홍보마케팅 지원 공고",
+      "kind": "no_match",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "at": "2026-09-17T10:30:32.561Z",
+      "retries": 0
+    },
+    {
+      "id": "gov_subsidy:[금융위원회] 안심전환대출:no_match",
+      "channel": "gov_subsidy",
+      "entityName": "[금융위원회] 안심전환대출",
+      "kind": "no_match",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "at": "2026-09-17T10:20:42.950Z",
+      "retries": 0
+    },
+    {
+      "id": "gov_subsidy:[기획재정부] 민생회복 지원금:no_match",
+      "channel": "gov_subsidy",
+      "entityName": "[기획재정부] 민생회복 지원금",
+      "kind": "no_match",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "at": "2026-09-17T10:13:49.439Z",
+      "retries": 0
+    },
     {
       "id": "housing:[인천] 송도더샵센트럴파크:no_match",
       "channel": "housing",
       "entityName": "[인천] 송도더샵센트럴파크",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:46:07.740Z",
-      "retries": 0
+      "at": "2026-09-17T10:33:08.766Z",
+      "retries": 1
     },
     {
       "id": "travel_grant:[문화체육관광부] 야간관광 특화도시:no_match",
@@ -16,8 +52,8 @@
       "entityName": "[문화체육관광부] 야간관광 특화도시",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:46:02.963Z",
-      "retries": 0
+      "at": "2026-09-17T10:33:37.978Z",
+      "retries": 1
     },
     {
       "id": "performance:[대전] 대전시향 정기연주회:no_match",
@@ -25,8 +61,8 @@
       "entityName": "[대전] 대전시향 정기연주회",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:45:56.251Z",
-      "retries": 0
+      "at": "2026-09-17T10:33:10.809Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[광주] ACC 몰입형 미디어전:no_match",
@@ -34,8 +70,8 @@
       "entityName": "[광주] ACC 몰입형 미디어전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:45:56.159Z",
-      "retries": 0
+      "at": "2026-09-17T10:33:13.959Z",
+      "retries": 1
     },
     {
       "id": "startup:치킨:no_match",
@@ -43,8 +79,8 @@
       "entityName": "치킨",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:45:54.021Z",
-      "retries": 0
+      "at": "2026-09-17T10:33:12.243Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[문화체육관광부] 작은도서관 조성:no_match",
@@ -52,8 +88,8 @@
       "entityName": "[문화체육관광부] 작은도서관 조성",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:45:42.297Z",
-      "retries": 0
+      "at": "2026-09-17T10:32:44.718Z",
+      "retries": 1
     },
     {
       "id": "local_policy:[충청남도] 청년농 지원:no_match",
@@ -61,8 +97,8 @@
       "entityName": "[충청남도] 청년농 지원",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:45:38.825Z",
-      "retries": 0
+      "at": "2026-09-17T10:32:37.657Z",
+      "retries": 1
     },
     {
       "id": "performance:[부산] [부산] 2026 AKMU CONCERT [ 소문의 낙원（Paradise of Rumors）]:no_match",
@@ -79,8 +115,8 @@
       "entityName": "[한국관광공사] 웰니스관광 클러스터",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:44:40.651Z",
-      "retries": 0
+      "at": "2026-09-17T10:32:09.562Z",
+      "retries": 1
     },
     {
       "id": "performance:[광주] 광주비엔날레 개막 공연:no_match",
@@ -88,8 +124,8 @@
       "entityName": "[광주] 광주비엔날레 개막 공연",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:44:32.283Z",
-      "retries": 0
+      "at": "2026-09-17T10:31:51.749Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[대구] 동성로 몰입형 반고흐전:no_match",
@@ -97,8 +133,8 @@
       "entityName": "[대구] 동성로 몰입형 반고흐전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:44:32.241Z",
-      "retries": 0
+      "at": "2026-09-17T10:31:51.964Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[한국문화예술위원회] 청년예술인 자립지원:no_match",
@@ -106,8 +142,8 @@
       "entityName": "[한국문화예술위원회] 청년예술인 자립지원",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:44:15.506Z",
-      "retries": 0
+      "at": "2026-09-17T10:31:29.991Z",
+      "retries": 1
     },
     {
       "id": "local_policy:[강원특별자치도] 강원상품권:no_match",
@@ -115,8 +151,8 @@
       "entityName": "[강원특별자치도] 강원상품권",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:44:01.116Z",
-      "retries": 0
+      "at": "2026-09-17T10:31:17.041Z",
+      "retries": 1
     },
     {
       "id": "travel_grant:[한국관광공사] 근로자 휴가지원사업:no_match",
@@ -124,8 +160,8 @@
       "entityName": "[한국관광공사] 근로자 휴가지원사업",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:43:42.819Z",
-      "retries": 0
+      "at": "2026-09-17T10:28:31.691Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[부산] 해운대 몰입형 반고흐전:no_match",
@@ -133,8 +169,8 @@
       "entityName": "[부산] 해운대 몰입형 반고흐전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:43:29.081Z",
-      "retries": 0
+      "at": "2026-09-17T10:30:15.543Z",
+      "retries": 1
     },
     {
       "id": "performance:[대구] 대구국제오페라축제:no_match",
@@ -142,8 +178,8 @@
       "entityName": "[대구] 대구국제오페라축제",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:43:29.073Z",
-      "retries": 0
+      "at": "2026-09-17T10:30:16.251Z",
+      "retries": 1
     },
     {
       "id": "housing:회야리버:no_match",
@@ -151,8 +187,8 @@
       "entityName": "회야리버",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:43:23.227Z",
-      "retries": 0
+      "at": "2026-09-17T10:29:13.469Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[문화체육관광부] 생활문화센터 활성화:no_match",
@@ -160,8 +196,8 @@
       "entityName": "[문화체육관광부] 생활문화센터 활성화",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:43:12.040Z",
-      "retries": 0
+      "at": "2026-09-17T10:29:24.137Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[인천] 송도 몰입형 반고흐전:no_match",
@@ -169,8 +205,8 @@
       "entityName": "[인천] 송도 몰입형 반고흐전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:42:48.734Z",
-      "retries": 0
+      "at": "2026-09-17T10:28:16.696Z",
+      "retries": 1
     },
     {
       "id": "performance:[부산] 부산국제록페스티벌:no_match",
@@ -178,8 +214,8 @@
       "entityName": "[부산] 부산국제록페스티벌",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:42:48.517Z",
-      "retries": 0
+      "at": "2026-09-17T10:28:14.951Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[문화체육관광부] 박물관·미술관 길 위의 인문학:no_match",
@@ -187,8 +223,8 @@
       "entityName": "[문화체육관광부] 박물관·미술관 길 위의 인문학",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:42:32.801Z",
-      "retries": 0
+      "at": "2026-09-17T10:27:28.821Z",
+      "retries": 1
     },
     {
       "id": "performance:[경기] [부산] 2026 THE FACT MUSIC AWARDS:no_match",
@@ -205,8 +241,8 @@
       "entityName": "[경기] 수원 미디어아트 특별전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:41:55.782Z",
-      "retries": 0
+      "at": "2026-09-17T10:26:22.126Z",
+      "retries": 1
     },
     {
       "id": "performance:[인천] 송도 뮤지컬 비스티:no_match",
@@ -214,8 +250,8 @@
       "entityName": "[인천] 송도 뮤지컬 비스티",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:41:55.557Z",
-      "retries": 0
+      "at": "2026-09-17T10:26:14.065Z",
+      "retries": 1
     },
     {
       "id": "housing:경동태원하이빌:no_match",
@@ -223,8 +259,8 @@
       "entityName": "경동태원하이빌",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:41:44.862Z",
-      "retries": 0
+      "at": "2026-09-17T10:25:17.682Z",
+      "retries": 1
     },
     {
       "id": "performance:[서울] 뮤지컬 〈비더슈탄트〉:no_match",
@@ -241,8 +277,8 @@
       "entityName": "[한국문화정보원] 문화데이터 활용 지원",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:41:30.582Z",
-      "retries": 0
+      "at": "2026-09-17T10:25:16.509Z",
+      "retries": 1
     },
     {
       "id": "local_policy:[제주특별자치도] 관광정책:no_match",
@@ -250,8 +286,8 @@
       "entityName": "[제주특별자치도] 관광정책",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:43:53.428Z",
-      "retries": 1
+      "at": "2026-09-17T10:31:09.192Z",
+      "retries": 3
     },
     {
       "id": "housing:포레시안:no_match",
@@ -259,8 +295,8 @@
       "entityName": "포레시안",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:41:14.494Z",
-      "retries": 0
+      "at": "2026-09-17T10:23:38.083Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[서울] 반고흐 인사이드:no_match",
@@ -268,8 +304,8 @@
       "entityName": "[서울] 반고흐 인사이드",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:41:10.971Z",
-      "retries": 0
+      "at": "2026-09-17T10:24:14.057Z",
+      "retries": 1
     },
     {
       "id": "performance:[경기] 뮤지컬 데스노트 수원:no_match",
@@ -277,8 +313,8 @@
       "entityName": "[경기] 뮤지컬 데스노트 수원",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:41:09.081Z",
-      "retries": 0
+      "at": "2026-09-17T10:24:06.857Z",
+      "retries": 1
     },
     {
       "id": "startup:카페 창업:no_match",
@@ -286,8 +322,8 @@
       "entityName": "카페 창업",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:40:36.380Z",
-      "retries": 0
+      "at": "2026-09-17T10:20:54.440Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[제주] 아르떼뮤지엄 제주 상설·특별전:no_match",
@@ -295,8 +331,8 @@
       "entityName": "[제주] 아르떼뮤지엄 제주 상설·특별전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:40:36.204Z",
-      "retries": 0
+      "at": "2026-09-17T10:22:37.615Z",
+      "retries": 1
     },
     {
       "id": "performance:[서울] 뮤지컬 데스노트:no_match",
@@ -304,8 +340,8 @@
       "entityName": "[서울] 뮤지컬 데스노트",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:40:36.145Z",
-      "retries": 0
+      "at": "2026-09-17T10:22:35.038Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[한국문학번역원] 한국문학 번역지원:no_match",
@@ -313,8 +349,8 @@
       "entityName": "[한국문학번역원] 한국문학 번역지원",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:40:28.400Z",
-      "retries": 0
+      "at": "2026-09-17T10:22:14.115Z",
+      "retries": 1
     },
     {
       "id": "housing:한빛:no_match",
@@ -322,8 +358,8 @@
       "entityName": "한빛",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:40:24.149Z",
-      "retries": 0
+      "at": "2026-09-17T10:21:46.925Z",
+      "retries": 1
     },
     {
       "id": "local_policy:[대전광역시] 대전사랑카드:no_match",
@@ -331,8 +367,8 @@
       "entityName": "[대전광역시] 대전사랑카드",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:41:50.559Z",
-      "retries": 1
+      "at": "2026-09-17T10:25:54.709Z",
+      "retries": 3
     },
     {
       "id": "travel_grant:[한국관광공사] 관광두레:no_match",
@@ -340,8 +376,8 @@
       "entityName": "[한국관광공사] 관광두레",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:39:55.376Z",
-      "retries": 0
+      "at": "2026-09-17T10:21:05.786Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[경남] 경남도립 기획전:no_match",
@@ -349,8 +385,8 @@
       "entityName": "[경남] 경남도립 기획전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:39:48.508Z",
-      "retries": 0
+      "at": "2026-09-17T10:20:51.572Z",
+      "retries": 1
     },
     {
       "id": "performance:[제주] 제주 뮤지컬 넥스트투노멀:no_match",
@@ -358,8 +394,8 @@
       "entityName": "[제주] 제주 뮤지컬 넥스트투노멀",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:39:48.405Z",
-      "retries": 0
+      "at": "2026-09-17T10:20:51.026Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[문화체육관광부] 방방곡곡 문화공감:no_match",
@@ -367,8 +403,8 @@
       "entityName": "[문화체육관광부] 방방곡곡 문화공감",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:39:39.696Z",
-      "retries": 0
+      "at": "2026-09-17T10:20:22.872Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[경북] 경주솔거 기획전:no_match",
@@ -376,8 +412,8 @@
       "entityName": "[경북] 경주솔거 기획전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:39:10.996Z",
-      "retries": 0
+      "at": "2026-09-17T10:19:10.045Z",
+      "retries": 1
     },
     {
       "id": "housing:더샵디어엘로:no_match",
@@ -385,8 +421,8 @@
       "entityName": "더샵디어엘로",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:38:57.685Z",
-      "retries": 0
+      "at": "2026-09-17T10:18:09.201Z",
+      "retries": 1
     },
     {
       "id": "performance:[경기] [안산] ASAC 콘서트 [ASAC한 Playlist ＃THE SOLUTIONS, 심아일랜드]:no_match",
@@ -403,8 +439,8 @@
       "entityName": "[전남] 여수엑스포 특별전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:38:23.813Z",
-      "retries": 0
+      "at": "2026-09-17T10:16:59.415Z",
+      "retries": 1
     },
     {
       "id": "performance:[경북] 경주 뮤지컬 명성황후:no_match",
@@ -412,8 +448,8 @@
       "entityName": "[경북] 경주 뮤지컬 명성황후",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:38:23.694Z",
-      "retries": 0
+      "at": "2026-09-17T10:16:53.110Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[국토교통부] 디딤돌대출:no_match",
@@ -421,8 +457,8 @@
       "entityName": "[국토교통부] 디딤돌대출",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:45:49.763Z",
-      "retries": 1
+      "at": "2026-09-17T10:15:54.487Z",
+      "retries": 3
     },
     {
       "id": "housing:송도더샵퍼스트파크F13-1BL:no_match",
@@ -430,8 +466,8 @@
       "entityName": "송도더샵퍼스트파크F13-1BL",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:38:06.045Z",
-      "retries": 0
+      "at": "2026-09-17T10:15:13.340Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[한국공예디자인문화진흥원] 전통공예 활성화:no_match",
@@ -439,8 +475,8 @@
       "entityName": "[한국공예디자인문화진흥원] 전통공예 활성화",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:37:56.940Z",
-      "retries": 0
+      "at": "2026-09-17T10:15:39.123Z",
+      "retries": 1
     },
     {
       "id": "local_policy:[대구광역시] 대구행복페이:no_match",
@@ -448,8 +484,8 @@
       "entityName": "[대구광역시] 대구행복페이",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:38:38.571Z",
-      "retries": 1
+      "at": "2026-09-17T10:17:54.455Z",
+      "retries": 3
     },
     {
       "id": "exhibition:[전북] 전북도립 기획전:no_match",
@@ -457,8 +493,8 @@
       "entityName": "[전북] 전북도립 기획전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:37:33.003Z",
-      "retries": 0
+      "at": "2026-09-17T10:13:59.916Z",
+      "retries": 1
     },
     {
       "id": "performance:[전남] 여수 뮤지컬 블루레인:no_match",
@@ -466,8 +502,8 @@
       "entityName": "[전남] 여수 뮤지컬 블루레인",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:37:32.919Z",
-      "retries": 0
+      "at": "2026-09-17T10:13:58.511Z",
+      "retries": 1
     },
     {
       "id": "performance:[광주] [광주] 기획공연 11시 음악산책 단편선 시리즈Ⅵ 더블린 사람들 中 ‘에블린’:no_match",
@@ -484,8 +520,8 @@
       "entityName": "[문화체육관광부] 공연예술 창작산실",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:37:03.126Z",
-      "retries": 0
+      "at": "2026-09-17T10:12:57.296Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[충남] 아산시립 기획전:no_match",
@@ -493,8 +529,8 @@
       "entityName": "[충남] 아산시립 기획전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:36:49.105Z",
-      "retries": 0
+      "at": "2026-09-17T10:12:13.447Z",
+      "retries": 1
     },
     {
       "id": "performance:[전북] 전주 뮤지컬 모래시계:no_match",
@@ -502,8 +538,8 @@
       "entityName": "[전북] 전주 뮤지컬 모래시계",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:36:48.895Z",
-      "retries": 0
+      "at": "2026-09-17T10:12:03.575Z",
+      "retries": 1
     },
     {
       "id": "performance:Aosaka: kurayamisaka & parannoul:no_match",
@@ -520,8 +556,8 @@
       "entityName": "릴 토니노 람보르기니",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:35:59.881Z",
-      "retries": 0
+      "at": "2026-09-17T10:10:21.790Z",
+      "retries": 1
     },
     {
       "id": "performance:[충남] 천안 뮤지컬 번지점프를하다:no_match",
@@ -529,8 +565,8 @@
       "entityName": "[충남] 천안 뮤지컬 번지점프를하다",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:35:59.742Z",
-      "retries": 0
+      "at": "2026-09-17T10:10:21.616Z",
+      "retries": 1
     },
     {
       "id": "housing:구월힐스테이트1단지:no_match",
@@ -538,8 +574,8 @@
       "entityName": "구월힐스테이트1단지",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:35:53.265Z",
-      "retries": 0
+      "at": "2026-09-17T10:07:38.205Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[문화체육관광부] 생활밀착형 국민체육센터:no_match",
@@ -547,8 +583,8 @@
       "entityName": "[문화체육관광부] 생활밀착형 국민체육센터",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:35:50.689Z",
-      "retries": 0
+      "at": "2026-09-17T10:09:14.484Z",
+      "retries": 1
     },
     {
       "id": "performance:[충북] 청주 뮤지컬 빨래:no_match",
@@ -556,8 +592,8 @@
       "entityName": "[충북] 청주 뮤지컬 빨래",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:35:21.813Z",
-      "retries": 0
+      "at": "2026-09-17T10:04:18.799Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[충북] 청주시립 기획전:no_match",
@@ -565,8 +601,8 @@
       "entityName": "[충북] 청주시립 기획전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:35:21.473Z",
-      "retries": 0
+      "at": "2026-09-17T10:04:34.119Z",
+      "retries": 1
     },
     {
       "id": "housing:캐슬골드파크4단지:no_match",
@@ -574,8 +610,8 @@
       "entityName": "캐슬골드파크4단지",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:35:10.218Z",
-      "retries": 0
+      "at": "2026-09-17T10:00:32.043Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[영화진흥위원회] 독립영화 제작지원:no_match",
@@ -583,8 +619,8 @@
       "entityName": "[영화진흥위원회] 독립영화 제작지원",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:35:04.935Z",
-      "retries": 0
+      "at": "2026-09-17T09:55:05.262Z",
+      "retries": 1
     },
     {
       "id": "performance:뮤지컬 [렛미플라이] 혜공 전관 - 그래이공 DAY:no_match",
@@ -601,8 +637,8 @@
       "entityName": "[강원] 강릉시립 기획전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:34:35.932Z",
-      "retries": 0
+      "at": "2026-09-17T09:59:12.129Z",
+      "retries": 1
     },
     {
       "id": "performance:[강원] 춘천 뮤지컬 그날들:no_match",
@@ -610,8 +646,8 @@
       "entityName": "[강원] 춘천 뮤지컬 그날들",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:34:35.822Z",
-      "retries": 0
+      "at": "2026-09-17T09:58:24.375Z",
+      "retries": 1
     },
     {
       "id": "performance:[서울] 뮤지컬 [잔혹동화 생존기] 웃다가 살아남는 생존 뮤지컬:no_match",
@@ -628,8 +664,8 @@
       "entityName": "[한국콘텐츠진흥원] 스토리창작 지원",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:34:19.053Z",
-      "retries": 0
+      "at": "2026-09-17T09:44:55.713Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[세종] 세종시 기획 특별전:no_match",
@@ -637,8 +673,8 @@
       "entityName": "[세종] 세종시 기획 특별전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:33:41.255Z",
-      "retries": 0
+      "at": "2026-09-17T09:51:16.907Z",
+      "retries": 1
     },
     {
       "id": "performance:[세종] 세종 뮤지컬 킹키부츠:no_match",
@@ -646,8 +682,8 @@
       "entityName": "[세종] 세종 뮤지컬 킹키부츠",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:33:41.247Z",
-      "retries": 0
+      "at": "2026-09-17T09:51:48.613Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[한국문화예술위원회] 아르코 문학창작기금:no_match",
@@ -655,8 +691,8 @@
       "entityName": "[한국문화예술위원회] 아르코 문학창작기금",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:33:17.516Z",
-      "retries": 0
+      "at": "2026-09-17T09:35:45.764Z",
+      "retries": 1
     },
     {
       "id": "performance:Vaundy ASIA ARENA TOUR 2026 “HORO” IN SEOUL:no_match",
@@ -673,8 +709,8 @@
       "entityName": "[울산] 울산시립 기획전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:32:53.592Z",
-      "retries": 0
+      "at": "2026-09-17T09:42:52.279Z",
+      "retries": 1
     },
     {
       "id": "performance:[울산] 울산 뮤지컬 렌트:no_match",
@@ -682,8 +718,8 @@
       "entityName": "[울산] 울산 뮤지컬 렌트",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:32:52.497Z",
-      "retries": 0
+      "at": "2026-09-17T09:42:05.495Z",
+      "retries": 1
     },
     {
       "id": "performance:[경기] 현대카드 슈퍼콘서트 28 위켄드(The Weeknd):no_match",
@@ -700,8 +736,8 @@
       "entityName": "[문화체육관광부] 청춘문화패스",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:32:09.438Z",
-      "retries": 0
+      "at": "2026-09-17T09:21:54.052Z",
+      "retries": 1
     },
     {
       "id": "performance:[대전] 대전 뮤지컬 프랑켄슈타인:no_match",
@@ -709,8 +745,8 @@
       "entityName": "[대전] 대전 뮤지컬 프랑켄슈타인",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:31:56.197Z",
-      "retries": 0
+      "at": "2026-09-17T09:33:15.298Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[대전] 대전시립 기획전:no_match",
@@ -718,8 +754,8 @@
       "entityName": "[대전] 대전시립 기획전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:31:56.181Z",
-      "retries": 0
+      "at": "2026-09-17T09:33:22.957Z",
+      "retries": 1
     },
     {
       "id": "housing:협성·DS엘리시안:no_match",
@@ -727,8 +763,8 @@
       "entityName": "협성·DS엘리시안",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:31:37.787Z",
-      "retries": 0
+      "at": "2026-09-17T09:28:10.970Z",
+      "retries": 1
     },
     {
       "id": "performance:[서울] NEXZ 1ST ASIA TOUR 〈SAUCIN’ THE WORLD〉:no_match",
@@ -745,8 +781,8 @@
       "entityName": "[광주] 광주비엔날레 본전시",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:31:04.552Z",
-      "retries": 0
+      "at": "2026-09-17T09:25:15.437Z",
+      "retries": 1
     },
     {
       "id": "performance:[광주] 광주 뮤지컬 시라노:no_match",
@@ -754,8 +790,8 @@
       "entityName": "[광주] 광주 뮤지컬 시라노",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:31:04.163Z",
-      "retries": 0
+      "at": "2026-09-17T09:24:50.846Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[한국예술인복지재단] 예술인 생활안정자금:no_match",
@@ -763,8 +799,8 @@
       "entityName": "[한국예술인복지재단] 예술인 생활안정자금",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:30:53.308Z",
-      "retries": 0
+      "at": "2026-09-17T10:01:33.468Z",
+      "retries": 1
     },
     {
       "id": "performance:[경기] 2026 무명전설 크리스마스 콘서트 - 수원앵콜:no_match",
@@ -781,8 +817,8 @@
       "entityName": "샘머리2차",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:30:40.722Z",
-      "retries": 0
+      "at": "2026-09-17T09:21:24.262Z",
+      "retries": 1
     },
     {
       "id": "performance:[대구] 대구 뮤지컬 스웨그에이지:no_match",
@@ -790,8 +826,8 @@
       "entityName": "[대구] 대구 뮤지컬 스웨그에이지",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:30:06.121Z",
-      "retries": 0
+      "at": "2026-09-17T09:20:35.943Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[대구] 대구미술관 기획전:no_match",
@@ -799,8 +835,8 @@
       "entityName": "[대구] 대구미술관 기획전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:30:05.502Z",
-      "retries": 0
+      "at": "2026-09-17T09:20:35.652Z",
+      "retries": 1
     },
     {
       "id": "housing:호반써밋그랜드파크3BL:no_match",
@@ -808,8 +844,8 @@
       "entityName": "호반써밋그랜드파크3BL",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:29:38.721Z",
-      "retries": 0
+      "at": "2026-09-17T09:19:35.994Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[부산] 부산비엔날레 본전시:no_match",
@@ -817,8 +853,8 @@
       "entityName": "[부산] 부산비엔날레 본전시",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:29:07.974Z",
-      "retries": 0
+      "at": "2026-09-17T09:18:51.178Z",
+      "retries": 1
     },
     {
       "id": "performance:[부산] 부산 뮤지컬 명성황후:no_match",
@@ -826,8 +862,8 @@
       "entityName": "[부산] 부산 뮤지컬 명성황후",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:29:07.704Z",
-      "retries": 0
+      "at": "2026-09-17T09:18:51.122Z",
+      "retries": 1
     },
     {
       "id": "housing:매화마을공무원2:no_match",
@@ -835,8 +871,8 @@
       "entityName": "매화마을공무원2",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:28:45.481Z",
-      "retries": 0
+      "at": "2026-09-17T09:17:57.271Z",
+      "retries": 1
     },
     {
       "id": "local_policy:[서울특별시] 청년월세 특별지원:no_match",
@@ -844,8 +880,8 @@
       "entityName": "[서울특별시] 청년월세 특별지원",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:30:56.113Z",
-      "retries": 1
+      "at": "2026-09-17T09:22:03.448Z",
+      "retries": 3
     },
     {
       "id": "performance:[인천] 인천시립교향악단 정기연주회:no_match",
@@ -853,8 +889,8 @@
       "entityName": "[인천] 인천시립교향악단 정기연주회",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:28:11.790Z",
-      "retries": 0
+      "at": "2026-09-17T09:17:10.718Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[인천] 인천아트플랫폼 기획전:no_match",
@@ -862,8 +898,8 @@
       "entityName": "[인천] 인천아트플랫폼 기획전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:28:11.214Z",
-      "retries": 0
+      "at": "2026-09-17T09:17:10.636Z",
+      "retries": 1
     },
     {
       "id": "housing:명지협성휴포레:no_match",
@@ -871,8 +907,8 @@
       "entityName": "명지협성휴포레",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:27:43.880Z",
-      "retries": 0
+      "at": "2026-09-17T09:16:25.305Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[경기] 경기도미술관 기획전:no_match",
@@ -880,8 +916,8 @@
       "entityName": "[경기] 경기도미술관 기획전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:27:11.730Z",
-      "retries": 0
+      "at": "2026-09-17T09:15:41.749Z",
+      "retries": 1
     },
     {
       "id": "performance:[경기] 성남 뮤지컬 레베카:no_match",
@@ -889,8 +925,8 @@
       "entityName": "[경기] 성남 뮤지컬 레베카",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:27:11.697Z",
-      "retries": 0
+      "at": "2026-09-17T09:15:36.341Z",
+      "retries": 1
     },
     {
       "id": "gov_subsidy:[중소벤처기업부] 소상공인 전기요금 지원:no_match",
@@ -898,8 +934,8 @@
       "entityName": "[중소벤처기업부] 소상공인 전기요금 지원",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:43:50.103Z",
-      "retries": 2
+      "at": "2026-09-17T10:30:57.150Z",
+      "retries": 5
     },
     {
       "id": "housing:더샵명지퍼스트월드3단지:no_match",
@@ -907,8 +943,8 @@
       "entityName": "더샵명지퍼스트월드3단지",
       "kind": "no_match",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "at": "2026-09-17T07:26:59.938Z",
-      "retries": 0
+      "at": "2026-09-17T09:15:23.139Z",
+      "retries": 1
     },
     {
       "id": "exhibition:[서울] 데이비드 호크니 특별전:no_match",
@@ -916,8 +952,8 @@
       "entityName": "[서울] 데이비드 호크니 특별전",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:26:15.669Z",
-      "retries": 0
+      "at": "2026-09-17T09:14:20.601Z",
+      "retries": 1
     },
     {
       "id": "performance:[서울] 뮤지컬 위키드:no_match",
@@ -925,8 +961,8 @@
       "entityName": "[서울] 뮤지컬 위키드",
       "kind": "no_match",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "at": "2026-09-17T07:26:15.655Z",
-      "retries": 0
+      "at": "2026-09-17T09:14:20.030Z",
+      "retries": 1
     },
     {
       "id": "local_policy:[서울특별시] 기후동행카드:no_match",
@@ -934,8 +970,8 @@
       "entityName": "[서울특별시] 기후동행카드",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:27:52.473Z",
-      "retries": 1
+      "at": "2026-09-17T09:16:34.150Z",
+      "retries": 3
     },
     {
       "id": "gov_subsidy:[국세청] 근로장려금:no_match",
@@ -943,8 +979,8 @@
       "entityName": "[국세청] 근로장려금",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:26:08.683Z",
-      "retries": 1
+      "at": "2026-09-17T09:31:13.674Z",
+      "retries": 3
     },
     {
       "id": "gov_subsidy:[금융위원회] 청년도약계좌:no_match",
@@ -952,8 +988,8 @@
       "entityName": "[금융위원회] 청년도약계좌",
       "kind": "no_match",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "at": "2026-09-17T07:42:06.640Z",
-      "retries": 2
+      "at": "2026-09-17T10:26:53.382Z",
+      "retries": 5
     },
     {
       "id": "gov_subsidy:문화체육관부  한국문화예술위원회 문화누리카드:no_match",
@@ -967,53 +1003,277 @@
   ],
   "retryQueue": [
     {
+      "entityName": "[과학기술정보통신부] 디지털배움터",
+      "channel": "gov_subsidy",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "enqueuedAt": "2026-09-17T10:31:43.618Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[제주] 2026년 2차 도내 여행업계 중심 제주 상품 홍보마케팅 지원 공고",
+      "channel": "travel_grant",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "enqueuedAt": "2026-09-17T10:30:32.561Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[금융위원회] 안심전환대출",
+      "channel": "gov_subsidy",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "enqueuedAt": "2026-09-17T10:20:42.950Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[기획재정부] 민생회복 지원금",
+      "channel": "gov_subsidy",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "enqueuedAt": "2026-09-17T10:13:49.439Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[한국예술인복지재단] 예술인 생활안정자금",
+      "channel": "gov_subsidy",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "enqueuedAt": "2026-09-17T10:01:33.468Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[울산] 울산시립 기획전",
+      "channel": "exhibition",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:42:52.279Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[울산] 울산 뮤지컬 렌트",
+      "channel": "performance",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:42:05.495Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[대전] 대전시립 기획전",
+      "channel": "exhibition",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:33:22.957Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[대전] 대전 뮤지컬 프랑켄슈타인",
+      "channel": "performance",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:33:15.298Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "협성·DS엘리시안",
+      "channel": "housing",
+      "reason": "국토부 실거래·분양 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:28:10.970Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[광주] 광주비엔날레 본전시",
+      "channel": "exhibition",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:25:15.437Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[광주] 광주 뮤지컬 시라노",
+      "channel": "performance",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:24:50.846Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "샘머리2차",
+      "channel": "housing",
+      "reason": "국토부 실거래·분양 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:21:24.262Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[대구] 대구 뮤지컬 스웨그에이지",
+      "channel": "performance",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:20:35.943Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[대구] 대구미술관 기획전",
+      "channel": "exhibition",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:20:35.652Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "호반써밋그랜드파크3BL",
+      "channel": "housing",
+      "reason": "국토부 실거래·분양 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:19:35.994Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[부산] 부산비엔날레 본전시",
+      "channel": "exhibition",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:18:51.178Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[부산] 부산 뮤지컬 명성황후",
+      "channel": "performance",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:18:51.122Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[서울특별시] 청년월세 특별지원",
+      "channel": "local_policy",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "enqueuedAt": "2026-09-17T09:22:03.448Z",
+      "attempts": 1
+    },
+    {
+      "entityName": "매화마을공무원2",
+      "channel": "housing",
+      "reason": "국토부 실거래·분양 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:17:57.271Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[인천] 인천시립교향악단 정기연주회",
+      "channel": "performance",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:17:10.718Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[인천] 인천아트플랫폼 기획전",
+      "channel": "exhibition",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:17:10.636Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[금융위원회] 청년도약계좌",
+      "channel": "gov_subsidy",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "enqueuedAt": "2026-09-17T10:26:53.382Z",
+      "attempts": 2
+    },
+    {
+      "entityName": "명지협성휴포레",
+      "channel": "housing",
+      "reason": "국토부 실거래·분양 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:16:25.305Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[경기] 경기도미술관 기획전",
+      "channel": "exhibition",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:15:41.749Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[경기] 성남 뮤지컬 레베카",
+      "channel": "performance",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:15:36.341Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[중소벤처기업부] 소상공인 전기요금 지원",
+      "channel": "gov_subsidy",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "enqueuedAt": "2026-09-17T10:30:57.150Z",
+      "attempts": 2
+    },
+    {
+      "entityName": "더샵명지퍼스트월드3단지",
+      "channel": "housing",
+      "reason": "국토부 실거래·분양 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:15:23.139Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[서울] 데이비드 호크니 특별전",
+      "channel": "exhibition",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:14:20.601Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[서울] 뮤지컬 위키드",
+      "channel": "performance",
+      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
+      "enqueuedAt": "2026-09-17T09:14:20.030Z",
+      "attempts": 0
+    },
+    {
+      "entityName": "[국세청] 근로장려금",
+      "channel": "gov_subsidy",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "enqueuedAt": "2026-09-17T09:31:13.674Z",
+      "attempts": 1
+    },
+    {
+      "entityName": "[서울특별시] 기후동행카드",
+      "channel": "local_policy",
+      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      "enqueuedAt": "2026-09-17T09:16:34.150Z",
+      "attempts": 1
+    },
+    {
       "entityName": "[인천] 송도더샵센트럴파크",
       "channel": "housing",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:46:07.740Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:33:08.766Z",
+      "attempts": 1
     },
     {
       "entityName": "[문화체육관광부] 야간관광 특화도시",
       "channel": "travel_grant",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:46:02.963Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:33:37.978Z",
+      "attempts": 1
     },
     {
       "entityName": "[대전] 대전시향 정기연주회",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:45:56.251Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:33:10.809Z",
+      "attempts": 1
     },
     {
       "entityName": "[광주] ACC 몰입형 미디어전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:45:56.159Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:33:13.959Z",
+      "attempts": 1
     },
     {
       "entityName": "치킨",
       "channel": "startup",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:45:54.021Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:33:12.243Z",
+      "attempts": 1
     },
     {
       "entityName": "[문화체육관광부] 작은도서관 조성",
       "channel": "gov_subsidy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:45:42.297Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:32:44.718Z",
+      "attempts": 1
     },
     {
       "entityName": "[충청남도] 청년농 지원",
       "channel": "local_policy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:45:38.825Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:32:37.657Z",
+      "attempts": 1
     },
     {
       "entityName": "[부산] [부산] 2026 AKMU CONCERT [ 소문의 낙원（Paradise of Rumors）]",
@@ -1026,92 +1286,92 @@
       "entityName": "[한국관광공사] 웰니스관광 클러스터",
       "channel": "travel_grant",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:44:40.651Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:32:09.562Z",
+      "attempts": 1
     },
     {
       "entityName": "[광주] 광주비엔날레 개막 공연",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:44:32.283Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:31:51.749Z",
+      "attempts": 1
     },
     {
       "entityName": "[대구] 동성로 몰입형 반고흐전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:44:32.241Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:31:51.964Z",
+      "attempts": 1
     },
     {
       "entityName": "[한국문화예술위원회] 청년예술인 자립지원",
       "channel": "gov_subsidy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:44:15.506Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:31:29.991Z",
+      "attempts": 1
     },
     {
       "entityName": "[강원특별자치도] 강원상품권",
       "channel": "local_policy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:44:01.116Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:31:17.041Z",
+      "attempts": 1
     },
     {
       "entityName": "[한국관광공사] 근로자 휴가지원사업",
       "channel": "travel_grant",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:43:42.819Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:28:31.691Z",
+      "attempts": 1
     },
     {
       "entityName": "[부산] 해운대 몰입형 반고흐전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:43:29.081Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:30:15.543Z",
+      "attempts": 1
     },
     {
       "entityName": "[대구] 대구국제오페라축제",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:43:29.073Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:30:16.251Z",
+      "attempts": 1
     },
     {
       "entityName": "회야리버",
       "channel": "housing",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:43:23.227Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:29:13.469Z",
+      "attempts": 1
     },
     {
       "entityName": "[문화체육관광부] 생활문화센터 활성화",
       "channel": "gov_subsidy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:43:12.040Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:29:24.137Z",
+      "attempts": 1
     },
     {
       "entityName": "[인천] 송도 몰입형 반고흐전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:42:48.734Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:28:16.696Z",
+      "attempts": 1
     },
     {
       "entityName": "[부산] 부산국제록페스티벌",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:42:48.517Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:28:14.951Z",
+      "attempts": 1
     },
     {
       "entityName": "[문화체육관광부] 박물관·미술관 길 위의 인문학",
       "channel": "gov_subsidy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:42:32.801Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:27:28.821Z",
+      "attempts": 1
     },
     {
       "entityName": "[경기] [부산] 2026 THE FACT MUSIC AWARDS",
@@ -1124,22 +1384,22 @@
       "entityName": "[경기] 수원 미디어아트 특별전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:41:55.782Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:26:22.126Z",
+      "attempts": 1
     },
     {
       "entityName": "[인천] 송도 뮤지컬 비스티",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:41:55.557Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:26:14.065Z",
+      "attempts": 1
     },
     {
       "entityName": "경동태원하이빌",
       "channel": "housing",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:41:44.862Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:25:17.682Z",
+      "attempts": 1
     },
     {
       "entityName": "[서울] 뮤지컬 〈비더슈탄트〉",
@@ -1152,120 +1412,120 @@
       "entityName": "[한국문화정보원] 문화데이터 활용 지원",
       "channel": "gov_subsidy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:41:30.582Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:25:16.509Z",
+      "attempts": 1
     },
     {
       "entityName": "[제주특별자치도] 관광정책",
       "channel": "local_policy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:43:53.428Z",
-      "attempts": 1
+      "enqueuedAt": "2026-09-17T10:31:09.192Z",
+      "attempts": 3
     },
     {
       "entityName": "포레시안",
       "channel": "housing",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:41:14.494Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:23:38.083Z",
+      "attempts": 1
     },
     {
       "entityName": "[서울] 반고흐 인사이드",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:41:10.971Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:24:14.057Z",
+      "attempts": 1
     },
     {
       "entityName": "[경기] 뮤지컬 데스노트 수원",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:41:09.081Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:24:06.857Z",
+      "attempts": 1
     },
     {
       "entityName": "카페 창업",
       "channel": "startup",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:40:36.380Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:20:54.440Z",
+      "attempts": 1
     },
     {
       "entityName": "[제주] 아르떼뮤지엄 제주 상설·특별전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:40:36.204Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:22:37.615Z",
+      "attempts": 1
     },
     {
       "entityName": "[서울] 뮤지컬 데스노트",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:40:36.145Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:22:35.038Z",
+      "attempts": 1
     },
     {
       "entityName": "[한국문학번역원] 한국문학 번역지원",
       "channel": "gov_subsidy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:40:28.400Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:22:14.115Z",
+      "attempts": 1
     },
     {
       "entityName": "한빛",
       "channel": "housing",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:40:24.149Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:21:46.925Z",
+      "attempts": 1
     },
     {
       "entityName": "[대전광역시] 대전사랑카드",
       "channel": "local_policy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:41:50.559Z",
-      "attempts": 1
+      "enqueuedAt": "2026-09-17T10:25:54.709Z",
+      "attempts": 3
     },
     {
       "entityName": "[한국관광공사] 관광두레",
       "channel": "travel_grant",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:39:55.376Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:21:05.786Z",
+      "attempts": 1
     },
     {
       "entityName": "[경남] 경남도립 기획전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:39:48.508Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:20:51.572Z",
+      "attempts": 1
     },
     {
       "entityName": "[제주] 제주 뮤지컬 넥스트투노멀",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:39:48.405Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:20:51.026Z",
+      "attempts": 1
     },
     {
       "entityName": "[문화체육관광부] 방방곡곡 문화공감",
       "channel": "gov_subsidy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:39:39.696Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:20:22.872Z",
+      "attempts": 1
     },
     {
       "entityName": "[경북] 경주솔거 기획전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:39:10.996Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:19:10.045Z",
+      "attempts": 1
     },
     {
       "entityName": "더샵디어엘로",
       "channel": "housing",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:38:57.685Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:18:09.201Z",
+      "attempts": 1
     },
     {
       "entityName": "[경기] [안산] ASAC 콘서트 [ASAC한 Playlist ＃THE SOLUTIONS, 심아일랜드]",
@@ -1278,57 +1538,57 @@
       "entityName": "[전남] 여수엑스포 특별전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:38:23.813Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:16:59.415Z",
+      "attempts": 1
     },
     {
       "entityName": "[경북] 경주 뮤지컬 명성황후",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:38:23.694Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:16:53.110Z",
+      "attempts": 1
     },
     {
       "entityName": "[국토교통부] 디딤돌대출",
       "channel": "gov_subsidy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:45:49.763Z",
-      "attempts": 1
+      "enqueuedAt": "2026-09-17T10:15:54.487Z",
+      "attempts": 3
     },
     {
       "entityName": "송도더샵퍼스트파크F13-1BL",
       "channel": "housing",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:38:06.045Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:15:13.340Z",
+      "attempts": 1
     },
     {
       "entityName": "[한국공예디자인문화진흥원] 전통공예 활성화",
       "channel": "gov_subsidy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:37:56.940Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:15:39.123Z",
+      "attempts": 1
     },
     {
       "entityName": "[대구광역시] 대구행복페이",
       "channel": "local_policy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:38:38.571Z",
-      "attempts": 1
+      "enqueuedAt": "2026-09-17T10:17:54.455Z",
+      "attempts": 3
     },
     {
       "entityName": "[전북] 전북도립 기획전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:37:33.003Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:13:59.916Z",
+      "attempts": 1
     },
     {
       "entityName": "[전남] 여수 뮤지컬 블루레인",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:37:32.919Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:13:58.511Z",
+      "attempts": 1
     },
     {
       "entityName": "[광주] [광주] 기획공연 11시 음악산책 단편선 시리즈Ⅵ 더블린 사람들 中 ‘에블린’",
@@ -1341,22 +1601,22 @@
       "entityName": "[문화체육관광부] 공연예술 창작산실",
       "channel": "gov_subsidy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:37:03.126Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:12:57.296Z",
+      "attempts": 1
     },
     {
       "entityName": "[충남] 아산시립 기획전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:36:49.105Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:12:13.447Z",
+      "attempts": 1
     },
     {
       "entityName": "[전북] 전주 뮤지컬 모래시계",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:36:48.895Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:12:03.575Z",
+      "attempts": 1
     },
     {
       "entityName": "Aosaka: kurayamisaka & parannoul",
@@ -1369,57 +1629,57 @@
       "entityName": "릴 토니노 람보르기니",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:35:59.881Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:10:21.790Z",
+      "attempts": 1
     },
     {
       "entityName": "[충남] 천안 뮤지컬 번지점프를하다",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:35:59.742Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:10:21.616Z",
+      "attempts": 1
     },
     {
       "entityName": "구월힐스테이트1단지",
       "channel": "housing",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:35:53.265Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:07:38.205Z",
+      "attempts": 1
     },
     {
       "entityName": "[문화체육관광부] 생활밀착형 국민체육센터",
       "channel": "gov_subsidy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:35:50.689Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:09:14.484Z",
+      "attempts": 1
     },
     {
       "entityName": "[충북] 청주 뮤지컬 빨래",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:35:21.813Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:04:18.799Z",
+      "attempts": 1
     },
     {
       "entityName": "[충북] 청주시립 기획전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:35:21.473Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:04:34.119Z",
+      "attempts": 1
     },
     {
       "entityName": "캐슬골드파크4단지",
       "channel": "housing",
       "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:35:10.218Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T10:00:32.043Z",
+      "attempts": 1
     },
     {
       "entityName": "[영화진흥위원회] 독립영화 제작지원",
       "channel": "gov_subsidy",
       "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:35:04.935Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T09:55:05.262Z",
+      "attempts": 1
     },
     {
       "entityName": "뮤지컬 [렛미플라이] 혜공 전관 - 그래이공 DAY",
@@ -1432,239 +1692,15 @@
       "entityName": "[강원] 강릉시립 기획전",
       "channel": "exhibition",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:34:35.932Z",
-      "attempts": 0
+      "enqueuedAt": "2026-09-17T09:59:12.129Z",
+      "attempts": 1
     },
     {
       "entityName": "[강원] 춘천 뮤지컬 그날들",
       "channel": "performance",
       "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:34:35.822Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[서울] 뮤지컬 [잔혹동화 생존기] 웃다가 살아남는 생존 뮤지컬",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:34:22.440Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[한국콘텐츠진흥원] 스토리창작 지원",
-      "channel": "gov_subsidy",
-      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:34:19.053Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[세종] 세종시 기획 특별전",
-      "channel": "exhibition",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:33:41.255Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[세종] 세종 뮤지컬 킹키부츠",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:33:41.247Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[한국문화예술위원회] 아르코 문학창작기금",
-      "channel": "gov_subsidy",
-      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:33:17.516Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "Vaundy ASIA ARENA TOUR 2026 “HORO” IN SEOUL",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:33:06.883Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[울산] 울산시립 기획전",
-      "channel": "exhibition",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:32:53.592Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[울산] 울산 뮤지컬 렌트",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:32:52.497Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[경기] 현대카드 슈퍼콘서트 28 위켄드(The Weeknd)",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:32:19.182Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[문화체육관광부] 청춘문화패스",
-      "channel": "gov_subsidy",
-      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:32:09.438Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[대전] 대전 뮤지컬 프랑켄슈타인",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:31:56.197Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[대전] 대전시립 기획전",
-      "channel": "exhibition",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:31:56.181Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "협성·DS엘리시안",
-      "channel": "housing",
-      "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:31:37.787Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[서울] NEXZ 1ST ASIA TOUR 〈SAUCIN’ THE WORLD〉",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:31:36.240Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[광주] 광주비엔날레 본전시",
-      "channel": "exhibition",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:31:04.552Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[광주] 광주 뮤지컬 시라노",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:31:04.163Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[한국예술인복지재단] 예술인 생활안정자금",
-      "channel": "gov_subsidy",
-      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:30:53.308Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[경기] 2026 무명전설 크리스마스 콘서트 - 수원앵콜",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:30:45.538Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "샘머리2차",
-      "channel": "housing",
-      "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:30:40.722Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[대구] 대구 뮤지컬 스웨그에이지",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:30:06.121Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[대구] 대구미술관 기획전",
-      "channel": "exhibition",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:30:05.502Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "호반써밋그랜드파크3BL",
-      "channel": "housing",
-      "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:29:38.721Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[부산] 부산비엔날레 본전시",
-      "channel": "exhibition",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:29:07.974Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[부산] 부산 뮤지컬 명성황후",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:29:07.704Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "매화마을공무원2",
-      "channel": "housing",
-      "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:28:45.481Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[서울특별시] 청년월세 특별지원",
-      "channel": "local_policy",
-      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:30:56.113Z",
+      "enqueuedAt": "2026-09-17T09:58:24.375Z",
       "attempts": 1
-    },
-    {
-      "entityName": "[인천] 인천시립교향악단 정기연주회",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:28:11.790Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[인천] 인천아트플랫폼 기획전",
-      "channel": "exhibition",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:28:11.214Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "명지협성휴포레",
-      "channel": "housing",
-      "reason": "국토부 실거래·분양 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:27:43.880Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[경기] 경기도미술관 기획전",
-      "channel": "exhibition",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:27:11.730Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[경기] 성남 뮤지컬 레베카",
-      "channel": "performance",
-      "reason": "놀티켓·티켓링크·인터파크·예스24에서 공연/전시 매칭 실패",
-      "enqueuedAt": "2026-09-17T07:27:11.697Z",
-      "attempts": 0
-    },
-    {
-      "entityName": "[중소벤처기업부] 소상공인 전기요금 지원",
-      "channel": "gov_subsidy",
-      "reason": "보조금24·복지로·기업마당에서 매칭 결과 없음",
-      "enqueuedAt": "2026-09-17T07:43:50.103Z",
-      "attempts": 2
     }
   ]
 }
