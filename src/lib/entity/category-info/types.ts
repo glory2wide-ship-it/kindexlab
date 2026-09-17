@@ -82,6 +82,8 @@ export type CategoryInfoBase = {
   channel: CategoryInfoChannel;
   channelLabel: string;
   entityName: string;
+  /** Artist / English name — music-board songs use this for Melon matching. */
+  entityNameEn?: string;
   entitySlug: string;
   updatedAt: string;
   /** Last refresh timestamp for this channel tier (ISO). */

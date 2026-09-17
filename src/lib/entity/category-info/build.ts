@@ -186,7 +186,14 @@ function fromTv(entity: RankingEntity): {
 function musicChartRows(entity: RankingEntity): CategoryInfoRow[] {
   const rows: CategoryInfoRow[] = [];
   const ent = fromEntertainment(entity);
-  rows.push(...ent.rows);
+  rows.push(...ent.rows.filter((row) => !/출처|멜론/.test(row.label)));
+  if (entity.nameEn) {
+    rows.push({
+      label: "아티스트",
+      value: entity.nameEn,
+      emphasize: true,
+    });
+  }
   if (entity.rank > 0) {
     rows.push({
       label: "KinDex 음원 보드 순위",
@@ -194,15 +201,18 @@ function musicChartRows(entity: RankingEntity): CategoryInfoRow[] {
       emphasize: true,
     });
   }
-  rows.push({
-    label: "멜론 차트",
-    value: UPDATING,
-    emphasize: true,
-  });
-  rows.push({
-    label: "출처",
-    value: "음원 상세는 멜론 공개 차트를 우선 수집·표시합니다.",
-  });
+  rows.push(
+    { label: "앨범", value: UPDATING },
+    {
+      label: "멜론 차트",
+      value: UPDATING,
+      emphasize: true,
+    },
+    {
+      label: "출처",
+      value: UPDATING,
+    },
+  );
   return rows;
 }
 
@@ -428,11 +438,13 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
       rows = nonemptyRows(musicChartRows(entity));
       chips = nonemptyChips(entertainment.chips);
       synopsis = entertainment.synopsis;
-      // Melon search URL is a product deep-link (not a news search fallback).
+      // Melon deep-link — enrich replaces with song detail when crawl succeeds.
       links = [
         {
-          title: `${entity.name} 멜론 곡 검색`,
-          href: `https://www.melon.com/search/song/index.htm?q=${encodeURIComponent(entity.name)}`,
+          title: `${entity.name} 멜론 곡 정보`,
+          href: `https://www.melon.com/search/song/index.htm?q=${encodeURIComponent(
+            entity.nameEn ? `${entity.name} ${entity.nameEn}` : entity.name,
+          )}`,
           source: "멜론",
         },
         ...detail.links,
@@ -565,6 +577,7 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
     channel: resolved.channel,
     channelLabel: resolved.channelLabel,
     entityName: entity.name,
+    entityNameEn: entity.nameEn || undefined,
     entitySlug: entity.slug,
     updatedAt: now,
     sparse,

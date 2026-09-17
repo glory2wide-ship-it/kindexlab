@@ -6,6 +6,11 @@ import { lookupFoodFacts } from "@/lib/entity/category-info/lookup-food";
 import { lookupTicketFacts } from "@/lib/entity/category-info/lookup-tickets";
 import { lookupWebtoonFacts } from "@/lib/entity/category-info/lookup-webtoon";
 import {
+  crawlMelonSongsForArtist,
+  lookupMelonSong,
+  type MelonSongHit,
+} from "@/lib/entity/category-info/melon";
+import {
   ensureQualityNewsLinks,
   isNewsSearchFallbackUrl,
   newsQueryForChannel,
@@ -332,6 +337,58 @@ function fillUpdatingRows(
   return next;
 }
 
+function forceRow(
+  rows: CategoryInfoRow[],
+  label: string,
+  value: string,
+  extra?: Partial<CategoryInfoRow>,
+): CategoryInfoRow[] {
+  let replaced = false;
+  const next = rows.map((row) => {
+    if (row.label !== label) return row;
+    replaced = true;
+    return { ...row, value, ...extra, label };
+  });
+  if (!replaced) next.push({ label, value, ...extra });
+  return next;
+}
+
+function applyMelonSongRows(
+  rows: CategoryInfoRow[],
+  links: CategoryInfoLink[],
+  hit: MelonSongHit,
+  songTitle: string,
+): { rows: CategoryInfoRow[]; links: CategoryInfoLink[] } {
+  let next = [...rows];
+  next = forceRow(next, "아티스트", hit.artistName || songTitle, { emphasize: true });
+  if (hit.albumName) {
+    next = forceRow(next, "앨범", hit.albumName);
+  }
+  const chartValue = hit.chartRank
+    ? `멜론 TOP100 ${hit.chartRank}위 · ${hit.songName}`
+    : `멜론 검색 확인 · ${hit.songName}${hit.artistName ? ` · ${hit.artistName}` : ""}`;
+  next = forceRow(next, "멜론 차트", chartValue, {
+    emphasize: true,
+    href: hit.href,
+  });
+  next = forceRow(next, "출처", `멜론 ${hit.source === "chart" ? "공개 차트" : "곡 검색"} 수집`, {
+    href: hit.href,
+  });
+
+  const melonLink: CategoryInfoLink = {
+    title: `${hit.songName} · 멜론 곡 정보`,
+    href: hit.href,
+    source: "멜론",
+  };
+  const withoutMelonSearch = links.filter(
+    (link) => !/melon\.com\/search/i.test(link.href) && !/melon\.com\/song\/detail/i.test(link.href),
+  );
+  return {
+    rows: next,
+    links: [melonLink, ...withoutMelonSearch].slice(0, 5),
+  };
+}
+
 async function crawlNews(
   name: string,
   channel?: CategoryInfoChannel,
@@ -429,87 +486,6 @@ async function crawlYoutube(name: string): Promise<ContextSource[]> {
 }
 
 /** Melon chart + artist search — fill song chips when the artist appears. */
-async function crawlMelonChartHits(name: string): Promise<string[]> {
-  const songs: string[] = [];
-  const seen = new Set<string>();
-  const push = (song?: string) => {
-    const s = plain(song);
-    if (!s || seen.has(s)) return;
-    // Reject agency/news scraps even when Melon HTML is mis-parsed.
-    if (!sanitizeHitSongTitles([s], name).length) return;
-    seen.add(s);
-    songs.push(s);
-  };
-  const nameCore = name.replace(/\s+/g, "");
-
-  const harvest = (html: string, requireArtistMatch: boolean) => {
-    const rowRe =
-      /<div class="ellipsis rank01">[\s\S]*?<a[^>]*>([^<]+)<\/a>[\s\S]*?<div class="ellipsis rank02">[\s\S]*?<a[^>]*>([^<]+)<\/a>/g;
-    for (const match of html.matchAll(rowRe)) {
-      const song = plain(match[1]);
-      const artist = plain(match[2]);
-      if (!song || !artist) continue;
-      const artistCore = artist.replace(/\s+/g, "");
-      if (
-        requireArtistMatch &&
-        !artistCore.includes(nameCore) &&
-        !nameCore.includes(artistCore) &&
-        !artist.includes(name) &&
-        !name.includes(artist)
-      ) {
-        continue;
-      }
-      push(song);
-      if (songs.length >= 5) break;
-    }
-  };
-
-  try {
-    const chartHtml = await fetchText("https://www.melon.com/chart/index.htm", {
-      headers: { Referer: "https://www.melon.com/" },
-      next: { revalidate: 3600 },
-    });
-    harvest(chartHtml, true);
-  } catch {
-    // soft-fail to search
-  }
-
-  if (songs.length < 3) {
-    try {
-      const searchHtml = await fetchText(
-        `https://www.melon.com/search/song/index.htm?q=${encodeURIComponent(name)}`,
-        {
-          headers: { Referer: "https://www.melon.com/" },
-          next: { revalidate: 3600 },
-        },
-      );
-      // Search page: song title then artist in nearby anchors
-      const searchRe =
-        /<a[^>]*href="[^"]*songId=\d+[^"]*"[^>]*>([^<]{2,80})<\/a>[\s\S]{0,400}?<a[^>]*href="[^"]*artistId=\d+[^"]*"[^>]*>([^<]{1,60})<\/a>/gi;
-      for (const match of searchHtml.matchAll(searchRe)) {
-        const song = plain(match[1]);
-        const artist = plain(match[2]);
-        if (!song || !artist) continue;
-        const artistCore = artist.replace(/\s+/g, "");
-        if (
-          !artistCore.includes(nameCore) &&
-          !nameCore.includes(artistCore) &&
-          !artist.includes(name) &&
-          !name.includes(artist)
-        ) {
-          continue;
-        }
-        push(song);
-        if (songs.length >= 5) break;
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  return songs.slice(0, 5);
-}
-
 function linksFromDocs(docs: CrawlDoc[], sourceLabel: string): CategoryInfoLink[] {
   return docs
     .filter((doc) => isSafeOutboundUrl(doc.url))
@@ -911,8 +887,10 @@ export async function enrichCategoryInfoPayload(
   const wantsTickets =
     base.channel === "performance" || base.channel === "exhibition";
   const wantsFood = base.channel === "food";
-  const wantsMelon =
-    base.channel === "music" || base.channel === "kpop" || base.channel === "trot";
+  const wantsMelonArtist =
+    base.channel === "kpop" || base.channel === "trot" || base.channel === "star";
+  const wantsMelonSong = base.channel === "music";
+  const wantsMelon = wantsMelonArtist || wantsMelonSong;
   // Skip expensive web crawl when specialized lookups cover the channel, unless grant/housing need snippets.
   const wantsWebCrawl =
     wantsGrant ||
@@ -935,6 +913,7 @@ export async function enrichCategoryInfoPayload(
     base.sparse;
   const punditSeed =
     base.channel === "political_pundit" ? matchPunditProfileSeed(name) : undefined;
+  const artistHint = base.entityNameEn?.trim() || undefined;
 
   const [
     newsDocs,
@@ -947,6 +926,7 @@ export async function enrichCategoryInfoPayload(
     ticketFacts,
     foodFacts,
     melonHits,
+    melonSong,
     analysisDocs,
     rankingPeers,
   ] = await Promise.all([
@@ -972,7 +952,12 @@ export async function enrichCategoryInfoPayload(
         ).catch(() => undefined)
       : Promise.resolve(undefined),
     wantsFood ? lookupFoodFacts(name).catch(() => undefined) : Promise.resolve(undefined),
-    wantsMelon ? crawlMelonChartHits(name) : Promise.resolve([] as string[]),
+    wantsMelonArtist
+      ? crawlMelonSongsForArtist(name).catch(() => [] as string[])
+      : Promise.resolve([] as string[]),
+    wantsMelonSong
+      ? lookupMelonSong(name, artistHint).catch(() => undefined)
+      : Promise.resolve(undefined),
     loadAnalysisContextDocs(base.entitySlug),
     wantsMelon
       ? getRankings()
@@ -981,6 +966,15 @@ export async function enrichCategoryInfoPayload(
       : Promise.resolve([] as RankingEntity[]),
   ]);
 
+  // Music songs: if payload lacked nameEn, retry Melon with peer artist from rankings.
+  let resolvedMelonSong = melonSong;
+  if (wantsMelonSong && !resolvedMelonSong) {
+    const peer = rankingPeers.find((item) => item.slug === base.entitySlug);
+    const peerArtist = peer?.nameEn?.trim();
+    if (peerArtist && peerArtist !== artistHint) {
+      resolvedMelonSong = await lookupMelonSong(name, peerArtist).catch(() => undefined);
+    }
+  }
   // Ticket / food lookup miss → Admin ledger (same soft retry path as grants).
   if (wantsTickets) {
     const ticketOk = Boolean(
@@ -1150,39 +1144,24 @@ export async function enrichCategoryInfoPayload(
         chips = chips.filter((chip) => !/히트|곡/.test(chip.label) || chip.items.length > 0);
       }
       if (base.channel === "music") {
-        if (hitSongs.length) {
-          rows = fillUpdatingRows(rows, [
-            {
-              label: "멜론 차트",
-              value: `멜론 수집 · ${hitSongs.slice(0, 5).join(" · ")}`,
-              emphasize: true,
-            },
-          ]);
-        } else if (melonHits.length) {
-          rows = fillUpdatingRows(rows, [
-            {
-              label: "멜론 차트",
-              value: `멜론 검색 Top · ${melonHits.slice(0, 5).join(" · ")}`,
-              emphasize: true,
-            },
-          ]);
+        if (resolvedMelonSong) {
+          const applied = applyMelonSongRows(rows, [], resolvedMelonSong, name);
+          rows = applied.rows;
         } else {
-          // Still expose a confirmed Melon field path (search Top empty) without blanking.
-          rows = fillUpdatingRows(rows, [
-            {
-              label: "멜론 차트",
-              value: "멜론 아티스트 곡 검색 결과 확인 중",
-              emphasize: true,
-            },
-          ]);
-          rows = rows.map((row) =>
-            row.label === "멜론 차트"
-              ? {
-                  ...row,
-                  href: `https://www.melon.com/search/song/index.htm?q=${encodeURIComponent(name)}`,
-                }
-              : row,
-          );
+          // Force a Melon provenance path even when the live lookup misses.
+          const searchHref = `https://www.melon.com/search/song/index.htm?q=${encodeURIComponent(
+            artistHint ? `${name} ${artistHint}` : name,
+          )}`;
+          rows = forceRow(rows, "멜론 차트", "멜론 곡 검색으로 확인 중", {
+            emphasize: true,
+            href: searchHref,
+          });
+          rows = forceRow(rows, "출처", "멜론 공개 차트·검색 수집 대기", {
+            href: searchHref,
+          });
+          if (artistHint) {
+            rows = forceRow(rows, "아티스트", artistHint, { emphasize: true });
+          }
         }
       }
       // Pack-less kpop/trot/star: ensure at least one Melon/news field is filled.
@@ -1828,6 +1807,13 @@ export async function enrichCategoryInfoPayload(
       title: `${name} · ${foodFacts.source} 장소 정보`,
       href: foodFacts.url,
       source: foodFacts.source,
+    });
+  }
+  if (resolvedMelonSong?.href) {
+    specializedLinks.unshift({
+      title: `${resolvedMelonSong.songName} · 멜론 곡 정보`,
+      href: resolvedMelonSong.href,
+      source: "멜론",
     });
   }
 
