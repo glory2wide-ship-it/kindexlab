@@ -37,6 +37,8 @@ export type AdminOpsArticleTypeRow = {
 export type AdminDashboardPayload = {
   generatedAt: string;
   editionDate: string;
+  /** Past KST dates with stored ops/traffic/cost snapshots (newest first). */
+  availableDates: string[];
   schedule: typeof ADMIN_REFRESH_SCHEDULE;
   categoryInfoRefresh: Array<{
     id: string;
@@ -48,6 +50,16 @@ export type AdminDashboardPayload = {
     lastUpdatedAt: string;
     nextUpdateAt: string;
     overdue: boolean;
+    run: {
+      ok: number;
+      fail: number;
+      skip: number;
+      fillRateAvg: number;
+      usedFallback: number;
+      lastRunAt?: string;
+    };
+    fillRateLabel: string;
+    fallbackLabel: string;
   }>;
   detailCollectApiCost: {
     dayKst: string;
@@ -67,6 +79,33 @@ export type AdminDashboardPayload = {
       note: string;
     };
     updatedAt: string;
+  };
+  detailCollectApiCostHistory: Array<{
+    dayKst: string;
+    youtubeKrwLabel: string;
+    openaiKrwLabel: string;
+    youtubeUnits: number;
+    openaiCalls: number;
+    updatedAt: string;
+  }>;
+  publicDataFailLedger: {
+    updatedAt: string;
+    failures: Array<{
+      id: string;
+      channel: string;
+      entityName: string;
+      kind: string;
+      reason: string;
+      at: string;
+      retries: number;
+    }>;
+    retryQueue: Array<{
+      entityName: string;
+      channel: string;
+      reason: string;
+      enqueuedAt: string;
+      attempts: number;
+    }>;
   };
   daily: {
     editionDate: string;

@@ -1,5 +1,6 @@
 import { fetchJson } from "@/lib/ingestion/http";
 import { recordYoutubeApiUnits } from "@/lib/ops/detail-collect-api-cost";
+import { matchPunditProfileSeed } from "@/lib/politics/pundit-profiles";
 import { matchPoliticsYoutubeSeed } from "@/lib/politics/youtube-seeds";
 
 function youtubeApiKey(): string {
@@ -124,28 +125,15 @@ async function recentVideoTitles(
   }
 }
 
-/**
- * Prefer stable /channel/UC… URLs. Only emit @handles when the handle itself
- * resembles the entity name AND the channel has meaningful subscribers
- * (blocks handle-squatter channels with 0–3 subs).
- */
-function channelPublicUrl(
-  channelId: string,
-  customUrl: string | undefined,
-  queryName: string,
-  subscriberCount?: number,
-): string {
-  const handle = customUrl?.replace(/^@/, "").trim();
-  if (handle && (subscriberCount ?? 0) >= 10_000) {
-    const handleScore = titleSimilarity(handle, queryName);
-    if (handleScore >= 4) return `https://www.youtube.com/@${handle}`;
-  }
+/** Always prefer stable /channel/UC… — never emit @handles as primary URL. */
+function channelPublicUrl(channelId: string): string {
   return `https://www.youtube.com/channel/${channelId}`;
 }
 
 /**
  * Resolve a YouTube channel (seed ID or name search) + subscriber stats + top videos.
  * Soft-fails to undefined when YOUTUBE_API_KEY is missing.
+ * Prefer board-level UC seeds (politics / pundit / entertainment) over search quota.
  */
 export async function lookupYoutubeChannelProfile(
   name: string,
@@ -158,10 +146,18 @@ export async function lookupYoutubeChannelProfile(
   try {
     const politics = matchPoliticsYoutubeSeed(q);
     const entertainment = matchEntertainmentYoutubeSeed(q);
-    let channelId =
+    const pundit = matchPunditProfileSeed(q);
+    const seededId =
       (politics?.channelId && /^UC[\w-]{20,}$/.test(politics.channelId)
         ? politics.channelId
-        : undefined) || entertainment?.channelId;
+        : undefined) ||
+      entertainment?.channelId ||
+      (pundit?.youtubeChannelId && /^UC[\w-]{20,}$/.test(pundit.youtubeChannelId)
+        ? pundit.youtubeChannelId
+        : undefined) ||
+      (/^UC[\w-]{20,}$/.test(q) ? q : undefined);
+
+    let channelId = seededId;
 
     if (!channelId) {
       const search = await fetchJson<{
@@ -182,7 +178,6 @@ export async function lookupYoutubeChannelProfile(
         })
         .filter((row): row is { id: string; title: string; score: number } => Boolean(row.id))
         .sort((a, b) => b.score - a.score);
-      // Reject weak matches — wrong channels destroy trust more than missing URLs.
       if (!ranked[0] || ranked[0].score < 4) return undefined;
       channelId = ranked[0].id;
     }
@@ -194,16 +189,23 @@ export async function lookupYoutubeChannelProfile(
     ]);
     const channel = channels[0];
     if (!channel) return undefined;
-    if (!politics && !entertainment && titleSimilarity(channel.title, q) < 4) {
+    if (
+      !politics &&
+      !entertainment &&
+      !pundit &&
+      !seededId &&
+      titleSimilarity(channel.title, q) < 4
+    ) {
       return undefined;
     }
-    // Reject ghost / squatter channels even if title somehow matched.
-    if ((channel.subscriberCount ?? 0) < 1000 && !politics) return undefined;
+    if ((channel.subscriberCount ?? 0) < 1000 && !politics && !pundit && !seededId) {
+      return undefined;
+    }
 
     return {
       channelId: channel.id,
       title: channel.title,
-      url: channelPublicUrl(channel.id, channel.customUrl, q, channel.subscriberCount),
+      url: channelPublicUrl(channel.id),
       subscriberCount: channel.subscriberCount,
       subscriberLabel:
         channel.subscriberCount != null

@@ -9,6 +9,16 @@ import {
 } from "@/lib/entity/category-info/refresh-policy";
 import type { CategoryInfoChannel } from "@/lib/entity/category-info/types";
 
+export type CategoryInfoRefreshRunStats = {
+  ok: number;
+  fail: number;
+  skip: number;
+  /** 0–1 average required-field fill across successful runs in the window. */
+  fillRateAvg: number;
+  usedFallback: number;
+  lastRunAt?: string;
+};
+
 export type CategoryInfoRefreshTierStatus = {
   id: CategoryInfoRefreshTierId;
   label: string;
@@ -19,15 +29,22 @@ export type CategoryInfoRefreshTierStatus = {
   lastUpdatedAt: string;
   nextUpdateAt: string;
   overdue: boolean;
+  /** Latest refresh window success/fail/skip counts. */
+  run: CategoryInfoRefreshRunStats;
 };
 
 type RefreshStateFile = {
   updatedAt: string;
   tiers: Partial<Record<CategoryInfoRefreshTierId, string>>;
+  runs?: Partial<Record<CategoryInfoRefreshTierId, CategoryInfoRefreshRunStats>>;
 };
 
 const STATE_PATH = path.join(process.cwd(), "src/data/ops/category-info-refresh.json");
 const TOUCH_DEBOUNCE_MS = 5 * 60 * 1000;
+
+function emptyRun(): CategoryInfoRefreshRunStats {
+  return { ok: 0, fail: 0, skip: 0, fillRateAvg: 0, usedFallback: 0 };
+}
 
 function defaultLastFor(id: CategoryInfoRefreshTierId): string {
   if (id === "live_signal" || id === "ticket_food" || id === "media_catalog") {
@@ -42,15 +59,16 @@ function defaultLastFor(id: CategoryInfoRefreshTierId): string {
 function readState(): RefreshStateFile {
   try {
     if (!existsSync(STATE_PATH)) {
-      return { updatedAt: new Date().toISOString(), tiers: {} };
+      return { updatedAt: new Date().toISOString(), tiers: {}, runs: {} };
     }
     const raw = JSON.parse(readFileSync(STATE_PATH, "utf8")) as RefreshStateFile;
     return {
       updatedAt: raw.updatedAt || new Date().toISOString(),
       tiers: raw.tiers ?? {},
+      runs: raw.runs ?? {},
     };
   } catch {
-    return { updatedAt: new Date().toISOString(), tiers: {} };
+    return { updatedAt: new Date().toISOString(), tiers: {}, runs: {} };
   }
 }
 
@@ -144,7 +162,6 @@ export function buildCategoryInfoRefreshStatus(
   now = Date.now(),
 ): CategoryInfoRefreshTierStatus[] {
   const state = readState();
-  // Keep curated anchors aligned with catalogue stamps when newer.
   state.tiers.live_signal = pickLater(state.tiers.live_signal, DETAIL_FACTS_DAILY_CHECKED_AT);
   state.tiers.ticket_food = pickLater(state.tiers.ticket_food, DETAIL_FACTS_DAILY_CHECKED_AT);
   state.tiers.media_catalog = pickLater(
@@ -159,6 +176,7 @@ export function buildCategoryInfoRefreshStatus(
   return CATEGORY_INFO_REFRESH_TIERS.map((tier) => {
     const lastUpdatedAt = state.tiers[tier.id] || defaultLastFor(tier.id);
     const { nextUpdateAt, overdue } = computeNext(lastUpdatedAt, tier.intervalMs, now);
+    const run = state.runs?.[tier.id] ?? emptyRun();
     return {
       id: tier.id,
       label: tier.label,
@@ -169,6 +187,7 @@ export function buildCategoryInfoRefreshStatus(
       lastUpdatedAt,
       nextUpdateAt,
       overdue,
+      run,
     };
   });
 }
@@ -191,5 +210,77 @@ export function touchCategoryInfoRefreshTier(channel: CategoryInfoChannel): void
     writeState(state);
   } catch {
     /* soft — admin can still show catalogue anchors */
+  }
+}
+
+/**
+ * Record one enrich outcome for Admin 회차별 성공/실패/스킵 + 채움률.
+ * Not debounced — counts every attempt in the process lifetime window.
+ */
+export function recordCategoryInfoRefreshRun(input: {
+  channel: CategoryInfoChannel;
+  status: "ok" | "fail" | "skip";
+  fillRate?: number;
+  usedFallback?: boolean;
+}): void {
+  const tier = resolveCategoryInfoRefreshTier(input.channel);
+  const state = readState();
+  if (!state.runs) state.runs = {};
+  const prev = state.runs[tier.id] ?? emptyRun();
+  const next: CategoryInfoRefreshRunStats = { ...prev };
+  if (input.status === "ok") next.ok += 1;
+  else if (input.status === "fail") next.fail += 1;
+  else next.skip += 1;
+  if (input.usedFallback) next.usedFallback += 1;
+  if (typeof input.fillRate === "number" && Number.isFinite(input.fillRate)) {
+    const total = next.ok + next.fail + next.skip;
+    const prevTotal = Math.max(0, total - 1);
+    next.fillRateAvg =
+      prevTotal <= 0
+        ? Math.max(0, Math.min(1, input.fillRate))
+        : (prev.fillRateAvg * prevTotal + Math.max(0, Math.min(1, input.fillRate))) /
+          total;
+  }
+  next.lastRunAt = new Date().toISOString();
+  state.runs[tier.id] = next;
+  state.updatedAt = next.lastRunAt;
+  try {
+    writeState(state);
+  } catch {
+    /* soft */
+  }
+}
+
+/** Required labels for fill-rate (Excel-ish essentials). */
+export function requiredLabelsForChannel(channel: CategoryInfoChannel): string[] {
+  switch (channel) {
+    case "music":
+      return ["멜론 차트"];
+    case "kpop":
+    case "trot":
+    case "star":
+      return ["소속사", "최근 히트곡"];
+    case "youtuber":
+    case "politics_youtube":
+      return ["유튜브 채널", "구독자 수", "채널 URL"];
+    case "political_pundit":
+      return ["방송 출연", "유튜브 채널", "SNS"];
+    case "webtoon":
+      return ["플랫폼", "작가", "주요 인물"];
+    case "book":
+      return ["작가", "출판사", "필모"];
+    case "performance":
+      return ["공연 장소", "공연 일정", "티켓 가격"];
+    case "exhibition":
+      return ["행사 장소", "행사 시간", "입장료"];
+    case "food":
+      return ["주소", "영업시간", "추천 메뉴"];
+    case "gov_subsidy":
+    case "travel_grant":
+      return ["주관 기관 홈페이지", "신청 기간", "신청 자격·조건"];
+    case "housing":
+      return ["실거래가"];
+    default:
+      return [];
   }
 }

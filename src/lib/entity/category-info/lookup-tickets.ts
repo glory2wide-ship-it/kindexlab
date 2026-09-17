@@ -10,7 +10,7 @@ export type TicketLookup = {
   price?: string;
   url?: string;
   bookingPercent?: string;
-  source: "놀티켓" | "티켓링크" | "예스24티켓";
+  source: "놀티켓" | "티켓링크" | "예스24티켓" | "인터파크티켓";
   kind: "performance" | "exhibition";
 };
 
@@ -328,6 +328,109 @@ async function lookupTicketlink(
   }
 }
 
+async function lookupYes24TicketSearch(
+  name: string,
+  kind: "performance" | "exhibition",
+): Promise<TicketLookup | undefined> {
+  const url = `https://ticket.yes24.com/Pages/Search/Search.aspx?query=${encodeURIComponent(name)}`;
+  try {
+    const html = await fetchText(url, {
+      headers: { Referer: "https://ticket.yes24.com/" },
+    });
+    const candidates: Array<{ title: string; href: string; venue?: string; schedule?: string }> =
+      [];
+    for (const match of html.matchAll(
+      /href="([^"]*Perf\/Detail\/Index\?Id=\d+[^"]*)"[^>]*>([^<]{2,80})</gi,
+    )) {
+      const title = plain(match[2]);
+      if (!title || titleScore(title, name) < 50) continue;
+      const href = match[1]!.startsWith("http")
+        ? match[1]!
+        : `https://ticket.yes24.com${match[1]}`;
+      const idx = match.index ?? 0;
+      const window = html.slice(idx, idx + 800);
+      candidates.push({
+        title,
+        href,
+        venue: plain(window.match(/(?:장소|공연장)[^<]{0,20}>([^<]{2,40})</i)?.[1]),
+        schedule: plain(window.match(/(?:기간|일정)[^<]{0,20}>([^<]{6,40})</i)?.[1]),
+      });
+      if (candidates.length >= 5) break;
+    }
+    // Broader anchor fallback — take first ranked search hit
+    if (!candidates.length) {
+      for (const match of html.matchAll(/<a[^>]+href="([^"]+)"[^>]*>([^<]{2,80})<\/a>/gi)) {
+        const title = plain(match[2]);
+        const hrefRaw = match[1] ?? "";
+        if (!title || titleScore(title, name) < 60) continue;
+        if (!/ticket|perf|goods|detail/i.test(hrefRaw) && !/공연|전시|뮤지컬|콘서트/.test(title)) {
+          continue;
+        }
+        const href = hrefRaw.startsWith("http")
+          ? hrefRaw
+          : `https://ticket.yes24.com${hrefRaw.startsWith("/") ? "" : "/"}${hrefRaw}`;
+        candidates.push({ title, href });
+        break;
+      }
+    }
+    candidates.sort((a, b) => titleScore(b.title, name) - titleScore(a.title, name));
+    const top = candidates[0];
+    if (!top) return undefined;
+    return {
+      title: top.title,
+      venue: top.venue,
+      schedule: top.schedule,
+      url: top.href,
+      source: "예스24티켓",
+      kind,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+async function lookupInterparkSearch(
+  name: string,
+  kind: "performance" | "exhibition",
+): Promise<TicketLookup | undefined> {
+  const url = `https://tickets.interpark.com/search?q=${encodeURIComponent(name)}`;
+  try {
+    const html = await fetchText(url, {
+      headers: { Referer: "https://tickets.interpark.com/" },
+    });
+    const candidates: Array<{ title: string; href: string; venue?: string }> = [];
+    for (const match of html.matchAll(
+      /href="((?:https:\/\/tickets\.interpark\.com)?\/goods\/\d+)"[^>]*>([^<]{2,80})</gi,
+    )) {
+      const title = plain(match[2]);
+      if (!title || titleScore(title, name) < 50) continue;
+      const href = match[1]!.startsWith("http")
+        ? match[1]!
+        : `https://tickets.interpark.com${match[1]}`;
+      const idx = match.index ?? 0;
+      const window = html.slice(idx, idx + 600);
+      candidates.push({
+        title,
+        href,
+        venue: plain(window.match(/(?:장소|공연장)[^<]{0,30}>([^<]{2,40})</i)?.[1]),
+      });
+      if (candidates.length >= 5) break;
+    }
+    candidates.sort((a, b) => titleScore(b.title, name) - titleScore(a.title, name));
+    const top = candidates[0];
+    if (!top) return undefined;
+    return {
+      title: top.title,
+      venue: top.venue,
+      url: top.href,
+      source: "인터파크티켓",
+      kind,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 /** Resolve performance/exhibition venue·schedule·price via NOL Ticket + Ticketlink crawls. */
 export async function lookupTicketFacts(
   name: string,
@@ -338,5 +441,10 @@ export async function lookupTicketFacts(
   const nol = await lookupNolTicket(q, kind);
   if (nol?.venue || nol?.schedule || nol?.price) return nol;
   const ticketlink = await lookupTicketlink(q, kind);
-  return ticketlink ?? nol;
+  if (ticketlink?.venue || ticketlink?.schedule) return ticketlink;
+  // 미매칭 시 Interpark / Yes24 검색 1순위 파싱
+  const interpark = await lookupInterparkSearch(q, kind);
+  if (interpark) return interpark;
+  const yes24 = await lookupYes24TicketSearch(q, kind);
+  return yes24 ?? ticketlink ?? nol;
 }

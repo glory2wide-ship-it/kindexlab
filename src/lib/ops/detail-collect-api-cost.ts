@@ -150,8 +150,8 @@ export function snapshotDetailCollectApiCost(
       estimatedKrwLabel: formatKrw(youtubeKrw),
       note:
         bucket.youtubeUnits > 0
-          ? `오늘 ${bucket.youtubeUnits.toLocaleString("ko-KR")} units · ${bucket.youtubeCalls}회 호출 (일일 무료 할당량 내 0원)`
-          : "오늘 상세 정보수집 YouTube 호출 없음",
+          ? `${day} ${bucket.youtubeUnits.toLocaleString("ko-KR")} units · ${bucket.youtubeCalls}회 호출 (일일 무료 할당량 내 0원)`
+          : `${day} 상세 정보수집 YouTube 호출 없음`,
     },
     openai: {
       promptTokens: bucket.openaiPromptTokens,
@@ -161,9 +161,47 @@ export function snapshotDetailCollectApiCost(
       estimatedKrwLabel: formatKrw(openaiKrw),
       note:
         bucket.openaiCalls > 0
-          ? `오늘 ${bucket.openaiCalls}회 · 토큰 ${(bucket.openaiPromptTokens + bucket.openaiCompletionTokens).toLocaleString("ko-KR")}`
+          ? `${day} ${bucket.openaiCalls}회 · 토큰 ${(bucket.openaiPromptTokens + bucket.openaiCompletionTokens).toLocaleString("ko-KR")}`
           : "상세 정보수집 경로에서 OpenAI 미사용 (콘텐츠 생성은 Gemini)",
     },
     updatedAt: bucket.updatedAt || new Date().toISOString(),
   };
+}
+
+/** Past cost days for Admin history (newest first). */
+export function listDetailCollectApiCostDays(limit = 30): string[] {
+  const store = readStore();
+  return Object.keys(store.days)
+    .sort((a, b) => b.localeCompare(a))
+    .slice(0, limit);
+}
+
+/** History rows with KRW labels for Admin “업데이트별 금액”. */
+export function listDetailCollectApiCostHistory(limit = 14): Array<{
+  dayKst: string;
+  youtubeKrwLabel: string;
+  openaiKrwLabel: string;
+  youtubeUnits: number;
+  openaiCalls: number;
+  updatedAt: string;
+}> {
+  const store = readStore();
+  const rate = usdKrwRate();
+  return Object.entries(store.days)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .slice(0, limit)
+    .map(([day, bucket]) => {
+      const youtubeUsd = (bucket.youtubeUnits / 1000) * YOUTUBE_USD_PER_1000_UNITS;
+      const openaiUsd =
+        (bucket.openaiPromptTokens / 1_000_000) * OPENAI_INPUT_PER_M +
+        (bucket.openaiCompletionTokens / 1_000_000) * OPENAI_OUTPUT_PER_M;
+      return {
+        dayKst: day,
+        youtubeKrwLabel: formatKrw(Math.round(youtubeUsd * rate)),
+        openaiKrwLabel: formatKrw(Math.round(openaiUsd * rate)),
+        youtubeUnits: bucket.youtubeUnits,
+        openaiCalls: bucket.openaiCalls,
+        updatedAt: bucket.updatedAt,
+      };
+    });
 }

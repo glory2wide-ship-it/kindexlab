@@ -260,7 +260,6 @@ export function isNewsPrimaryChannel(channel: CategoryInfoChannel): boolean {
     channel === "party_support" ||
     channel === "politician_support" ||
     channel === "local_policy" ||
-    channel === "political_pundit" ||
     channel === "issue_keyword" ||
     channel === "finance" ||
     channel === "stock" ||

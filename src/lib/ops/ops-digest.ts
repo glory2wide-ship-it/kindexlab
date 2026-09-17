@@ -400,6 +400,23 @@ export async function loadOpsDigestsForDate(editionDate = kstToday()): Promise<O
   return dedupeDigestsForAdmin([...byKey.values()]);
 }
 
+/** Distinct KST edition dates that have any ops digest (newest first). */
+export async function listOpsEditionDates(limit = 30): Promise<string[]> {
+  const dates = new Set<string>();
+  for (const dir of [OPS_DAILY_DIR, ARTIFACTS_DIR]) {
+    try {
+      const names = await readdir(dir);
+      for (const name of names) {
+        const m = name.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (m?.[1]) dates.add(m[1]);
+      }
+    } catch {
+      /* missing dir */
+    }
+  }
+  return [...dates].sort((a, b) => b.localeCompare(a)).slice(0, limit);
+}
+
 function rollupCategories(items: OpsDigestItem[]): OpsCategorySummary[] {
   const map = new Map<string, OpsCategorySummary>();
   for (const item of items) {

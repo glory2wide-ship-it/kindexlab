@@ -8,6 +8,7 @@ import {
 } from "@/lib/entity/category-info/refresh-policy";
 import {
   buildCategoryInfoRefreshStatus,
+  recordCategoryInfoRefreshRun,
   touchCategoryInfoRefreshTier,
 } from "@/lib/entity/category-info/refresh-status";
 import type { CategoryInfoPayload } from "@/lib/entity/category-info/types";
@@ -18,7 +19,7 @@ export const CATEGORY_INFO_REVALIDATE_SEC = 3600;
 
 function cacheKey(entity: RankingEntity, channel: string): string[] {
   return [
-    "item-detail-category-info-v11-live-signal-daily",
+    "item-detail-category-info-v12-quality-news-pundit",
     channel,
     entity.slug,
     entity.type,
@@ -44,8 +45,27 @@ async function buildAndEnrich(entity: RankingEntity): Promise<CategoryInfoPayloa
   try {
     const enriched = await enrichCategoryInfoPayload(base);
     touchCategoryInfoRefreshTier(enriched.channel);
+    const fillRate = enriched.fillRate ?? 0;
+    const status =
+      fillRate >= 0.5 || !enriched.sparse
+        ? "ok"
+        : fillRate > 0
+          ? "skip"
+          : "fail";
+    recordCategoryInfoRefreshRun({
+      channel: enriched.channel,
+      status,
+      fillRate,
+      usedFallback: enriched.usedFallback,
+    });
     return withRefreshMeta(enriched);
   } catch {
+    recordCategoryInfoRefreshRun({
+      channel: base.channel,
+      status: "fail",
+      fillRate: 0,
+      usedFallback: true,
+    });
     return withRefreshMeta({
       ...base,
       notice:

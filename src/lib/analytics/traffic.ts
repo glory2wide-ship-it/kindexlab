@@ -245,3 +245,18 @@ export async function getTrafficSnapshot(day = kstDateString()): Promise<Traffic
           : undefined,
   };
 }
+
+/** Local file traffic days (newest first). Supabase-only days are not listed. */
+export async function listTrafficDays(limit = 30): Promise<string[]> {
+  try {
+    const { readdir } = await import("node:fs/promises");
+    const names = await readdir(path.join(process.cwd(), FILE_DIR));
+    return names
+      .map((name) => name.match(/^(\d{4}-\d{2}-\d{2})\.json$/)?.[1])
+      .filter((d): d is string => Boolean(d))
+      .sort((a, b) => b.localeCompare(a))
+      .slice(0, limit);
+  } catch {
+    return [];
+  }
+}

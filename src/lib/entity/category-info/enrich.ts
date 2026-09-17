@@ -5,6 +5,14 @@ import { lookupBookFacts } from "@/lib/entity/category-info/lookup-book";
 import { lookupFoodFacts } from "@/lib/entity/category-info/lookup-food";
 import { lookupTicketFacts } from "@/lib/entity/category-info/lookup-tickets";
 import { lookupWebtoonFacts } from "@/lib/entity/category-info/lookup-webtoon";
+import {
+  ensureQualityNewsLinks,
+  isNewsSearchFallbackUrl,
+  scoreNewsLinkQuality,
+} from "@/lib/entity/category-info/news";
+import {
+  requiredLabelsForChannel,
+} from "@/lib/entity/category-info/refresh-status";
 import type { CategoryInfoChannel } from "@/lib/entity/category-info/types";
 import type {
   CategoryInfoLink,
@@ -14,8 +22,14 @@ import type {
 import { fetchText } from "@/lib/ingestion/http";
 import { decodeHtml, stripTags } from "@/lib/ingestion/parse";
 import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
+import { matchPunditProfileSeed } from "@/lib/politics/pundit-profiles";
+import {
+  clearPublicDataRetry,
+  recordPublicDataFailure,
+} from "@/lib/public-data/fail-ledger";
 import { matchPublicGrant } from "@/lib/public-data/grants";
 import { summarizeHousingPublicData } from "@/lib/public-data/housing";
+import { hasDataGoKrKey } from "@/lib/public-data/key";
 import type { PublicGrantRecord } from "@/lib/public-data/types";
 import { lookupYoutubeChannelProfile } from "@/lib/public-data/youtube-channel";
 import { entityNarrativeSummary } from "@/lib/entity/index-blurb";
@@ -271,6 +285,8 @@ function queryHint(channel: CategoryInfoChannel): string {
     case "youtuber":
     case "politics_youtube":
       return "유튜브 채널 구독자";
+    case "political_pundit":
+      return "출연 토론 방송 유튜브";
     case "gov_subsidy":
     case "travel_grant":
       return "지원금 신청 자격 기간";
@@ -400,36 +416,23 @@ function isSafeOutboundUrl(href: string): boolean {
 }
 
 /**
- * Drop links whose claimed source/title disagrees with the destination host.
- * Prevents “보조금24” titles pointing at unrelated commercial sites.
+ * Drop links whose claimed source/title disagrees with the destination host,
+ * and prefer title·entity·domain quality (보조금24 rules expanded to all channels).
  */
 function sanitizeRelatedLinks(links: CategoryInfoLink[], entityName: string): CategoryInfoLink[] {
-  const needle = entityName.replace(/\s+/g, "").replace(/^\[[^\]]+\]/, "");
+  const scored = links
+    .filter((link) => link.href && isSafeOutboundUrl(link.href))
+    .map((link) => ({ link, score: scoreNewsLinkQuality(link, entityName) }))
+    .filter((row) => row.score > 0 || isNewsSearchFallbackUrl(row.link.href))
+    .sort((a, b) => b.score - a.score);
+
   const out: CategoryInfoLink[] = [];
   const seen = new Set<string>();
-  for (const link of links) {
-    if (!link.href || seen.has(link.href)) continue;
-    if (!isSafeOutboundUrl(link.href)) continue;
-    let host = "";
-    try {
-      host = new URL(link.href).hostname.toLowerCase();
-    } catch {
-      continue;
-    }
-    const title = `${link.title} ${link.source ?? ""}`;
-    const claimsGov = /보조금\s*24|정부24|gov\.kr/i.test(title);
-    const claimsWelfare = /복지로|bokjiro/i.test(title);
-    if (claimsGov && !/(^|\.)gov\.kr$/i.test(host) && !host.endsWith(".go.kr")) continue;
-    if (claimsWelfare && !/bokjiro\.go\.kr$/i.test(host) && !host.endsWith(".go.kr")) continue;
-    // Official grant cards must mention the entity (or a clear grant token).
-    if (claimsGov || claimsWelfare) {
-      const compactTitle = link.title.replace(/\s+/g, "");
-      const tokens = needle.match(/[가-힣A-Za-z0-9]{2,}/g) ?? [];
-      const overlap = tokens.some((t) => compactTitle.includes(t));
-      if (!overlap && needle.length >= 2 && !compactTitle.includes(needle.slice(0, Math.min(4, needle.length)))) {
-        continue;
-      }
-    }
+  for (const { link, score } of scored) {
+    if (seen.has(link.href)) continue;
+    // Keep search URLs only as candidates for ensureQualityNewsLinks — skip here if we already have reals.
+    if (isNewsSearchFallbackUrl(link.href) && out.length >= 1) continue;
+    if (!isNewsSearchFallbackUrl(link.href) && score < 2 && out.length >= 2) continue;
     seen.add(link.href);
     out.push(link);
     if (out.length >= 5) break;
@@ -591,12 +594,16 @@ export async function enrichCategoryInfoPayload(
     base.channel === "startup";
   const wantsHousing = base.channel === "housing";
   const wantsYoutube =
-    base.channel === "youtuber" || base.channel === "politics_youtube";
+    base.channel === "youtuber" ||
+    base.channel === "politics_youtube" ||
+    base.channel === "political_pundit";
   const wantsWebtoon = base.channel === "webtoon";
   const wantsBook = base.channel === "book";
   const wantsTickets =
     base.channel === "performance" || base.channel === "exhibition";
   const wantsFood = base.channel === "food";
+  const punditSeed =
+    base.channel === "political_pundit" ? matchPunditProfileSeed(name) : undefined;
 
   const [
     newsDocs,
@@ -616,7 +623,7 @@ export async function enrichCategoryInfoPayload(
       ? summarizeHousingPublicData(name).catch(() => undefined)
       : Promise.resolve(undefined),
     wantsYoutube
-      ? lookupYoutubeChannelProfile(name).catch(() => undefined)
+      ? lookupYoutubeChannelProfile(punditSeed?.name || name).catch(() => undefined)
       : Promise.resolve(undefined),
     wantsWebtoon
       ? lookupWebtoonFacts(name).catch(() => undefined)
@@ -630,6 +637,46 @@ export async function enrichCategoryInfoPayload(
       : Promise.resolve(undefined),
     wantsFood ? lookupFoodFacts(name).catch(() => undefined) : Promise.resolve(undefined),
   ]);
+
+  // Public API miss → Admin ledger + retry queue
+  if (wantsGrant) {
+    if (!hasDataGoKrKey()) {
+      recordPublicDataFailure({
+        channel: base.channel,
+        entityName: name,
+        kind: "missing_key",
+        reason: "DATA_GO_KR_SERVICE_KEY 미설정 — 보조금24·복지로 조회 불가",
+      });
+    } else if (!publicGrant) {
+      recordPublicDataFailure({
+        channel: base.channel,
+        entityName: name,
+        kind: "no_match",
+        reason: "보조금24·복지로·기업마당에서 매칭 결과 없음",
+      });
+    } else {
+      clearPublicDataRetry(name, base.channel);
+    }
+  }
+  if (wantsHousing) {
+    if (!hasDataGoKrKey()) {
+      recordPublicDataFailure({
+        channel: base.channel,
+        entityName: name,
+        kind: "missing_key",
+        reason: "DATA_GO_KR_SERVICE_KEY 미설정 — 국토부 실거래 조회 불가",
+      });
+    } else if (!housingPublic?.tradeSummary && !housingPublic?.byPyeong) {
+      recordPublicDataFailure({
+        channel: base.channel,
+        entityName: name,
+        kind: "no_match",
+        reason: "국토부 실거래·분양 매칭 실패",
+      });
+    } else {
+      clearPublicDataRetry(name, base.channel);
+    }
+  }
 
   const youtubeDocs =
     wantsYoutube && !youtubeProfile?.recentVideoTitles.length
@@ -695,15 +742,24 @@ export async function enrichCategoryInfoPayload(
           rows = fillUpdatingRows(rows, [
             {
               label: "멜론 차트",
-              value: `멜론 수집 · ${hitSongs.slice(0, 3).join(" · ")}`,
+              value: `멜론 수집 · ${hitSongs.slice(0, 5).join(" · ")}`,
+              emphasize: true,
+            },
+          ]);
+        } else if (melonHits.length) {
+          rows = fillUpdatingRows(rows, [
+            {
+              label: "멜론 차트",
+              value: `멜론 검색 Top · ${melonHits.slice(0, 5).join(" · ")}`,
               emphasize: true,
             },
           ]);
         } else {
+          // Still expose a confirmed Melon field path (search Top empty) without blanking.
           rows = fillUpdatingRows(rows, [
             {
               label: "멜론 차트",
-              value: "멜론 검색으로 확인",
+              value: "멜론 아티스트 곡 검색 결과 확인 중",
               emphasize: true,
             },
           ]);
@@ -711,11 +767,20 @@ export async function enrichCategoryInfoPayload(
             row.label === "멜론 차트"
               ? {
                   ...row,
-                  href: `https://www.melon.com/search/total/index.htm?q=${encodeURIComponent(name)}`,
+                  href: `https://www.melon.com/search/song/index.htm?q=${encodeURIComponent(name)}`,
                 }
               : row,
           );
         }
+      }
+      // Pack-less kpop/trot/star: ensure at least one Melon/news field is filled.
+      if (
+        (base.channel === "kpop" || base.channel === "trot" || base.channel === "star") &&
+        hitSongs.length
+      ) {
+        rows = fillUpdatingRows(rows, [
+          { label: /히트곡|대표곡|최근 히트/, value: hitSongs.join(" · ") },
+        ]);
       }
       break;
     }
@@ -736,7 +801,8 @@ export async function enrichCategoryInfoPayload(
       break;
     }
     case "youtuber":
-    case "politics_youtube": {
+    case "politics_youtube":
+    case "political_pundit": {
       if (youtubeProfile) {
         rows = fillUpdatingRows(rows, [
           { label: "유튜브 채널", value: youtubeProfile.title, emphasize: true },
@@ -760,6 +826,9 @@ export async function enrichCategoryInfoPayload(
           ];
         }
       } else if (youtubeDocs[0]) {
+        const preferUc = youtubeDocs[0].url.includes("/channel/UC")
+          ? youtubeDocs[0].url
+          : youtubeDocs[0].url;
         rows = fillUpdatingRows(rows, [
           {
             label: "유튜브 채널",
@@ -768,13 +837,13 @@ export async function enrichCategoryInfoPayload(
           },
           {
             label: "채널 URL",
-            value: youtubeDocs[0].url,
+            value: preferUc,
             emphasize: true,
           },
         ]);
         rows = rows.map((row) =>
           row.label === "채널 URL"
-            ? { ...row, value: youtubeDocs[0]!.url, href: youtubeDocs[0]!.url }
+            ? { ...row, value: preferUc, href: preferUc }
             : row,
         );
         chips = [
@@ -784,6 +853,56 @@ export async function enrichCategoryInfoPayload(
             items: youtubeDocs.map((doc) => doc.title).slice(0, 5),
           },
         ];
+      }
+
+      if (base.channel === "political_pundit") {
+        const seed = punditSeed ?? matchPunditProfileSeed(name);
+        if (seed?.sns?.length) {
+          rows = fillUpdatingRows(rows, [
+            {
+              label: "SNS",
+              value: seed.sns.map((s) => s.label).join(" · "),
+              emphasize: true,
+            },
+          ]);
+          rows = rows.map((row) =>
+            row.label === "SNS"
+              ? { ...row, href: seed.sns![0]?.href }
+              : row,
+          );
+          chips = [
+            ...chips.filter((chip) => chip.label !== "SNS"),
+            { label: "SNS", items: seed.sns.map((s) => `${s.label}`) },
+          ];
+        }
+        // 7-day appearance chips from news lookback (출연·토론·라디오)
+        const appearance = newsDocs
+          .filter((doc) =>
+            /출연|토론|라디오|방송|인터뷰|패널|시사/.test(`${doc.title} ${doc.snippet ?? ""}`),
+          )
+          .map((doc) => doc.title.slice(0, 48))
+          .filter(Boolean)
+          .slice(0, 5);
+        if (appearance.length) {
+          rows = fillUpdatingRows(rows, [
+            {
+              label: "방송 출연",
+              value: appearance.slice(0, 2).join(" · "),
+              emphasize: true,
+            },
+          ]);
+          chips = [
+            ...chips.filter((chip) => !/출연|발언/.test(chip.label)),
+            { label: "최근 7일 출연·발언", items: appearance },
+          ];
+        } else {
+          rows = fillUpdatingRows(rows, [
+            {
+              label: "방송 출연",
+              value: "최근 7일 출연·발언 추가 수집 중",
+            },
+          ]);
+        }
       }
       break;
     }
@@ -956,6 +1075,13 @@ export async function enrichCategoryInfoPayload(
         if (webtoonFacts.scoreLabel) {
           rows = upsertRow(rows, "독자 반응", webtoonFacts.scoreLabel);
         }
+        if (webtoonFacts.characters?.length) {
+          rows = upsertRow(rows, "주요 인물", webtoonFacts.characters.join(" · "));
+          chips = [
+            ...chips.filter((chip) => !/인물|등장/.test(chip.label)),
+            { label: "주요 인물", items: webtoonFacts.characters.slice(0, 6) },
+          ];
+        }
         if (webtoonFacts.url) {
           rows = rows.map((row) =>
             row.label === "플랫폼"
@@ -976,6 +1102,14 @@ export async function enrichCategoryInfoPayload(
         if (platform) rows = upsertRow(rows, "플랫폼", platform, true);
         if (author) rows = upsertRow(rows, "작가", author);
       }
+      const characters = extractCast(corpus);
+      if (characters.length && !rows.some((r) => r.label === "주요 인물" && !isUpdating(r.value))) {
+        rows = upsertRow(rows, "주요 인물", characters.join(" · "));
+        chips = [
+          ...chips.filter((chip) => !/인물|등장/.test(chip.label)),
+          { label: "주요 인물", items: characters.slice(0, 6) },
+        ];
+      }
       if (crawledSynopsis) synopsis = synopsis || crawledSynopsis;
       break;
     }
@@ -990,14 +1124,27 @@ export async function enrichCategoryInfoPayload(
             emphasize: true,
           },
         ]);
+        if (bookFacts.otherWorks?.length) {
+          rows = upsertRow(
+            rows,
+            "필모",
+            `작가 다른 작품 · ${bookFacts.otherWorks.slice(0, 4).join(" · ")}`,
+          );
+        }
         if (bookFacts.url) {
           rows = rows.map((row) =>
-            /서점|판매처|작가|출판사/.test(row.label)
+            /서점|판매처|작가|출판사|필모/.test(row.label)
               ? { ...row, href: row.href || bookFacts.url }
               : row,
           );
         }
-        // Synopsis belongs in the table path for books — avoid duplicating hero synopsis.
+        // Bookstore synopsis stays in table path as 요약 when present.
+        if (bookFacts.synopsis) {
+          rows = upsertRow(rows, "요약", bookFacts.synopsis);
+          rows = rows.map((row) =>
+            row.label === "요약" ? { ...row, multiline: true } : row,
+          );
+        }
         synopsis = undefined;
       } else {
         const author = extractAuthor(corpus, name);
@@ -1183,24 +1330,43 @@ export async function enrichCategoryInfoPayload(
     });
   }
 
-  const links = sanitizeRelatedLinks(
-    mergeLinks(
-      specializedLinks,
-      mergeLinks(officialGrantLinks, mergeLinks(crawledLinks, baseLinks)),
-    ),
+  const links = ensureQualityNewsLinks(
     name,
+    sanitizeRelatedLinks(
+      mergeLinks(
+        specializedLinks,
+        mergeLinks(officialGrantLinks, mergeLinks(crawledLinks, baseLinks)),
+      ),
+      name,
+    ),
+    { minPreferred: 2, maxSearchFallbacks: 1 },
   );
   if (!synopsis && publicGrant?.summary) {
     synopsis = publicGrant.summary;
   }
   const filledCount = rows.filter((row) => !isUpdating(row.value)).length;
-  if (filledCount > 0 || links.length >= 3 || synopsis) {
+  const required = requiredLabelsForChannel(base.channel);
+  const filledRequired = required.filter((label) =>
+    rows.some(
+      (row) =>
+        (row.label === label ||
+          new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(row.label)) &&
+        !isUpdating(row.value),
+    ),
+  );
+  const fillRate =
+    required.length > 0 ? filledRequired.length / required.length : filledCount > 0 ? 1 : 0;
+  const usedFallback =
+    links.some((link) => isNewsSearchFallbackUrl(link.href)) ||
+    rows.some((row) => /추가 수집 중|검색으로 확인|확인 중/.test(row.value));
+
+  if (filledCount > 0 || links.filter((l) => !isNewsSearchFallbackUrl(l.href)).length >= 1 || synopsis) {
     sparse = false;
     if (statusMessage === UPDATING && filledCount > 0) {
       statusMessage = undefined;
     }
   }
-  if (sparse && links.length >= 3) {
+  if (sparse && links.length >= 2) {
     statusMessage = statusMessage || UPDATING;
   }
 
@@ -1211,7 +1377,8 @@ export async function enrichCategoryInfoPayload(
     Boolean(foodFacts) ||
     Boolean(publicGrant) ||
     Boolean(housingPublic) ||
-    Boolean(youtubeProfile);
+    Boolean(youtubeProfile) ||
+    Boolean(punditSeed);
 
   return {
     ...base,
@@ -1223,6 +1390,9 @@ export async function enrichCategoryInfoPayload(
     sparkline,
     sparklines: sparklines.length ? sparklines : undefined,
     links: links.slice(0, 5),
+    fillRate,
+    usedFallback,
+    fillStats: { filled: filledRequired.length, required: required.length || filledCount },
     notice:
       base.notice ||
       (usedSpecialized

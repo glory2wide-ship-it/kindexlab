@@ -7,6 +7,8 @@ export type BookLookup = {
   author?: string;
   publisher?: string;
   synopsis?: string;
+  /** Other titles by the same author (필모). */
+  otherWorks?: string[];
   url?: string;
   source: "예스24" | "알라딘";
 };
@@ -117,6 +119,7 @@ async function lookupYes24(name: string): Promise<BookLookup | undefined> {
         author,
         publisher,
         synopsis: synopsis?.slice(0, 220),
+        otherWorks: extractOtherWorks(detail, top.title, author),
       };
     } catch {
       return top;
@@ -124,6 +127,41 @@ async function lookupYes24(name: string): Promise<BookLookup | undefined> {
   } catch {
     return undefined;
   }
+}
+
+function extractOtherWorks(
+  html: string,
+  currentTitle?: string,
+  author?: string,
+): string[] | undefined {
+  if (!author) return undefined;
+  const works = new Set<string>();
+  const current = (currentTitle ?? "").replace(/\s+/g, "");
+  for (const match of html.matchAll(
+    /(?:작가의\s*다른\s*책|이\s*작가의\s*다른\s*작품|관련\s*도서)[\s\S]{0,1200}/gi,
+  )) {
+    const block = match[0] ?? "";
+    for (const titleMatch of block.matchAll(/>([^<]{2,60})</g)) {
+      const t = plain(titleMatch[1]);
+      if (!t || t.length < 2 || t.replace(/\s+/g, "") === current) continue;
+      if (/더보기|전체보기|저자|출판|원$/.test(t)) continue;
+      works.add(t);
+      if (works.size >= 4) break;
+    }
+  }
+  if (!works.size) {
+    const escaped = author.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    for (const match of html.matchAll(
+      new RegExp(`${escaped}[\\s\\S]{0,80}>([^<]{2,50})<`, "gi"),
+    )) {
+      const t = plain(match[1]);
+      if (!t || t.replace(/\s+/g, "") === current) continue;
+      if (/저|지은이|출판|더보기/.test(t)) continue;
+      works.add(t);
+      if (works.size >= 4) break;
+    }
+  }
+  return works.size ? [...works] : undefined;
 }
 
 async function lookupAladin(name: string): Promise<BookLookup | undefined> {

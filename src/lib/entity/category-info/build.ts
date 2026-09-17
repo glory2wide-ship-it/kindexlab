@@ -8,8 +8,7 @@ import {
 } from "@/lib/entity/category-info/channel";
 import {
   buildRelatedNewsLinks,
-  ensureMinNewsLinks,
-  naverNewsUrl,
+  ensureQualityNewsLinks,
 } from "@/lib/entity/category-info/news";
 import type {
   CategoryInfoChipGroup,
@@ -18,6 +17,7 @@ import type {
   CategoryInfoRow,
 } from "@/lib/entity/category-info/types";
 import { formatCompact, formatRate } from "@/lib/format";
+import { matchPunditProfileSeed } from "@/lib/politics/pundit-profiles";
 import type { RankingEntity } from "@/lib/types";
 
 const UPDATING = "실시간 정보 업데이트 중";
@@ -194,7 +194,10 @@ function subsidyRows(entity: RankingEntity, links: CategoryInfoLink[]): {
   ];
   return {
     rows: nonemptyRows([...detail.rows.filter((r) => !/순위|등락/.test(r.label)), ...rows]),
-    links: ensureMinNewsLinks(entity.name, [...detail.links, ...links], 3),
+    links: ensureQualityNewsLinks(entity.name, [...detail.links, ...links], {
+      minPreferred: 2,
+      maxSearchFallbacks: 1,
+    }),
   };
 }
 
@@ -262,6 +265,8 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
         { label: "작가", value: UPDATING, emphasize: true },
         { label: "출판사", value: UPDATING },
         { label: "서점/판매처", value: UPDATING },
+        { label: "필모", value: UPDATING },
+        { label: "요약", value: UPDATING },
         { label: "출간·판형", value: UPDATING },
       ];
       chips = [];
@@ -320,19 +325,61 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
       rows = nonemptyRows(musicChartRows(entity));
       chips = nonemptyChips(entertainment.chips);
       synopsis = entertainment.synopsis;
+      // Melon search URL is a product deep-link (not a news search fallback).
       links = [
         {
-          title: `${entity.name} 멜론 검색`,
-          href: `https://www.melon.com/search/total/index.htm?q=${encodeURIComponent(entity.name)}`,
+          title: `${entity.name} 멜론 곡 검색`,
+          href: `https://www.melon.com/search/song/index.htm?q=${encodeURIComponent(entity.name)}`,
           source: "멜론",
         },
-        {
-          title: `${entity.name} 관련 뉴스`,
-          href: naverNewsUrl(entity.name),
-          source: "네이버 뉴스",
-        },
-        ...buildRelatedNewsLinks(entity.name, ["음원", "차트"]),
+        ...detail.links,
       ];
+      break;
+    }
+    case "political_pundit": {
+      const seed = matchPunditProfileSeed(entity.name);
+      const ytUrl =
+        seed?.youtubeUrl ||
+        (seed?.youtubeChannelId && /^UC[\w-]{20,}$/.test(seed.youtubeChannelId)
+          ? `https://www.youtube.com/channel/${seed.youtubeChannelId}`
+          : undefined);
+      rows = nonemptyRows([
+        {
+          label: "방송 출연",
+          value: UPDATING,
+          emphasize: true,
+        },
+        {
+          label: "유튜브 채널",
+          value: ytUrl ? seed?.name || entity.name : UPDATING,
+          href: ytUrl,
+          emphasize: true,
+        },
+        {
+          label: "채널 URL",
+          value: ytUrl ? ytUrl.replace(/^https?:\/\//, "") : UPDATING,
+          href: ytUrl,
+        },
+        {
+          label: "SNS",
+          value: seed?.sns?.length
+            ? seed.sns.map((s) => s.label).join(" · ")
+            : UPDATING,
+          href: seed?.sns?.[0]?.href,
+        },
+        ...detail.rows.filter((r) => !/순위|등락/.test(r.label)),
+      ]);
+      chips = nonemptyChips([
+        ...(seed?.sns?.length
+          ? [{ label: "SNS", items: seed.sns.map((s) => s.label) }]
+          : []),
+        ...detail.chips,
+      ]);
+      synopsis = detail.synopsis;
+      notice =
+        detail.notice ||
+        "최근 7일 방송·토론 출연은 뉴스 보도로 보완하며, 유튜브·SNS는 시드 프로필을 우선합니다.";
+      links = detail.links;
       break;
     }
     case "gov_subsidy":
@@ -362,7 +409,7 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
 
   if (newsPrimary || rows.length === 0) {
     statusMessage = statusMessage || UPDATING;
-    links = ensureMinNewsLinks(
+    links = ensureQualityNewsLinks(
       entity.name,
       links.length
         ? links
@@ -370,13 +417,13 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
             includeWeb: includeWebBlog,
             includeBlog: includeWebBlog,
           }),
-      3,
+      { minPreferred: 2, maxSearchFallbacks: 1 },
     );
     if (rows.length === 0) {
       rows = [{ label: "상태", value: UPDATING, emphasize: true }];
     }
   } else {
-    links = ensureMinNewsLinks(
+    links = ensureQualityNewsLinks(
       entity.name,
       links.length
         ? links
@@ -384,7 +431,7 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
             includeWeb: includeWebBlog,
             includeBlog: includeWebBlog,
           }),
-      3,
+      { minPreferred: 1, maxSearchFallbacks: 1 },
     );
   }
 

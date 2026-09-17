@@ -7,6 +7,7 @@ export type WebtoonLookup = {
   platform: string;
   author?: string;
   synopsis?: string;
+  characters?: string[];
   url?: string;
   scoreLabel?: string;
 };
@@ -69,7 +70,32 @@ async function fetchNaverWeekTitles(week: string): Promise<NaverTitle[]> {
   return [];
 }
 
-async function naverSynopsis(titleId: number): Promise<string | undefined> {
+function extractWebtoonCharacters(html: string): string[] {
+  const cast = new Set<string>();
+  const patterns = [
+    /(?:등장인물|주요\s*인물|캐릭터)\s*[:：]?\s*([가-힣A-Za-z,\s·/]{4,120})/gi,
+    /"characterName"\s*:\s*"([^"]{2,30})"/gi,
+    /data-character-name=["']([^"']{2,30})["']/gi,
+  ];
+  for (const pattern of patterns) {
+    for (const match of html.matchAll(pattern)) {
+      const raw = plain(match[1]);
+      if (!raw) continue;
+      for (const part of raw.split(/[,·/]| 및 |와 |과 /)) {
+        const name = part.trim();
+        if (name.length >= 2 && name.length <= 16 && !/작가|웹툰|연재/.test(name)) {
+          cast.add(name);
+        }
+        if (cast.size >= 6) return [...cast];
+      }
+    }
+  }
+  return [...cast];
+}
+
+async function naverDetailExtras(
+  titleId: number,
+): Promise<{ synopsis?: string; characters?: string[] }> {
   try {
     const html = await fetchText(
       `https://comic.naver.com/webtoon/list?titleId=${titleId}`,
@@ -81,9 +107,12 @@ async function naverSynopsis(titleId: number): Promise<string | undefined> {
     const meta = html.match(
       /name=["']description["']\s+content=["']([^"']+)["']/i,
     )?.[1];
-    return plain(og || meta)?.slice(0, 220);
+    return {
+      synopsis: plain(og || meta)?.slice(0, 220),
+      characters: extractWebtoonCharacters(html),
+    };
   } catch {
-    return undefined;
+    return {};
   }
 }
 
@@ -106,12 +135,13 @@ async function lookupNaver(name: string): Promise<WebtoonLookup | undefined> {
   );
   if (!matched) return undefined;
   const raw = (matched as { title: string; raw: NaverTitle }).raw;
-  const synopsis = raw.titleId ? await naverSynopsis(raw.titleId) : undefined;
+  const extras = raw.titleId ? await naverDetailExtras(raw.titleId) : {};
   return {
     title: raw.titleName!,
     platform: "네이버웹툰",
     author: plain(raw.author),
-    synopsis,
+    synopsis: extras.synopsis,
+    characters: extras.characters,
     url: raw.titleId
       ? `https://comic.naver.com/webtoon/list?titleId=${raw.titleId}`
       : undefined,

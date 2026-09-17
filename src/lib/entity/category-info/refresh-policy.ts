@@ -67,12 +67,12 @@ export const CATEGORY_INFO_REFRESH_TIERS: readonly CategoryInfoRefreshTier[] = [
   },
   {
     id: "media_catalog",
-    label: "웹툰·도서·유튜브",
+    label: "웹툰·도서·유튜브·평론",
     cadenceLabel: "3일",
     intervalMs: 3 * DAY,
     revalidateSec: 3 * 24 * 3600,
-    channels: ["webtoon", "book", "youtuber", "politics_youtube"],
-    reason: "플랫폼·작가·출판사·채널 메타는 상대적으로 안정적",
+    channels: ["webtoon", "book", "youtuber", "politics_youtube", "political_pundit"],
+    reason: "플랫폼·작가·출판사·채널·SNS 메타는 상대적으로 안정적",
   },
   {
     id: "entertainment_curated",
@@ -81,7 +81,7 @@ export const CATEGORY_INFO_REFRESH_TIERS: readonly CategoryInfoRefreshTier[] = [
     intervalMs: 7 * DAY,
     revalidateSec: 7 * 24 * 3600,
     channels: ["kpop", "trot", "star", "movie", "tv_ratings"],
-    reason: "큐레이션 팩(멤버·소속·시놉시스) 중심 채널",
+    reason: "큐레이션 팩(멤버·소속·시놉시스) 주 1회 보강 + 멜론/뉴스 최소 필드",
   },
   {
     id: "other_news",
@@ -98,7 +98,6 @@ export const CATEGORY_INFO_REFRESH_TIERS: readonly CategoryInfoRefreshTier[] = [
       "domestic_travel",
       "overseas_travel",
       "weekend_outing",
-      "political_pundit",
     ],
     reason: "뉴스·웹 수집 보강이 주된 채널",
   },

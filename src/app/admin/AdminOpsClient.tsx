@@ -138,8 +138,9 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
   const editionRef = useRef(initial.editionDate);
   editionRef.current = data.editionDate;
 
-  const fetchPayload = useCallback(async (): Promise<AdminDashboardPayload | null> => {
-    const res = await fetch(`/api/admin/ops?date=${encodeURIComponent(editionRef.current)}`, {
+  const fetchPayload = useCallback(async (date?: string): Promise<AdminDashboardPayload | null> => {
+    const day = date ?? editionRef.current;
+    const res = await fetch(`/api/admin/ops?date=${encodeURIComponent(day)}`, {
       cache: "no-store",
     });
     if (!res.ok) {
@@ -148,6 +149,28 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
     }
     return (await res.json()) as AdminDashboardPayload;
   }, []);
+
+  const selectHistoryDate = useCallback(
+    (date: string) => {
+      if (date === editionRef.current) return;
+      startTransition(async () => {
+        setError(null);
+        try {
+          const next = await fetchPayload(date);
+          if (!next) return;
+          setData(next);
+          setSectionUpdatedAt({
+            daily: next.daily.updatedAt,
+            webHealth: next.webHealth.updatedAt,
+            liveFill: next.liveFill.updatedAt,
+          });
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "네트워크 오류");
+        }
+      });
+    },
+    [fetchPayload],
+  );
 
   const refreshSection = useCallback(
     (key: SectionKey) => {
@@ -162,10 +185,13 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                 ...prev,
                 generatedAt: next.generatedAt,
                 editionDate: next.editionDate,
+                availableDates: next.availableDates,
                 daily: next.daily,
                 schedule: next.schedule,
                 categoryInfoRefresh: next.categoryInfoRefresh,
                 detailCollectApiCost: next.detailCollectApiCost,
+                detailCollectApiCostHistory: next.detailCollectApiCostHistory,
+                publicDataFailLedger: next.publicDataFailLedger,
               };
             }
             if (key === "webHealth") {
@@ -269,6 +295,9 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
     schedule,
     categoryInfoRefresh,
     detailCollectApiCost,
+    detailCollectApiCostHistory,
+    publicDataFailLedger,
+    availableDates,
   } = data;
 
   return (
@@ -338,7 +367,33 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
         })}
       </nav>
 
-      <div role="tabpanel">
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-b border-line pb-3">
+        <span className="text-[0.825rem] text-muted">과거 자료</span>
+        <div className="flex max-w-full flex-wrap gap-1.5 overflow-x-auto">
+          {(availableDates?.length ? availableDates : [data.editionDate]).map((day) => {
+            const active = day === data.editionDate;
+            return (
+              <button
+                key={day}
+                type="button"
+                disabled={pending}
+                onClick={() => selectHistoryDate(day)}
+                className={
+                  active
+                    ? "rounded border border-accent bg-accent/15 px-2 py-0.5 text-[0.825rem] font-medium tabular-nums text-ink"
+                    : "rounded border border-line bg-panel px-2 py-0.5 text-[0.825rem] tabular-nums text-muted hover:border-accent hover:text-ink disabled:opacity-50"
+                }
+                title={`${formatKstDate(day)} 자료 열람`}
+              >
+                {day.slice(5)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tab body copy +10% (base 14px → ~15.4px) */}
+      <div role="tabpanel" className="text-[1.1em] leading-[1.55]">
         {activeTab === "traffic" ? (
           <Section
             title="방문자 현황"
@@ -700,16 +755,18 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
           <>
             <Section
               title="종목 상세 정보 갱신"
-              subtitle="채널 구분별 권장 주기와 최근·다음 업데이트 시각(KST). 실제 조회 캐시도 이 주기에 맞춰 재검증합니다."
-              meta={`정책 기준 ${formatKst(data.generatedAt)}`}
+              subtitle="채널 구분별 권장 주기·채움률·회차별 성공/실패/스킵. 실제 조회 캐시도 이 주기에 맞춰 재검증합니다."
+              meta={`정책 기준 ${formatKst(data.generatedAt)} · 열람일 ${data.editionDate}`}
             >
               <div className="overflow-x-auto rounded-xl border border-line">
                 <table className="min-w-full text-left text-sm">
                   <thead className="bg-board text-xs text-muted">
                     <tr>
                       <th className="px-3 py-2 font-medium">구분</th>
-                      <th className="px-3 py-2 font-medium">권장 주기</th>
-                      <th className="px-3 py-2 font-medium">채널</th>
+                      <th className="whitespace-nowrap px-3 py-2 font-medium">권장 주기</th>
+                      <th className="px-3 py-2 font-medium">채움률</th>
+                      <th className="whitespace-nowrap px-3 py-2 font-medium">성공/실패/스킵</th>
+                      <th className="px-3 py-2 font-medium">폴백</th>
                       <th className="px-3 py-2 font-medium">최신 업데이트</th>
                       <th className="px-3 py-2 font-medium">다음 업데이트</th>
                     </tr>
@@ -719,11 +776,26 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                       <tr key={row.id} className="border-t border-line align-top">
                         <td className="px-3 py-2.5">
                           <div className="font-medium text-ink">{row.label}</div>
-                          <div className="mt-0.5 text-xs text-muted">{row.reason}</div>
+                          <div className="mt-0.5 text-xs text-muted">{row.channelsLabel}</div>
                         </td>
-                        <td className="px-3 py-2.5 tabular-nums text-ink">{row.cadenceLabel}</td>
-                        <td className="max-w-[14rem] px-3 py-2.5 text-xs text-muted">
-                          {row.channelsLabel}
+                        <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-ink">
+                          {row.cadenceLabel}
+                        </td>
+                        <td className="px-3 py-2.5 tabular-nums text-ink">
+                          {row.fillRateLabel ?? `${Math.round((row.run?.fillRateAvg ?? 0) * 100)}%`}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2.5 tabular-nums">
+                          <span className="text-emerald-700">{row.run?.ok ?? 0}</span>
+                          <span className="text-muted"> / </span>
+                          <span className="text-red-700">{row.run?.fail ?? 0}</span>
+                          <span className="text-muted"> / </span>
+                          <span className="text-muted">{row.run?.skip ?? 0}</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-xs text-muted">
+                          {row.fallbackLabel ??
+                            ((row.run?.usedFallback ?? 0) > 0
+                              ? `폴백 ${row.run?.usedFallback}`
+                              : "폴백 없음")}
                         </td>
                         <td className="px-3 py-2.5 text-xs tabular-nums text-ink">
                           {formatKst(row.lastUpdatedAt)}
@@ -744,7 +816,7 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
             </Section>
 
             <Section
-              title="정보수집 API 비용 (오늘)"
+              title="정보수집 API 비용"
               subtitle={`YouTube · OpenAI 추정 비용 (KST ${detailCollectApiCost.dayKst}).`}
               meta={`마지막 업데이트 ${formatKst(detailCollectApiCost.updatedAt)}`}
             >
@@ -779,7 +851,81 @@ export function AdminOpsClient({ initial }: { initial: AdminDashboardPayload }) 
                   </tbody>
                 </table>
               </div>
+
+              {(detailCollectApiCostHistory?.length ?? 0) > 0 ? (
+                <div className="mt-4 overflow-x-auto rounded-xl border border-line">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="bg-board text-xs text-muted">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">날짜</th>
+                        <th className="px-3 py-2 font-medium text-right">YouTube</th>
+                        <th className="px-3 py-2 font-medium text-right">OpenAI</th>
+                        <th className="px-3 py-2 font-medium">호출</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detailCollectApiCostHistory.map((row) => (
+                        <tr key={row.dayKst} className="border-t border-line">
+                          <td className="px-3 py-2.5">
+                            <button
+                              type="button"
+                              className="tabular-nums text-ink underline-offset-2 hover:underline"
+                              onClick={() => selectHistoryDate(row.dayKst)}
+                            >
+                              {row.dayKst}
+                            </button>
+                          </td>
+                          <td className="px-3 py-2.5 text-right tabular-nums">{row.youtubeKrwLabel}</td>
+                          <td className="px-3 py-2.5 text-right tabular-nums">{row.openaiKrwLabel}</td>
+                          <td className="px-3 py-2.5 text-xs text-muted">
+                            YT {row.youtubeUnits.toLocaleString("ko-KR")}u · OA {row.openaiCalls}회
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
             </Section>
+
+            {(publicDataFailLedger?.failures?.length ?? 0) > 0 ||
+            (publicDataFailLedger?.retryQueue?.length ?? 0) > 0 ? (
+              <Section
+                title="공공API 실패 · 재시도 큐"
+                subtitle="지원금·부동산 키/매칭 실패 사유. Admin에서 원인을 추적하고 재시도 큐에 쌓입니다."
+                meta={`갱신 ${formatKst(publicDataFailLedger.updatedAt)}`}
+              >
+                <div className="overflow-x-auto rounded-xl border border-line">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="bg-board text-xs text-muted">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">종목</th>
+                        <th className="px-3 py-2 font-medium">채널</th>
+                        <th className="px-3 py-2 font-medium">사유</th>
+                        <th className="px-3 py-2 font-medium">시각</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {publicDataFailLedger.failures.slice(0, 20).map((row) => (
+                        <tr key={row.id} className="border-t border-line align-top">
+                          <td className="px-3 py-2.5 font-medium text-ink">{row.entityName}</td>
+                          <td className="px-3 py-2.5 text-xs text-muted">{row.channel}</td>
+                          <td className="px-3 py-2.5 text-xs text-muted">{row.reason}</td>
+                          <td className="px-3 py-2.5 text-xs tabular-nums text-muted">
+                            {formatKst(row.at)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {publicDataFailLedger.retryQueue.length > 0 ? (
+                  <p className="mt-3 text-xs text-muted">
+                    재시도 큐 {publicDataFailLedger.retryQueue.length}건 · 다음 enrich 시 재조회
+                  </p>
+                ) : null}
+              </Section>
+            ) : null}
           </>
         ) : null}
       </div>

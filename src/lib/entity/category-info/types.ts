@@ -100,6 +100,12 @@ export type CategoryInfoBase = {
   sparkline?: CategoryInfoSparkline;
   /** Extra trends (매매·전세·월세) when more than one series is available. */
   sparklines?: CategoryInfoSparkline[];
+  /** Required-field fill rate 0–1 after enrich. */
+  fillRate?: number;
+  /** True when a search-URL or soft fallback was used for links/rows. */
+  usedFallback?: boolean;
+  /** Filled / required label counts for Admin. */
+  fillStats?: { filled: number; required: number };
 };
 
 export type CategoryInfoPayload = CategoryInfoBase;
