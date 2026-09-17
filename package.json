@@ -38,6 +38,7 @@
         "live:entity-guards": "tsx scripts/_check-board-entity-guards.ts",
         "live:index-blurb": "tsx scripts/_check-index-blurb-dedupe.ts",
     "live:category-info": "tsx scripts/_check-category-info.ts",
+    "live:hit-songs": "tsx scripts/_check-hit-songs.ts",
     "live:public-data": "tsx --env-file=.env.local scripts/_check-public-data.ts",
     "live:first": "tsx scripts/_check-live-first-heatmap.ts",
         "live:completeness": "tsx scripts/_check-live-completeness.ts",

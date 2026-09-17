@@ -20,6 +20,7 @@ import type {
   CategoryInfoPayload,
   CategoryInfoRow,
 } from "@/lib/entity/category-info/types";
+import type { RankingEntity } from "@/lib/types";
 import { fetchText } from "@/lib/ingestion/http";
 import { decodeHtml, stripTags } from "@/lib/ingestion/parse";
 import { retrieveNewsForKeyword } from "@/lib/news/retrieve";
@@ -39,7 +40,14 @@ import { hasDataGoKrKey } from "@/lib/public-data/key";
 import type { PublicGrantRecord } from "@/lib/public-data/types";
 import { lookupYoutubeChannelProfile } from "@/lib/public-data/youtube-channel";
 import { entityNarrativeSummary } from "@/lib/entity/index-blurb";
+import {
+  extractHitSongs,
+  hitSongsFromMusicChartPeers,
+  pickHitSongs,
+  sanitizeHitSongTitles,
+} from "@/lib/entity/category-info/hit-songs";
 import { readAnalysis } from "@/lib/analysis/store";
+import { getRankings } from "@/lib/providers/trends";
 
 const UPDATING = "실시간 정보 업데이트 중";
 
@@ -186,24 +194,6 @@ function extractAgency(text: string): string | undefined {
     /소속사[:\s]*([가-힣A-Za-z0-9&.()\s]{2,40}?(?:엔터테인먼트|엔터|뮤직|Music|레이블|기획|아티스트)?)/,
     /(?:소속|계약)\s*([가-힣A-Za-z0-9&.]{2,30}(?:엔터테인먼트|엔터|뮤직))/,
   ]);
-}
-
-function extractHitSongs(text: string, name: string): string[] {
-  const songs = new Set<string>();
-  const patterns = [
-    new RegExp(`${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*(?:의)?\\s*(?:히트곡|대표곡|신곡|타이틀)\\s*[:\\s]*([가-힣A-Za-z0-9\\s]{2,40})`, "g"),
-    /(?:히트곡|대표곡|타이틀곡|신곡)\s*[:\s]*([가-힣A-Za-z0-9\s]{2,40})/g,
-    /['"‘“]([^'"’”]{2,30})['"’”]\s*(?:공개|발매|차트)/g,
-  ];
-  for (const pattern of patterns) {
-    for (const match of text.matchAll(pattern)) {
-      const song = match[1]?.replace(/\s+/g, " ").trim();
-      if (!song || song.includes(name) || song.length < 2) continue;
-      songs.add(song);
-      if (songs.size >= 3) return [...songs];
-    }
-  }
-  return [...songs];
 }
 
 function extractSynopsis(docs: CrawlDoc[], name: string): string | undefined {
@@ -437,6 +427,8 @@ async function crawlMelonChartHits(name: string): Promise<string[]> {
   const push = (song?: string) => {
     const s = plain(song);
     if (!s || seen.has(s)) return;
+    // Reject agency/news scraps even when Melon HTML is mis-parsed.
+    if (!sanitizeHitSongTitles([s], name).length) return;
     seen.add(s);
     songs.push(s);
   };
@@ -943,6 +935,7 @@ export async function enrichCategoryInfoPayload(
     foodFacts,
     melonHits,
     analysisDocs,
+    rankingPeers,
   ] = await Promise.all([
     crawlNews(name, base.channel),
     wantsWebCrawl
@@ -968,6 +961,11 @@ export async function enrichCategoryInfoPayload(
     wantsFood ? lookupFoodFacts(name).catch(() => undefined) : Promise.resolve(undefined),
     wantsMelon ? crawlMelonChartHits(name) : Promise.resolve([] as string[]),
     loadAnalysisContextDocs(base.entitySlug),
+    wantsMelon
+      ? getRankings()
+          .then((payload) => payload.items)
+          .catch(() => [] as RankingEntity[])
+      : Promise.resolve([] as RankingEntity[]),
   ]);
 
   // Public API miss → Admin ledger + retry queue
@@ -1060,7 +1058,20 @@ export async function enrichCategoryInfoPayload(
   let sparklines = base.sparklines ? [...base.sparklines] : [];
 
   const agency = extractAgency(corpus);
-  const hitSongs = melonHits.length ? melonHits : extractHitSongs(corpus, name);
+  const curatedHitSongs = sanitizeHitSongTitles(
+    chips.find((chip) => /히트|곡/.test(chip.label))?.items ?? [],
+    name,
+  );
+  const chartPeerHits = hitSongsFromMusicChartPeers(name, rankingPeers);
+  // Melon → music_chart nameEn peers → curated pack → strict news extract.
+  // Never fall back to unvalidated corpus scraps (HYBE/빅히트 agency noise).
+  const hitSongs = pickHitSongs(
+    name,
+    melonHits,
+    chartPeerHits,
+    curatedHitSongs,
+    extractHitSongs(corpus, name),
+  );
   const cast = extractCast(corpus);
   const housing = extractHousingSnippet(corpus);
   const crawledSynopsis = extractSynopsis(docs, name);
@@ -1073,6 +1084,12 @@ export async function enrichCategoryInfoPayload(
       if (agency) {
         rows = fillUpdatingRows(rows, [{ label: "소속사", value: agency, emphasize: true }]);
       }
+      // Drop any junk titles that snuck into curated chips before enrich.
+      chips = chips.map((chip) =>
+        /히트|곡/.test(chip.label)
+          ? { ...chip, items: sanitizeHitSongTitles(chip.items, name) }
+          : chip,
+      );
       if (hitSongs.length) {
         rows = fillUpdatingRows(rows, [
           { label: /히트곡|대표곡|최근 히트/, value: hitSongs.join(" · ") },
@@ -1085,6 +1102,9 @@ export async function enrichCategoryInfoPayload(
         } else {
           chips = [...chips, { label: "최근 히트곡", items: hitSongs }];
         }
+      } else {
+        // Prefer empty over junk — UI shows UPDATING row when no validated titles.
+        chips = chips.filter((chip) => !/히트|곡/.test(chip.label) || chip.items.length > 0);
       }
       if (base.channel === "music") {
         if (hitSongs.length) {

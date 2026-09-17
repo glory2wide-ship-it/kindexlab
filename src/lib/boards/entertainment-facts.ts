@@ -291,6 +291,23 @@ const CATALOG: CatalogEntry[] = [
       },
     ],
   },
+  {
+    title: "Imael Angel",
+    aliases: ["Imael"],
+    domain: "kpop",
+    rows: [
+      { label: "소속사", value: "Imael Angel Records" },
+      { label: "구분", value: "아티스트" },
+    ],
+    chips: [
+      {
+        label: "최근 히트곡",
+        items: ["BAD TIMES", "Movin' To The Sun", "I'm Alive"],
+      },
+    ],
+    synopsis:
+      "BAD TIMES로 음원 차트에 이름을 올린 아티스트. Movin' To The Sun, I'm Alive 등 싱글 중심 활동을 이어간다.",
+  },
 
   // —— Music tracks / artists ——
   {

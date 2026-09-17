@@ -8,6 +8,7 @@ import {
   isNewsPrimaryChannel,
   resolveCategoryInfoChannel,
 } from "@/lib/entity/category-info/channel";
+import { sanitizeHitSongTitles } from "@/lib/entity/category-info/hit-songs";
 import {
   buildRelatedNewsLinks,
   ensureQualityNewsLinks,
@@ -55,7 +56,10 @@ function nonemptyChips(chips: CategoryInfoChipGroup[]): CategoryInfoChipGroup[] 
   const seen = new Set<string>();
   const out: CategoryInfoChipGroup[] = [];
   for (const chip of chips) {
-    const items = chip.items.map((item) => item.trim()).filter(Boolean);
+    const rawItems = chip.items.map((item) => item.trim()).filter(Boolean);
+    const items = /히트|곡/.test(chip.label)
+      ? sanitizeHitSongTitles(rawItems)
+      : rawItems;
     if (!items.length || seen.has(chip.label)) continue;
     seen.add(chip.label);
     out.push({ ...chip, items });
@@ -105,7 +109,12 @@ function fromEntertainment(entity: RankingEntity): {
       value: row.value,
       emphasize: row.label === "소속사" || row.label === "플랫폼",
     })),
-    chips: (facts.chips ?? []).map((chip) => ({ label: chip.label, items: chip.items })),
+    chips: (facts.chips ?? []).map((chip) => ({
+      label: chip.label,
+      items: /히트|곡/.test(chip.label)
+        ? sanitizeHitSongTitles(chip.items, entity.name)
+        : chip.items,
+    })),
     synopsis: entityNarrativeSummary(facts.synopsis),
   };
 }
