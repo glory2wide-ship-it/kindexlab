@@ -65,42 +65,62 @@ export async function evaluateWebHealth(): Promise<WebHealthStatus> {
       detail: trends.ok
         ? `items=${trends.itemCount} · age=${
             trends.ageMs != null ? `${(trends.ageMs / 60_000).toFixed(0)}분` : "—"
-          } · 필수 실패 소스 ${trends.requiredFailedCount}`
+          } · ${
+            trends.requiredFailedCount > 0
+              ? `필수 실패 소스 ${trends.requiredFailedCount}`
+              : "필수 소스 OK"
+          }`
         : trends.issues.map((issue) => issue.message).join(" · ") || "trends health failed",
     },
   ];
 
-  const landingPath = path.join(process.cwd(), "src", "data", "ingestion", "landing-unified.json");
-  try {
-    const raw = await readFile(landingPath, "utf8");
-    const parsed = JSON.parse(raw) as {
-      updatedAt?: string;
-      savedAt?: string;
-      items?: unknown[];
-      market?: { items?: unknown[]; desks?: unknown[] };
-    };
-    // Slim cache shape is `{ savedAt, market: { items, desks } }` — fall back to
-    // a legacy top-level `items` array if present.
-    const itemCount = parsed.market?.items?.length ?? parsed.items?.length ?? 0;
-    const deskCount = parsed.market?.desks?.length ?? 0;
-    const stamp = parsed.updatedAt ?? parsed.savedAt;
-    const ageMs = stamp ? Date.now() - new Date(stamp).getTime() : null;
-    const stale = ageMs != null && ageMs > SIX_HOURS_MS * 2;
-    const empty = itemCount === 0;
+  const landingCandidates = [
+    path.join(process.cwd(), "src", "data", "ingestion", "landing-unified.json"),
+    path.join("/tmp", "kindexlab-landing-unified.json"),
+  ];
+  let landingLoaded = false;
+  for (const landingPath of landingCandidates) {
+    try {
+      const raw = await readFile(landingPath, "utf8");
+      const parsed = JSON.parse(raw) as {
+        updatedAt?: string;
+        savedAt?: string;
+        items?: unknown[];
+        market?: { items?: unknown[]; desks?: unknown[] };
+      };
+      // Slim cache shape is `{ savedAt, market: { items, desks } }` — fall back to
+      // a legacy top-level `items` array if present.
+      const itemCount = parsed.market?.items?.length ?? parsed.items?.length ?? 0;
+      const deskCount = parsed.market?.desks?.length ?? 0;
+      const stamp = parsed.updatedAt ?? parsed.savedAt;
+      const ageMs = stamp ? Date.now() - new Date(stamp).getTime() : null;
+      const stale = ageMs != null && ageMs > SIX_HOURS_MS * 2;
+      const empty = itemCount === 0;
+      checks.push({
+        id: "landing-unified",
+        label: "랜딩 통합 캐시",
+        level: !stamp ? "warn" : empty ? "warn" : stale ? "warn" : "ok",
+        detail: stamp
+          ? `savedAt=${stamp} · age=${ageMs != null ? `${(ageMs / 60_000).toFixed(0)}분` : "—"} · items=${itemCount}${deskCount ? ` · desks=${deskCount}` : ""}`
+          : "landing-unified.json missing timestamp",
+      });
+      landingLoaded = true;
+      break;
+    } catch {
+      // try next candidate
+    }
+  }
+  if (!landingLoaded) {
+    // Slim cache is gitignored and rebuilt on first landing hit (/tmp on Vercel).
+    // Missing on disk is expected cold state — only warn when the snapshot itself is sick.
+    const snapshotHealthy = trends.ok && trends.itemCount >= 400;
     checks.push({
       id: "landing-unified",
       label: "랜딩 통합 캐시",
-      level: !stamp ? "warn" : empty ? "warn" : stale ? "warn" : "ok",
-      detail: stamp
-        ? `savedAt=${stamp} · age=${ageMs != null ? `${(ageMs / 60_000).toFixed(0)}분` : "—"} · items=${itemCount}${deskCount ? ` · desks=${deskCount}` : ""}`
-        : "landing-unified.json missing timestamp",
-    });
-  } catch {
-    checks.push({
-      id: "landing-unified",
-      label: "랜딩 통합 캐시",
-      level: "warn",
-      detail: "landing-unified.json 없음 (런타임 재생성 가능)",
+      level: snapshotHealthy ? "ok" : "warn",
+      detail: snapshotHealthy
+        ? "디스크 캐시 없음 · 랜딩 첫 요청 시 런타임 재생성"
+        : "landing-unified.json 없음 (스냅샷도 불안정)",
     });
   }
 

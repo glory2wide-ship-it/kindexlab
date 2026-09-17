@@ -124,10 +124,13 @@ function rowFromRecord(record: Record<string, unknown>, index: number): ChartRow
 }
 
 export async function fetchAppleMusicKr(): Promise<SourceResult> {
+  // KR marketing RSS often empties under cron; mirror fetchItunesKr fallbacks
+  // so apple-music stays green whenever any Apple chart body is available.
   const urls = [
     "https://rss.applemarketingtools.com/api/v2/kr/music/most-played/25/songs.json",
     "https://rss.applemarketingtools.com/api/v2/kr/music/most-played/50/songs.json",
     "https://itunes.apple.com/kr/rss/topsongs/limit=50/json",
+    "https://itunes.apple.com/us/rss/topsongs/limit=50/json",
   ];
   const errors: string[] = [];
   for (const url of urls) {
@@ -136,14 +139,15 @@ export async function fetchAppleMusicKr(): Promise<SourceResult> {
         const data = await fetchJson<{
           feed?: { entry?: { "im:name": { label: string }; "im:artist": { label: string } }[] };
         }>(url);
+        const region = url.includes("/us/") ? "iTunes US fallback" : "iTunes KR fallback";
         const items = (data.feed?.entry ?? []).map((row, index) => ({
           rank: index + 1,
           title: row["im:name"]?.label,
           subtitle: row["im:artist"]?.label,
-          tags: ["Apple Music KR", "iTunes fallback"],
+          tags: ["Apple Music KR", region],
         }));
         if (items.length) return result("apple-music", "Apple Music 한국 차트", items);
-        errors.push("itunes empty");
+        errors.push(url.includes("/us/") ? "itunes-us empty" : "itunes empty");
         continue;
       }
       const data = await fetchJson<{ feed?: { results?: { name: string; artistName: string }[] } }>(url);

@@ -53,6 +53,9 @@ export const OPTIONAL_INGEST_SOURCES = new Set([
   "family:books",
   "family:tickets",
   "family:games",
+  // DATA_GO_KR grants/housing often blows the 240s family budget under cron load;
+  // live-* board rows from category-live / prior snapshot still cover the desks.
+  "family:public-data",
 ]);
 
 /**
@@ -250,7 +253,24 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
   if (musicHardFailed) {
     hardCriticalFailed.push("music-primary");
   }
-  const softCriticalFailed = criticalFailed.filter((id) => !hardCriticalFailed.includes(id));
+  // One music primary flaking is noise when Circle or Melon/Genie/Bugs still fill the desk.
+  const softCriticalFailed = criticalFailed.filter((id) => {
+    if (hardCriticalFailed.includes(id)) return false;
+    if (
+      (id === "apple-music" || id === "circle") &&
+      (musicPrimaryOk || musicFallbackOk)
+    ) {
+      return false;
+    }
+    return true;
+  });
+  // Same coverage rule for the admin "필수 실패 소스" counter.
+  const requiredFailedEffective = requiredFailed.filter((row) => {
+    if (row.id === "apple-music" || row.id === "circle") {
+      return !(musicPrimaryOk || musicFallbackOk);
+    }
+    return true;
+  });
   const youtubeOk =
     snapshot?.sources?.some(
       (row) =>
@@ -284,7 +304,7 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
     });
   }
 
-  if (requiredFailed.length > maxRequiredFailures) {
+  if (requiredFailedEffective.length > maxRequiredFailures) {
     // When the board still has enough rows and core charts are up, treat a
     // burst of scrape timeouts as a warning — common while heatmap Batch and
     // ingest share outbound quota.
@@ -292,7 +312,7 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
     issues.push({
       code: "too_many_failures",
       level: boardHealthy ? "warn" : "error",
-      message: `${requiredFailed.length} required sources failed (max ${maxRequiredFailures}): ${requiredFailed
+      message: `${requiredFailedEffective.length} required sources failed (max ${maxRequiredFailures}): ${requiredFailedEffective
         .slice(0, 12)
         .map((row) => row.id)
         .join(", ")}`,
@@ -304,7 +324,8 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
     // heatmap Batch shares Serper/Naver/YouTube quota). Keep a hard fail when
     // required sources also blew up or the board is critically empty.
     const onlyOptionalPressure =
-      requiredFailed.length === 0 && itemCount >= Math.max(200, Math.floor(minItems * 0.5));
+      requiredFailedEffective.length === 0 &&
+      itemCount >= Math.max(200, Math.floor(minItems * 0.5));
     issues.push({
       code: "used_previous_snapshot",
       level: onlyOptionalPressure ? "warn" : "error",
@@ -322,7 +343,7 @@ export function evaluateTrendsHealth(options: TrendsHealthOptions = {}): TrendsH
     itemCount,
     sourceCount: snapshot?.sources?.length ?? 0,
     failedCount: failedSources.length,
-    requiredFailedCount: requiredFailed.length,
+    requiredFailedCount: requiredFailedEffective.length,
     failedSources,
     issues,
   };
