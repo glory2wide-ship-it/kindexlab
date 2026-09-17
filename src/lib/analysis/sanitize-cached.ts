@@ -19,6 +19,26 @@ import type { RankingEntity } from "@/lib/types";
 const GENERIC_GRANT_READER = "지원금을 신청하는 방법";
 const GENERIC_GRANT_OUTLOOK = "다음 모집·쿠폰 일정을 확인하는 법";
 
+/** Known awkward / corrupted comparative-보다 fragments to normalize on read. */
+const PROSE_SCRUBS: Array<[RegExp, string]> = [
+  [
+    /바우처를 소진하는 전략이 무엇봅니다\.\s*중요해졌습니다/gu,
+    "바우처를 소진하는 일이 더욱 중요해졌습니다",
+  ],
+  [
+    /바우처를 소진하는 전략이 무엇보다 중요해졌습니다/gu,
+    "바우처를 소진하는 일이 더욱 중요해졌습니다",
+  ],
+];
+
+function scrubKnownAwkwardProse(text: string): string {
+  let out = repairComparativeBodaCorruption(text);
+  for (const [pattern, replacement] of PROSE_SCRUBS) {
+    out = out.replace(pattern, replacement);
+  }
+  return out;
+}
+
 function focusLabel(entry: CachedAnalysis, entity?: RankingEntity): string {
   const raw =
     entity?.name ||
@@ -59,7 +79,7 @@ export function sanitizeCachedAnalysisArticle(
   const sections = entry.article.sections.map((section) => {
     let heading = section.heading;
     let paragraphs = section.paragraphs.map((paragraph) => {
-      const repaired = repairComparativeBodaCorruption(paragraph);
+      const repaired = scrubKnownAwkwardProse(paragraph);
       if (repaired !== paragraph) changed = true;
       return repaired;
     });
@@ -96,7 +116,7 @@ export function sanitizeCachedAnalysisArticle(
 
   let excerpt = entry.article.excerpt;
   if (excerpt) {
-    const repairedExcerpt = repairComparativeBodaCorruption(excerpt);
+    const repairedExcerpt = scrubKnownAwkwardProse(excerpt);
     if (repairedExcerpt !== excerpt) {
       excerpt = repairedExcerpt;
       changed = true;
