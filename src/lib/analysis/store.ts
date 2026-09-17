@@ -3,7 +3,10 @@ import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { TrafficPump } from "@/lib/analysis/chain/pump";
 import { isPublicEditorialContent } from "@/lib/content/public-since";
-import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
+import {
+  analysisPlainText,
+  type TodayAnalysisArticle,
+} from "@/lib/editorial/today-analysis";
 
 export type AnalysisSourceKind = "chain" | "template";
 
@@ -96,41 +99,33 @@ export function analysisBoardPrefix(slug: string): string | null {
 /** Strip brackets / punctuation so `[보건복지부] 기초연금` ≈ `기초연금`. */
 export function normalizeAnalysisMatchKey(value: string): string {
   return value
-    .replace(/\[[^\]]*]/g, "")
+    .replace(/\[[^\]]*\]/g, "")
     .replace(/[^\p{L}\p{N}]+/gu, "")
     .toLowerCase();
 }
 
-/**
- * True when a cached column belongs to this entity even if the slug tail was
- * renamed (e.g. `…--보건복지부-기초연금` → `…--기초연금`).
- */
-export function analysisEntryMatchesEntity(
-  entry: Pick<CachedAnalysis, "slug" | "keyword" | "article">,
-  entitySlug: string,
-  entityName: string,
+/** Reader-facing body present (not a title-only stub). */
+export function hasUsableAnalysisBody(
+  entry: Pick<CachedAnalysis, "article"> | null | undefined,
 ): boolean {
-  if (entry.slug === entitySlug) return true;
-  const board = analysisBoardPrefix(entitySlug);
-  const entryBoard = analysisBoardPrefix(entry.slug);
-  if (!board || !entryBoard || board !== entryBoard) return false;
+  if (!entry?.article) return false;
+  return analysisPlainText(entry.article).replace(/\s+/g, "").length >= 80;
+}
 
-  const name = entityName.trim();
-  if (name && entry.keyword === name) return true;
+/**
+ * Strong keyword/name identity for alias remount.
+ * Equality always counts; suffix match requires ≥4 chars to avoid “청년”→“청년내일…”.
+ */
+export function strongAnalysisKeywordIdentity(nameKey: string, keywordKey: string): boolean {
+  if (!nameKey || !keywordKey) return false;
+  if (nameKey === keywordKey) return nameKey.length >= 2;
+  const shorter = nameKey.length <= keywordKey.length ? nameKey : keywordKey;
+  const longer = nameKey.length <= keywordKey.length ? keywordKey : nameKey;
+  if (shorter.length < 4) return false;
+  return longer.endsWith(shorter);
+}
 
-  const nameKey = normalizeAnalysisMatchKey(name);
-  const keywordKey = normalizeAnalysisMatchKey(entry.keyword || "");
-  if (
-    nameKey &&
-    keywordKey &&
-    (nameKey === keywordKey ||
-      keywordKey.endsWith(nameKey) ||
-      nameKey.endsWith(keywordKey))
-  ) {
-    return true;
-  }
-
-  // Parenthetical alias: `자산형성지원사업(청년내일저축계좌)` ↔ `청년내일저축계좌`
+function parentheticalAliasMatch(name: string, keywordKey: string): boolean {
   for (const part of name.match(/\(([^)]+)\)/g) ?? []) {
     const inner = normalizeAnalysisMatchKey(part.slice(1, -1));
     if (
@@ -142,46 +137,84 @@ export function analysisEntryMatchesEntity(
       return true;
     }
   }
+  return false;
+}
 
-  const entityTail = normalizeAnalysisMatchKey(entitySlug.slice(board.length + 2));
-  const entryTail = normalizeAnalysisMatchKey(entry.slug.slice(entryBoard.length + 2));
-  if (
-    entityTail &&
-    entryTail &&
-    (entryTail === entityTail ||
-      entryTail.endsWith(entityTail) ||
-      entityTail.endsWith(entryTail))
-  ) {
-    if (
-      nameKey &&
-      keywordKey &&
-      (keywordKey.includes(nameKey) || nameKey.includes(keywordKey))
-    ) {
-      return true;
-    }
-    // Agency-stripped slug rename with overlapping core tail (≥4 chars).
-    if (entityTail.length >= 4 && entryTail.length >= 4) {
-      return true;
-    }
-  }
+/**
+ * True when a cached column belongs to this entity even if the slug/board was
+ * renamed (e.g. `…--보건복지부-기초연금` → `…--기초연금`, or
+ * `government-support-fund--국세청-근로장려금` → `pol-subsidy-근로장려금`).
+ *
+ * HARD RULE: a prior Gemini 오늘의 분석 must remain findable so detail pages
+ * never blank the slot while waiting for a newer column.
+ */
+export function analysisEntryMatchesEntity(
+  entry: Pick<CachedAnalysis, "slug" | "keyword" | "article">,
+  entitySlug: string,
+  entityName: string,
+): boolean {
+  if (entry.slug === entitySlug) return true;
 
   const articleSlug = entry.article?.entitySlug;
   if (articleSlug && articleSlug === entitySlug) return true;
 
-  return false;
+  const name = entityName.trim();
+  if (name && entry.keyword === name) return true;
+
+  const nameKey = normalizeAnalysisMatchKey(name);
+  const keywordKey = normalizeAnalysisMatchKey(entry.keyword || "");
+  const strongName = strongAnalysisKeywordIdentity(nameKey, keywordKey);
+  const parenMatch = parentheticalAliasMatch(name, keywordKey);
+
+  const board = analysisBoardPrefix(entitySlug);
+  const entryBoard = analysisBoardPrefix(entry.slug);
+
+  // Same heatmap board: keep the historical rename/tail rules.
+  if (board && entryBoard && board === entryBoard) {
+    if (strongName || parenMatch) return true;
+
+    const entityTail = normalizeAnalysisMatchKey(entitySlug.slice(board.length + 2));
+    const entryTail = normalizeAnalysisMatchKey(entry.slug.slice(entryBoard.length + 2));
+    if (
+      entityTail &&
+      entryTail &&
+      (entryTail === entityTail ||
+        entryTail.endsWith(entityTail) ||
+        entityTail.endsWith(entryTail))
+    ) {
+      if (
+        nameKey &&
+        keywordKey &&
+        (keywordKey.includes(nameKey) || nameKey.includes(keywordKey))
+      ) {
+        return true;
+      }
+      // Agency-stripped slug rename with overlapping core tail (≥4 chars).
+      if (entityTail.length >= 4 && entryTail.length >= 4) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Cross-board or legacy slug without `--` (e.g. pol-subsidy-근로장려금):
+  // only strong keyword/name identity — never weak substring matches.
+  return strongName || parenMatch;
 }
 
 function isReusableAnalysisEntry(
-  entry: Pick<CachedAnalysis, "provenance"> | null | undefined,
+  entry: Pick<CachedAnalysis, "provenance" | "article"> | null | undefined,
 ): boolean {
   if (!entry?.provenance) return false;
+  if (!hasUsableAnalysisBody(entry)) return false;
   if (entry.provenance.kind === "chain") return true;
   return Boolean(entry.provenance.model?.startsWith("import:"));
 }
 
 /**
- * Prefer the exact slug; if missing or only a template stub, reuse the newest
- * prior Gemini/import column for the same board + keyword/name.
+ * Prefer the exact slug; if missing or only a stub, reuse the newest prior
+ * Gemini/import column for the same entity (same board rename or cross-board
+ * keyword identity).
  *
  * Detail pages must never blank out a previously generated 오늘의 분석 until a
  * newer column replaces it.
@@ -199,7 +232,9 @@ export async function readAnalysisForEntity(
   }
 
   await loadDisk();
+  const board = analysisBoardPrefix(entitySlug);
   let best: CachedAnalysis | undefined;
+  let bestScore = Number.NEGATIVE_INFINITY;
   for (const entry of memory.values()) {
     if (entry.slug === entitySlug) continue; // already considered (non-reusable)
     if (
@@ -212,8 +247,13 @@ export async function readAnalysisForEntity(
     }
     if (!isReusableAnalysisEntry(entry)) continue;
     if (!analysisEntryMatchesEntity(entry, entitySlug, name)) continue;
-    if (!best || (entry.generatedAt || "") > (best.generatedAt || "")) {
+    const entryBoard = analysisBoardPrefix(entry.slug);
+    const sameBoard = board && entryBoard && board === entryBoard ? 1 : 0;
+    const generated = Date.parse(entry.generatedAt || "") || 0;
+    const score = sameBoard * 1e15 + generated;
+    if (score > bestScore) {
       best = entry;
+      bestScore = score;
     }
   }
   return best;

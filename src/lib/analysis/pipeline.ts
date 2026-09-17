@@ -16,6 +16,7 @@ import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import { sanitizeCachedAnalysisArticle } from "@/lib/analysis/sanitize-cached";
 import {
   analysisTtlHours,
+  hasUsableAnalysisBody,
   isExpired,
   readAnalysis,
   readAnalysisForEntity,
@@ -279,16 +280,17 @@ export async function getOrCreateAnalysis(options: {
   const exact = options.force ? undefined : await readAnalysis(options.entity.slug);
   let cached =
     exact &&
+    hasUsableAnalysisBody(exact) &&
     (isGeminiAnalysis(exact) || exact.provenance.model?.startsWith("import:"))
       ? exact
       : undefined;
   let remountedAlias = false;
 
-  // Slug renames (e.g. …--보건복지부-기초연금 → …--기초연금) would otherwise
-  // blank the slot even though a prior Gemini column exists.
+  // HARD RULE: prior Gemini columns (any slug/board alias) fill the slot until
+  // a newer column replaces them — never leave a previously generated entity blank.
   if (!cached) {
     const aliased = await readAnalysisForEntity(options.entity.slug, options.entity.name);
-    if (aliased && isGeminiAnalysis(aliased)) {
+    if (aliased && isGeminiAnalysis(aliased) && hasUsableAnalysisBody(aliased)) {
       const remounted = remountAnalysisForEntity(
         aliased,
         options.entity.slug,

@@ -3,6 +3,7 @@ import {
   analysisEntryMatchesEntity,
   normalizeAnalysisMatchKey,
   remountAnalysisForEntity,
+  strongAnalysisKeywordIdentity,
   type CachedAnalysis,
 } from "../src/lib/analysis/store";
 
@@ -25,7 +26,15 @@ function stub(partial: Partial<CachedAnalysis> & Pick<CachedAnalysis, "slug" | "
       readingMinutes: 3,
       characterCount: 1000,
       reviewed: true,
-      sections: [],
+      sections: [
+        {
+          heading: "❶ 오늘의 결론",
+          headingLevel: 2,
+          paragraphs: [
+            "테스트 본문입니다. 과거 생성된 오늘의 분석이 상세 페이지 슬롯을 채워야 합니다. ".repeat(3),
+          ],
+        },
+      ],
       faq: [],
       table: { headers: [], rows: [] },
       internalLink: { href: "/", label: "홈" },
@@ -36,6 +45,8 @@ function stub(partial: Partial<CachedAnalysis> & Pick<CachedAnalysis, "slug" | "
 }
 
 assert.equal(normalizeAnalysisMatchKey("[보건복지부] 기초연금"), "기초연금");
+assert.equal(strongAnalysisKeywordIdentity("근로장려금", "근로장려금"), true);
+assert.equal(strongAnalysisKeywordIdentity("청년", "청년내일저축계좌"), false);
 
 assert.equal(
   analysisEntryMatchesEntity(
@@ -51,6 +62,19 @@ assert.equal(
     stub({ slug: "government-support-fund--보건복지부-청년내일저축계좌", keyword: "[보건복지부] 청년내일저축계좌" }),
     "government-support-fund--자산형성지원사업",
     "자산형성지원사업(청년내일저축계좌)",
+  ),
+  true,
+);
+
+// Cross-board / legacy politics slug must still find the prior Gemini column.
+assert.equal(
+  analysisEntryMatchesEntity(
+    stub({
+      slug: "government-support-fund--국세청-근로장려금",
+      keyword: "[국세청] 근로장려금",
+    }),
+    "pol-subsidy-근로장려금",
+    "[국세청] 근로장려금",
   ),
   true,
 );
