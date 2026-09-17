@@ -199,18 +199,31 @@ async function enrichNolGoodsDetail(
         )?.[1],
       ) ||
       plain(html.match(/playPeriod["']?\s*[:=]\s*["']([^"']+)["']/i)?.[1]);
-    const time = plain(
-      html.match(/(?:공연시간|관람시간)\s*[:：]?\s*([^<\n]{4,40})/i)?.[1],
+    const timeRaw = plain(
+      html.match(/(?:공연시간|관람시간|시작시간)\s*[:：]?\s*([^<\n]{4,40})/i)?.[1],
     );
+    const time =
+      timeRaw &&
+      !/예매율|퍼센트|%|\d{4}\s*[.년/-]\s*\d{1,2}/.test(timeRaw) &&
+      (/\d{1,2}\s*:\s*\d{2}/.test(timeRaw) || /[오전후]/.test(timeRaw))
+        ? timeRaw
+        : undefined;
     const priceRaw = plain(
       html.match(
-        /(?:티켓가격|관람료|입장료)\s*[:：]?\s*((?:전석|R석|S석|VIP|성인)?[^<\n]{0,40}\d[\d,]*(?:\s*원)?)/i,
+        /(?:티켓가격|관람료|입장료|가격)\s*[:：]?\s*((?:전석|R석|S석|VIP|성인)?[^<\n]{0,40}\d[\d,]*(?:\s*원)?)/i,
       )?.[1],
     );
+    const price =
+      priceRaw &&
+      !/예매율|퍼센트|%/.test(priceRaw) &&
+      /\d/.test(priceRaw) &&
+      /(원|석|전석|VIP)/i.test(priceRaw)
+        ? priceRaw
+        : undefined;
     return {
       schedule: looksLikeUiChrome(scheduleRaw) ? undefined : scheduleRaw,
       time: looksLikeUiChrome(time) ? undefined : time,
-      price: looksLikeUiChrome(priceRaw) ? undefined : priceRaw,
+      price: looksLikeUiChrome(price) ? undefined : price,
       url,
     };
   } catch {

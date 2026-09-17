@@ -68,7 +68,7 @@ export function xmlServList(xml: string): string[] {
 
 export function cleanPublicText(raw?: string): string | undefined {
   if (!raw) return undefined;
-  const text = raw
+  let text = raw
     .replace(/\r\n/g, "\n")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
@@ -78,7 +78,15 @@ export function cleanPublicText(raw?: string): string | undefined {
     .replace(/&gt;/g, ">")
     .replace(/\s+/g, " ")
     .trim();
-  return text || undefined;
+  // Drop SEO hashtag spam that sometimes leaks from portals into grant fields.
+  if ((text.match(/#/g) ?? []).length >= 2) {
+    text = text
+      .replace(/(?:^|\s)#[^\s#]{1,40}/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  if (!text || /^[#\s·,.]+$/.test(text)) return undefined;
+  return text;
 }
 
 export function clip(text: string | undefined, max = 160): string | undefined {

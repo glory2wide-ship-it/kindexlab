@@ -23,28 +23,34 @@ export async function matchPublicGrant(
   if (!hasDataGoKrKey()) return undefined;
   const q = keyword.trim();
   if (!q) return undefined;
-  const [gov, welfare] = await Promise.all([
+  const [gov, welfare, biz] = await Promise.all([
     matchGov24Service(q),
     matchWelfareService(q),
+    searchBizSupport(q, { limit: 5 }).then((rows) => rows[0]).catch(() => undefined),
   ]);
-  const candidates = [gov, welfare].filter(Boolean) as PublicGrantRecord[];
-  if (!candidates.length) {
-    const biz = await searchBizSupport(q, { limit: 3 });
-    return biz[0];
-  }
-  const normalized = q.replace(/\s+/g, "");
-  candidates.sort((a, b) => {
-    const score = (row: PublicGrantRecord) => {
-      let s = 0;
-      if (row.title.replace(/\s+/g, "").includes(normalized)) s += 3;
-      if (row.deadline) s += 1;
-      if (row.target) s += 1;
-      if (row.documents) s += 1;
-      if (row.source === "gov24") s += 0.5;
-      return s;
-    };
-    return score(b) - score(a);
-  });
+  const candidates = [gov, welfare, biz].filter(Boolean) as PublicGrantRecord[];
+  if (!candidates.length) return undefined;
+  const normalized = q.replace(/\s+/g, "").replace(/^\[[^\]]+\]/, "");
+  const richness = (row: PublicGrantRecord) => {
+    let s = 0;
+    const title = row.title.replace(/\s+/g, "");
+    if (title === normalized) s += 12;
+    if (title.includes(normalized) || normalized.includes(title)) s += 6;
+    const tokens = normalized.match(/[가-힣A-Za-z0-9]{2,}/g) ?? [];
+    for (const token of tokens) {
+      if (title.includes(token)) s += Math.min(token.length, 4);
+    }
+    if (row.deadline && !/#/.test(row.deadline)) s += 3;
+    if (row.target && !/#/.test(row.target)) s += 3;
+    if (row.documents && !/#/.test(row.documents)) s += 2;
+    if (row.howToApply && !/#/.test(row.howToApply)) s += 2;
+    if (row.criteria && !/#/.test(row.criteria)) s += 1;
+    if (row.summary) s += 1;
+    if (row.source === "gov24") s += 1.5;
+    if (row.source.startsWith("welfare")) s += 1;
+    return s;
+  };
+  candidates.sort((a, b) => richness(b) - richness(a));
   return candidates[0];
 }
 

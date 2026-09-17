@@ -286,21 +286,33 @@ export function ensureQualityNewsLinks(
   }
 
   const out = [...real.slice(0, 5)];
-  const needFallback = out.length < minPreferred && maxSearch > 0;
-  if (needFallback || (out.length === 0 && maxSearch > 0)) {
+  // Title fingerprint dedupe — same headline via different hosts must appear once.
+  const deduped: CategoryInfoLink[] = [];
+  const seenTitles = new Set<string>();
+  for (const link of out) {
+    const key = link.title
+      .replace(/\s+/g, "")
+      .replace(/[^\w가-힣]/g, "")
+      .toLowerCase();
+    if (key.length >= 8 && seenTitles.has(key)) continue;
+    if (key.length >= 8) seenTitles.add(key);
+    deduped.push(link);
+  }
+  const needFallback = deduped.length < minPreferred && maxSearch > 0;
+  if (needFallback || (deduped.length === 0 && maxSearch > 0)) {
     const searchQuery = newsQueryForChannel(name, channel);
     const fallback =
       search[0] ??
       ({
         title:
-          out.length > 0
+          deduped.length > 0
             ? `${name} 추가 수집 중 · 뉴스 검색`
             : `${name} 관련 뉴스 추가 수집 중`,
         href: naverNewsUrl(searchQuery),
         source: "뉴스 검색",
       } satisfies CategoryInfoLink);
-    if (!out.some((l) => l.href === fallback.href)) {
-      out.push({
+    if (!deduped.some((l) => l.href === fallback.href)) {
+      deduped.push({
         ...fallback,
         title: fallback.title.includes("추가 수집")
           ? fallback.title
@@ -312,7 +324,7 @@ export function ensureQualityNewsLinks(
     }
   }
   // Prefer quality 2 over forced 3 — cap soft at 5, do not pad.
-  return out.map((link) => ({
+  return deduped.map((link) => ({
     ...link,
     source: link.source
       ?.replace(/네이버\s*뉴스\s*검색/g, "뉴스 검색")

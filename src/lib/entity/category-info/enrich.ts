@@ -61,6 +61,30 @@ function isUpdating(value: string): boolean {
   return !value.trim() || value.includes(UPDATING) || value.includes("확인 중") || value.includes("준비 중");
 }
 
+/** Reject misparsed ticket times (dates, booking %, UI chrome). */
+function looksLikeBadTicketTime(value?: string): boolean {
+  if (!value?.trim()) return true;
+  const text = value.trim();
+  if (/예매율|퍼센트|%|가격 전체|로그인|쿠키|javascript/i.test(text)) return true;
+  // Date-only ranges belong in 일정, not 시간
+  if (
+    /\d{2,4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}/.test(text) &&
+    !/\d{1,2}\s*:\s*\d{2}/.test(text) &&
+    !/[오전후]\s*\d/.test(text)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function looksLikeTicketPrice(value?: string): boolean {
+  if (!value?.trim()) return false;
+  const text = value.trim();
+  if (/예매율|퍼센트|%/.test(text)) return false;
+  if (/가격 전체|확인해 주세요|로그인/i.test(text)) return false;
+  return /\d/.test(text) && /(원|석|전석|VIP|R석|S석|A석|무료|초대)/i.test(text);
+}
+
 function corpusOf(docs: CrawlDoc[]): string {
   return docs
     .map((doc) => `${doc.title} ${doc.snippet ?? ""}`)
@@ -542,22 +566,56 @@ function sanitizeRelatedLinks(
 }
 
 function mergeLinks(primary: CategoryInfoLink[], secondary: CategoryInfoLink[]): CategoryInfoLink[] {
-  const seen = new Set<string>();
+  const seenHref = new Set<string>();
+  const seenTitle = new Set<string>();
   const out: CategoryInfoLink[] = [];
   for (const link of [...primary, ...secondary]) {
-    if (!link.href || seen.has(link.href)) continue;
-    if (!isSafeOutboundUrl(link.href)) continue;
-    seen.add(link.href);
+    if (!link.href || !isSafeOutboundUrl(link.href)) continue;
+    if (seenHref.has(link.href)) continue;
+    const titleKey = link.title
+      .replace(/\s+/g, "")
+      .replace(/[^\w가-힣]/g, "")
+      .toLowerCase();
+    if (titleKey.length >= 8 && seenTitle.has(titleKey)) continue;
+    seenHref.add(link.href);
+    if (titleKey.length >= 8) seenTitle.add(titleKey);
     out.push(link);
     if (out.length >= 5) break;
   }
   return out;
 }
 
+/** Reject SEO hashtag / keyword-stuffed crawl noise for grant cells. */
+function isGrantSpamValue(value?: string): boolean {
+  if (!value?.trim()) return true;
+  const text = value.trim();
+  const hashCount = (text.match(/#/g) ?? []).length;
+  if (hashCount >= 2) return true;
+  if (/^#/.test(text) && text.length < 80) return true;
+  // "신청 기간 #태그 #태그" style mis-captures
+  if (/신청\s*기간\s*#/.test(text) || /자격[^\n]{0,20}#/.test(text)) return true;
+  // Mostly hashtags / short tag tokens
+  const tags = text.match(/#[^\s#]+/g) ?? [];
+  if (tags.length >= 2 && tags.join("").length / Math.max(text.replace(/\s/g, "").length, 1) > 0.45) {
+    return true;
+  }
+  return false;
+}
+
+function sanitizeGrantField(value?: string): string | undefined {
+  if (!value?.trim() || isGrantSpamValue(value)) return undefined;
+  const cleaned = value
+    .replace(/(?:^|\s)#[^\s#]{1,40}/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  if (!cleaned || isGrantSpamValue(cleaned) || cleaned.length < 4) return undefined;
+  return cleaned;
+}
+
 /** Split grant eligibility/prep into numbered lines; drop mid-clause truncations. */
 function formatGrantList(...parts: Array<string | undefined>): string | undefined {
   const chunks = parts
-    .map((part) => plain(part))
+    .map((part) => sanitizeGrantField(plain(part)))
     .filter((part): part is string => Boolean(part));
   if (!chunks.length) return undefined;
 
@@ -573,7 +631,7 @@ function formatGrantList(...parts: Array<string | undefined>): string | undefine
           .replace(/\s+/g, " ")
           .trim(),
       )
-      .filter((piece) => piece.length >= 2);
+      .filter((piece) => piece.length >= 2 && !isGrantSpamValue(piece));
     if (pieces.length > 1) {
       items.push(...pieces);
     } else {
@@ -581,9 +639,9 @@ function formatGrantList(...parts: Array<string | undefined>): string | undefine
       const soft = chunk
         .split(/(?<=다)\s+|,\s+(?=[가-힣])/)
         .map((piece) => piece.trim())
-        .filter((piece) => piece.length >= 8);
+        .filter((piece) => piece.length >= 8 && !isGrantSpamValue(piece));
       if (soft.length > 1) items.push(...soft);
-      else items.push(chunk);
+      else if (!isGrantSpamValue(chunk)) items.push(chunk);
     }
   }
 
@@ -594,17 +652,19 @@ function formatGrantList(...parts: Array<string | undefined>): string | undefine
       .replace(/\s+/g, " ")
       .replace(/(?:및|와|과|또는|등)\s*$/u, "")
       .trim();
-    if (cleaned.length < 4) continue;
+    if (cleaned.length < 4 || isGrantSpamValue(cleaned)) continue;
     if (cleaned.length < 12 && !/[.。!?)]$/.test(cleaned) && /(?:의|을|를|이|가|은|는)$/u.test(cleaned)) {
       continue;
     }
+    // Reject mis-captured "신청 기간 …" blobs in eligibility/prep.
+    if (/^신청\s*기간/.test(cleaned) && cleaned.length < 60) continue;
     const key = cleaned.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     unique.push(cleaned);
     if (unique.length >= 10) break;
   }
-  if (!unique.length) return chunks.join(" · ").slice(0, 280);
+  if (!unique.length) return undefined;
   if (unique.length === 1) return `· ${unique[0]}`;
   return unique.map((item, index) => `${index + 1}. ${item}`).join("\n");
 }
@@ -640,10 +700,11 @@ function applyGrantRecord(
       { label: /주관 기관/, value: grant.agency, emphasize: true },
     ]);
   }
-  if (grant.deadline) {
-    next = fillUpdatingRows(next, [{ label: "신청 기간", value: grant.deadline }]);
+  const deadline = sanitizeGrantField(grant.deadline);
+  if (deadline) {
+    next = fillUpdatingRows(next, [{ label: "신청 기간", value: deadline }]);
   }
-  const eligibility = formatGrantList(grant.target, grant.criteria);
+  const eligibility = formatGrantList(grant.target, grant.criteria, grant.content);
   if (eligibility) {
     next = next.map((row) =>
       /신청 자격|자격·조건/.test(row.label) && isUpdating(row.value)
@@ -1141,18 +1202,25 @@ export async function enrichCategoryInfoPayload(
           );
         }
       }
-      // Fill remaining gaps from API+crawl corpus even when a thin publicGrant matched.
-      const period = firstMatch(corpus, [
-        /신청\s*기간[:\s]*([^\n.]{6,80})/,
-        /접수\s*기간[:\s]*([^\n.]{6,80})/,
-        /(\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*[~～-]\s*\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2})/,
-      ]);
-      const eligibilityRaw = firstMatch(corpus, [
-        /(?:신청\s*자격|지원\s*대상|자격\s*요건|대상자)[:\s]*([^\n]{8,280})/,
-      ]);
-      const prepRaw = firstMatch(corpus, [
-        /(?:준비\s*서류|제출\s*서류|준비\s*사항|신청\s*방법|구비\s*서류)[:\s]*([^\n]{8,280})/,
-      ]);
+      // Fill remaining gaps from crawl only when public API left the cell empty.
+      // Never overwrite API values with hashtag/SEO spam.
+      const period = sanitizeGrantField(
+        firstMatch(corpus, [
+          /신청\s*기간[:\s]*([^\n#]{6,80})/,
+          /접수\s*기간[:\s]*([^\n#]{6,80})/,
+          /(\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*[~～-]\s*\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2})/,
+        ]),
+      );
+      const eligibilityRaw = sanitizeGrantField(
+        firstMatch(corpus, [
+          /(?:신청\s*자격|지원\s*대상|자격\s*요건|대상자)[:\s]*([^\n#]{8,280})/,
+        ]),
+      );
+      const prepRaw = sanitizeGrantField(
+        firstMatch(corpus, [
+          /(?:준비\s*서류|제출\s*서류|준비\s*사항|신청\s*방법|구비\s*서류)[:\s]*([^\n#]{8,280})/,
+        ]),
+      );
       if (period) {
         rows = fillUpdatingRows(rows, [{ label: "신청 기간", value: period }]);
       }
@@ -1178,8 +1246,14 @@ export async function enrichCategoryInfoPayload(
           rows = [...rows, { label: "준비사항", value: prep, multiline: true }];
         }
       }
+      // Final scrub — drop any leftover hashtag spam still sitting in grant cells.
+      rows = rows.map((row) => {
+        if (!/신청 기간|신청 자격|자격·조건|준비사항/.test(row.label)) return row;
+        if (!isGrantSpamValue(row.value)) return row;
+        return { ...row, value: UPDATING, multiline: undefined };
+      });
       if (publicGrant?.summary || crawledSynopsis) {
-        synopsis = synopsis || publicGrant?.summary || crawledSynopsis;
+        synopsis = synopsis || sanitizeGrantField(publicGrant?.summary) || crawledSynopsis;
       }
       break;
     }
@@ -1398,6 +1472,17 @@ export async function enrichCategoryInfoPayload(
     case "performance": {
       const isExhibition = base.channel === "exhibition";
       if (ticketFacts) {
+        const schedule = ticketFacts.schedule;
+        const time =
+          ticketFacts.time &&
+          !looksLikeBadTicketTime(ticketFacts.time) &&
+          ticketFacts.time !== schedule
+            ? ticketFacts.time
+            : undefined;
+        const price =
+          ticketFacts.price && looksLikeTicketPrice(ticketFacts.price)
+            ? ticketFacts.price
+            : undefined;
         rows = fillUpdatingRows(rows, [
           {
             label: isExhibition ? /행사\s*장소/ : /공연\s*장소|장소/,
@@ -1406,21 +1491,23 @@ export async function enrichCategoryInfoPayload(
           },
           {
             label: isExhibition ? /행사\s*시간|일정/ : /공연\s*일정|일정/,
-            value: ticketFacts.schedule || ticketFacts.time,
+            value: schedule,
           },
           {
             label: isExhibition ? /입장료/ : /티켓\s*가격|가격/,
-            value: ticketFacts.price || ticketFacts.bookingPercent,
+            value: price,
           },
         ]);
-        if (!isExhibition && ticketFacts.time && ticketFacts.schedule) {
-          rows = fillUpdatingRows(rows, [
-            { label: /공연\s*시간/, value: ticketFacts.time },
-          ]);
+        if (!isExhibition && time) {
+          rows = fillUpdatingRows(rows, [{ label: /공연\s*시간/, value: time }]);
+        }
+        // Never put 예매율 into 티켓 가격 / 공연 시간.
+        if (ticketFacts.bookingPercent && !price) {
+          rows = upsertRow(rows, "예매율", ticketFacts.bookingPercent);
         }
         if (ticketFacts.url) {
           rows = rows.map((row) =>
-            /장소|입장료|티켓/.test(row.label)
+            /장소|입장료|티켓|예매율/.test(row.label)
               ? { ...row, href: row.href || ticketFacts.url }
               : row,
           );
@@ -1435,20 +1522,26 @@ export async function enrichCategoryInfoPayload(
           );
         }
         const schedule = firstMatch(corpus, [
-          /(?:기간|일정|일시)\s*[:\s]*([^\n.]{6,50})/,
+          /(?:공연\s*기간|전시\s*기간|관람\s*기간|기간|일정)\s*[:\s]*([^\n.]{6,50})/,
           /(\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*[~～-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2})/,
         ]);
-        if (schedule) {
+        if (schedule && !looksLikeBadTicketTime(schedule)) {
           rows = upsertRow(
             rows,
             isExhibition ? "행사 시간" : "공연 일정",
             schedule,
           );
         }
-        const fee = firstMatch(corpus, [
-          /(?:입장료|티켓|관람료)\s*[:\s]*([^\n.]{2,40})/,
+        const time = firstMatch(corpus, [
+          /(?:공연\s*시간|관람\s*시간|시작\s*시간)\s*[:\s]*([^\n.]{4,40})/,
         ]);
-        if (fee) {
+        if (!isExhibition && time && !looksLikeBadTicketTime(time)) {
+          rows = upsertRow(rows, "공연 시간", time);
+        }
+        const fee = firstMatch(corpus, [
+          /(?:티켓\s*가격|입장료|관람료)\s*[:\s]*([^\n.]{2,40}\d[\d,]*(?:\s*원)?)/,
+        ]);
+        if (fee && looksLikeTicketPrice(fee)) {
           rows = upsertRow(rows, isExhibition ? "입장료" : "티켓 가격", fee);
         }
       }

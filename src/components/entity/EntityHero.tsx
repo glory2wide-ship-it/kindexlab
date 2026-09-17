@@ -9,7 +9,6 @@ import {
   isNaverStockMeasurement,
 } from "@/lib/market/naver-finance-format";
 import {
-  detailFactsAreStale,
   detailFactsForHero,
   resolveDetailFacts,
 } from "@/lib/boards/detail-facts";
@@ -133,23 +132,15 @@ function MarketQuoteHero({
 
 function DetailFactsBlock({
   detailFacts,
-  detailFactsStale,
-  refreshLabel,
 }: {
   detailFacts: NonNullable<ReturnType<typeof resolveDetailFacts>>;
-  detailFactsStale: boolean;
-  refreshLabel: string;
 }) {
   const synopsis = entityNarrativeSummary(detailFacts.synopsis);
   const showSynopsis = Boolean(synopsis) && !isEntityIndexBlurbText(synopsis);
   return (
-    <div className="mt-3 space-y-3 border-t border-line pt-3 md:mt-4 md:pt-4">
+    <div className="detail-profile-110 mt-3 space-y-3 border-t border-line pt-3 md:mt-4 md:pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] font-semibold tracking-wide text-soft">종목 프로필</p>
-        <p className="text-[10px] text-muted">
-          최근 {detailFacts.checkedAt.slice(0, 10)}
-          {detailFactsStale ? " · 갱신 필요" : ` · ${refreshLabel}`}
-        </p>
       </div>
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 md:gap-4">
         {detailFacts.rows.map((row) => (
@@ -227,25 +218,12 @@ export function EntityHero({
 }) {
   const rawDetailFacts = resolveDetailFacts(entity);
   const detailFacts = rawDetailFacts ? detailFactsForHero(rawDetailFacts) : undefined;
-  const detailFactsStale = detailFacts ? detailFactsAreStale(detailFacts) : false;
-  const refreshLabel =
-    detailFacts?.refresh === "daily"
-      ? "하루 1회"
-      : detailFacts?.refresh === "every3days"
-        ? "3일"
-        : "주 1회";
 
   const stockQuote = isNaverStockMeasurement(entity.measurement) ? entity.measurement : undefined;
   if (stockQuote) {
     return (
       <MarketQuoteHero entity={entity} quote={stockQuote} kicker={kicker}>
-        {detailFacts ? (
-          <DetailFactsBlock
-            detailFacts={detailFacts}
-            detailFactsStale={detailFactsStale}
-            refreshLabel={refreshLabel}
-          />
-        ) : null}
+        {detailFacts ? <DetailFactsBlock detailFacts={detailFacts} /> : null}
       </MarketQuoteHero>
     );
   }
@@ -303,13 +281,7 @@ export function EntityHero({
         </div>
       ) : null}
       
-      {detailFacts ? (
-        <DetailFactsBlock
-          detailFacts={detailFacts}
-          detailFactsStale={detailFactsStale}
-          refreshLabel={refreshLabel}
-        />
-      ) : null}
+      {detailFacts ? <DetailFactsBlock detailFacts={detailFacts} /> : null}
     </section>
   );
 }

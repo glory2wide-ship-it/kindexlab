@@ -321,14 +321,19 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
           { label: "입장료", value: UPDATING },
         ];
       } else {
-        // kpop / star
-        rows = [
-          { label: "소속사", value: UPDATING, emphasize: true },
-          { label: "직업", value: UPDATING },
-        ];
+        // kpop — 직업은 맞춤 정보에서 제외 (스타 채널만 직업 유지)
+        rows =
+          resolved.channel === "star"
+            ? [
+                { label: "소속사", value: UPDATING, emphasize: true },
+                { label: "직업", value: UPDATING },
+              ]
+            : [{ label: "소속사", value: UPDATING, emphasize: true }];
       }
       // Overlay curated pack values onto matching labels; keep chips (멤버/출연작품).
       for (const curated of curatedRows) {
+        // KPOP 맞춤 정보에서는 직업 행을 넣지 않음.
+        if (resolved.channel === "kpop" && curated.label === "직업") continue;
         rows = rows.map((row) =>
           row.label === curated.label || new RegExp(curated.label).test(row.label)
             ? { ...row, value: curated.value, href: curated.href ?? row.href, emphasize: row.emphasize || curated.emphasize }
@@ -337,6 +342,9 @@ export function buildCategoryInfoPayload(entity: RankingEntity): CategoryInfoPay
         if (!rows.some((row) => row.label === curated.label || new RegExp(curated.label).test(row.label))) {
           rows = [...rows, curated];
         }
+      }
+      if (resolved.channel === "kpop") {
+        rows = rows.filter((row) => row.label !== "직업");
       }
       chips = curatedChips;
       synopsis = fromEntertainment(entity).synopsis;

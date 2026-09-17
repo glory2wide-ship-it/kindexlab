@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { EntityHero } from "@/components/entity/EntityHero";
 import {
-  detailFactsAreStale,
   detailFactsForHero,
   resolveDetailFacts,
 } from "@/lib/boards/detail-facts";
@@ -93,13 +92,6 @@ function MarketQuotePendingHero({
 
   const rawDetailFacts = resolveDetailFacts(entity);
   const detailFacts = rawDetailFacts ? detailFactsForHero(rawDetailFacts) : undefined;
-  const detailFactsStale = detailFacts ? detailFactsAreStale(detailFacts) : false;
-  const refreshLabel =
-    detailFacts?.refresh === "daily"
-      ? "하루 1회"
-      : detailFacts?.refresh === "every3days"
-        ? "3일"
-        : "주 1회";
   const synopsis = entityNarrativeSummary(detailFacts?.synopsis);
 
   return (
@@ -116,13 +108,9 @@ function MarketQuotePendingHero({
         </div>
       </div>
       {detailFacts ? (
-        <div className="mt-3 space-y-3 border-t border-line pt-3 md:mt-4 md:pt-4">
+        <div className="detail-profile-110 mt-3 space-y-3 border-t border-line pt-3 md:mt-4 md:pt-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] font-semibold tracking-wide text-soft">종목 프로필</p>
-            <p className="text-[10px] text-muted">
-              최근 {detailFacts.checkedAt.slice(0, 10)}
-              {detailFactsStale ? " · 갱신 필요" : ` · ${refreshLabel}`}
-            </p>
           </div>
           {detailFacts.rows.length > 0 ? (
             <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 md:gap-4">
