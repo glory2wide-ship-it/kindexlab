@@ -1,7 +1,7 @@
 {
-  "updatedAt": "2026-09-17T08:00:23.906Z",
+  "updatedAt": "2026-09-17T08:20:00.967Z",
   "tiers": {
-    "live_signal": "2026-09-17T07:44:06.378Z",
+    "live_signal": "2026-09-17T08:20:00.966Z",
     "ticket_food": "2026-09-17T07:46:42.643Z",
     "media_catalog": "2026-09-17T07:44:09.894Z",
     "entertainment_curated": "2026-09-17T07:44:45.985Z",
@@ -25,12 +25,12 @@
       "lastRunAt": "2026-09-17T07:46:40.455Z"
     },
     "live_signal": {
-      "ok": 381,
+      "ok": 385,
       "fail": 37,
       "skip": 35,
-      "fillRateAvg": 0.5724797645327445,
-      "usedFallback": 102,
-      "lastRunAt": "2026-09-17T07:47:22.219Z"
+      "fillRateAvg": 0.5696571845368342,
+      "usedFallback": 105,
+      "lastRunAt": "2026-09-17T08:20:00.967Z"
     },
     "other_news": {
       "ok": 168,
