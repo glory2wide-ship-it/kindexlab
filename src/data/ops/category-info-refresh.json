@@ -1,10 +1,52 @@
 {
-  "updatedAt": "2026-09-16T14:27:51.577Z",
+  "updatedAt": "2026-09-17T05:52:54.961Z",
   "tiers": {
-    "live_signal": "2026-09-16T14:27:45.682Z",
-    "ticket_food": "2026-09-16T09:00:00+09:00",
-    "media_catalog": "2026-09-14T09:00:00+09:00",
-    "entertainment_curated": "2026-09-16T14:27:51.577Z",
-    "other_news": "2026-09-16T12:00:00.000Z"
+    "live_signal": "2026-09-17T04:26:32.565Z",
+    "ticket_food": "2026-09-17T05:52:25.926Z",
+    "media_catalog": "2026-09-17T04:42:42.945Z",
+    "entertainment_curated": "2026-09-17T05:39:38.074Z",
+    "other_news": "2026-09-17T05:48:34.636Z"
+  },
+  "runs": {
+    "media_catalog": {
+      "ok": 2,
+      "fail": 0,
+      "skip": 0,
+      "fillRateAvg": 0.6666666666666666,
+      "usedFallback": 1,
+      "lastRunAt": "2026-09-17T04:42:42.945Z"
+    },
+    "entertainment_curated": {
+      "ok": 72,
+      "fail": 0,
+      "skip": 0,
+      "fillRateAvg": 0.4791666666666667,
+      "usedFallback": 2,
+      "lastRunAt": "2026-09-17T05:43:30.973Z"
+    },
+    "live_signal": {
+      "ok": 4,
+      "fail": 0,
+      "skip": 0,
+      "fillRateAvg": 0.8333333333333333,
+      "usedFallback": 0,
+      "lastRunAt": "2026-09-17T04:27:50.045Z"
+    },
+    "other_news": {
+      "ok": 7,
+      "fail": 0,
+      "skip": 0,
+      "fillRateAvg": 0,
+      "usedFallback": 0,
+      "lastRunAt": "2026-09-17T05:48:34.636Z"
+    },
+    "ticket_food": {
+      "ok": 43,
+      "fail": 24,
+      "skip": 0,
+      "fillRateAvg": 0.40796019900497527,
+      "usedFallback": 58,
+      "lastRunAt": "2026-09-17T05:52:54.961Z"
+    }
   }
 }
