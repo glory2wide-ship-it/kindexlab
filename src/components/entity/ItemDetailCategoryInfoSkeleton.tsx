@@ -1,4 +1,4 @@
-/** Skeleton for ItemDetailCategoryInfo while the 1h-cached pack resolves. */
+/** Skeleton for ItemDetailCategoryInfo while the progressive enrich resolves. */
 export function ItemDetailCategoryInfoSkeleton() {
   return (
     <section

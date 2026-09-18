@@ -11,6 +11,7 @@ export { buildCategoryInfoPayload } from "@/lib/entity/category-info/build";
 export { enrichCategoryInfoPayload } from "@/lib/entity/category-info/enrich";
 export {
   CATEGORY_INFO_REVALIDATE_SEC,
+  loadCategoryInfoBasePayload,
   loadCategoryInfoPayload,
 } from "@/lib/entity/category-info/load";
 export {

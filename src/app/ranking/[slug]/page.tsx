@@ -6,7 +6,6 @@ import { BuzzChart } from "@/components/entity/BuzzChart";
 import { EntityHeroLive } from "@/components/entity/EntityHeroLive";
 import {
   ItemDetailCategoryInfo,
-  ItemDetailCategoryInfoSkeleton,
 } from "@/components/entity/ItemDetailCategoryInfo";
 import { TvProgramInfoCard } from "@/components/entity/TvProgramInfoCard";
 import { MarketPriceChart } from "@/components/entity/MarketPriceChart";
@@ -197,7 +196,7 @@ export default async function RankingDetailPage({
       </p>
       <EntityHeroLive entity={entity} hydrateQuote={hydrateQuote} />
       <TvProgramInfoCard entity={entity} />
-      <Suspense fallback={<ItemDetailCategoryInfoSkeleton />}>
+      <Suspense fallback={null}>
         <ItemDetailCategoryInfo entity={entity} />
       </Suspense>
       {marketInstrument ? (
