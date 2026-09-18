@@ -1,0 +1,433 @@
+{
+  "kind": "briefings",
+  "editionDate": "2026-09-19",
+  "pipeline": "daily-briefings",
+  "generatedAt": "2026-09-18T19:39:47.379Z",
+  "ok": 40,
+  "fail": 1,
+  "skip": 0,
+  "total": 41,
+  "estimatedKrw": 804.83865,
+  "liveKrw": 0,
+  "batchKrw": 804.83865,
+  "tokens": 433289,
+  "calls": 41,
+  "model": "gemini-3.6-flash",
+  "notes": [
+    "Gemini Batch=true",
+    "API 추정 ₩805"
+  ],
+  "items": [
+    {
+      "name": "노스탈지아 이슈",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "main",
+      "meta": "entertainment · main · 엔터 종합 브리핑"
+    },
+    {
+      "name": "김종배 이슈",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "main",
+      "meta": "politics · main · 정치 종합 브리핑"
+    },
+    {
+      "name": "송도더샵센트럴파크",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "main",
+      "meta": "economy · main · 경제 종합 브리핑"
+    },
+    {
+      "name": "성남 뮤지컬 레베카",
+      "category": "culture · main · 문화",
+      "categoryLabel": "culture · main · 문화",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "생활 종합 브리핑",
+      "meta": "culture · main · 문화/생활 종합 브리핑"
+    },
+    {
+      "name": "관광두레",
+      "category": "travel · main · 여행",
+      "categoryLabel": "travel · main · 여행",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "맛집 종합 브리핑",
+      "meta": "travel · main · 여행/맛집 종합 브리핑"
+    },
+    {
+      "name": "스트레이 키즈 이슈",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive · K POP"
+    },
+    {
+      "name": "장민호 이슈",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive · 트로트·가요"
+    },
+    {
+      "name": "주한 미군 사령관 이슈",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive · TV 시청률"
+    },
+    {
+      "name": "It's Me 이슈",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive · 음원"
+    },
+    {
+      "name": "백종원 이슈",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive · 스타"
+    },
+    {
+      "name": "뉴 데이 이슈",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive · 영화"
+    },
+    {
+      "name": "82만 유튜버 이슈",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive · 유튜버"
+    },
+    {
+      "name": "쿠베라 이슈",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive · 웹툰"
+    },
+    {
+      "name": "Counter- 이슈",
+      "category": "entertainment",
+      "categoryLabel": "엔터",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "entertainment · deep-dive · 게임"
+    },
+    {
+      "name": "디딤돌대출 이슈",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive · 정부 지원금"
+    },
+    {
+      "name": "기본소득당 이슈",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive · 정당 지지도"
+    },
+    {
+      "name": "배현진 이슈",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive · 정치인 지지도"
+    },
+    {
+      "name": "경기패스 이슈",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive · 지자체 정책"
+    },
+    {
+      "name": "딴지방송국 이슈",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive · 정치 유튜브"
+    },
+    {
+      "name": "서정욱 (시사평론가) 이슈",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive · 정치평론가"
+    },
+    {
+      "name": "대선 이슈",
+      "category": "politics",
+      "categoryLabel": "정치",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "politics · deep-dive · 이슈 키워드"
+    },
+    {
+      "name": "기초연금",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive · 정부지원금"
+    },
+    {
+      "name": "래미안대치팰리스",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "fail",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive · 지역별 부동산",
+      "reason": "not-gemini"
+    },
+    {
+      "name": "신용대출",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive · 금융"
+    },
+    {
+      "name": "알테오젠",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive · 주식"
+    },
+    {
+      "name": "아마존",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive · 해외 주식"
+    },
+    {
+      "name": "환율 1400원",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive · 원자재·환율"
+    },
+    {
+      "name": "농산물",
+      "category": "economy",
+      "categoryLabel": "경제",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "economy · deep-dive · 소비자 물가"
+    },
+    {
+      "name": "편의점",
+      "category": "economy · deep-dive · 창업",
+      "categoryLabel": "economy · deep-dive · 창업",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "소상공",
+      "meta": "economy · deep-dive · 창업/소상공"
+    },
+    {
+      "name": "문화누리카드",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive · 정부지원금"
+    },
+    {
+      "name": "청주 뮤지컬 빨래",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive · 공연"
+    },
+    {
+      "name": "데이비드 호크니 특별전",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive · 전시·팝업스토어"
+    },
+    {
+      "name": "2027 해커스경찰 갓대환 형사법 기출총정리 세트",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive · 도서·베스트셀러"
+    },
+    {
+      "name": "허리디스크",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive · 건강정보"
+    },
+    {
+      "name": "된장찌개",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive · 요리 레시피"
+    },
+    {
+      "name": "쏘나타",
+      "category": "culture",
+      "categoryLabel": "문화/생활",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "culture · deep-dive · 자동차"
+    },
+    {
+      "name": "자연휴양림 이용권",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "travel · deep-dive · 여행 정부지원금"
+    },
+    {
+      "name": "김포",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "travel · deep-dive · 국내 여행"
+    },
+    {
+      "name": "베트남 다낭",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "travel · deep-dive · 해외 여행"
+    },
+    {
+      "name": "강진",
+      "category": "travel",
+      "categoryLabel": "여행/맛집",
+      "status": "ok",
+      "estimatedKrw": 19.63,
+      "pipeline": "briefings",
+      "kind": "deep-dive",
+      "meta": "travel · deep-dive · 지역별 주말 나들이"
+    },
+    {
+      "name": "와구리",
+      "category": "travel · deep-dive · 지역별 음식",
+      "categoryLabel": "travel · deep-dive · 지역별 음식",
+      "status": "ok",
+      "estimatedKrw": 19.64,
+      "pipeline": "briefings",
+      "kind": "맛집",
+      "meta": "travel · deep-dive · 지역별 음식/맛집"
+    }
+  ]
+}
