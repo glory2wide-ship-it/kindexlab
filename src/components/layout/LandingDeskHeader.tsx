@@ -1,12 +1,14 @@
 import {
   SITE_INDEX_HEADLINE_DESKTOP,
-  SITE_LANDING_HEADLINE_DESKTOP,
+  SITE_LANDING_SUBCOPY_LINE1,
+  SITE_LANDING_SUBCOPY_LINE2,
 } from "@/lib/site";
 
 /**
  * Landing hero headcopy — shown on mobile and desktop above the ticker.
  * Category chips live in GlobalStickyMobileCategoryBar (root layout).
  * Mobile H1 stays on one line via fluid type + nowrap.
+ * Mobile subcopy is two fixed lines; desktop keeps a single flowing paragraph.
  */
 export function LandingDeskHeader() {
   return (
@@ -15,7 +17,9 @@ export function LandingDeskHeader() {
         {SITE_INDEX_HEADLINE_DESKTOP}
       </h1>
       <p className="max-w-3xl text-[11.97px] leading-[18.24px] text-soft md:text-[16.8px] md:leading-[25.92px]">
-        {SITE_LANDING_HEADLINE_DESKTOP}
+        <span className="block md:inline">{SITE_LANDING_SUBCOPY_LINE1}</span>
+        <span className="hidden md:inline"> </span>
+        <span className="block md:inline">{SITE_LANDING_SUBCOPY_LINE2}</span>
       </p>
     </header>
   );

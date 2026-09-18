@@ -10,13 +10,16 @@ export const SITE_INDEX_HEADLINE = "킨덱스! / KinDex";
 
 /** Head copy on the landing page hero, above the unified heatmap. */
 export const SITE_LANDING_HEADLINE =
-  "실시간 검색어보다 넓고, 뉴스보다 빠르게. 엔터·경제·정치·문화·여행의 지금을 지수로 확인하세요.";
+  "실시간 검색어보다 넓고, 뉴스보다 빠르게. 엔터·경제·정치·문화·여행의 지금을 지수로 확인하세요!";
 
 /** Landing H1 / subcopy (mobile + desktop). */
 export const SITE_INDEX_HEADLINE_DESKTOP =
   "지금 대한민국에서 뭐가 뜨고 있는지, 10초 만에";
-export const SITE_LANDING_HEADLINE_DESKTOP =
-  "실시간 검색어보다 넓고, 뉴스보다 빠르게. 엔터·경제·정치·문화·여행의 지금을 지수로 확인하세요.";
+export const SITE_LANDING_SUBCOPY_LINE1 = "실시간 검색어보다 넓고, 뉴스보다 빠르게.";
+export const SITE_LANDING_SUBCOPY_LINE2 =
+  "엔터·경제·정치·문화·여행의 지금을 지수로 확인하세요!";
+/** Single-line form for meta / desktop-friendly joins. */
+export const SITE_LANDING_HEADLINE_DESKTOP = `${SITE_LANDING_SUBCOPY_LINE1} ${SITE_LANDING_SUBCOPY_LINE2}`;
 
 export const SITE = {
   name: "KinDex",
