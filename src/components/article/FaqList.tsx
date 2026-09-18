@@ -19,19 +19,21 @@ export function FaqList({
   /** When true, every answer is visible without a click (오늘의 분석). */
   defaultOpen?: boolean;
   /**
-   * 오늘의 분석 FAQ: question +15%, answer −5% vs the shared article baseline.
-   * Does not affect magazine / briefing FAQ lists.
+   * 오늘의 분석 FAQ only (not magazine / briefing):
+   * Q +15% then +10% vs text-sm; A −5% then −3% vs article body, darker ink.
    */
   analysisSizing?: boolean;
 }) {
   if (!items?.length) return null;
 
+  // Cumulative vs shared baseline: Q 1.15×1.10, A 0.95×0.97.
   const questionStyle = analysisSizing
-    ? ({ fontSize: "calc(0.875rem * 1.15)" } as const)
+    ? ({ fontSize: "calc(0.875rem * 1.265)" } as const)
     : undefined;
   const answerStyle = analysisSizing
-    ? ({ fontSize: "calc(var(--article-font-size) * 0.95)" } as const)
+    ? ({ fontSize: "calc(var(--article-font-size) * 0.9215)" } as const)
     : undefined;
+  const answerColorClass = analysisSizing ? "text-ink/85" : "text-muted";
 
   return (
     <div className="not-prose space-y-3">
@@ -65,7 +67,7 @@ export function FaqList({
           <div className="flex gap-3 border-t border-line px-4 py-3.5">
             <span className="mt-px font-sans text-xs font-bold text-muted">A</span>
             <p
-              className="article-prose-text flex-1 whitespace-pre-line text-muted"
+              className={`article-prose-text flex-1 whitespace-pre-line ${answerColorClass}`}
               style={answerStyle}
             >
               {item.answer}
