@@ -326,7 +326,7 @@ export function TreemapView({
               href={href}
               prefetch={false}
               className="cursor-pointer"
-              aria-label={`${channelTag ? `${channelTag} ` : ""}${showPrefixChips ? `${prefixChipLabel} ` : ""}${group}${showRankNumber ? ` ${rankBadge}` : ""} ${tile.title}${priceLabel ? ` ${priceLabel}` : ""}${showHeaderRate ? ` ${rate}` : ""}`}
+              aria-label={`${showChannelTag && channelTag ? `${channelTag} ` : ""}${showPrefixChips ? `${prefixChipLabel} ` : ""}${group}${showRankNumber ? ` ${rankBadge}` : ""} ${tile.title}${priceLabel ? ` ${priceLabel}` : ""}${showHeaderRate ? ` ${rate}` : ""}`}
               data-heatmap-rank={rank}
               onPointerDown={() => {
                 router.prefetch(href);
