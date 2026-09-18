@@ -120,7 +120,6 @@ async function IndexAnalysisSlot({
       <TodayAnalysis
         article={slot.article}
         keyword={slot.keyword}
-        sourceNote={slot.sourceNote}
         entityHref={`${indexPath(id)}#chart`}
       />
     );

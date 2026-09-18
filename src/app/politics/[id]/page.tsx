@@ -165,13 +165,7 @@ export default async function PoliticsSupportDetailPage({
 async function TodayAnalysisSlot({ id, name }: { id: string; name?: string }) {
   const slot = await loadAnalysisArticle(id, name);
   if (!slot?.article) return null;
-  return (
-    <TodayAnalysis
-      article={slot.article}
-      keyword={slot.keyword}
-      sourceNote={slot.sourceNote}
-    />
-  );
+  return <TodayAnalysis article={slot.article} keyword={slot.keyword} />;
 }
 
 async function RelatedSlot({

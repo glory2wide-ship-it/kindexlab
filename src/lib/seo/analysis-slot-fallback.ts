@@ -50,20 +50,9 @@ export type AnalysisSlotContent = {
   article: TodayAnalysisArticle;
   keyword: string;
   source: AnalysisSlotSource;
-  /** Short reader-facing note under the 「오늘의 분석」 label. */
-  sourceNote?: string;
 };
 
 const EMPTY_TABLE: PostTable = { caption: "", headers: [], rows: [] };
-
-const SOURCE_NOTE: Record<AnalysisSlotSource, string | undefined> = {
-  analysis: undefined,
-  "prior-analysis": "이전에 생성된 분석 · 새 글이 나오면 자동 교체됩니다",
-  "related-analysis": "관련 종목 분석 · 이 종목 전용 글이 생성되면 교체됩니다",
-  insight: "관련 투데이 인사이트 · 이 종목 전용 분석이 생성되면 교체됩니다",
-  briefing: "관련 투데이 브리핑 · 이 종목 전용 분석이 생성되면 교체됩니다",
-  magazine: "관련 인사이트 매거진 · 이 종목 전용 분석이 생성되면 교체됩니다",
-};
 
 function entityChannel(entity: RankingEntity) {
   return entity.sourceChannel ?? channelFromEntityType(entity.type);
@@ -84,7 +73,6 @@ function fromCached(
     article: stripPresentationFields(remounted.article),
     keyword: entity.name,
     source,
-    sourceNote: SOURCE_NOTE[source],
   };
 }
 
@@ -297,7 +285,6 @@ async function resolveEditorialFallback(
       article: briefingToTodayAnalysis(insight, entity),
       keyword: entity.name,
       source: "insight",
-      sourceNote: SOURCE_NOTE.insight,
     };
   }
   const briefing = briefings.find((item) => item.kind === "main") ?? briefings[0];
@@ -306,7 +293,6 @@ async function resolveEditorialFallback(
       article: briefingToTodayAnalysis(briefing, entity),
       keyword: entity.name,
       source: "briefing",
-      sourceNote: SOURCE_NOTE.briefing,
     };
   }
 
@@ -316,7 +302,6 @@ async function resolveEditorialFallback(
       article: postToTodayAnalysis(post, entity),
       keyword: entity.name,
       source: "magazine",
-      sourceNote: SOURCE_NOTE.magazine,
     };
   }
 
@@ -343,13 +328,12 @@ export async function resolveTodayAnalysisSlot(options: {
   }
 
   if (pipeline?.entry && isReusableAnalysis(pipeline.entry)) {
-    const noteSource: AnalysisSlotSource =
+    const source: AnalysisSlotSource =
       pipeline.cache === "hit" ? "analysis" : "prior-analysis";
     return {
       article: stripPresentationFields(pipeline.entry.article),
       keyword: entity.name,
-      source: noteSource,
-      sourceNote: SOURCE_NOTE[noteSource],
+      source,
     };
   }
 
@@ -362,7 +346,6 @@ export async function resolveTodayAnalysisSlot(options: {
         article: stripPresentationFields(remounted.article),
         keyword: entity.name,
         source: "prior-analysis",
-        sourceNote: SOURCE_NOTE["prior-analysis"],
       };
     }
   } catch {
