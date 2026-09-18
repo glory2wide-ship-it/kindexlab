@@ -153,12 +153,23 @@ export function formatHeatmapRank(rank: number): string {
 }
 
 /**
- * Heatmap tile rank-number badge ceiling.
- * Ranks 1–15 show the numeric badge; 16위 and below paint without it.
+ * Heatmap category/channel chip ceiling.
+ * Ranks 1–15 show category·channel badges beside the rank;
+ * 16위 and below keep the rank number only (no meta chips).
  */
-export const HEATMAP_RANK_BADGE_MAX = 15;
+export const HEATMAP_META_BADGE_MAX = 15;
 
+/** @deprecated Use HEATMAP_META_BADGE_MAX — kept for older call sites. */
+export const HEATMAP_RANK_BADGE_MAX = HEATMAP_META_BADGE_MAX;
+
+/** Category / channel / genre chips — only for ranks 1–15. */
+export function heatmapShowsMetaBadge(rank: number): boolean {
+  const safe = Number.isFinite(rank) && rank > 0 ? Math.round(rank) : 0;
+  return safe >= 1 && safe <= HEATMAP_META_BADGE_MAX;
+}
+
+/** Rank number — painted for every valid rank, including 16위+. */
 export function heatmapShowsRankBadge(rank: number): boolean {
   const safe = Number.isFinite(rank) && rank > 0 ? Math.round(rank) : 0;
-  return safe >= 1 && safe <= HEATMAP_RANK_BADGE_MAX;
+  return safe >= 1;
 }

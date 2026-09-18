@@ -11,7 +11,11 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { uniqueHeatmapTiles } from "@/lib/boards/unique-tiles";
 import { TYPE_LABEL, formatRate } from "@/lib/format";
 import { heatFill, heatText } from "@/lib/heatmap";
-import { formatHeatmapRank, heatmapShowsRankBadge } from "@/lib/boards/limits";
+import {
+  formatHeatmapRank,
+  heatmapShowsMetaBadge,
+  heatmapShowsRankBadge,
+} from "@/lib/boards/limits";
 import { heatmapTileLabel } from "@/lib/heatmap-display-name";
 import { heatmapRankPrefixChips } from "@/lib/heatmap-rank-chip";
 import type { HeatmapTvGenre } from "@/lib/boards/tv-genre";
@@ -234,6 +238,8 @@ export function TreemapView({
           const rank = displayRankById.get(entity.id) ?? leaf.rank ?? entity.rank;
           const rankBadge = formatHeatmapRank(rank);
           const showRankNumber = heatmapShowsRankBadge(rank);
+          /** Category·channel chips only for 1–15; rank number stays for 16위+. */
+          const showMetaBadges = heatmapShowsMetaBadge(rank);
           /** Hide ±% in the name block — rate moves next to the rank badge. */
           const omitRate = true;
           /** Show ±% beside/below the rank when the header has room.
@@ -263,7 +269,8 @@ export function TreemapView({
             showChannelTags && entity.sourceChannel
               ? CHANNEL_SHORT_LABEL[entity.sourceChannel as PostChannel]
               : undefined;
-          const showChannelTag = Boolean(channelTag) && w >= 56 && h >= 22;
+          const showChannelTag =
+            showMetaBadges && Boolean(channelTag) && w >= 56 && h >= 22;
           /** Landing unified map: category tag only — skip genre/platform chips. */
           const prefixChips = showChannelTags
             ? []
@@ -273,7 +280,8 @@ export function TreemapView({
               });
           const sourceChipSize = Math.max(8, rankSize - 1.5);
           /** Channel + genre / platform / region chips immediately before the rank. */
-          const showPrefixChips = prefixChips.length > 0 && w >= 52 && h >= 22;
+          const showPrefixChips =
+            showMetaBadges && prefixChips.length > 0 && w >= 52 && h >= 22;
           const prefixChipLabel = prefixChips.join(" ");
           /** Header row when any chip/rate/badge needs paint space. */
           const showRankHeader =

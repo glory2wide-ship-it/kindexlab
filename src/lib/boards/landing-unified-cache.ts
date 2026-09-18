@@ -7,7 +7,7 @@ import { DEFAULT_TRENDS_REVALIDATE_SEC } from "@/lib/refresh";
 import type { RankingEntity } from "@/lib/types";
 import type { PostChannel } from "@/lib/posts/types";
 
-/** Bump when landing desk/heatmap contract changes (desk top-4, rank 1–20 badges). */
+/** Bump when landing desk/heatmap contract changes (desk top-4, ranks 1–20, meta chips 1–15). */
 const CACHE_VERSION = 6;
 const MAX_AGE_MS = DEFAULT_TRENDS_REVALIDATE_SEC * 1000;
 const EXPECTED_TILES = 5 * LANDING_PER_CHANNEL_TOP;
