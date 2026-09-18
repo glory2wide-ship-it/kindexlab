@@ -138,7 +138,7 @@ export function TodayAnalysis({
 
         <section>
           <SectionHeading as="h3">자주 묻는 질문</SectionHeading>
-          <FaqList items={article.faq ?? []} defaultOpen />
+          <FaqList items={article.faq ?? []} defaultOpen analysisSizing />
         </section>
 
         <ContentSlot placement="footer" label={article.focusKeyword} adFormat="auto" />
