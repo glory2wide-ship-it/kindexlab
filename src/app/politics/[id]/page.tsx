@@ -67,7 +67,12 @@ export async function generateMetadata({
   if (RESERVED.has(id)) return { title: "정치" };
   const query = searchParams ? await searchParams : {};
   const entity = await loadEntity(id, typeof query.name === "string" ? query.name : undefined);
-  if (!entity) return { title: "종목을 찾을 수 없습니다" };
+  if (!entity) {
+    return {
+      title: "종목을 찾을 수 없습니다",
+      robots: { index: false, follow: false },
+    };
+  }
   const analysis = await readAnalysisForEntity(entity.slug, entity.name);
   const indexable = isIndexableEntityPage(entity, analysis);
   const title = entitySeoTitle(entity);
@@ -107,7 +112,7 @@ export default async function PoliticsSupportDetailPage({
   if (!entity) notFound();
 
   if (entity.type !== "party_support" && entity.type !== "politician_support") {
-    redirect(rankingPath(entity.slug) + (name ? `?name=${encodeURIComponent(name)}` : ""));
+    redirect(rankingPath(entity.slug));
   }
 
   const initialTimeframe = parseTimeframeParam(query.tf) ?? "5m";

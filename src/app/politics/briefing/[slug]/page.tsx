@@ -29,7 +29,7 @@ export async function generateMetadata({
   const detail = await loadBriefingPage(slug);
   if (!detail) return { title: "브리핑을 찾을 수 없습니다" };
   const { briefing } = detail;
-  const canonical = `${channelSectionHref("politics", "briefing")}/${briefing.slug}`;
+  const canonical = `/briefing/${briefing.slug}`;
   return {
     title: briefing.title,
     description: briefing.excerpt,
@@ -56,7 +56,7 @@ export default async function PoliticsBriefingArticlePage({
   const { briefing, related } = detail;
   if (!briefingMatchesChannel(briefing, "politics")) notFound();
   const meta = getPostChannel("politics");
-  const canonicalPath = `${channelSectionHref("politics", "briefing")}/${briefing.slug}`;
+  const canonicalPath = `/briefing/${briefing.slug}`;
 
   const jsonLd = {
     "@context": "https://schema.org",

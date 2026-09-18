@@ -392,6 +392,9 @@ export function isUnusableRankName(name: string): boolean {
   if (/^(항목|종목|작품|곡|밈|프로그램)\s*[\dA-Z]+$/i.test(trimmed)) return true;
   if (/^(한국 상업영화|할리우드 대작|애니메이션|독립영화|재개봉작)$/.test(trimmed)) return true;
   if (/^movie\s*[a-z0-9]+$/i.test(trimmed)) return true;
+  // LIVE filler / offensive scraps that must never rank or index.
+  if (/^이름\s*사이\s*공백$/i.test(trimmed)) return true;
+  if (/^눈찢기$/i.test(trimmed.replace(/\s+/g, ""))) return true;
   return false;
 }
 

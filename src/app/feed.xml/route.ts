@@ -3,7 +3,7 @@ import { listAllBriefings } from "@/lib/briefing/store";
 import { briefingPlainText, isPersistableBriefing } from "@/lib/briefing/quality";
 import { entityNameLooksIndexable } from "@/lib/seo/indexable-entity";
 import { SITE } from "@/lib/site";
-import { decodeRouteSlug, rankingUrl } from "@/lib/slugs";
+import { decodeRouteSlug, rankingUrl, canonicalEntityPathSlug } from "@/lib/slugs";
 import type { BriefingArticle } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -74,7 +74,9 @@ export async function GET() {
     if (entry.provenance?.kind !== "chain") continue;
     const keyword = (entry.keyword || "").trim();
     if (!entityNameLooksIndexable(keyword)) continue;
-    const url = rankingUrl(SITE.url, decodeRouteSlug(entry.slug));
+    const slug = canonicalEntityPathSlug(decodeRouteSlug(entry.slug), keyword);
+    if (!slug || /[[\]]/.test(slug)) continue;
+    const url = rankingUrl(SITE.url, slug);
     if (byUrl.has(url)) continue;
     byUrl.set(url, {
       url,

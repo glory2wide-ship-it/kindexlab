@@ -23,7 +23,30 @@ export function politicsDetailPath(slug: string, hash?: string): string {
   return hash ? `${path}#${hash}` : path;
 }
 
-/** Always stay on the internal ranking detail page. External hrefs are ignored. */
+/**
+ * Collapse legacy bracket tails (`food-…--[서울]-을지로`) onto the live slugify
+ * form (`food-…--서울-을지로`) so sitemap / feed advertise one URL per subject.
+ * Matches `boardRowSlug` / heatmap `slugify` (strip `[` `]` glyphs, keep region text).
+ */
+export function canonicalEntityPathSlug(slug: string, displayName?: string): string {
+  const decoded = decodeRouteSlug(slug);
+  const sep = decoded.indexOf("--");
+  if (sep <= 0) return decoded.replace(/[\[\]]/g, "");
+  const board = decoded.slice(0, sep);
+  const raw = (displayName?.trim() || decoded.slice(sep + 2).replace(/-/g, " ")).trim();
+  const tail = raw
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9가-힣-]/g, "")
+    .slice(0, 48);
+  return `${board}--${tail || "item"}`;
+}
+
+/**
+ * Internal entity links stay on the clean ranking/politics path.
+ * Do not append `?name=` — that creates GSC “alternate page with proper
+ * canonical” duplicates while the meta canonical already omits the query.
+ */
 export function entityHref(
   item: { slug: string; name?: string; href?: string; type?: string },
   hash?: string,
@@ -31,9 +54,7 @@ export function entityHref(
   const isPoliticsSupport =
     item.type === "party_support" || item.type === "politician_support";
   const path = isPoliticsSupport ? politicsDetailPath(item.slug) : rankingPath(item.slug);
-  const query = item.name?.trim() ? `?name=${encodeURIComponent(item.name.trim())}` : "";
-  const withQuery = `${path}${query}`;
-  return hash ? `${withQuery}#${hash}` : withQuery;
+  return hash ? `${path}#${hash}` : path;
 }
 
 export function rankingUrl(origin: string, slug: string): string {

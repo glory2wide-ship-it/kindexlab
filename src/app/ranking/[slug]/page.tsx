@@ -100,7 +100,12 @@ export async function generateMetadata({
   const { slug } = await params;
   const query = searchParams ? await searchParams : {};
   const entity = await loadEntity(slug, typeof query.name === "string" ? query.name : undefined);
-  if (!entity) return { title: "종목을 찾을 수 없습니다" };
+  if (!entity) {
+    return {
+      title: "종목을 찾을 수 없습니다",
+      robots: { index: false, follow: false },
+    };
+  }
 
   const rate = isNaverStockMeasurement(entity.measurement)
     ? entity.measurement.changeRate

@@ -20,7 +20,11 @@ import type { EntityType, RankingEntity } from "@/lib/types";
 
 /** Single-token / scrap fragments that must never compete in SERP. */
 const FRAGMENT_NAME =
-  /^(감탄|RP|1초|공개|속보|종합|오늘|이유|사랑|부모|학대|구금|마취|활짝|깜짝|고고|옛말|화제성|본방|테이블|MJ|인도)$/i;
+  /^(감탄|RP|1초|공개|속보|종합|오늘|이유|사랑|부모|학대|구금|마취|활짝|깜짝|고고|옛말|화제성|본방|테이블|MJ|인도|눈찢기)$/i;
+
+/** Placeholder / UI filler labels that slipped into LIVE boards. */
+const PLACEHOLDER_NAME =
+  /^(이름\s*사이\s*공백|테스트|샘플|sample|dummy|placeholder|untitled)$/i;
 
 const GUIDE_OR_TRIVIA_NOISE =
   /(공략|키우기|가이드|활용\s*전략|키\b|몸무게|나이\b|평가$|리뷰\s*모음)/i;
@@ -31,6 +35,7 @@ export function entityNameLooksIndexable(name: string, type?: EntityType): boole
   if (isUnusableRankName(cleaned)) return false;
   if (!isAllowedKrEnEntityName(cleaned)) return false;
   if (FRAGMENT_NAME.test(cleaned.replace(/\s+/g, ""))) return false;
+  if (PLACEHOLDER_NAME.test(cleaned)) return false;
   if (GUIDE_OR_TRIVIA_NOISE.test(cleaned)) return false;
 
   if (type === "party_support") return isLikelyPartyName(cleaned);

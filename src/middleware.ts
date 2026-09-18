@@ -49,6 +49,18 @@ function cookieHeader(secret: string): string {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Strip ?name= from entity detail URLs — meta canonical already omits it, and
+  // internal links no longer emit the query. 308 collapses GSC "alternate with
+  // proper canonical" duplicates onto the clean path (keep tf= and other params).
+  if (
+    (pathname.startsWith("/ranking/") || pathname.startsWith("/politics/")) &&
+    request.nextUrl.searchParams.has("name")
+  ) {
+    const url = request.nextUrl.clone();
+    url.searchParams.delete("name");
+    return NextResponse.redirect(url, 308);
+  }
+
   // Public login API + analytics beacon.
   if (
     pathname === "/api/admin/login" ||
@@ -87,5 +99,12 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*", "/api/admin/:path*", "/api/analytics/:path*"],
+  matcher: [
+    "/admin",
+    "/admin/:path*",
+    "/api/admin/:path*",
+    "/api/analytics/:path*",
+    "/ranking/:path*",
+    "/politics/:path*",
+  ],
 };

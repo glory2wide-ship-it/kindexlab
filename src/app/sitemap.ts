@@ -4,7 +4,7 @@ import { BOARDS, boardPath, menuBoardsForChannel } from "@/lib/boards/registry";
 import { CHANNEL_SECTIONS, channelSectionHref, POST_CHANNELS } from "@/lib/posts/channels";
 import { entityNameLooksIndexable } from "@/lib/seo/indexable-entity";
 import { SITE } from "@/lib/site";
-import { decodeRouteSlug, rankingUrl } from "@/lib/slugs";
+import { canonicalEntityPathSlug, decodeRouteSlug, rankingUrl } from "@/lib/slugs";
 import type { MetadataRoute } from "next";
 
 /**
@@ -35,18 +35,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   /**
    * Ranking detail URLs — only chain-grounded analyses whose keyword passes the
-   * indexability name gate. Sitemap comments historically claimed robots would
-   * allow these; meta robots now matches that policy (see isIndexableEntityPage).
+   * indexability name gate. Bracket-legacy path tails collapse onto the live
+   * slugify form so GSC does not discover duplicate alternates.
    */
   const rankingEntries = new Map<string, { lastModified: Date; priority: number }>();
   for (const entry of analyses) {
     if (entry.provenance?.kind !== "chain") continue;
     const keyword = (entry.keyword || "").trim();
     if (!entityNameLooksIndexable(keyword)) continue;
-    rankingEntries.set(decodeRouteSlug(entry.slug), {
-      lastModified: toDate(entry.generatedAt ?? entry.article?.publishedAt, now),
-      priority: 0.85,
-    });
+    const slug = canonicalEntityPathSlug(decodeRouteSlug(entry.slug), keyword);
+    if (!slug || /[[\]]/.test(slug)) continue;
+    const prev = rankingEntries.get(slug);
+    const lastModified = toDate(entry.generatedAt ?? entry.article?.publishedAt, now);
+    if (!prev || lastModified > prev.lastModified) {
+      rankingEntries.set(slug, { lastModified, priority: 0.85 });
+    }
   }
 
   /** Stable board hubs — clearer intent than thin entity scraps. */
