@@ -545,6 +545,25 @@ nav[aria-label$="서브 메뉴"] {
   font-weight: 700;
 }
 
+/* Header row (구분·핵심 특징…) +5%; body rows −10%. */
+.analysis-fact-table-120 thead th {
+  font-size: 13.02px; /* 12.4 × 1.05 */
+}
+
+.analysis-fact-table-120 tbody td {
+  font-size: 13.05px; /* 14.5 × 0.9 */
+}
+
+@media (max-width: 767px) {
+  .analysis-fact-table-120 thead th {
+    font-size: 11.55px; /* 11 × 1.05 */
+  }
+
+  .analysis-fact-table-120 tbody td {
+    font-size: 11.7px; /* 13 × 0.9 */
+  }
+}
+
 /* Housing sparkline title + legend — 20%. */
 .housing-spark-120 {
   zoom: 1.2;
