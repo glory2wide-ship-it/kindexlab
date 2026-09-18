@@ -327,7 +327,8 @@ export async function getOrCreateAnalysis(options: {
     return serveCached(cached, "stale");
   }
 
-  // True miss (never generated) — queue Gemini, leave the slot empty for readers.
+  // True miss (never generated) — queue Gemini. The detail page fills the
+  // slot with prior/related editorial via resolveTodayAnalysisSlot until then.
   void generateOnce({ ...options, editionDate }).catch(() => undefined);
   return { entry: null, cache: "miss" };
 }

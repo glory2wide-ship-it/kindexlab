@@ -211,6 +211,13 @@ function isReusableAnalysisEntry(
   return Boolean(entry.provenance.model?.startsWith("import:"));
 }
 
+/** True when a cached column may fill the 오늘의 분석 detail slot. */
+export function isReusableAnalysis(
+  entry: Pick<CachedAnalysis, "provenance" | "article"> | null | undefined,
+): boolean {
+  return isReusableAnalysisEntry(entry);
+}
+
 /**
  * Prefer the exact slug; if missing or only a stub, reuse the newest prior
  * Gemini/import column for the same entity (same board rename or cross-board

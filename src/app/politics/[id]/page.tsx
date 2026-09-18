@@ -9,11 +9,8 @@ import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
 import { SupportIndexChart } from "@/components/politics/SupportIndexChart";
-import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
-import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import { readAnalysisForEntity } from "@/lib/analysis/store";
 import { getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
-import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import {
   breadcrumbJsonLd,
   entityDatasetJsonLd,
@@ -21,6 +18,7 @@ import {
   entitySeoTitle,
   isIndexableEntityPage,
 } from "@/lib/seo/indexable-entity";
+import { resolveTodayAnalysisSlot } from "@/lib/seo/analysis-slot-fallback";
 import { SITE } from "@/lib/site";
 import { decodeRouteSlug, politicsDetailPath, rankingPath } from "@/lib/slugs";
 import { parseTimeframeParam } from "@/lib/timeframes";
@@ -44,15 +42,12 @@ const loadRelated = cache(async (id: string, name?: string) => {
 const loadAnalysisArticle = cache(async (id: string, name?: string) => {
   const entity = await loadEntity(id, name);
   if (!entity) return null;
-  let article: TodayAnalysisArticle | undefined;
   try {
     const [related, market] = await Promise.all([loadRelated(id, name), getRankings()]);
-    const analysis = await getOrCreateAnalysis({ entity, market, related });
-    if (analysis.entry && isGeminiAnalysis(analysis.entry)) article = analysis.entry.article;
+    return await resolveTodayAnalysisSlot({ entity, market, related });
   } catch {
-    /* data sections stand alone */
+    return null;
   }
-  return { article, name: entity.name };
 });
 
 export async function generateMetadata({
@@ -168,9 +163,15 @@ export default async function PoliticsSupportDetailPage({
 }
 
 async function TodayAnalysisSlot({ id, name }: { id: string; name?: string }) {
-  const analysis = await loadAnalysisArticle(id, name);
-  if (!analysis?.article) return null;
-  return <TodayAnalysis article={analysis.article} keyword={analysis.name} />;
+  const slot = await loadAnalysisArticle(id, name);
+  if (!slot?.article) return null;
+  return (
+    <TodayAnalysis
+      article={slot.article}
+      keyword={slot.keyword}
+      sourceNote={slot.sourceNote}
+    />
+  );
 }
 
 async function RelatedSlot({

@@ -8,10 +8,7 @@ import { RelatedRankingDesk } from "@/components/entity/RelatedRankingDesk";
 import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
 import { SetActiveChannel } from "@/components/providers/ActiveChannelProvider";
-import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
-import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import { getRankings } from "@/lib/api";
-import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import { formatRate } from "@/lib/format";
 import { APPROVAL_INDEX_ID } from "@/lib/ingestion/composite";
 import {
@@ -22,9 +19,10 @@ import {
   listIndexIds,
 } from "@/lib/indices";
 import { channelFromLead } from "@/lib/posts/channels";
+import { resolveTodayAnalysisSlot } from "@/lib/seo/analysis-slot-fallback";
 import { SITE } from "@/lib/site";
 import { parseTimeframeParam } from "@/lib/timeframes";
-import type { RankingEntity, RankingsPayload } from "@/lib/types";
+import type { RankingEntity } from "@/lib/types";
 
 export const revalidate = 60;
 export const dynamicParams = true;
@@ -111,17 +109,22 @@ async function IndexAnalysisSlot({
 }) {
   const detail = await loadIndexDetail(id);
   if (!detail) return null;
-  let analysisArticle: TodayAnalysisArticle | undefined;
   try {
-    const analysis = await getOrCreateAnalysis({
+    const slot = await resolveTodayAnalysisSlot({
       entity,
-      market: detail.market as RankingsPayload,
+      market: detail.market,
       related,
     });
-    if (analysis.entry && isGeminiAnalysis(analysis.entry)) analysisArticle = analysis.entry.article;
+    if (!slot?.article) return null;
+    return (
+      <TodayAnalysis
+        article={slot.article}
+        keyword={slot.keyword}
+        sourceNote={slot.sourceNote}
+        entityHref={`${indexPath(id)}#chart`}
+      />
+    );
   } catch {
-    /* charts and constituents stand alone until Gemini fills the column */
+    return null;
   }
-  if (!analysisArticle) return null;
-  return <TodayAnalysis article={analysisArticle} entityHref={`${indexPath(id)}#chart`} />;
 }

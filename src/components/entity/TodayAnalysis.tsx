@@ -14,12 +14,15 @@ export function TodayAnalysis({
   compact = false,
   entityHref,
   keyword,
+  sourceNote,
 }: {
   article: TodayAnalysisArticle;
   compact?: boolean;
   entityHref?: string;
   /** Clicked heatmap/list keyword, rendered in this section for later generated copy. */
   keyword?: string;
+  /** Shown when the slot is filled by a prior/related fallback until a fresh column lands. */
+  sourceNote?: string;
 }) {
   const topic = stripRowQualifier(keyword ?? article.focusKeyword ?? "");
   const boardHref = entityHref ?? rankingPath(article.entitySlug);
@@ -65,6 +68,9 @@ export function TodayAnalysis({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <p className="font-sans text-[13.2px] font-semibold tracking-[0.14em] text-accent">오늘의 분석</p>
+      {sourceNote ? (
+        <p className="mt-1.5 max-w-3xl text-[11px] leading-4 text-muted">{sourceNote}</p>
+      ) : null}
       {topic ? (
         <p data-analysis-keyword={topic} className="mt-2 text-sm font-semibold text-ink">
           키워드 · {topic}

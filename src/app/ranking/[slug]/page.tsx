@@ -15,11 +15,8 @@ import { TodayAnalysis } from "@/components/entity/TodayAnalysis";
 import { PollDeskSection } from "@/components/politics/PollDeskSection";
 import { SupportIndexChart } from "@/components/politics/SupportIndexChart";
 import { SetActiveChannel } from "@/components/providers/ActiveChannelProvider";
-import { getOrCreateAnalysis } from "@/lib/analysis/pipeline";
-import { isGeminiAnalysis } from "@/lib/analysis/quality";
 import { readAnalysisForEntity } from "@/lib/analysis/store";
 import { getAllSlugs, getEntityBySlug, getRankings, getRelatedEntities } from "@/lib/api";
-import type { TodayAnalysisArticle } from "@/lib/editorial/today-analysis";
 import { formatRate } from "@/lib/format";
 import {
   enrichEntityWithCachedKospiQuote,
@@ -28,6 +25,7 @@ import {
 import { resolveMarketChartInstrument } from "@/lib/market/naver-chart";
 import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
 import { channelFromLead, getPostChannel } from "@/lib/posts/channels";
+import { resolveTodayAnalysisSlot } from "@/lib/seo/analysis-slot-fallback";
 import {
   breadcrumbJsonLd,
   entityDatasetJsonLd,
@@ -68,10 +66,7 @@ const loadAnalysisArticle = cache(async (slug: string, name?: string) => {
   const entity = await loadEntity(slug, name);
   if (!entity) return null;
 
-  let article: TodayAnalysisArticle | undefined;
   try {
-    // Board heatmap rows resolve without the live tape — don't block analysis
-    // streaming on getRankings() for the common detail click path.
     const related = await loadRelated(slug, name);
     const market = slug.includes("--")
       ? ({
@@ -81,13 +76,10 @@ const loadAnalysisArticle = cache(async (slug: string, name?: string) => {
           items: [],
         } as Awaited<ReturnType<typeof getRankings>>)
       : await getRankings();
-    const analysis = await getOrCreateAnalysis({ entity, market, related });
-    if (analysis.entry && isGeminiAnalysis(analysis.entry)) article = analysis.entry.article;
+    return await resolveTodayAnalysisSlot({ entity, market, related });
   } catch {
-    /* leave the block out; the data sections below stand on their own */
+    return null;
   }
-
-  return { article, name: entity.name };
 });
 
 export async function generateMetadata({
@@ -236,10 +228,15 @@ export default async function RankingDetailPage({
 }
 
 async function TodayAnalysisSlot({ slug, name }: { slug: string; name?: string }) {
-  const analysis = await loadAnalysisArticle(slug, name);
-  if (!analysis?.article) return null;
-  const { bodyMarkdown: _md, jsonLd: _ld, ...article } = analysis.article;
-  return <TodayAnalysis article={article} keyword={analysis.name} />;
+  const slot = await loadAnalysisArticle(slug, name);
+  if (!slot?.article) return null;
+  return (
+    <TodayAnalysis
+      article={slot.article}
+      keyword={slot.keyword}
+      sourceNote={slot.sourceNote}
+    />
+  );
 }
 
 async function PollDeskSlot({ entity }: { entity: RankingEntity }) {
