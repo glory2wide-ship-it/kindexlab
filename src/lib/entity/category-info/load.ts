@@ -26,7 +26,7 @@ export const CATEGORY_INFO_REVALIDATE_SEC = 3600;
  */
 function cacheKey(entity: RankingEntity, channel: string): string[] {
   return [
-    "item-detail-category-info-v25-stable-key",
+    "item-detail-category-info-v26-stable-key",
     channel,
     entity.slug,
     entity.type,
@@ -34,7 +34,7 @@ function cacheKey(entity: RankingEntity, channel: string): string[] {
   ];
 }
 
-const DISK_DIR = path.join(process.cwd(), ".next", "cache", "category-info-v25");
+const DISK_DIR = path.join(process.cwd(), ".next", "cache", "category-info-v26");
 
 function diskFileFor(slug: string): string {
   const safe = slug.replace(/[^\w.\-\uac00-\ud7a3]+/g, "_").slice(0, 180);

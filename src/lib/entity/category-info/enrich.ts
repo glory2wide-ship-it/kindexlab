@@ -23,6 +23,11 @@ import {
 } from "@/lib/entity/category-info/refresh-status";
 import { extractMissingCategoryFields } from "@/lib/entity/category-info/llm-extract";
 import {
+  extractGrantPeriod,
+  isPlausibleGrantPeriod,
+  sanitizeGrantPeriod,
+} from "@/lib/entity/category-info/grant-period";
+import {
   isUpdatingValue,
   meetsNewsSla,
   NEWS_SLA_MIN_REAL,
@@ -856,7 +861,7 @@ function applyGrantRecord(
       { label: /주관 기관/, value: grant.agency, emphasize: true },
     ]);
   }
-  const deadline = sanitizeGrantField(grant.deadline);
+  const deadline = sanitizeGrantPeriod(grant.deadline);
   if (deadline) {
     next = fillUpdatingRows(next, [{ label: "신청 기간", value: deadline }]);
   }
@@ -1443,14 +1448,9 @@ export async function enrichCategoryInfoPayload(
         }
       }
       // Fill remaining gaps from crawl only when public API left the cell empty.
-      // Never overwrite API values with hashtag/SEO spam.
-      const period = sanitizeGrantField(
-        firstMatch(corpus, [
-          /신청\s*기간[:\s]*([^\n#]{6,80})/,
-          /접수\s*기간[:\s]*([^\n#]{6,80})/,
-          /(\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*[~～-]\s*\d{4}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2})/,
-        ]),
-      );
+      // Never overwrite API values with hashtag/SEO spam or news-title mis-captures
+      // ("신청 기간, 접수 마감…" / "신청 기간\\n뉴스 제목…").
+      const period = extractGrantPeriod(corpus);
       const eligibilityRaw = sanitizeGrantField(
         firstMatch(corpus, [
           /(?:신청\s*자격|지원\s*대상|자격\s*요건|대상자)[:\s]*([^\n#]{8,280})/,
@@ -1486,9 +1486,13 @@ export async function enrichCategoryInfoPayload(
           rows = [...rows, { label: "준비사항", value: prep, multiline: true }];
         }
       }
-      // Final scrub — drop any leftover hashtag spam still sitting in grant cells.
+      // Final scrub — drop hashtag spam and implausible 신청 기간 cells
+      // (news headlines / prep-list fragments captured by loose crawl regex).
       rows = rows.map((row) => {
         if (!/신청 기간|신청 자격|자격·조건|준비사항/.test(row.label)) return row;
+        if (row.label === "신청 기간" && !isUpdating(row.value) && !isPlausibleGrantPeriod(row.value)) {
+          return { ...row, value: UPDATING, multiline: undefined };
+        }
         if (!isGrantSpamValue(row.value)) return row;
         return { ...row, value: UPDATING, multiline: undefined };
       });

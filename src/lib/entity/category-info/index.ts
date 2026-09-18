@@ -10,6 +10,11 @@ export { resolveCategoryInfoChannel, isNewsPrimaryChannel } from "@/lib/entity/c
 export { buildCategoryInfoPayload } from "@/lib/entity/category-info/build";
 export { enrichCategoryInfoPayload } from "@/lib/entity/category-info/enrich";
 export {
+  extractGrantPeriod,
+  isPlausibleGrantPeriod,
+  sanitizeGrantPeriod,
+} from "@/lib/entity/category-info/grant-period";
+export {
   CATEGORY_INFO_REVALIDATE_SEC,
   loadCategoryInfoBasePayload,
   loadCategoryInfoPayload,

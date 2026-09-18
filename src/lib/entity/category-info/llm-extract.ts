@@ -4,6 +4,7 @@
  */
 import { analysisLlmConfigured, chatJsonLive } from "@/lib/analysis/chain/llm";
 import { analysisLogger } from "@/lib/analysis/log";
+import { isPlausibleGrantPeriod } from "@/lib/entity/category-info/grant-period";
 import type { CategoryInfoChannel, CategoryInfoRow } from "@/lib/entity/category-info/types";
 import { isUpdatingValue } from "@/lib/entity/category-info/trust";
 
@@ -34,7 +35,14 @@ function looksLikeJunk(label: string, value: string): boolean {
   if (/모름|알\s*수\s*없|확인\s*불|N\/?A|없음|미상/i.test(v)) return true;
   if (/히트곡|곡/.test(label) && /소속|데뷔|감독|작가/.test(v)) return true;
   if (/가격|입장료|티켓/.test(label) && !/\d/.test(v)) return true;
-  if (/기간|일정|개봉|데뷔/.test(label) && !/\d/.test(v)) return true;
+  if (/기간|일정|개봉|데뷔/.test(label) && !/\d/.test(v)) {
+    // 상시/연중 등 숫자 없는 정상 기간은 허용
+    if (!/상시|연중|수시|매년|별\s*상이|신청\s*가능|영업일/.test(v)) return true;
+  }
+  // Grant period: reject news titles / checklist fragments (same rules as crawl).
+  if (/신청\s*기간|접수\s*기간/.test(label) && !isPlausibleGrantPeriod(v)) {
+    return true;
+  }
   return false;
 }
 
