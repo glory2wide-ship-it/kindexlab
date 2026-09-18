@@ -46,9 +46,7 @@ export function FactTable({
       {/* Mobile: fit viewport without horizontal scroll. Desktop keeps the wide table. */}
       <div className="max-md:overflow-x-visible md:overflow-x-auto">
         <table
-          className={`w-full border-collapse text-[14.5px] max-md:table-fixed md:min-w-[30rem] ${
-            emphasized ? "font-bold" : ""
-          }`}
+          className="w-full border-collapse text-[14.5px] max-md:table-fixed md:min-w-[30rem]"
         >
           <thead>
             <tr className="bg-board/70">
@@ -75,8 +73,12 @@ export function FactTable({
                   <td
                     key={`${rowIndex}-${cellIndex}`}
                     className={`px-4 py-3 align-top leading-6 max-md:break-words max-md:px-2.5 max-md:py-2 max-md:text-[13px] max-md:leading-[0.9375rem] ${
-                      cellIndex === 0 ? "font-medium text-ink" : "text-muted"
-                    } ${emphasized ? "font-bold text-ink" : ""}`}
+                      emphasized
+                        ? "font-normal text-ink"
+                        : cellIndex === 0
+                          ? "font-medium text-ink"
+                          : "text-muted"
+                    }`}
                   >
                     {cell}
                   </td>

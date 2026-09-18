@@ -534,24 +534,24 @@ nav[aria-label$="서브 메뉴"] {
   zoom: 1.1;
 }
 
-/* 오늘의 분석 fact table — +20% type, bold body. */
+/* 오늘의 분석 fact table — +20% type; caption/header bold, body regular. */
 .analysis-fact-table-120 {
   zoom: 1.2;
 }
 
 .analysis-fact-table-120 figcaption,
-.analysis-fact-table-120 th,
-.analysis-fact-table-120 td {
+.analysis-fact-table-120 thead th {
   font-weight: 700;
 }
 
-/* Header row (구분·핵심 특징…) +5%; body rows −10%. */
+/* Header row (구분·핵심 특징…) +5%; body rows −10% then −5%, normal weight. */
 .analysis-fact-table-120 thead th {
   font-size: 13.02px; /* 12.4 × 1.05 */
 }
 
 .analysis-fact-table-120 tbody td {
-  font-size: 13.05px; /* 14.5 × 0.9 */
+  font-size: 12.4px; /* 14.5 × 0.9 × 0.95 */
+  font-weight: 400;
 }
 
 @media (max-width: 767px) {
@@ -560,7 +560,8 @@ nav[aria-label$="서브 메뉴"] {
   }
 
   .analysis-fact-table-120 tbody td {
-    font-size: 11.7px; /* 13 × 0.9 */
+    font-size: 11.12px; /* 13 × 0.9 × 0.95 */
+    font-weight: 400;
   }
 }
 
