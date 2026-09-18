@@ -16,7 +16,7 @@ export function FactTable({
   table: PostTable;
   /** Omit or pass empty string to hide the accent eyebrow label. */
   eyebrow?: string;
-  /** Today's analysis: +20% type size and bold text in the boxed table. */
+  /** Today's analysis: +20% type size; body uses regular (non-bold) weight. */
   emphasized?: boolean;
 }) {
   if (!table?.rows?.length) return null;
@@ -31,12 +31,12 @@ export function FactTable({
     >
       <figcaption className="border-b border-line border-l-4 border-l-accent bg-board/50 px-4 py-3">
         {label ? (
-          <span className="block font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
+          <span className="block font-sans text-[10px] font-normal uppercase tracking-[0.18em] text-accent">
             {label}
           </span>
         ) : null}
         <span
-          className={`block text-[14.5px] font-semibold leading-6 text-ink max-md:leading-[1.125rem] ${
+          className={`block text-[14.5px] font-normal leading-6 text-ink max-md:leading-[1.125rem] ${
             label ? "mt-1" : ""
           }`}
         >
@@ -46,7 +46,7 @@ export function FactTable({
       {/* Mobile: fit viewport without horizontal scroll. Desktop keeps the wide table. */}
       <div className="max-md:overflow-x-visible md:overflow-x-auto">
         <table
-          className="w-full border-collapse text-[14.5px] max-md:table-fixed md:min-w-[30rem]"
+          className="w-full border-collapse text-[14.5px] font-normal max-md:table-fixed md:min-w-[30rem]"
         >
           <thead>
             <tr className="bg-board/70">
@@ -56,7 +56,7 @@ export function FactTable({
                   scope="col"
                   className={`border-b border-line px-4 py-3 text-left font-sans text-[12.4px] font-semibold uppercase tracking-wide text-muted max-md:px-2.5 max-md:py-2 max-md:text-[11px] max-md:normal-case max-md:tracking-normal max-md:leading-[0.9375rem] md:whitespace-nowrap ${
                     headerIndex === 0 ? "max-md:w-[32%]" : ""
-                  } ${emphasized ? "font-bold" : ""}`}
+                  }`}
                 >
                   {header}
                 </th>
@@ -72,13 +72,20 @@ export function FactTable({
                 {row.map((cell, cellIndex) => (
                   <td
                     key={`${rowIndex}-${cellIndex}`}
-                    className={`px-4 py-3 align-top leading-6 max-md:break-words max-md:px-2.5 max-md:py-2 max-md:text-[13px] max-md:leading-[0.9375rem] ${
+                    className={`px-4 py-3 align-top font-normal leading-6 max-md:break-words max-md:px-2.5 max-md:py-2 max-md:text-[13px] max-md:leading-[0.9375rem] ${
                       emphasized
-                        ? "font-normal text-ink"
+                        ? cellIndex === 0
+                          ? "text-ink"
+                          : "text-muted"
                         : cellIndex === 0
                           ? "font-medium text-ink"
                           : "text-muted"
                     }`}
+                    style={
+                      emphasized
+                        ? { fontWeight: 400, fontVariationSettings: '"wght" 400' }
+                        : undefined
+                    }
                   >
                     {cell}
                   </td>
