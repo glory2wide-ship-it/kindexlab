@@ -86,7 +86,7 @@ export function TodayAnalysis({
       <div className="article-prose prose-board mt-6 max-w-3xl">
         {/* The fact table leads the body: it is the densest block on the page and
             now carries the opening visual weight on its own. */}
-        <FactTable table={article.table} />
+        <FactTable table={article.table} eyebrow="" emphasized />
 
         <ContentSlot placement="intro" label={article.focusKeyword} />
 

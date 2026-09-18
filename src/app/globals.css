@@ -534,6 +534,17 @@ nav[aria-label$="서브 메뉴"] {
   zoom: 1.1;
 }
 
+/* 오늘의 분석 fact table — +20% type, bold body. */
+.analysis-fact-table-120 {
+  zoom: 1.2;
+}
+
+.analysis-fact-table-120 figcaption,
+.analysis-fact-table-120 th,
+.analysis-fact-table-120 td {
+  font-weight: 700;
+}
+
 /* Housing sparkline title + legend — 20%. */
 .housing-spark-120 {
   zoom: 1.2;

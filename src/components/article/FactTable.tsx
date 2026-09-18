@@ -11,23 +11,45 @@ import type { PostTable } from "@/lib/posts/types";
 export function FactTable({
   table,
   eyebrow = "핵심 요약",
+  emphasized = false,
 }: {
   table: PostTable;
+  /** Omit or pass empty string to hide the accent eyebrow label. */
   eyebrow?: string;
+  /** Today's analysis: +20% type size and bold text in the boxed table. */
+  emphasized?: boolean;
 }) {
   if (!table?.rows?.length) return null;
 
+  const label = eyebrow?.trim() ?? "";
+
   return (
-    <figure className="not-prose my-7 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm ring-1 ring-accent/10">
+    <figure
+      className={`not-prose my-7 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm ring-1 ring-accent/10 ${
+        emphasized ? "analysis-fact-table-120" : ""
+      }`}
+    >
       <figcaption className="border-b border-line border-l-4 border-l-accent bg-board/50 px-4 py-3">
-        <span className="block font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
-          {eyebrow}
+        {label ? (
+          <span className="block font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
+            {label}
+          </span>
+        ) : null}
+        <span
+          className={`block text-[14.5px] font-semibold leading-6 text-ink max-md:leading-[1.125rem] ${
+            label ? "mt-1" : ""
+          }`}
+        >
+          {table.caption}
         </span>
-        <span className="mt-1 block text-[14.5px] font-semibold leading-6 text-ink max-md:leading-[1.125rem]">{table.caption}</span>
       </figcaption>
       {/* Mobile: fit viewport without horizontal scroll. Desktop keeps the wide table. */}
       <div className="max-md:overflow-x-visible md:overflow-x-auto">
-        <table className="w-full border-collapse text-[14.5px] max-md:table-fixed md:min-w-[30rem]">
+        <table
+          className={`w-full border-collapse text-[14.5px] max-md:table-fixed md:min-w-[30rem] ${
+            emphasized ? "font-bold" : ""
+          }`}
+        >
           <thead>
             <tr className="bg-board/70">
               {table.headers.map((header, headerIndex) => (
@@ -36,7 +58,7 @@ export function FactTable({
                   scope="col"
                   className={`border-b border-line px-4 py-3 text-left font-sans text-[12.4px] font-semibold uppercase tracking-wide text-muted max-md:px-2.5 max-md:py-2 max-md:text-[11px] max-md:normal-case max-md:tracking-normal max-md:leading-[0.9375rem] md:whitespace-nowrap ${
                     headerIndex === 0 ? "max-md:w-[32%]" : ""
-                  }`}
+                  } ${emphasized ? "font-bold" : ""}`}
                 >
                   {header}
                 </th>
@@ -54,7 +76,7 @@ export function FactTable({
                     key={`${rowIndex}-${cellIndex}`}
                     className={`px-4 py-3 align-top leading-6 max-md:break-words max-md:px-2.5 max-md:py-2 max-md:text-[13px] max-md:leading-[0.9375rem] ${
                       cellIndex === 0 ? "font-medium text-ink" : "text-muted"
-                    }`}
+                    } ${emphasized ? "font-bold text-ink" : ""}`}
                   >
                     {cell}
                   </td>
