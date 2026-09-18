@@ -35,13 +35,19 @@ async function countH1(path: string): Promise<{ count: number; texts: string[] }
   return { count: texts.length, texts };
 }
 
-for (const path of PATHS) {
-  const { count, texts } = await countH1(path);
-  assert.equal(
-    count,
-    1,
-    `${path} expected 1 h1, got ${count}: ${JSON.stringify(texts)}`,
-  );
+async function main() {
+  for (const path of PATHS) {
+    const { count, texts } = await countH1(path);
+    assert.equal(
+      count,
+      1,
+      `${path} expected 1 h1, got ${count}: ${JSON.stringify(texts)}`,
+    );
+  }
+  console.log(`OK single H1 on ${PATHS.length} hub pages (${base})`);
 }
 
-console.log(`OK single H1 on ${PATHS.length} hub pages (${base})`);
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
