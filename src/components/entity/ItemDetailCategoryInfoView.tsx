@@ -17,22 +17,6 @@ function formatDateOnly(iso?: string): string {
   }).format(date);
 }
 
-/** KST date + time for refresh stamps (최근/다음 업데이트). */
-function formatDateTime(iso?: string): string {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("ko-KR", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-}
-
 /** Display values as 억원 (public RTMS points are in 만원). */
 function formatSparkEok(valueManwon: number): string {
   const eok = valueManwon / 10_000;
@@ -170,9 +154,6 @@ export function ItemDetailCategoryInfoView({
   const trust = toVisitorTrustView(payload);
   if (trust.hideSection) return null;
 
-  const lastLabel =
-    formatDateTime(payload.refreshLastAt) || formatDateTime(payload.updatedAt);
-  const nextLabel = formatDateTime(payload.refreshNextAt);
   const showSparseBadge = trust.thin || payload.sparse;
   const statusMessage =
     trust.rows.length === 0 && trust.links.length === 0
@@ -192,29 +173,11 @@ export function ItemDetailCategoryInfoView({
             <span className="ml-2 text-base font-medium text-soft">· {payload.entityName}</span>
           </h2>
         </div>
-        <div className="flex flex-wrap items-end gap-2">
-          {showSparseBadge ? (
-            <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-800 dark:text-amber-200">
-              일부 확인 중
-            </span>
-          ) : null}
-          {lastLabel || nextLabel ? (
-            <span className="category-info-refresh-108 grid max-w-[22rem] grid-cols-[7.5rem_minmax(0,1fr)] gap-x-1 text-left leading-snug text-muted">
-              {lastLabel ? (
-                <>
-                  <span className="whitespace-nowrap">최근 업데이트</span>
-                  <span className="tabular-nums">{lastLabel}</span>
-                </>
-              ) : null}
-              {nextLabel ? (
-                <>
-                  <span className="whitespace-nowrap">다음 업데이트</span>
-                  <span className="tabular-nums">{nextLabel}</span>
-                </>
-              ) : null}
-            </span>
-          ) : null}
-        </div>
+        {showSparseBadge ? (
+          <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-800 dark:text-amber-200">
+            일부 확인 중
+          </span>
+        ) : null}
       </div>
 
       {statusMessage ? (
