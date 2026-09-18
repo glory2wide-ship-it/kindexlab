@@ -13,16 +13,21 @@ export function MultiLineChart({
   labels,
   lines,
   axisFontSize = 10,
+  yAxisSide = "left",
 }: {
   labels: string[];
   lines: ChartLine[];
-  /** Axis tick label size (default 10). Support charts pass 12 (+20%). */
+  /** Axis tick label size (default 10). */
   axisFontSize?: number;
+  /** Where Y-axis tick labels sit. Support charts use `"right"`. */
+  yAxisSide?: "left" | "right";
 }) {
   const width = 760;
   const height = 320;
-  const padLeft = axisFontSize > 10 ? 52 : 44;
-  const padRight = 16;
+  const axisPad = axisFontSize > 10 ? 52 : 44;
+  const edgePad = 16;
+  const padLeft = yAxisSide === "left" ? axisPad : edgePad;
+  const padRight = yAxisSide === "right" ? axisPad : edgePad;
   const padTop = 18;
   const padBottom = axisFontSize > 10 ? 40 : 36;
   const numbers = lines.flatMap((line) => line.values.filter((value): value is number => value != null));
@@ -39,6 +44,8 @@ export function MultiLineChart({
 
   const yTicks = [max, min + range / 2, min];
   const xTicks = [0, Math.floor(labels.length / 2), labels.length - 1];
+  const yLabelX = yAxisSide === "right" ? width - padRight + 8 : padLeft - 8;
+  const yLabelAnchor = yAxisSide === "right" ? "start" : "end";
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="h-[20rem] w-full text-muted" role="img">
@@ -53,9 +60,9 @@ export function MultiLineChart({
             strokeOpacity={0.12}
           />
           <text
-            x={padLeft - 8}
+            x={yLabelX}
             y={y(tick) + 3}
-            textAnchor="end"
+            textAnchor={yLabelAnchor}
             fill="currentColor"
             fontSize={axisFontSize}
           >
