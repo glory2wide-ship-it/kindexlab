@@ -199,7 +199,7 @@ export function ItemDetailCategoryInfoView({
             </span>
           ) : null}
           {lastLabel || nextLabel ? (
-            <span className="category-info-refresh-120 grid max-w-[22rem] grid-cols-[7.5rem_minmax(0,1fr)] gap-x-1 text-left text-xs leading-snug text-muted sm:text-sm">
+            <span className="category-info-refresh-108 grid max-w-[22rem] grid-cols-[7.5rem_minmax(0,1fr)] gap-x-1 text-left leading-snug text-muted">
               {lastLabel ? (
                 <>
                   <span className="whitespace-nowrap">최근 업데이트</span>
