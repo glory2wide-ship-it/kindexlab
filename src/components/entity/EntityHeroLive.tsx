@@ -2,12 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { EntityHero } from "@/components/entity/EntityHero";
-import {
-  detailFactsForHero,
-  resolveDetailFacts,
-} from "@/lib/boards/detail-facts";
-import { entityNarrativeSummary } from "@/lib/entity/index-blurb";
-import { youtubeChannelLinkLabel } from "@/lib/entity/youtube-link-label";
 import { TYPE_LABEL } from "@/lib/format";
 import { isNaverStockMeasurement } from "@/lib/market/naver-finance-format";
 import type { RankingEntity } from "@/lib/types";
@@ -15,6 +9,9 @@ import type { RankingEntity } from "@/lib/types";
 /**
  * Detail hero that paints immediately from the RSC payload, then refreshes
  * the Naver quote in the background so soft-nav never waits on Finance.
+ *
+ * Profile facts (소속사·히트곡 등) live only in 히트맵 채널 맞춤 정보 —
+ * the hero keeps rank / quote metrics to avoid duplicating that pack.
  */
 export function EntityHeroLive({
   entity,
@@ -91,10 +88,6 @@ function MarketQuotePendingHero({
           ? "국내 주식"
           : TYPE_LABEL[entity.type];
 
-  const rawDetailFacts = resolveDetailFacts(entity);
-  const detailFacts = rawDetailFacts ? detailFactsForHero(rawDetailFacts) : undefined;
-  const synopsis = entityNarrativeSummary(detailFacts?.synopsis);
-
   return (
     <section className="rounded-2xl border border-line bg-panel p-[18px] md:p-8">
       <p className="detail-kicker-120 text-xs text-muted">{kicker ?? boardHint}</p>
@@ -108,58 +101,6 @@ function MarketQuotePendingHero({
           <p className="mt-1.5 font-sans text-sm text-muted md:mt-2">시세 불러오는 중…</p>
         </div>
       </div>
-      {detailFacts ? (
-        <div className="detail-profile-110 mt-3 space-y-3 border-t border-line pt-3 md:mt-4 md:pt-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] font-semibold tracking-wide text-soft">종목 프로필</p>
-          </div>
-          {detailFacts.rows.length > 0 ? (
-            <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 md:gap-4">
-              {detailFacts.rows.map((row) => (
-                <div key={row.label}>
-                  <dt className="text-muted">{row.label}</dt>
-                  <dd className="mt-0.5 font-medium leading-snug text-ink md:mt-1">
-                    {row.href ? (
-                      <a
-                        href={row.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline decoration-line underline-offset-2 hover:text-accent"
-                      >
-                        {/채널\s*URL|유튜브\s*채널/.test(row.label)
-                          ? youtubeChannelLinkLabel(entity.name, row.value)
-                          : row.value}
-                      </a>
-                    ) : (
-                      row.value
-                    )}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
-          {detailFacts.links && detailFacts.links.length > 0 ? (
-            <div>
-              <p className="text-[11px] font-semibold tracking-wide text-soft">관련 링크</p>
-              <ul className="mt-1.5 space-y-1">
-                {detailFacts.links.map((link) => (
-                  <li key={link.href} className="text-sm">
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-accent underline decoration-line underline-offset-2 hover:opacity-80"
-                    >
-                      {link.title}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {synopsis ? <p className="text-sm leading-6 text-ink/90">{synopsis}</p> : null}
-        </div>
-      ) : null}
     </section>
   );
 }
