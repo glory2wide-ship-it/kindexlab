@@ -22,6 +22,7 @@ export function FactTable({
   if (!table?.rows?.length) return null;
 
   const label = eyebrow?.trim() ?? "";
+  const wide = (table.headers?.length ?? 0) >= 4;
 
   return (
     <figure
@@ -36,7 +37,7 @@ export function FactTable({
           </span>
         ) : null}
         <span
-          className={`block text-[14.5px] font-normal leading-6 text-ink max-md:leading-[1.125rem] ${
+          className={`block text-[14.5px] font-normal leading-6 text-ink max-md:text-[12.5px] max-md:leading-[1.35] ${
             label ? "mt-1" : ""
           }`}
         >
@@ -54,8 +55,12 @@ export function FactTable({
                 <th
                   key={header}
                   scope="col"
-                  className={`border-b border-line px-4 py-3 text-left font-sans text-[12.4px] font-semibold uppercase tracking-wide text-muted max-md:px-2.5 max-md:py-2 max-md:text-[11px] max-md:normal-case max-md:tracking-normal max-md:leading-[0.9375rem] md:whitespace-nowrap ${
-                    headerIndex === 0 ? "max-md:w-[32%]" : ""
+                  className={`border-b border-line px-4 py-3 text-left font-sans text-[12.4px] font-semibold uppercase tracking-wide text-muted max-md:px-1.5 max-md:py-1.5 max-md:text-[9.5px] max-md:normal-case max-md:tracking-normal max-md:leading-[1.25] md:whitespace-nowrap ${
+                    headerIndex === 0
+                      ? wide
+                        ? "max-md:w-[22%]"
+                        : "max-md:w-[32%]"
+                      : ""
                   }`}
                 >
                   {header}
@@ -72,7 +77,7 @@ export function FactTable({
                 {row.map((cell, cellIndex) => (
                   <td
                     key={`${rowIndex}-${cellIndex}`}
-                    className={`px-4 py-3 align-top font-normal leading-6 max-md:break-words max-md:px-2.5 max-md:py-2 max-md:text-[13px] max-md:leading-[0.9375rem] ${
+                    className={`px-4 py-3 align-top font-normal leading-6 max-md:break-words max-md:px-1.5 max-md:py-1.5 max-md:text-[10px] max-md:leading-[1.3] ${
                       emphasized
                         ? cellIndex === 0
                           ? "text-ink"
