@@ -7,15 +7,18 @@ import type { PostChannel } from "@/lib/posts/types";
 /**
  * Category board hero headcopy — mobile + desktop, above the ticker.
  * Section tabs live in the root layout sticky bars.
+ *
+ * Only the board (실시간 랭킹) section owns an H1 here. Briefing / archive /
+ * about pages render their own page-level H1 — emitting a second (even
+ * sr-only) H1 trips Naver Search Advisor “H1 2개 이상”.
  */
 export function CategoryDeskHeader({ channel }: { channel: PostChannel }) {
   const meta = getPostChannel(channel);
   const section = resolveChannelSection(useSelectedLayoutSegment());
+  if (section !== "board") return null;
+
   const title = meta.indexTitleDesktop ?? meta.indexTitle;
   const description = meta.descriptionDesktop ?? meta.description;
-  if (section !== "board") {
-    return <h1 className="sr-only">{meta.indexTitle}</h1>;
-  }
 
   return (
     <header className="space-y-1.5 font-gothic md:space-y-[6.12px]">
