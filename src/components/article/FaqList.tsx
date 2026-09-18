@@ -13,12 +13,25 @@ import type { PostFaq } from "@/lib/posts/types";
 export function FaqList({
   items,
   defaultOpen = false,
+  analysisSizing = false,
 }: {
   items: PostFaq[];
   /** When true, every answer is visible without a click (오늘의 분석). */
   defaultOpen?: boolean;
+  /**
+   * 오늘의 분석 FAQ: question +15%, answer −5% vs the shared article baseline.
+   * Does not affect magazine / briefing FAQ lists.
+   */
+  analysisSizing?: boolean;
 }) {
   if (!items?.length) return null;
+
+  const questionStyle = analysisSizing
+    ? ({ fontSize: "calc(0.875rem * 1.15)" } as const)
+    : undefined;
+  const answerStyle = analysisSizing
+    ? ({ fontSize: "calc(var(--article-font-size) * 0.95)" } as const)
+    : undefined;
 
   return (
     <div className="not-prose space-y-3">
@@ -28,7 +41,10 @@ export function FaqList({
           open={defaultOpen || undefined}
           className="group overflow-hidden rounded-xl border border-line bg-board/30 transition-colors open:bg-panel open:shadow-sm hover:border-accent/40"
         >
-          <summary className="flex cursor-pointer list-none items-start gap-3 px-4 py-3.5 text-sm font-semibold leading-6 text-ink [&::-webkit-details-marker]:hidden">
+          <summary
+            className="flex cursor-pointer list-none items-start gap-3 px-4 py-3.5 text-sm font-semibold leading-6 text-ink [&::-webkit-details-marker]:hidden"
+            style={questionStyle}
+          >
             <span className="mt-px font-sans text-xs font-bold text-accent">Q</span>
             <span className="flex-1">{item.question}</span>
             {defaultOpen ? null : (
@@ -48,7 +64,12 @@ export function FaqList({
           </summary>
           <div className="flex gap-3 border-t border-line px-4 py-3.5">
             <span className="mt-px font-sans text-xs font-bold text-muted">A</span>
-            <p className="article-prose-text flex-1 whitespace-pre-line text-muted">{item.answer}</p>
+            <p
+              className="article-prose-text flex-1 whitespace-pre-line text-muted"
+              style={answerStyle}
+            >
+              {item.answer}
+            </p>
           </div>
         </details>
       ))}
